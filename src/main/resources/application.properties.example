@@ -1,0 +1,19 @@
+# ===================================================================
+# COMMON SPRING BOOT PROPERTIES
+#
+# rename this file to application.properties and fill out USER and PASSWORD below
+#
+# http://docs.spring.io/spring-boot/docs/current/reference/html/common-application-properties.html
+# ===================================================================
+
+## Use Googles JSON for (un)marshalling POJOs <-> JSON
+
+spring.http.converters.preferred-json-mapper=gson
+
+## Logging
+
+logging.level.org.doogie.liquido=TRACE
+
+# MongoDB via spring-data-mongo
+
+spring.data.mongodb.uri=mongodb://USER:PASSWORD@ds019664.mlab.com:19664/liquido-test
