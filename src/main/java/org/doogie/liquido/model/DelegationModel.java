@@ -8,6 +8,17 @@ public class DelegationModel {
   @Id
   String id;
 
-  UserModel from;
-  UserModel to;
+  /** id of delegee */
+  String fromId;
+
+  /** id of proxy */
+  String toId;
+
+  public String getFromId() {
+    return fromId;
+  }
+
+  public String getToId() {
+    return toId;
+  }
 }
