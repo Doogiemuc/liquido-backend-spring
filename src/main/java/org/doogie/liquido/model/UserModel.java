@@ -1,9 +1,12 @@
 package org.doogie.liquido.model;
 
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 import sun.plugin.util.UserProfile;
 
+import java.util.Date;
 import java.util.Map;
 
 /**
@@ -18,6 +21,12 @@ public class UserModel {
   String passwordHash;
 
   Map<String, String> profile;
+
+  @LastModifiedDate
+  Date updatedAt;
+
+  @CreatedDate
+  Date createdAt;
 
   public UserModel(String email, String passwordHash, Map<String, String> profile) {
     this.email = email;
@@ -59,5 +68,9 @@ public class UserModel {
 
   public String getEMail() {
     return email;
+  }
+
+  public String getId() {
+    return id;
   }
 }

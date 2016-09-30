@@ -1,10 +1,14 @@
 package org.doogie.liquido.model;
 
 import org.hibernate.validator.constraints.NotEmpty;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.config.EnableMongoAuditing;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import javax.validation.constraints.NotNull;
+import java.util.Date;
 import java.util.List;
 
 /** POJO Entity that represents a vote that a user has casted */
@@ -22,6 +26,12 @@ public class BallotModel {
   List<String> voteOrder;
 
   //TODO: String votersHash;
+
+  @LastModifiedDate
+  Date updatedAt;
+
+  @CreatedDate
+  Date createdAt;
 
   public BallotModel() {}
 
@@ -58,6 +68,8 @@ public class BallotModel {
         "id='" + id + '\'' +
         ", initialLawId='" + initialLawId + '\'' +
         ", voteOrder=" + voteOrder +
+        ", updatedAt=" + updatedAt +
+        ", createdAt=" + createdAt +
         '}';
   }
 

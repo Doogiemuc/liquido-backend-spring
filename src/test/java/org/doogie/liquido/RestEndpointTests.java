@@ -31,11 +31,11 @@ import static org.junit.Assert.assertTrue;
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)  // This is so cool. This automatically sets up everything and starts the server. *like*
-public class RestEndpointTest {
+public class RestEndpointTests {
   private Logger log = LoggerFactory.getLogger(this.getClass());
 
   @Autowired
-  TestRestTemplate template;    // REST client that is automatically configured with port of runnign test server.
+  TestRestTemplate template;    // REST client that is automatically configured with port of running test server.
 
   @LocalServerPort
   int port;
@@ -69,7 +69,7 @@ public class RestEndpointTest {
     ResponseEntity<BallotModel> createdBallot = template.postForEntity("/ballot", newBallot, BallotModel.class);
     assertNotNull("Newly posted Ballot must have an ID", createdBallot.getBody().getId());
     assertEquals(200, createdBallot.getStatusCodeValue());
-    log.trace("TEST postBallot successful: new ballot had ID.");
+    log.trace("TEST postBallot successful: newly created ballot has ID="+createdBallot.getBody());
   }
 
   @Test

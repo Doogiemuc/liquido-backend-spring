@@ -8,4 +8,8 @@ import org.springframework.data.mongodb.repository.MongoRepository;
  */
 public interface UserRepo extends MongoRepository<UserModel, String> {
 
+  UserModel findByEmail(String email);   // This magically creates a mongo query just from the method name!
+
+
+
 }

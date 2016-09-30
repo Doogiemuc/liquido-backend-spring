@@ -7,6 +7,10 @@ import java.io.UnsupportedEncodingException;
 
 public class DoogiesUtil {
 
+  public static boolean isEmpty(String s) {
+    return s == null || s.trim().length() == 0;
+  }
+
   //http://stackoverflow.com/questions/309424/read-convert-an-inputstream-to-a-string
   public static String _stream2String(InputStream inputStream) throws IOException {
     ByteArrayOutputStream result = new ByteArrayOutputStream();

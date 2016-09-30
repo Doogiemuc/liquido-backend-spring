@@ -1,7 +1,7 @@
 package org.doogie.liquido.rest;
 
+import org.doogie.liquido.datarepos.BallotRepo;
 import org.doogie.liquido.model.BallotModel;
-import org.doogie.liquido.service.BallotService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +26,7 @@ public class BallotRestController {
   Logger log = LoggerFactory.getLogger(BallotRestController.class);  // Simple Logging Facade 4 Java
 
   @Autowired
-  BallotService ballotService;
+  BallotRepo ballotRepo;
 
   /**
    * is alive test
@@ -52,7 +52,7 @@ public class BallotRestController {
       log.trace("   ballot is invalid: "+bindingResult.getAllErrors());
       throw new BindException(bindingResult);  // this generates a cool error message. Undocumented spring feature :-)
     }
-    BallotModel createdBallot = ballotService.postBallot(newBallot);
+    BallotModel createdBallot = ballotRepo.save(newBallot);
     log.trace("<= POST /ballot returned: "+createdBallot);
     return createdBallot;
   }
