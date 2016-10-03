@@ -1,7 +1,9 @@
 package org.doogie.liquido;
 
+import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.UserRepo;
+import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.UserModel;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,30 +33,33 @@ public class RepoTests {
   @Autowired
   private DelegationRepo delegationRepo;
 
-  private static final String USER1_EMAIL = "testuser1@liquido.de";
-  private static final int    USER1_NUM_VOTES = 5;
+  @Autowired
+  private AreaRepo areaRepo;
+
 
   @Test
   public void findAllUsers() {
+    log.trace("TEST findAllUsers");
     List<UserModel> allUsers = userRepo.findAll();
-    System.out.println("TEST findAllUsers: got " + allUsers.size()+" users.");
-    assertThat(allUsers, hasItem(userWithEMail("testuser1@liquido.de")));
-    log.info("TEST SUCCESS: "+USER1_EMAIL+" found in list of all users.");
+    assertThat(allUsers, hasItem(userWithEMail(TestFixtures.USER1_EMAIL)));
+    log.info("TEST SUCCESS: "+ TestFixtures.USER1_EMAIL +" found in list of all users.");
   }
 
   @Test
   public void findUserByEmail() {
-    UserModel foundUser = userRepo.findByEmail(USER1_EMAIL);
-    assertNotNull(USER1_EMAIL+" could not be found", foundUser);
-    assertEquals(USER1_EMAIL, foundUser.getEMail());
-    log.info("TEST SUCCESS: "+USER1_EMAIL+" found by email.");
+    UserModel foundUser = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
+    assertNotNull(TestFixtures.USER1_EMAIL +" could not be found", foundUser);
+    assertEquals(TestFixtures.USER1_EMAIL, foundUser.getEMail());
+    log.info("TEST SUCCESS: "+ TestFixtures.USER1_EMAIL +" found by email.");
   }
 
   @Test
   public void getNumVotes() {
-    UserModel user1 = userRepo.findByEmail(USER1_EMAIL);
-    int numVotes = delegationRepo.getNumVotes(user1.getId());
-    assertEquals(USER1_NUM_VOTES, numVotes);
-    log.info("TEST SUCCESS: user1 is proxy for "+USER1_NUM_VOTES+" delegates");
+    log.trace("TEST getNumVotes of "+ TestFixtures.USER4_EMAIL +" in area.title='"+ TestFixtures.AREA1_TITLE +"'");
+    UserModel user4 = userRepo.findByEmail(TestFixtures.USER4_EMAIL);
+    AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+    int numVotes = delegationRepo.getNumVotes(user4.getId(), area1.getId());
+    assertEquals(TestFixtures.USER4_NUM_VOTES, numVotes);
+    log.info("TEST SUCCESS: "+ TestFixtures.USER4_EMAIL +" is proxy for "+ TestFixtures.USER4_NUM_VOTES +" delegates (including himself).");
   }
 }

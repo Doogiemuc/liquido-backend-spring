@@ -1,24 +1,38 @@
 package org.doogie.liquido.model;
 
+import org.bson.types.ObjectId;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.util.Date;
 
 @Document(collection = "delegations")
 public class DelegationModel {
   @Id
   String id;
 
-  /** id of delegee */
-  String fromId;
+  /** area */
+  ObjectId area;
 
-  /** id of proxy */
-  String toId;
+  /** ObjectId of delegee user */
+  ObjectId from;
 
-  public String getFromId() {
-    return fromId;
+  /** ObjectId of proxy user */
+  ObjectId to;
+
+  @LastModifiedDate
+  Date updatedAt;
+
+  @CreatedDate
+  Date createdAt;
+
+  public ObjectId getFrom() {
+    return from;
   }
 
-  public String getToId() {
-    return toId;
+  public ObjectId getTo() {
+    return to;
   }
 }

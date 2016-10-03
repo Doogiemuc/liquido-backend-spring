@@ -1,6 +1,10 @@
 package org.doogie.liquido;
 
+import org.doogie.liquido.datarepos.AreaRepo;
+import org.doogie.liquido.datarepos.UserRepo;
+import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.BallotModel;
+import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,6 +40,12 @@ public class RestEndpointTests {
 
   @Autowired
   TestRestTemplate template;    // REST client that is automatically configured with port of running test server.
+
+  @Autowired
+  UserRepo userRepo;
+
+  @Autowired
+  AreaRepo areaRepo;
 
   @LocalServerPort
   int port;
@@ -82,5 +92,16 @@ public class RestEndpointTests {
     log.trace("TEST postInvalidBallot successful: received correct status and error message in response.");
   }
 
+  @Test
+  public void testGetNumVotes() {
+    log.trace("TEST getNumVotes");
+    UserModel user4 = userRepo.findByEmail(TestFixtures.USER4_EMAIL);
+    AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+    String uri = "/users/"+user4.getId()+"/getNumVotes?areaId="+area1.getId();
+    ResponseEntity<Integer> response = template.getForEntity(uri, Integer.class);
+    assertNotNull(response);
+    assertEquals("User "+TestFixtures.USER4_EMAIL+" should have "+TestFixtures.USER4_NUM_VOTES+" delegated votes", TestFixtures.USER4_NUM_VOTES, response.getBody().intValue());
+    log.trace("TEST SUCCESS: found expected delegations for "+TestFixtures.USER4_EMAIL);
+  }
 
 }
