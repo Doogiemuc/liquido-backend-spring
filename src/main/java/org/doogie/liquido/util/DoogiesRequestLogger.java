@@ -30,11 +30,17 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     long startTime = System.currentTimeMillis();
     String reqId = "[" + startTime % 10000 + "]";
     this.logger.debug("=> " + reqId + " " + req.getMethod() + " " + req.getRequestURI());
-    //String requestBody = DoogiesUtil._stream2String(req.getInputStream());     //keep in mind, that when you read the request body here, then it cannot be read again!!!! So only enable this for debugging
-    //this.logger.trace("=========== "+ requestBody);
+    /*
+      //Keep in mind, that we cannon simply log the body. Because this input stream can only be read once.
+      String requestBody = DoogiesUtil._stream2String(req.getInputStream());
+      this.logger.trace("   " + requestBody);
+    */
     filterChain.doFilter(req, res);
     long duration = System.currentTimeMillis() - startTime;
     this.logger.debug("<= " + reqId + " " + req.getMethod() + " " + req.getRequestURI() + ": returned status=" + res.getStatus() + " in "+duration + "ms");
+
+
+
   }
 
 }

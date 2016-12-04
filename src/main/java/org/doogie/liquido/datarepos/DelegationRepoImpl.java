@@ -38,4 +38,5 @@ public class DelegationRepoImpl implements DelegationRepoCustom {
     }
     return numVotes;
   }
+
 }

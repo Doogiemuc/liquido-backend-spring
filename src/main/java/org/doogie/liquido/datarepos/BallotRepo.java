@@ -9,5 +9,5 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
  */
 //NOT exported as @RepositoryRestResource ! Ballots can only be accessed via BallotRestcontroller
 public interface BallotRepo extends MongoRepository<BallotModel, String> {
-
+  // EMPTY
 }

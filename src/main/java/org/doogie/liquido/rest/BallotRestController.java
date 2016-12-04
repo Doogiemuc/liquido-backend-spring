@@ -54,7 +54,7 @@ public class BallotRestController {
       throw new BindException(bindingResult);  // this generates a cool error message. Undocumented spring feature :-)
     }
     BallotModel createdBallot = ballotRepo.save(newBallot);
-    log.trace("<= POST /ballot returned: "+createdBallot);
+    log.trace("<= POST /ballot created: "+createdBallot);
     return createdBallot;
   }
 

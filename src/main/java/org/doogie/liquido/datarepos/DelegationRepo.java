@@ -4,7 +4,9 @@ import org.bson.types.ObjectId;
 import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
+import org.springframework.data.rest.core.annotation.RestResource;
 
 import java.util.List;
 
@@ -20,6 +22,7 @@ public interface DelegationRepo extends MongoRepository<DelegationModel, String>
    * @param area ObjectId of area
    * @return all <b>direct</b> delegations to this proxy in that area
    */
+  @RestResource(exported = false)
   List<DelegationModel> findByToProxyAndArea(ObjectId toProxy, ObjectId area);
 
   /**
