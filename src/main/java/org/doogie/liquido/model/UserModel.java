@@ -1,11 +1,12 @@
 package org.doogie.liquido.model;
 
+import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
-import sun.plugin.util.UserProfile;
 
+import javax.validation.constraints.NotNull;
 import java.util.Date;
 import java.util.Map;
 
@@ -15,18 +16,23 @@ import java.util.Map;
 @Document(collection = "users")
 public class UserModel {
   @Id
-  String id;
+  private String id;
 
-  String email;
-  String passwordHash;
+  @NotNull
+  @NotEmpty
+  public String email;
 
-  Map<String, String> profile;
+  @NotNull
+  @NotEmpty
+  private String passwordHash;
+
+  public Map<String, String> profile;
 
   @LastModifiedDate
-  Date updatedAt;
+  public Date updatedAt;
 
   @CreatedDate
-  Date createdAt;
+  public Date createdAt;
 
   public UserModel(String email, String passwordHash, Map<String, String> profile) {
     this.email = email;

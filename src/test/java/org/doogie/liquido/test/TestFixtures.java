@@ -1,4 +1,4 @@
-package org.doogie.liquido;
+package org.doogie.liquido.test;
 
 /**
  * Fixed test data (see TestDataCreator.js)

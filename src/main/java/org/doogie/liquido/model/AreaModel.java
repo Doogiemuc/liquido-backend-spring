@@ -1,25 +1,33 @@
 package org.doogie.liquido.model;
 
+import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import javax.validation.constraints.NotNull;
 import java.util.Date;
 
 @Document(collection = "areas")
 public class AreaModel {
   @Id
-  String id;
+  private String id;
 
-  String title;
-  String description;
+  // public fields are automatically exposed in REST enpoint
+  @NotNull
+  @NotEmpty
+  public String title;
+
+  @NotNull
+  @NotEmpty
+  public String description;
 
   @LastModifiedDate
-  Date updatedAt;
+  public Date updatedAt;
 
   @CreatedDate
-  Date createdAt;
+  public Date createdAt;
 
   public AreaModel(String title, String description) {
     this.title = title;
@@ -63,4 +71,6 @@ public class AreaModel {
   public String getId() {
     return id;
   }
+
+
 }
