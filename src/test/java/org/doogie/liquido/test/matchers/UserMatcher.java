@@ -1,4 +1,4 @@
-package org.doogie.liquido.matchers;
+package org.doogie.liquido.test.matchers;
 
 import org.doogie.liquido.model.UserModel;
 import org.hamcrest.Description;

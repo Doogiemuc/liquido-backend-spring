@@ -1,4 +1,4 @@
-package org.doogie.liquido;
+package org.doogie.liquido.test;
 
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
@@ -15,7 +15,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.List;
 
-import static org.doogie.liquido.matchers.UserMatcher.userWithEMail;
+import static org.doogie.liquido.test.matchers.UserMatcher.userWithEMail;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.junit.Assert.*;
 

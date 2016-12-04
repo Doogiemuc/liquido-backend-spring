@@ -1,30 +1,39 @@
 package org.doogie.liquido.model;
 
+import org.bson.types.ObjectId;
+import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import javax.validation.constraints.NotNull;
 import java.util.Date;
 
 @Document(collection = "laws")
 public class LawModel {
   @Id
-  String id;
+  private String id;
 
-  String title;
-  String description;
-  int status;
+  @NotNull
+  @NotEmpty
+  public String title;
+
+  @NotNull
+  @NotEmpty
+  public String description;
+
+  public int status;
 
   @CreatedBy
-  UserModel createdBy;
+  public ObjectId createdBy;
 
   @LastModifiedDate
-  Date updatedAt;
+  public Date updatedAt;
 
   @CreatedDate
-  Date createdAt;
+  public Date createdAt;
 
   public LawModel(String title, String description, int status) {
     this.title = title;
