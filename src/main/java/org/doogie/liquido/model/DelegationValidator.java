@@ -32,8 +32,8 @@ public class DelegationValidator implements Validator {
    */
   @Override
   public void validate(Object o, Errors errors) {
-    log.debug("======= Validating: "+o);
     DelegationModel delegation = (DelegationModel)o;
+    log.trace("Validating Delegation: "+delegation);
     String areaId      = delegation.getArea().toHexString();
     String fromUserId  = delegation.getFromUser().toHexString();
     String toProxyId   = delegation.getToProxy().toHexString();

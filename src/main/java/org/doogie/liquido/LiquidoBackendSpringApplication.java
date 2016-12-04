@@ -38,4 +38,6 @@ public class LiquidoBackendSpringApplication {
 		return new DoogiesRequestLogger();
 	}
 
+
+
 }

@@ -1,5 +1,6 @@
 package org.doogie.liquido.model;
 
+import org.bson.types.ObjectId;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
@@ -8,6 +9,7 @@ import org.springframework.data.mongodb.config.EnableMongoAuditing;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -16,27 +18,32 @@ import java.util.List;
 public class BallotModel {
   //protected fields are only possible with Google's GSON lib (not with Jackson)
   @Id
-  String id;
+  private String id;
 
   @NotNull
-  String initialLawId;
+  public ObjectId initialLawId;
 
   @NotNull
   @NotEmpty
-  List<String> voteOrder;
+  public List<ObjectId> voteOrder;
 
-  //TODO: String votersHash;
+  /** encrypted information about voter that casted this ballot */
+  @NotNull
+  @NotEmpty
+  public String voterHash;
 
   @LastModifiedDate
-  Date updatedAt;
+  public Date updatedAt;
 
   @CreatedDate
-  Date createdAt;
+  public Date createdAt;
 
+  /** empty default constructor. Needed for deserialisation from HttpRequests */
   public BallotModel() {}
 
-  public BallotModel(String initialLawId, List<String> voteOrder) {
+  public BallotModel(String voterHash, ObjectId initialLawId, List<ObjectId> voteOrder) {
     this.id = null;
+    this.voterHash = voterHash;
     this.initialLawId = initialLawId;
     this.voteOrder = voteOrder;
   }
@@ -75,5 +82,9 @@ public class BallotModel {
 
   public String getId() {
     return id;
+  }
+
+  public String getVoterHash() {
+    return voterHash;
   }
 }

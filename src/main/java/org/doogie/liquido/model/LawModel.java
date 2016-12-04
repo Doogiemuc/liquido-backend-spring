@@ -26,6 +26,7 @@ public class LawModel {
 
   public int status;
 
+  //TODO: configure createBy User for laws: http://docs.spring.io/spring-data/jpa/docs/current/reference/html/index.html#auditing.auditor-aware
   @CreatedBy
   public ObjectId createdBy;
 
@@ -72,5 +73,9 @@ public class LawModel {
         ", status=" + status +
         ", createdBy=" + createdBy +
         '}';
+  }
+
+  public String getId() {
+    return id;
   }
 }

@@ -17,17 +17,14 @@ public class DelegationModel {
 
   /** area */
   @NotNull
-  @NotEmpty
   public ObjectId area;
 
   /** ObjectId of delegee user */
   @NotNull
-  @NotEmpty
   public ObjectId fromUser;
 
   /** ObjectId of proxy user */
   @NotNull
-  @NotEmpty
   public ObjectId toProxy;
 
   @LastModifiedDate
@@ -36,12 +33,14 @@ public class DelegationModel {
   @CreatedDate
   public Date createdAt;
 
-  public DelegationModel(String fromUserId, String toProxyId, String areaId) {
-    this.fromUser = new ObjectId(fromUserId);
-    this.toProxy  = new ObjectId(toProxyId);
-    this.area     = new ObjectId(areaId);
-    this.createdAt = new Date();
-    this.updatedAt = new Date();
+  public DelegationModel() { }
+
+  public DelegationModel(ObjectId area, ObjectId fromUser, ObjectId toProxy, Date updatedAt, Date createdAt) {
+    this.area = area;
+    this.fromUser = fromUser;
+    this.toProxy = toProxy;
+    this.updatedAt = updatedAt;
+    this.createdAt = createdAt;
   }
 
   public ObjectId getFromUser() {
@@ -53,4 +52,44 @@ public class DelegationModel {
   }
 
   public ObjectId getArea() { return area; }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    DelegationModel that = (DelegationModel) o;
+
+    if (!area.equals(that.area)) return false;
+    if (!fromUser.equals(that.fromUser)) return false;
+    return toProxy.equals(that.toProxy);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = area.hashCode();
+    result = 31 * result + fromUser.hashCode();
+    result = 31 * result + toProxy.hashCode();
+    return result;
+  }
+
+  @Override
+  public String toString() {
+    return "DelegationModel{" +
+        "id='" + id + '\'' +
+        ", area=" + area +
+        ", fromUser=" + fromUser +
+        ", toProxy=" + toProxy +
+        ", updatedAt=" + updatedAt +
+        ", createdAt=" + createdAt +
+        '}';
+  }
+
+  public String getId() {
+    return id;
+  }
+
+  public void setId(String id) {
+    this.id = id;
+  }
 }

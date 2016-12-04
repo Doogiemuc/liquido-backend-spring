@@ -1,6 +1,7 @@
 package org.doogie.liquido.datarepos;
 
 import org.bson.types.ObjectId;
+import org.springframework.data.rest.core.annotation.RestResource;
 
 /**
  * Custom query methods for delegations.
