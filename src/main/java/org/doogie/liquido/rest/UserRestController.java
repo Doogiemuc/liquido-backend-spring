@@ -47,8 +47,8 @@ public class UserRestController {
   @Autowired
   DelegationRepo delegationRepo;  // high level abstraction of repositories in (any) DB.
 
-  @Autowired
-  MongoTemplate mongoTemplate;    // low level MongoOperations
+//  @Autowired
+//  MongoTemplate mongoTemplate;    // low level MongoOperations
 
   /** will validate Delegations for the existence of the references foreign keys */
   /*  BUGFIX:  DelegationValidator cannot Autowire  repos  :-(

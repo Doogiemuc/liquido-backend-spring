@@ -133,6 +133,19 @@ public class RestEndpointTests {
   }
 
   @Test
+  public void testDelegationObjectIdConversion() {
+    log.trace("TEST testDelegationObjectIdConversion");
+
+    String uri = "/liquido/v2/delegations";
+    String result = client.getForObject(uri, String.class);
+
+    log.debug(result);
+
+    log.info("TEST testDelegationObjectIdConversion");
+  }
+
+
+  @Test
   public void testPostBallot() {
     final String VOTER_HASH = "dummyUserHashFromTest";  // test fixture
 
