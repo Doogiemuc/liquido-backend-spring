@@ -1,5 +1,6 @@
 package org.doogie.liquido.rest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.rest.core.config.RepositoryRestConfiguration;
@@ -23,8 +24,10 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
     config.setBasePath("/liquido/v2");
 
     // Only export data repositories that are annotated with @RepositoryRestResource(...)
-    // In future versions this will be configurable in applicatin.properties   spring.data.rest.detection-strategy=visibility   https://github.com/spring-projects/spring-boot/issues/7113
+    // In future versions this will be configurable in application.properties   spring.data.rest.detection-strategy=visibility   https://github.com/spring-projects/spring-boot/issues/7113
     config.setRepositoryDetectionStrategy(RepositoryDetectionStrategy.RepositoryDetectionStrategies.ANNOTATED);
   }
 
+  // Overwriting this method is not necessary. MongoMapperModule is automatically recognized by SpringBoot.
+  //public void configureJacksonObjectMapper(ObjectMapper objectMapper) { ...}
 }
