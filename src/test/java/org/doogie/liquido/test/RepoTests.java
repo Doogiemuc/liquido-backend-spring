@@ -1,10 +1,10 @@
 package org.doogie.liquido.test;
 
+import org.springframework.dao.DuplicateKeyException;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -62,5 +62,36 @@ public class RepoTests {
     int numVotes = delegationRepo.getNumVotes(user4.getId(), area1.getId());
     assertEquals(TestFixtures.USER4_NUM_VOTES, numVotes);
     log.info("TEST SUCCESS: "+ TestFixtures.USER4_EMAIL +" is proxy for "+ TestFixtures.USER4_NUM_VOTES +" delegates (including himself).");
+  }
+
+  @Test
+  public void testUpsert() {
+    log.trace("TEST update");
+    long count1 = areaRepo.count();
+    AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+    assertNotNull("Did not find area 1 by title", area);
+    area.setDescription("Description from Test");
+
+    areaRepo.save(area);
+
+    long count2 = areaRepo.count();
+    assertEquals("Should not have inserted duplicate", count1, count2);
+    log.trace("TEST update SUCCESS");
+  }
+
+  @Test
+  public void testSaveDuplicateArea() {
+    log.trace("TEST testSaveDuplicateArea");
+    long count1 = areaRepo.count();
+    AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+    assertNotNull("Did not find area 1 by title", area);
+
+    AreaModel areaDuplicate = new AreaModel(area.getTitle(), "This is a duplicate");
+    try {
+      areaRepo.save(areaDuplicate);  // should throw DuplicateKeyException
+      fail("Did not receive expected DuplicateKeyException");
+    } catch ( DuplicateKeyException e) {
+      log.trace("TEST testSaveDuplicateArea SUCCESS: did receive expected exception");
+    }
   }
 }

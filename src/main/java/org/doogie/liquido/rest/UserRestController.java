@@ -84,15 +84,13 @@ public class UserRestController {
   @RequestMapping(value = "/users/{userId}/delegations", method = PUT)
   public String saveProxy(@PathVariable String userId, @Valid @RequestBody DelegationModel newDelegation, BindingResult bindingResult, HttpServletRequest req) throws Exception {
     log.trace("=> PUT saveProxy: newDelegation="+newDelegation);
-    // validation happened in DelegationValidator class
+    // validation did happen in DelegationValidator class
     if (bindingResult.hasErrors()) {
       log.trace("   newDelegation is invalid: " + bindingResult.getAllErrors());
       throw new BindException(bindingResult);  // this generates a cool error message. Undocumented spring feature :-)
     }
 
-    //TODO: Screw all this Spring Repository stuff and code by hand with full pure mongo power  mongoTemplate.upsert(query, update, DelegationModel.class);
-
-    //Do not create the delegation twice if it already exists.
+    //Do not create the delegation twice if it already exists. (There is also a combined unique contraint in MongoDB on  (area, fromUser, toProxy)
     DelegationModel existingDelegation = delegationRepo.findOne(Example.of(newDelegation));
     if (existingDelegation != null) {
       log.trace("   update existing delegation with id="+existingDelegation.getId());
@@ -102,7 +100,7 @@ public class UserRestController {
       log.trace("   insert new delegation");
       delegationRepo.insert(newDelegation);
     }
-
+    //MAYBE: Screw all this Spring Repository stuff and code by hand with full pure mongo power  mongoTemplate.upsert(query, update, DelegationModel.class);
 
     log.trace("<= PUT saveProxy successful.");
     return "Proxy saved successfully";

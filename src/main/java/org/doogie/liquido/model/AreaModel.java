@@ -1,5 +1,6 @@
 package org.doogie.liquido.model;
 
+import lombok.Data;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
@@ -9,6 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import javax.validation.constraints.NotNull;
 import java.util.Date;
 
+@Data
 @Document(collection = "areas")
 public class AreaModel {
   @Id
@@ -29,11 +31,14 @@ public class AreaModel {
   @CreatedDate
   public Date createdAt;
 
+  public AreaModel() { }
+
   public AreaModel(String title, String description) {
     this.title = title;
     this.description = description;
   }
 
+  /*
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -71,6 +76,6 @@ public class AreaModel {
   public String getId() {
     return id;
   }
-
+  */
 
 }
