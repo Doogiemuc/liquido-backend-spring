@@ -1,7 +1,9 @@
 # Liquido-backend-spring
 
-Backend for my Liquid Democracy application
-written in JAVA with Spring Boot
+RESTfull backend for my Liquid Democracy application
+written in JAVA with Spring Boot and MongoDB.
+
+This project is my playground for learning Spring. 
 
 ## Configuration
 
@@ -15,3 +17,8 @@ Use maven:  'mvn install && mvn run:jetty'
 
 Run the test cases under `srs/test/java`.
 Spring Boot will automatically start the server for you.
+
+### References
+
+ * https://github.com/spring-projects/spring-data-examples
+ 

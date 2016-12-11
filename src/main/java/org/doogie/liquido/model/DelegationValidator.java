@@ -26,7 +26,7 @@ public class DelegationValidator implements Validator {
   }
 
   /**
-   * A DelegationModel is valid when all its referenced ObjectIds acutally exist in the areaRepo and userRepo.
+   * A DelegationModel is valid when all its referenced ObjectIds actually exist in the areaRepo and userRepo.
    * @param o expectes a DelegationModel
    * @param errors list of errors with error message
    */

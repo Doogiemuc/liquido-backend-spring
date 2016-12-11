@@ -38,9 +38,6 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     filterChain.doFilter(req, res);
     long duration = System.currentTimeMillis() - startTime;
     this.logger.debug("<= " + reqId + " " + req.getMethod() + " " + req.getRequestURI() + ": returned status=" + res.getStatus() + " in "+duration + "ms");
-
-
-
   }
 
 }

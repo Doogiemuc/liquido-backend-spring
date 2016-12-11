@@ -26,8 +26,10 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
     // Only export data repositories that are annotated with @RepositoryRestResource(...)
     // In future versions this will be configurable in application.properties   spring.data.rest.detection-strategy=visibility   https://github.com/spring-projects/spring-boot/issues/7113
     config.setRepositoryDetectionStrategy(RepositoryDetectionStrategy.RepositoryDetectionStrategies.ANNOTATED);
+
   }
 
-  // Overwriting this method is not necessary. MongoMapperModule is automatically recognized by SpringBoot.
-  //public void configureJacksonObjectMapper(ObjectMapper objectMapper) { ...}
+  // Overwriting this method is not necessary. MongoMapperModule is automatically recognized by SpringBoot
+  // public void configureJacksonObjectMapper(ObjectMapper objectMapper) { ...}
+  // See also this example: https://github.com/jhiemer/spring-data-rest-sample/blob/master/src/main/java/de/cloudscale/config/CustomRepositoryRestMvcConfiguration.java
 }

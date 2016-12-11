@@ -30,6 +30,7 @@ import org.springframework.http.converter.json.GsonHttpMessageConverter;
 import org.springframework.mock.http.MockHttpOutputMessage;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.ResponseErrorHandler;
+import org.springframework.web.client.RestClientException;
 
 import javax.annotation.PostConstruct;
 import java.io.BufferedOutputStream;
@@ -41,9 +42,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Integration test for Liquiodo REST endpoint and mongoDB.
@@ -75,9 +74,10 @@ public class RestEndpointTests {
   /*   use with WebEnvironment.RANDOM_PORT   (when SpringBootTest starts the server) */
   @Autowired
   TestRestTemplate client;    // REST client that is automatically configured with port of running test server.
+
+
   @LocalServerPort
   int port;
-
 
   @Autowired
   UserRepo userRepo;
@@ -214,6 +214,7 @@ public class RestEndpointTests {
     String url = "/users/"+fromUserId+"/delegations";
     //Implementation note: I tried doing this via the auto generated /liquido/v2/delegations endpoint.  But it only support POST a new item. I need an upsert operation here.
 
+    //I am deliberately not using DelegationModel here. This is the JSON as a client would send it.
     JSONObject newDelegationJSON = new JSONObject()
         .put("fromUser", this.users.get(0).getId())
         .put("toProxy",  this.users.get(1).getId())
@@ -231,5 +232,26 @@ public class RestEndpointTests {
     */
 
     log.trace("TEST SUCCESS: saved delegation to proxy successfully");
+  }
+
+  @Test
+  public void testPostDuplicateArea() {
+    log.trace("TEST postDuplicateArea");
+    AreaModel existingArea = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+
+    String url = "/liquido/v2/areas";
+    JSONObject duplicateAreaJson = new JSONObject()
+      .put("title", existingArea.getTitle())
+      .put("description", "duplicate Area from test");
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    HttpEntity<String> entity = new HttpEntity<String>(duplicateAreaJson.toString(), headers);
+
+    ResponseEntity<String> responseEntity = client.postForEntity(url, entity, String.class);  // This will return HTTP status 409(Conflict) becasue of the duplicate composite key.
+
+    log.trace("responseEntity:\n" + responseEntity);
+    assertEquals(responseEntity.getStatusCode(), HttpStatus.CONFLICT);  // status == 409
+    log.trace("TEST postDuplicateArea SUCCESS: Did receive expected HttpStatus=409 (Conflict)");
   }
 }
