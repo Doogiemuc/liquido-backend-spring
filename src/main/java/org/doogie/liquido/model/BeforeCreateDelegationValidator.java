@@ -5,17 +5,21 @@ import org.doogie.liquido.datarepos.UserRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
 
 /**
  * Will validate Delegations for the existence of the references foreign keys
+ *
+ * See https://github.com/danielolszewski/blog/tree/master/spring-custom-validation
  */
-public class DelegationValidator implements Validator {
+@Component
+public class BeforeCreateDelegationValidator implements Validator {
   Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
 
   @Autowired
-  UserRepo userRepo;
+  UserRepo userRepo;   //FIXME: this is null
 
   @Autowired
   AreaRepo areaRepo;
@@ -33,7 +37,7 @@ public class DelegationValidator implements Validator {
   @Override
   public void validate(Object o, Errors errors) {
     DelegationModel delegation = (DelegationModel)o;
-    log.trace("Validating Delegation: "+delegation);
+    log.trace("======== Validating Delegation: "+delegation);
     String areaId      = delegation.getArea().toHexString();
     String fromUserId  = delegation.getFromUser().toHexString();
     String toProxyId   = delegation.getToProxy().toHexString();

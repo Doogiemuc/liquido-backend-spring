@@ -5,12 +5,14 @@ import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.UserRepo;
-import org.doogie.liquido.model.*;
+import org.doogie.liquido.model.AreaModel;
+import org.doogie.liquido.model.BallotModel;
+import org.doogie.liquido.model.LawModel;
+import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -18,29 +20,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.embedded.LocalServerPort;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.context.annotation.Bean;
-import org.springframework.data.domain.Example;
 import org.springframework.http.*;
 import org.springframework.http.client.ClientHttpResponse;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.json.GsonHttpMessageConverter;
-import org.springframework.mock.http.MockHttpOutputMessage;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.ResponseErrorHandler;
-import org.springframework.web.client.RestClientException;
 
 import javax.annotation.PostConstruct;
-import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
+
+import static org.doogie.liquido.test.TestFixtures.BASE_URL;
 
 import static org.junit.Assert.*;
 
@@ -136,14 +127,12 @@ public class RestEndpointTests {
   public void testDelegationObjectIdConversion() {
     log.trace("TEST testDelegationObjectIdConversion");
 
-    String uri = "/liquido/v2/delegations";
-    String result = client.getForObject(uri, String.class);
+    String result = client.getForObject(BASE_URL+"/delegations", String.class);
 
     log.debug(result);
 
     log.info("TEST testDelegationObjectIdConversion");
   }
-
 
   @Test
   public void testPostBallot() {
@@ -153,9 +142,9 @@ public class RestEndpointTests {
 
     //TODO: find a law that is currently in the voting phase
     //TODO: create a random voteOrder of (some of) its competing proposals
-    //TODO: calculate userHash
+    //TODO: calculate new(!) userHash  (make test repeatable!)
 
-    // I am deliberately not createing a new BallotModel(...) here that I could then   postForEntity like this:
+    // I am deliberately not creating a new BallotModel(...) here that I could then   postForEntity like this:
     //   ResponseEntity<BallotModel> createdBallot = client.postForEntity("/ballot", newBallot, BallotModel.class);
     // because I do not want the test to success just because of on spring's very clever serialization and deserialization.
     //
@@ -196,7 +185,7 @@ public class RestEndpointTests {
     log.trace("TEST getNumVotes");
     UserModel user4 = userRepo.findByEmail(TestFixtures.USER4_EMAIL);
     AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-    String uri = "/users/"+user4.getId()+"/getNumVotes?areaId="+area1.getId();
+    String uri = BASE_URL+"/users/"+user4.getId()+"/getNumVotes?areaId="+area1.getId();
 
     Integer numVotes = client.getForObject(uri, Integer.class);
 
@@ -209,9 +198,7 @@ public class RestEndpointTests {
   public void testSaveProxy() {
     log.trace("TEST saveProxy");
 
-    String fromUserId = userRepo.findByEmail(TestFixtures.USER1_EMAIL).getId();
-
-    String url = "/users/"+fromUserId+"/delegations";
+    String url = BASE_URL+"/users/"+this.users.get(0).getId()+"/delegations";
     //Implementation note: I tried doing this via the auto generated /liquido/v2/delegations endpoint.  But it only support POST a new item. I need an upsert operation here.
 
     //I am deliberately not using DelegationModel here. This is the JSON as a client would send it.
@@ -224,31 +211,53 @@ public class RestEndpointTests {
     headers.setContentType(MediaType.APPLICATION_JSON);
     HttpEntity<String> entity = new HttpEntity<String>(newDelegationJSON.toString(), headers);
 
-    client.put(url, entity);    //TODO: this is stupid that PUT does not return anything. Maybe I have to switch to     URI upsertedDelegationURI = client.postForLocation(url, entity);
+    ResponseEntity<String> result = client.exchange(url, HttpMethod.PUT, entity, String.class);
 
-    /*
-    URI upsertedDelegationURI = client.postForLocation(url, entity);
-    assertNotNull(upsertedDelegationURI);
-    */
+    assertEquals(result.getStatusCode(), HttpStatus.OK);
 
     log.trace("TEST SUCCESS: saved delegation to proxy successfully");
+  }
+
+  /**
+   * try to save a delegation with an invalid objectID
+   */
+  @Test
+  public void testSaveInvalidProxy() {
+    log.trace("TEST saveProxy");
+
+    String url = BASE_URL+"/delegations";
+
+    //I am deliberately not using DelegationModel here. This is the JSON as a client would send it.
+    JSONObject newDelegationJSON = new JSONObject()
+      .put("fromUser", this.users.get(0).getId())
+      .put("toProxy",  "ffffffffffffffffffffffff")   // invalid userID  (but still a valid mongo ObjectId
+      .put("area",     this.areas.get(3).getId());
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    HttpEntity<String> entity = new HttpEntity<String>(newDelegationJSON.toString(), headers);
+
+    ResponseEntity<String> result = client.exchange(url, HttpMethod.POST, entity, String.class);
+
+    assertEquals(result.getStatusCode(), HttpStatus.BAD_REQUEST);
+
+    log.trace("TEST SUCCESS: invalid delegation was rejected as expected");
   }
 
   @Test
   public void testPostDuplicateArea() {
     log.trace("TEST postDuplicateArea");
-    AreaModel existingArea = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
 
     String url = "/liquido/v2/areas";
     JSONObject duplicateAreaJson = new JSONObject()
-      .put("title", existingArea.getTitle())
+      .put("title", TestFixtures.AREA1_TITLE)           // area with that title already exists.
       .put("description", "duplicate Area from test");
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
     HttpEntity<String> entity = new HttpEntity<String>(duplicateAreaJson.toString(), headers);
 
-    ResponseEntity<String> responseEntity = client.postForEntity(url, entity, String.class);  // This will return HTTP status 409(Conflict) becasue of the duplicate composite key.
+    ResponseEntity<String> responseEntity = client.postForEntity(url, entity, String.class);  // This will return HTTP status 409(Conflict) because of the duplicate composite key.
 
     log.trace("responseEntity:\n" + responseEntity);
     assertEquals(responseEntity.getStatusCode(), HttpStatus.CONFLICT);  // status == 409

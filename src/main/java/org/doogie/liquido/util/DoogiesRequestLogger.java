@@ -28,8 +28,18 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
   @Override
   protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain filterChain) throws ServletException, IOException {
     long startTime = System.currentTimeMillis();
-    String reqId = "[" + startTime % 10000 + "]";
-    this.logger.debug("=> " + reqId + " " + req.getMethod() + " " + req.getRequestURI());
+    StringBuffer reqInfo = new StringBuffer()
+     .append("[")
+     .append(startTime % 10000)
+     .append("] ")
+     .append(req.getMethod())
+     .append(" ")
+     .append(req.getRequestURL());
+    String queryString = req.getQueryString();
+    if (queryString != null) {
+      reqInfo.append("?").append(queryString);
+    }
+    this.logger.debug("=> " + reqInfo);
     /*
       //Keep in mind, that we cannon simply log the body. Because this input stream can only be read once.
       String requestBody = DoogiesUtil._stream2String(req.getInputStream());
@@ -37,7 +47,7 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     */
     filterChain.doFilter(req, res);
     long duration = System.currentTimeMillis() - startTime;
-    this.logger.debug("<= " + reqId + " " + req.getMethod() + " " + req.getRequestURI() + ": returned status=" + res.getStatus() + " in "+duration + "ms");
+    this.logger.debug("<= " + reqInfo + ": returned status=" + res.getStatus() + " in "+duration + "ms");
   }
 
 }

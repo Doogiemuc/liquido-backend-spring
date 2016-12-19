@@ -1,4 +1,4 @@
-package org.doogie.liquido.model;
+package org.doogie.liquido.datarepos;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.config.EnableMongoAuditing;

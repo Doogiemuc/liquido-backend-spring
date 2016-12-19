@@ -1,9 +1,10 @@
 package org.doogie.liquido.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.doogie.liquido.model.BeforeCreateDelegationValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.rest.core.config.RepositoryRestConfiguration;
+import org.springframework.data.rest.core.event.ValidatingRepositoryEventListener;
 import org.springframework.data.rest.core.mapping.RepositoryDetectionStrategy;
 import org.springframework.data.rest.webmvc.config.RepositoryRestConfigurerAdapter;
 import org.springframework.stereotype.Component;
@@ -27,6 +28,12 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
     // In future versions this will be configurable in application.properties   spring.data.rest.detection-strategy=visibility   https://github.com/spring-projects/spring-boot/issues/7113
     config.setRepositoryDetectionStrategy(RepositoryDetectionStrategy.RepositoryDetectionStrategies.ANNOTATED);
 
+  }
+
+  @Override
+  public void configureValidatingRepositoryEventListener(ValidatingRepositoryEventListener validatingListener) {
+    log.info("========== adding beforeSave validator");
+    validatingListener.addValidator("beforeCreate", new BeforeCreateDelegationValidator());
   }
 
   // Overwriting this method is not necessary. MongoMapperModule is automatically recognized by SpringBoot
