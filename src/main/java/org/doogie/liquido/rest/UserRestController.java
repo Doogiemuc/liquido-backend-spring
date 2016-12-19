@@ -29,12 +29,16 @@ import static org.springframework.web.bind.annotation.RequestMethod.PUT;
 /**
  * Controller for our RESTfull endpoint for user management.
  *
- * REST Resouces:
- *  BASE     /users/{userId}
- *  GET        /getNumVotes   - return the number of votes that this user may cast
- *  PUT        /delegations   - save a new proxy (upsert: updated existing delegation or insert a new one if that user has no delegation in that area yet.)
+ * Available endpoints:   This is the same endpoint as published by the SprintRestController for the users repository. We extend it with some additional endpoints:
+ *
+ *  BASE_URL     /liquido/v2/users
+ *  RESOURCE       /{userId}
+ *  GET              /getNumVotes   - return the number of votes that this user may cast
+ *  PUT              /delegations   - save a new proxy (upsert: updated existing delegation or insert a new one if that user has no delegation in that area yet.)
+ *
  */
 @RestController
+@RequestMapping("/liquido/v2/users")
 public class UserRestController {
   Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
 
@@ -66,9 +70,9 @@ public class UserRestController {
    * @param req HttpServletRequest automatically injected by Spring
    * @return the number of votes this user may cast, including his own one!
    */
-  @RequestMapping(value = "/users/{userId}/getNumVotes", method = GET)
+  @RequestMapping(value = "/{userId}/getNumVotes", method = GET)
   public int getNumVotes(@PathVariable String userId, @PathParam("areaId") String areaId, HttpServletRequest req) throws Exception {
-    log.trace("=> GET numVotes "+req.getRequestURI());
+    log.trace("=> GET numVotes(userId=" + userId + ", areaId=" + areaId + ")");
     //check that userId and areaId are correct and exist
     UserModel user = userRepo.findOne(userId);
     AreaModel area = areaRepo.findOne(areaId);
@@ -77,25 +81,34 @@ public class UserRestController {
     //TODO: get number of votes from cache if possible
     //calculate number of votes from "delegations" in DB
     int numVotes = delegationRepo.getNumVotes(userId, areaId);
-    log.trace("<= GET numVotes = "+numVotes);
+    log.trace("<= GET numVotes(userId=" + userId + ", areaId=" + areaId + ") = "+numVotes);
     return numVotes;
   }
 
-  @RequestMapping(value = "/users/{userId}/delegations", method = PUT)
+  /**
+   * Save a proxy. This will insert a new delegation or update the existing one
+   * @param userId
+   * @param newDelegation
+   * @param bindingResult
+   * @param req
+   * @return
+   * @throws Exception
+   */
+  @RequestMapping(value = "/{userId}/delegations", method = PUT)
   public String saveProxy(@PathVariable String userId, @Valid @RequestBody DelegationModel newDelegation, BindingResult bindingResult, HttpServletRequest req) throws Exception {
     log.trace("=> PUT saveProxy: newDelegation="+newDelegation);
-    // validation did happen in DelegationValidator class
+    // validation did happen in DelegationValidator.java  This includes checking foreign keys!
     if (bindingResult.hasErrors()) {
       log.trace("   newDelegation is invalid: " + bindingResult.getAllErrors());
       throw new BindException(bindingResult);  // this generates a cool error message. Undocumented spring feature :-)
     }
 
-    //Do not create the delegation twice if it already exists. (There is also a combined unique contraint in MongoDB on  (area, fromUser, toProxy)
+    //Do not create the delegation twice if it already exists. (There is also a combined unique constraint in MongoDB on  (area, fromUser, toProxy)
     DelegationModel existingDelegation = delegationRepo.findOne(Example.of(newDelegation));
     if (existingDelegation != null) {
       log.trace("   update existing delegation with id="+existingDelegation.getId());
       newDelegation.setId(existingDelegation.getId());
-      delegationRepo.save(newDelegation);
+      delegationRepo.save(newDelegation);  //TODO: This is actually not necessary. A delegatino consinsts only of foreign keys. Nothing to update. (except maybe timestamp)
     } else {
       log.trace("   insert new delegation");
       delegationRepo.insert(newDelegation);

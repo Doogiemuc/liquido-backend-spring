@@ -9,5 +9,6 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
  */
 @RepositoryRestResource(collectionResourceRel = "laws", path = "laws")
 public interface LawRepo extends MongoRepository<LawModel, String> {
-  // EMPTY: all CRUD operations are automically created.
+  // EMPTY: all CRUD operations are automatically created.
+
 }
