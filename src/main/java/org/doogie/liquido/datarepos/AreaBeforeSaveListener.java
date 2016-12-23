@@ -14,6 +14,5 @@ public class AreaBeforeSaveListener extends AbstractMongoEventListener<AreaModel
   public void onBeforeSave(BeforeSaveEvent<AreaModel> event) {
     AreaModel area = event.getSource();
     System.out.println("====> onBeforeSave "+area);
-
   }
 }

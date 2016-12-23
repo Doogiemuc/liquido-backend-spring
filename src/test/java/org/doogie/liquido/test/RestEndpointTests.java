@@ -213,7 +213,7 @@ public class RestEndpointTests {
 
     ResponseEntity<String> result = client.exchange(url, HttpMethod.PUT, entity, String.class);
 
-    assertEquals(result.getStatusCode(), HttpStatus.OK);
+    assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
 
     log.trace("TEST SUCCESS: saved delegation to proxy successfully");
   }
