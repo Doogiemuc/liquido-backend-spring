@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Database abstraction for MongoDB collection "delegations".
  */
-@RepositoryRestResource(collectionResourceRel = "delegations", path = "delegations")
+@RepositoryRestResource(collectionResourceRel = "delegations", path = "delegations", itemResourceRel = "delegation")
 public interface DelegationRepo extends MongoRepository<DelegationModel, String>, DelegationRepoCustom {
 
   //Delegations have a combined unique index on area,fromUSer and toProxy
@@ -37,6 +37,6 @@ public interface DelegationRepo extends MongoRepository<DelegationModel, String>
    * @param areaId ID of an area
    * @return all <b>direct</b> delegations to this proxy in that area as a List of DelegationModels (may be empty list)
    */
-  List<DelegationModel> findByToProxyAndArea(String toProxyId, String areaId);
+  List<DelegationModel> findByToProxyAndArea(@Param("toProxyId") String toProxyId, @Param("areaId") String areaId);
 
 }

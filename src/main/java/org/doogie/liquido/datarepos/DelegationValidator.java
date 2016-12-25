@@ -32,7 +32,7 @@ public class DelegationValidator implements Validator {
   AreaRepo areaRepo;
 
   public DelegationValidator() {
-    log.info("==== DelegationValidator constructor");
+    //log.info("==== DelegationValidator constructor");
   }
 
   @Override
@@ -48,7 +48,7 @@ public class DelegationValidator implements Validator {
   @Override
   public void validate(Object o, Errors errors) {
     DelegationModel delegation = (DelegationModel)o;
-    log.trace("======== Validating Delegation: "+delegation);
+    log.trace("Validating Delegation: "+delegation);
     String areaId      = delegation.getArea().toHexString();
     String fromUserId  = delegation.getFromUser().toHexString();
     String toProxyId   = delegation.getToProxy().toHexString();
@@ -57,6 +57,6 @@ public class DelegationValidator implements Validator {
     if (!userRepo.exists(fromUserId)) errors.rejectValue("fromUser", "objectId.mustExist", new String[]{fromUserId}, "Referenced userId does not exist: "+fromUserId);
     if (!userRepo.exists(toProxyId)) errors.rejectValue("toProxy", "objectId.mustExist", new String[]{toProxyId}, "Referenced userId does not exist: "+toProxyId);
 
-    if (errors.hasErrors()) { log.debug("Validation of Delegation failed: "+ errors); }
+    if (errors.hasErrors()) { log.trace("Validation of Delegation failed: "+ errors); }
   }
 }

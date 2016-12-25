@@ -5,7 +5,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
-@RepositoryRestResource(collectionResourceRel = "areas", path = "areas")
+@RepositoryRestResource(collectionResourceRel = "areas", path = "areas", itemResourceRel = "area")
 public interface AreaRepo extends MongoRepository<AreaModel, String> {
 
   //Note: Areas have a unique index on field title:    db.areas.createIndex({ "title": 1 }, { unique: true })

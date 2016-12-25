@@ -14,10 +14,10 @@ import javax.validation.constraints.NotNull;
 import java.util.Date;
 
 @Data
-@Document(collection = "laws")
-public class LawModel {
+@Document(collection = "ideas")
+public class IdeaModel {
   @Id
-  private String id;
+  public String id;
 
   @NotNull
   @NotEmpty
@@ -26,12 +26,6 @@ public class LawModel {
   @NotNull
   @NotEmpty
   public String description;
-
-  /** Reference to initial proposal. May be reference to self */
-  @DBRef
-  LawModel initialLaw;
-
-  public int status;
 
   //TODO: configure createBy User for laws: http://docs.spring.io/spring-data/jpa/docs/current/reference/html/index.html#auditing.auditor-aware
   @CreatedBy
@@ -44,11 +38,10 @@ public class LawModel {
   @CreatedDate
   public Date createdAt;
 
-  public LawModel(String title, String description, int status, LawModel initialLaw) {
+  public IdeaModel(String title, String description, UserModel createdBy) {
     this.title = title;
     this.description = description;
-    this.status = status;
-    this.initialLaw = initialLaw;
+    this.createdBy = createdBy;
   }
 
 }

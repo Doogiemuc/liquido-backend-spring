@@ -64,7 +64,7 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
 
   @Override
   public void configureJacksonObjectMapper(ObjectMapper objectMapper) {
-    log.debug("==== configureJacksonObjectMapper");
+    log.debug("configureJacksonObjectMapper for (de)serializing ObjectIds to Strings");
     SimpleModule myModule = new SimpleModule("ObjectIdJacksonModule");
     myModule.addSerializer(ObjectId.class, new MongoObjectIdSerializer());
     objectMapper.registerModule(myModule);
@@ -75,7 +75,7 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
     //TODO: BUG: This serializer ist not yet picked up in exception handling of spring-data-rest exceptions
     @Override
     public void serialize(ObjectId objectId, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
-      log.debug("==== serializing ObjectID  from RepositoryRestConfigurer");
+      //log.debug("serializing ObjectID  from RepositoryRestConfigurer");
       jsonGenerator.writeString(objectId.toHexString());
     }
   }

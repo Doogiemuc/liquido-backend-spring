@@ -7,7 +7,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 /**
  * Database abstraction for MongoDB collection "ballot".
  */
-//NOT exported as @RepositoryRestResource ! Ballots can only be accessed via BallotRestcontroller
+//NOT exported as @RepositoryRestResource ! Ballots can only be accessed via BallotRestController
 public interface BallotRepo extends MongoRepository<BallotModel, String> {
   // EMPTY
 }
