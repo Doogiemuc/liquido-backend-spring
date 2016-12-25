@@ -11,7 +11,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
  * This Repository is exposed as REST service under the endpint <pre>/users</pre>
  * see https://spring.io/guides/gs/accessing-mongodb-data-rest/
  */
-@RepositoryRestResource(collectionResourceRel = "users", path = "users")
+@RepositoryRestResource(collectionResourceRel = "users", path = "users", itemResourceRel = "user")
 public interface UserRepo extends MongoRepository<UserModel, String> {
 
   /**

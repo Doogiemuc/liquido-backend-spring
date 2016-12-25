@@ -12,8 +12,16 @@ spring.http.converters.preferred-json-mapper=gson
 
 ## Logging
 
+spring.output.ansi.enabled=ALWAYS
 logging.level.org.doogie.liquido=TRACE
+logging.level.org.springframework.web.filter.CommonsRequestLoggingFilter=DEBUG
+
+# Since 10 years and three logging frameworks I am always re-learning, how to configure this simple logging format. It gives you clickable Links in your IDE *G*
+logging.pattern.console=%highlight(%-5level) %cyan(%-70.70(.\\(%file:%line\\).%method\\(\\))) | %message%n
+
+
+# Spring Data Rest services  are configured in org.doogie.rest.RepositoryRestConfigurer class
 
 # MongoDB via spring-data-mongo
 
-spring.data.mongodb.uri=mongodb://USER:PASSWORD@ds019664.mlab.com:19664/liquido-test
+spring.data.mongodb.uri=mongodb://localhost:27017/liquido-test

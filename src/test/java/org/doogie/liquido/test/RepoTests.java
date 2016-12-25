@@ -1,5 +1,7 @@
 package org.doogie.liquido.test;
 
+import org.doogie.liquido.datarepos.IdeaRepo;
+import org.doogie.liquido.model.IdeaModel;
 import org.springframework.dao.DuplicateKeyException;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
@@ -14,7 +16,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.doogie.liquido.test.matchers.UserMatcher.userWithEMail;
 import static org.hamcrest.CoreMatchers.hasItem;
@@ -29,13 +33,16 @@ public class RepoTests {
   private Logger log = LoggerFactory.getLogger(this.getClass());
 
   @Autowired
-  private UserRepo userRepo;
+  UserRepo userRepo;
 
   @Autowired
-  private DelegationRepo delegationRepo;
+  DelegationRepo delegationRepo;
 
   @Autowired
-  private AreaRepo areaRepo;
+  AreaRepo areaRepo;
+
+  @Autowired
+  IdeaRepo ideaRepo;
 
 
   @Test
@@ -50,9 +57,28 @@ public class RepoTests {
   public void findUserByEmail() {
     UserModel foundUser = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
     assertNotNull(TestFixtures.USER1_EMAIL +" could not be found", foundUser);
-    assertEquals(TestFixtures.USER1_EMAIL, foundUser.getEMail());
+    assertEquals(TestFixtures.USER1_EMAIL, foundUser.getEmail());
     log.info("TEST SUCCESS: "+ TestFixtures.USER1_EMAIL +" found by email.");
   }
+
+  @Test
+  public void testCreateIdeaWithCreatedByUser() {
+    /*
+    UserModel user1 = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
+    IdeaModel newIdea = new IdeaModel("Test Title by User1", "Some very nice idea description", user1);
+
+    IdeaModel insertedIdea = ideaRepo.insert(newIdea);
+
+    log.trace("insertedIdea "+insertedIdea);
+    */
+
+    List<IdeaModel> ideas = ideaRepo.findAll();
+    for(IdeaModel idea : ideas) {
+      log.debug(idea.toString());
+    };
+
+  }
+
 
   @Test
   public void getNumVotes() {

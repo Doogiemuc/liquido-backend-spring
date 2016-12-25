@@ -5,10 +5,7 @@ import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.UserRepo;
-import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.BallotModel;
-import org.doogie.liquido.model.LawModel;
-import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.model.*;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -21,10 +18,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.embedded.LocalServerPort;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.boot.web.client.RootUriTemplateHandler;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.*;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.ResponseErrorHandler;
+import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
@@ -62,13 +63,17 @@ public class RestEndpointTests {
 
   }
   */
-  /*   use with WebEnvironment.RANDOM_PORT   (when SpringBootTest starts the server) */
+  /*   use with WebEnvironment.RANDOM_PORT   (when SpringBootTest starts the server)
   @Autowired
-  TestRestTemplate client;    // REST client that is automatically configured with port of running test server.
+  TestRestTemplate client;    // REST client that is automatically configured with localServerPort of running test server.
+                              // BUG: but wit the wrong base url
+  */
 
+  @Autowired
+  TestRestTemplate client;
 
   @LocalServerPort
-  int port;
+  int localServerPort;
 
   @Autowired
   UserRepo userRepo;
@@ -82,6 +87,12 @@ public class RestEndpointTests {
   @Autowired
   DelegationRepo delegationRepo;
 
+  @Bean
+  RestTemplateBuilder restTemplateBuilder() {
+    //BUG: This is never called: https://github.com/spring-projects/spring-boot/issues/6465
+    log.trace("========== resteTemplateBuilder" + localServerPort);
+    return new RestTemplateBuilder();
+  }
 
   /* HTTP body of last error response */
   String lastErrorResponseBody = "";
@@ -108,7 +119,15 @@ public class RestEndpointTests {
   @PostConstruct
   public void doLogging() {
     log.info("Spring tests started");
+    // Here you can do any one time setup necessary
+    log.trace("preloading data from DB");
+    this.users = userRepo.findAll();
+    this.areas = areaRepo.findAll();
+    this.laws  = lawRepo.findAll();
+
     client.getRestTemplate().setErrorHandler(new LiquidoTestErrorHandler());
+    //client.getRestTemplate().setDefaultUriVariables();   //TODO:  for API keys
+    client.getRestTemplate().setUriTemplateHandler(new RootUriTemplateHandler("http://localhost:"+ localServerPort +BASE_URL));
   }
 
   /**
@@ -116,23 +135,30 @@ public class RestEndpointTests {
    * Keep in mind that this will run before every single test case!
    */
   @Before
-  public void preloadData() {
-    log.trace("preloading data from DB");
-    this.users = userRepo.findAll();
-    this.areas = areaRepo.findAll();
-    this.laws  = lawRepo.findAll();
+  public void beforeEachTest() {
+    log.trace("This runs before each single test case");
   }
 
   @Test
   public void testDelegationObjectIdConversion() {
     log.trace("TEST testDelegationObjectIdConversion");
 
-    String result = client.getForObject(BASE_URL+"/delegations", String.class);
+    String result = client.getForObject("/delegations", String.class);
 
-    log.debug(result);
-
+    //log.debug(result);
+    //TODO: assert
     log.info("TEST testDelegationObjectIdConversion");
   }
+
+  @Test
+  public void testFindMostRecentIdeas() {
+    log.trace("TEST testFindMostRecentIdeas");
+    List<IdeaModel> recentIdeas = client.getForObject("/getRecentIdeas", List.class);
+    log.debug("Got size="+recentIdeas.size());
+    assertTrue(recentIdeas.size() > 8);
+
+  }
+
 
   @Test
   public void testPostBallot() {

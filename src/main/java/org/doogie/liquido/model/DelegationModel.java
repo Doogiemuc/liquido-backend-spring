@@ -1,8 +1,6 @@
 package org.doogie.liquido.model;
 
 import org.bson.types.ObjectId;
-import org.doogie.liquido.datarepos.ObjectIdExistsIn;
-import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -18,15 +16,12 @@ public class DelegationModel {
 
   /** area */
   @NotNull
-  @ObjectIdExistsIn
   public ObjectId area;
 
   /** ObjectId of delegee user */
-  @ObjectIdExistsIn
   public ObjectId fromUser;
 
   /** ObjectId of proxy user */
-  @ObjectIdExistsIn
   public ObjectId toProxy;
 
   @LastModifiedDate

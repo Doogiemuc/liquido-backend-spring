@@ -16,7 +16,7 @@ public class UserMatcher extends TypeSafeMatcher<UserModel> {
 
   @Override
   protected boolean matchesSafely(UserModel userModel) {
-    return email.equals(userModel.getEMail());
+    return email.equals(userModel.getEmail());
   }
 
   @Override
