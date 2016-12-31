@@ -16,8 +16,11 @@ public interface IdeaRepo extends MongoRepository<IdeaModel, String> {
 
   //TODO: make Ideas.getAll() pageable?  need to be in sync with client implementation
 
-  /** find the most recently created ideas */
-  @RestResource(path = "getRecent")
+  /**
+   * Find the most recently created ideas.
+   * published as  /liquido/v2/ideas/search/recentIdeas
+   */
+  @RestResource(path = "recentIdeas")
   List<IdeaModel> findFirst10ByOrderByCreatedAtDesc();  // http://docs.spring.io/spring-data/data-mongo/docs/1.9.6.RELEASE/reference/html/#repositories.limit-query-result
 
 }

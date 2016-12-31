@@ -27,6 +27,11 @@ public class IdeaModel {
   @NotEmpty
   public String description;
 
+  @DBRef
+  AreaModel area;
+
+  //TODO: List<UserModel> supporters;  // need list of all supporters so that no one is allowed to vote twice
+
   //TODO: configure createBy User for laws: http://docs.spring.io/spring-data/jpa/docs/current/reference/html/index.html#auditing.auditor-aware
   @CreatedBy
   @DBRef
@@ -38,9 +43,10 @@ public class IdeaModel {
   @CreatedDate
   public Date createdAt;
 
-  public IdeaModel(String title, String description, UserModel createdBy) {
+  public IdeaModel(String title, String description, AreaModel area, UserModel createdBy) {
     this.title = title;
     this.description = description;
+    this.area = area;
     this.createdBy = createdBy;
   }
 
