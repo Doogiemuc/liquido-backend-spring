@@ -32,8 +32,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.doogie.liquido.test.TestFixtures.BASE_URL;
-
 import static org.junit.Assert.*;
 
 /**
@@ -116,8 +114,11 @@ public class RestEndpointTests {
     }
   }
 
+  /**
+   * this is executed, when the Bean has been created and @Autowired references are injected and ready.
+   */
   @PostConstruct
-  public void doLogging() {
+  public void postConstruct() {
     log.info("Spring tests started");
     // Here you can do any one time setup necessary
     log.trace("preloading data from DB");
@@ -127,7 +128,7 @@ public class RestEndpointTests {
 
     client.getRestTemplate().setErrorHandler(new LiquidoTestErrorHandler());
     //client.getRestTemplate().setDefaultUriVariables();   //TODO:  for API keys
-    client.getRestTemplate().setUriTemplateHandler(new RootUriTemplateHandler("http://localhost:"+ localServerPort +BASE_URL));
+    client.getRestTemplate().setUriTemplateHandler(new RootUriTemplateHandler("http://localhost:"+ localServerPort +TestFixtures.BASE_URL));
   }
 
   /**
@@ -211,7 +212,7 @@ public class RestEndpointTests {
     log.trace("TEST getNumVotes");
     UserModel user4 = userRepo.findByEmail(TestFixtures.USER4_EMAIL);
     AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-    String uri = BASE_URL+"/users/"+user4.getId()+"/getNumVotes?areaId="+area1.getId();
+    String uri = "/users/"+user4.getId()+"/getNumVotes?areaId="+area1.getId();
 
     Integer numVotes = client.getForObject(uri, Integer.class);
 
@@ -224,7 +225,7 @@ public class RestEndpointTests {
   public void testSaveProxy() {
     log.trace("TEST saveProxy");
 
-    String url = BASE_URL+"/users/"+this.users.get(0).getId()+"/delegations";
+    String url = "/users/"+this.users.get(0).getId()+"/delegations";
     //Implementation note: I tried doing this via the auto generated /liquido/v2/delegations endpoint.  But it only support POST a new item. I need an upsert operation here.
 
     //I am deliberately not using DelegationModel here. This is the JSON as a client would send it.
@@ -251,7 +252,7 @@ public class RestEndpointTests {
   public void testSaveInvalidProxy() {
     log.trace("TEST saveProxy");
 
-    String url = BASE_URL+"/delegations";
+    String url = "/delegations";
 
     //I am deliberately not using DelegationModel here. This is the JSON as a client would send it.
     JSONObject newDelegationJSON = new JSONObject()

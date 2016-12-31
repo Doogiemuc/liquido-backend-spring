@@ -1,6 +1,7 @@
 package org.doogie.liquido.datarepos;
 
 import org.bson.types.ObjectId;
+import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.IdeaModel;
 import org.doogie.liquido.model.UserModel;
 import org.springframework.data.rest.core.config.Projection;
@@ -23,40 +24,49 @@ interface IdeaProjection {
 
   // this will inline the DBRef to UserModel into the JSON of every idea
   UserModel getCreatedBy();
+
+  AreaModel getArea();
 }
 
 /*  example JSON of exposed REST HATEOAS resource "idea"
 
 
      {
-        "title": "Test Title",
-        "description": "Some very nice idea description",
-        "createdBy": {
-          "email": "testuser1@liquido.de",
-          "passwordHash": "$2a$10$39c7ORNl9ZI8ckwpNLLlPuMAh.IzAxuZTvQj9sWV38pqnRN.m7izO",
-          "profile": {
-            "name": "Test User1",
-            "website": "http://www.liquido.de",
-            "picture": "/static/img/Avatar_32x32.jpeg"
-          },
-          "updatedAt": "2016-11-17T20:53:48.801+0000",
-          "createdAt": "2016-11-16T20:53:48.801+0000"
+      "title" : "Test Title by User1 1482763815625",
+      "description" : "Some very nice idea description",
+      "area" : {
+        "title" : "Area 1",
+        "description" : "Department/Area of interest or ministry 1",
+        "updatedAt" : "2016-10-16T20:53:49.717+0000",
+        "createdAt" : "2016-10-16T20:53:49.717+0000"
+      },
+      "createdBy" : {
+        "email" : "testuser1@liquido.de",
+        "profile" : {
+          "name" : "Test User1",
+          "website" : "http://www.liquido.de",
+          "picture" : "/static/img/Avatar_32x32.jpeg"
         },
-        "updatedAt": "2016-12-25T19:23:50.448+0000",
-        "createdAt": "2016-12-25T19:23:50.448+0000",
-        "_links": {
-          "self": {
-            "href": "http://localhost:8080/liquido/v2/ideas/58601cc69f6c11127873b254"
-          },
-          "ideaModel": {
-            "href": "http://localhost:8080/liquido/v2/ideas/58601cc69f6c11127873b254{?projection}",
-            "templated": true
-          },
-          "createdBy": {
-            "href": "http://localhost:8080/liquido/v2/ideas/58601cc69f6c11127873b254/createdBy"
-          }
+        "updatedAt" : "2016-11-17T20:53:48.801+0000",
+        "createdAt" : "2016-11-16T20:53:48.801+0000"
+      },
+      "updatedAt" : "2016-12-26T14:50:15.635+0000",
+      "createdAt" : "2016-12-26T14:50:15.635+0000",
+      "_links" : {
+        "self" : {
+          "href" : "http://localhost:8090/liquido/v2/ideas/58612e279f6c1110a463b3a8"
+        },
+        "idea" : {
+          "href" : "http://localhost:8090/liquido/v2/ideas/58612e279f6c1110a463b3a8{?projection}",
+          "templated" : true
+        },
+        "area" : {
+          "href" : "http://localhost:8090/liquido/v2/ideas/58612e279f6c1110a463b3a8/area"
+        },
+        "createdBy" : {
+          "href" : "http://localhost:8090/liquido/v2/ideas/58612e279f6c1110a463b3a8/createdBy"
         }
       }
-
+    }
 
  */

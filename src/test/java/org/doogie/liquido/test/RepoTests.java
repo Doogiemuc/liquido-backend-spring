@@ -61,16 +61,16 @@ public class RepoTests {
     log.info("TEST SUCCESS: "+ TestFixtures.USER1_EMAIL +" found by email.");
   }
 
+  //TODO: extend this to seed the DB.  I think there is already something in spring
   @Test
-  public void testCreateIdeaWithCreatedByUser() {
-    /*
+  public void testCreateIdeaWithAllRefs() {
     UserModel user1 = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
-    IdeaModel newIdea = new IdeaModel("Test Title by User1", "Some very nice idea description", user1);
+    AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+    IdeaModel newIdea = new IdeaModel("Test Title by User1 "+System.currentTimeMillis(), "Some very nice idea description", area1, user1);
 
     IdeaModel insertedIdea = ideaRepo.insert(newIdea);
 
     log.trace("insertedIdea "+insertedIdea);
-    */
 
     List<IdeaModel> ideas = ideaRepo.findAll();
     for(IdeaModel idea : ideas) {
@@ -91,7 +91,7 @@ public class RepoTests {
   }
 
   @Test
-  public void testUpsert() {
+  public void testUpdate() {
     log.trace("TEST update");
     long count1 = areaRepo.count();
     AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
