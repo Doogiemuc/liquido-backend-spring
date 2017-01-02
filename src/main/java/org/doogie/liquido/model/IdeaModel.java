@@ -1,40 +1,57 @@
 package org.doogie.liquido.model;
 
 import lombok.Data;
-import org.bson.types.ObjectId;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.mapping.DBRef;
-import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.util.Date;
+import java.util.List;
 
 @Data
-@Document(collection = "ideas")
+@Entity
+@NoArgsConstructor
+@RequiredArgsConstructor
+@EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
+@Table(name = "ideas")
 public class IdeaModel {
   @Id
-  public String id;
+  @GeneratedValue
+  public Long id;
 
   @NotNull
+  @NonNull
   @NotEmpty
+  @Column(unique = true)
   public String title;
 
   @NotNull
+  @NonNull
   @NotEmpty
   public String description;
 
-  @DBRef
+  @NonNull
+  @OneToOne
   AreaModel area;
 
-  //TODO: List<UserModel> supporters;  // need list of all supporters so that no one is allowed to vote twice
+  /** list of users that support this idea */
+  @ManyToMany(fetch = FetchType.EAGER)    //BUGFIX: EAGER loading is neseccary for testCreateIdeaWithAllRefs to work!
+  List<UserModel> supporters;  // need list of all supporters so that no one is allowed to vote twice
 
-  //TODO: configure createBy User for laws: http://docs.spring.io/spring-data/jpa/docs/current/reference/html/index.html#auditing.auditor-aware
+  //TODO: configure createBy
+  // http://docs.spring.io/spring-data/jpa/docs/current/reference/html/index.html#auditing.auditor-aware
+  // https://blog.countableset.com/2014/03/08/auditing-spring-data-jpa-java-config/    nice example
   @CreatedBy
-  @DBRef
+  @NonNull
+  @NotNull
+  @ManyToOne(fetch = FetchType.EAGER)
   public UserModel createdBy;
 
   @LastModifiedDate
@@ -42,12 +59,5 @@ public class IdeaModel {
 
   @CreatedDate
   public Date createdAt;
-
-  public IdeaModel(String title, String description, AreaModel area, UserModel createdBy) {
-    this.title = title;
-    this.description = description;
-    this.area = area;
-    this.createdBy = createdBy;
-  }
 
 }

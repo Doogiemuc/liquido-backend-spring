@@ -1,20 +1,23 @@
 package org.doogie.liquido.datarepos;
 
 import org.doogie.liquido.model.IdeaModel;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.data.rest.core.annotation.RestResource;
 
 import java.util.List;
 
 /**
- * Database abstraction for MongoDB collection "ideas".
+ * Database abstraction "ideas".
  * Every idea will automatically have its createdBy user inlined.
  */
 @RepositoryRestResource(collectionResourceRel = "ideas", path = "ideas", itemResourceRel = "idea", excerptProjection = IdeaProjection.class)
-public interface IdeaRepo extends MongoRepository<IdeaModel, String> {
+public interface IdeaRepo extends CrudRepository<IdeaModel, Long> {
 
   //TODO: make Ideas.getAll() pageable?  need to be in sync with client implementation
+
+  IdeaModel findByTitle(@Param("title") String title);
 
   /**
    * Find the most recently created ideas.

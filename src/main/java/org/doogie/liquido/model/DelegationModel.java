@@ -1,28 +1,45 @@
 package org.doogie.liquido.model;
 
-import org.bson.types.ObjectId;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import javax.validation.constraints.NotNull;
+import javax.persistence.*;
 import java.util.Date;
 
-@Document(collection = "delegations")
+/**
+ * Delegation from a user to a proxy in a given area.
+ * This entity only consists of the three foreign keys.
+ */
+@Entity
+@Data
+@NoArgsConstructor
+@RequiredArgsConstructor
+@EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
+@Table(name = "delegations")
 public class DelegationModel {
   @Id
-  private String id;
+  @GeneratedValue
+  Long id;
 
-  /** area */
-  @NotNull
-  public ObjectId area;
+  /** Area that this delegation is in */
+  @NonNull
+  @OneToOne
+  public AreaModel area;
 
-  /** ObjectId of delegee user */
-  public ObjectId fromUser;
+  /** reference to delegee that delegated his vote */
+  @NonNull
+  @OneToOne
+  public UserModel fromUser;
 
-  /** ObjectId of proxy user */
-  public ObjectId toProxy;
+  /** reference to proxy that receives the delegation */
+  @NonNull
+  @OneToOne
+  public UserModel toProxy;
 
   @LastModifiedDate
   public Date updatedAt;
@@ -30,63 +47,4 @@ public class DelegationModel {
   @CreatedDate
   public Date createdAt;
 
-  public DelegationModel() { }
-
-  public DelegationModel(ObjectId area, ObjectId fromUser, ObjectId toProxy, Date updatedAt, Date createdAt) {
-    this.area = area;
-    this.fromUser = fromUser;
-    this.toProxy = toProxy;
-    this.updatedAt = updatedAt;
-    this.createdAt = createdAt;
-  }
-
-  public ObjectId getFromUser() {
-    return fromUser;
-  }
-
-  public ObjectId getToProxy() {
-    return toProxy;
-  }
-
-  public ObjectId getArea() { return area; }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-
-    DelegationModel that = (DelegationModel) o;
-
-    if (!area.equals(that.area)) return false;
-    if (!fromUser.equals(that.fromUser)) return false;
-    return toProxy.equals(that.toProxy);
-  }
-
-  @Override
-  public int hashCode() {
-    int result = area.hashCode();
-    result = 31 * result + fromUser.hashCode();
-    result = 31 * result + toProxy.hashCode();
-    return result;
-  }
-
-  @Override
-  public String toString() {
-    return "DelegationModel{" +
-        "id='" + id + '\'' +
-        ", area=" + area +
-        ", fromUser=" + fromUser +
-        ", toProxy=" + toProxy +
-        ", updatedAt=" + updatedAt +
-        ", createdAt=" + createdAt +
-        '}';
-  }
-
-  public String getId() {
-    return id;
-  }
-
-  public void setId(String id) {
-    this.id = id;
-  }
 }

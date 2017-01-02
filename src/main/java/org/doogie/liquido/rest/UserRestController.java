@@ -10,8 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -51,17 +49,6 @@ public class UserRestController {
   @Autowired
   DelegationRepo delegationRepo;  // high level abstraction of repositories in (any) DB.
 
-//  @Autowired
-//  MongoTemplate mongoTemplate;    // low level MongoOperations
-
-  /** will validate Delegations for the existence of the references foreign keys */
-  /*  BUGFIX:  DelegationValidator cannot Autowire  repos  :-(
-  @InitBinder
-  protected void initBinder(WebDataBinder binder) {
-    binder.addValidators(new DelegationValidator());
-  }
-  */
-
   /**
    * calculate the number of votes a user may cast (including his own one) because of (transitive) delegation
    * of votes to this proxy.
@@ -71,7 +58,7 @@ public class UserRestController {
    * @return the number of votes this user may cast, including his own one!
    */
   @RequestMapping(value = "/{userId}/getNumVotes", method = GET)
-  public int getNumVotes(@PathVariable String userId, @PathParam("areaId") String areaId, HttpServletRequest req) throws Exception {
+  public int getNumVotes(@PathVariable Long userId, @PathParam("areaId") Long areaId, HttpServletRequest req) throws Exception {
     log.trace("=> GET numVotes(userId=" + userId + ", areaId=" + areaId + ")");
     //check that userId and areaId are correct and exist
     UserModel user = userRepo.findOne(userId);
@@ -80,7 +67,7 @@ public class UserRestController {
     if (area == null) throw new Exception("Area with id="+areaId+" does not exist.");
     //TODO: get number of votes from cache if possible
     //calculate number of votes from "delegations" in DB
-    int numVotes = delegationRepo.getNumVotes(userId, areaId);
+    int numVotes = delegationRepo.getNumVotes(area, user);
     log.trace("<= GET numVotes(userId=" + userId + ", areaId=" + areaId + ") = "+numVotes);
     return numVotes;
   }
@@ -94,8 +81,9 @@ public class UserRestController {
    * @return
    * @throws Exception
    */
+/*
   @RequestMapping(value = "/{userId}/delegations", method = PUT)
-  public String saveProxy(@PathVariable String userId, @Valid @RequestBody DelegationModel newDelegation, BindingResult bindingResult, HttpServletRequest req) throws Exception {
+  public String saveProxy(@PathVariable Long userId, @Valid @RequestBody DelegationModel newDelegation, BindingResult bindingResult, HttpServletRequest req) throws Exception {
     log.trace("=> PUT saveProxy: newDelegation="+newDelegation);
     // validation did happen in DelegationValidator.java  This includes checking foreign keys!
     if (bindingResult.hasErrors()) {
@@ -103,7 +91,7 @@ public class UserRestController {
       throw new BindException(bindingResult);  // this generates a cool error message. Undocumented spring feature :-)
     }
 
-    //Do not create the delegation twice if it already exists. (There is also a combined unique constraint in MongoDB on  (area, fromUser, toProxy)
+    //Do not create the delegation twice if it already exists. (There is also a combined unique constraint on  (area, fromUser, toProxy)
     DelegationModel existingDelegation = delegationRepo.findOne(Example.of(newDelegation));
     if (existingDelegation != null) {
       log.trace("   update existing delegation with id="+existingDelegation.getId());
@@ -118,7 +106,7 @@ public class UserRestController {
     log.trace("<= PUT saveProxy successful.");
     return "Proxy saved successfully";
   }
-
+*/
 }
 
 

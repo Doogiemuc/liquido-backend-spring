@@ -2,7 +2,7 @@ package org.doogie.liquido.test;
 
 import org.doogie.liquido.datarepos.IdeaRepo;
 import org.doogie.liquido.model.IdeaModel;
-import org.springframework.dao.DuplicateKeyException;
+import org.doogie.liquido.testdata.TestDataCreator;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.UserRepo;
@@ -16,9 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import javax.annotation.PostConstruct;
 
 import static org.doogie.liquido.test.matchers.UserMatcher.userWithEMail;
 import static org.hamcrest.CoreMatchers.hasItem;
@@ -33,6 +31,9 @@ public class RepoTests {
   private Logger log = LoggerFactory.getLogger(this.getClass());
 
   @Autowired
+  TestDataCreator testDataCreator;
+
+  @Autowired
   UserRepo userRepo;
 
   @Autowired
@@ -44,11 +45,16 @@ public class RepoTests {
   @Autowired
   IdeaRepo ideaRepo;
 
+  @PostConstruct
+  public void populateTestDB() {
+    //Test data was automatically injected by the CommandLineRunner
+  }
+
 
   @Test
   public void findAllUsers() {
     log.trace("TEST findAllUsers");
-    List<UserModel> allUsers = userRepo.findAll();
+    Iterable<UserModel> allUsers = userRepo.findAll();
     assertThat(allUsers, hasItem(userWithEMail(TestFixtures.USER1_EMAIL)));
     log.info("TEST SUCCESS: "+ TestFixtures.USER1_EMAIL +" found in list of all users.");
   }
@@ -61,22 +67,20 @@ public class RepoTests {
     log.info("TEST SUCCESS: "+ TestFixtures.USER1_EMAIL +" found by email.");
   }
 
-  //TODO: extend this to seed the DB.  I think there is already something in spring
   @Test
   public void testCreateIdeaWithAllRefs() {
     UserModel user1 = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
     AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-    IdeaModel newIdea = new IdeaModel("Test Title by User1 "+System.currentTimeMillis(), "Some very nice idea description", area1, user1);
+    IdeaModel newIdea = new IdeaModel("Idea from test"+System.currentTimeMillis(), "Very nice description from test", area1, user1);
 
-    IdeaModel insertedIdea = ideaRepo.insert(newIdea);
+    IdeaModel insertedIdea = ideaRepo.save(newIdea);
 
-    log.trace("insertedIdea "+insertedIdea);
+    log.trace("saved Idea "+insertedIdea);
 
-    List<IdeaModel> ideas = ideaRepo.findAll();
+    Iterable<IdeaModel> ideas = ideaRepo.findAll();
     for(IdeaModel idea : ideas) {
       log.debug(idea.toString());
-    };
-
+    }
   }
 
 
@@ -85,7 +89,7 @@ public class RepoTests {
     log.trace("TEST getNumVotes of "+ TestFixtures.USER4_EMAIL +" in area.title='"+ TestFixtures.AREA1_TITLE +"'");
     UserModel user4 = userRepo.findByEmail(TestFixtures.USER4_EMAIL);
     AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-    int numVotes = delegationRepo.getNumVotes(user4.getId(), area1.getId());
+    int numVotes = delegationRepo.getNumVotes(area1, user4);
     assertEquals(TestFixtures.USER4_NUM_VOTES, numVotes);
     log.info("TEST SUCCESS: "+ TestFixtures.USER4_EMAIL +" is proxy for "+ TestFixtures.USER4_NUM_VOTES +" delegates (including himself).");
   }
@@ -116,8 +120,8 @@ public class RepoTests {
     try {
       areaRepo.save(areaDuplicate);  // should throw DuplicateKeyException
       fail("Did not receive expected DuplicateKeyException");
-    } catch ( DuplicateKeyException e) {
-      log.trace("TEST testSaveDuplicateArea SUCCESS: did receive expected exception");
+    } catch ( Exception e) {
+      log.trace("TEST testSaveDuplicateArea SUCCESS: did receive expected exception: "+e);
     }
   }
 }
