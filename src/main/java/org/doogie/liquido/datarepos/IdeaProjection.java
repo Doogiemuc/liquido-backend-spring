@@ -1,6 +1,5 @@
 package org.doogie.liquido.datarepos;
 
-import org.bson.types.ObjectId;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.IdeaModel;
 import org.doogie.liquido.model.UserModel;
@@ -22,7 +21,7 @@ interface IdeaProjection {
   Date getCreatedAt();
   Date getUpdatedAt();
 
-  // this will inline the DBRef to UserModel into the JSON of every idea
+  // this will inline the reference to UserModel into the JSON of every idea
   UserModel getCreatedBy();
 
   AreaModel getArea();

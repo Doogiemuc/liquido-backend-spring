@@ -1,12 +1,5 @@
 package org.doogie.liquido.rest;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import org.bson.types.ObjectId;
 import org.doogie.liquido.datarepos.DelegationValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,8 +14,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
-
-import java.io.IOException;
 
 /**
  * Configure the exposed REST HATEOAS services.
@@ -67,23 +58,24 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
   }
   */
 
-  @Override
-  public void configureJacksonObjectMapper(ObjectMapper objectMapper) {
-    log.debug("configureJacksonObjectMapper for (de)serializing ObjectIds to Strings");
-    SimpleModule myModule = new SimpleModule("ObjectIdJacksonModule");
-    myModule.addSerializer(ObjectId.class, new MongoObjectIdSerializer());
-    objectMapper.registerModule(myModule);
-  }
 
-  private class MongoObjectIdSerializer extends JsonSerializer<ObjectId>{
-    // See also this example: https://github.com/jhiemer/spring-data-rest-sample/blob/master/src/main/java/de/cloudscale/config/CustomRepositoryRestMvcConfiguration.java
-    //TODO: BUG: This serializer ist not yet picked up in exception handling of spring-data-rest exceptions
-    @Override
-    public void serialize(ObjectId objectId, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
-      //log.debug("serializing ObjectID  from RepositoryRestConfigurer");
-      jsonGenerator.writeString(objectId.toHexString());
-    }
-  }
+//  @Override
+//  public void configureJacksonObjectMapper(ObjectMapper objectMapper) {
+//    log.debug("configureJacksonObjectMapper for (de)serializing ObjectIds to Strings");
+//    SimpleModule myModule = new SimpleModule("ObjectIdJacksonModule");
+//    myModule.addSerializer(ObjectId.class, new MongoObjectIdSerializer());
+//    objectMapper.registerModule(myModule);
+//  }
+//
+//  private class MongoObjectIdSerializer extends JsonSerializer<ObjectId>{
+//    // See also this example: https://github.com/jhiemer/spring-data-rest-sample/blob/master/src/main/java/de/cloudscale/config/CustomRepositoryRestMvcConfiguration.java
+//    //TODO: BUG: This serializer ist not yet picked up in exception handling of spring-data-rest exceptions
+//    @Override
+//    public void serialize(ObjectId objectId, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
+//      //log.debug("serializing ObjectID  from RepositoryRestConfigurer");
+//      jsonGenerator.writeString(objectId.toHexString());
+//    }
+//  }
 
 
   /**
@@ -93,7 +85,7 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
    */
   @Bean
   public FilterRegistrationBean corsFilter() {
-    log.trace("Setting corsFilter to allow everyting  from localhost");
+    log.trace("Setting corsFilter to allow everything from localhost");
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     CorsConfiguration config = new CorsConfiguration();
     config.setAllowCredentials(true);

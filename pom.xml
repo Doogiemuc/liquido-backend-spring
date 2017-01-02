@@ -5,7 +5,7 @@
 
 	<groupId>org.doogie.liquido</groupId>
 	<artifactId>liquido-backend-spring</artifactId>
-	<version>0.0.2-SNAPSHOT</version>
+	<version>0.1.17-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>liquido-backend-spring</name>
@@ -30,20 +30,35 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
-		<!-- spring data: expose repositroy as REST endpoint -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-rest</artifactId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
-
-		<!-- spring data MongoDB support -->
 		<dependency>
-			<groupId>org.springframework.data</groupId>
-			<artifactId>spring-data-mongodb</artifactId>
-			<version>1.9.3.RELEASE</version>
+			<groupId>org.hsqldb</groupId>
+			<artifactId>hsqldb</artifactId>
+			<scope>runtime</scope>
 		</dependency>
 
+        <!-- Spring Developer Tools https://docs.spring.io/spring-boot/docs/current/reference/html/using-boot-devtools.html  provide /h2-console  -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <optional>true</optional>
+        </dependency>
 
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+        </dependency>
+
+        <!-- spring data: expose repositroy as REST endpoint -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-rest</artifactId>
+        </dependency>
+
+        <!-- spring-boot JUnit test case support -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
@@ -57,13 +72,6 @@
 			<version>2.7</version>
 		</dependency>
         -->
-
-		<!-- https://mvnrepository.com/artifact/org.mongodb/mongo-java-driver -->
-		<dependency>
-		  <groupId>org.mongodb</groupId>
-		  <artifactId>mongo-java-driver</artifactId>
-		  <version>3.3.0</version>
-		</dependency>
 
 		<!-- Project Lombok http://jnb.ociweb.com/jnb/jnbJan2010.html -->
 		<dependency>

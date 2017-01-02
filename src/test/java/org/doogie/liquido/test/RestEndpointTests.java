@@ -1,6 +1,5 @@
 package org.doogie.liquido.test;
 
-import org.bson.types.ObjectId;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.LawRepo;
@@ -25,7 +24,6 @@ import org.springframework.http.*;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.ResponseErrorHandler;
-import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
@@ -122,9 +120,18 @@ public class RestEndpointTests {
     log.info("Spring tests started");
     // Here you can do any one time setup necessary
     log.trace("preloading data from DB");
-    this.users = userRepo.findAll();
-    this.areas = areaRepo.findAll();
-    this.laws  = lawRepo.findAll();
+    for (UserModel userModel : userRepo.findAll()) {
+      this.users.add(userModel);
+    }
+    log.trace("loaded "+this.users.size()+ " users");
+    for (AreaModel areaModel : areaRepo.findAll()) {
+      this.areas.add(areaModel);
+    }
+    log.trace("loaded "+this.areas.size()+ " areas");
+    for (LawModel lawModel : lawRepo.findAll()) {
+      this.laws.add(lawModel);
+    }
+    log.trace("loaded "+this.laws.size()+ " laws");
 
     client.getRestTemplate().setErrorHandler(new LiquidoTestErrorHandler());
     //client.getRestTemplate().setDefaultUriVariables();   //TODO:  for API keys
@@ -198,7 +205,7 @@ public class RestEndpointTests {
   @Test
   public void testPostInvalidBallot() {
     log.trace("TEST postInvalidBallot");
-    BallotModel invalidBallot = new BallotModel("voterHash", null, new ArrayList<ObjectId>());   // this is an invalid ballot!
+    BallotModel invalidBallot = new BallotModel(null, new ArrayList<>(), "invalidVoterHash");   // this is an invalid ballot!
 
     ResponseEntity<BallotModel> response = client.postForEntity("/ballot", invalidBallot, BallotModel.class);
 

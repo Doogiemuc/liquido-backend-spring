@@ -1,18 +1,18 @@
 package org.doogie.liquido.datarepos;
 
 import org.doogie.liquido.model.UserModel;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
 /**
- * Database abstraction for MongoDB collection "users".
+ * Database abstraction for "users".
  *
- * This Repository is exposed as REST service under the endpint <pre>/users</pre>
+ * This Repository is exposed as REST service under the endpoint <pre>/liquido/v2/users</pre>
  * see https://spring.io/guides/gs/accessing-mongodb-data-rest/
  */
 @RepositoryRestResource(collectionResourceRel = "users", path = "users", itemResourceRel = "user")
-public interface UserRepo extends MongoRepository<UserModel, String> {
+public interface UserRepo extends CrudRepository<UserModel, Long> {
 
   /**
    * Find a specific user by email address.
@@ -22,7 +22,7 @@ public interface UserRepo extends MongoRepository<UserModel, String> {
    * @param email users email
    * @return one UserModel or null if no user with that email was found.
    */
-  UserModel findByEmail(@Param("email") String email);   // This magically creates a mongo query just from the method name!
+  UserModel findByEmail(@Param("email") String email);   // This magically creates a query just from the method name!
 
 
 
