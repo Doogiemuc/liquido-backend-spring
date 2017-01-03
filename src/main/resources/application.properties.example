@@ -6,22 +6,43 @@
 # http://docs.spring.io/spring-boot/docs/current/reference/html/common-application-properties.html
 # ===================================================================
 
+# Port of running backend server  (default: 8080)
+server.port=8090
+
+# This will output SQL statements
+#debug=true
+
+# Uncomment this to see EVERY SQL statement
+#spring.jpa.show-sql=true
+
+####################################
+# Connection to production DB
+# (For testing, an embedded H2 DB is autoconfigured)
+####################################
+
+# do not drop tables on embedded H2 database
+# one of    none, validate, update, create, create-drop
+#spring.jpa.hibernate.ddl-auto=update
+
+#spring.datasource.url=jdbc:mysql://db_host/prod
+#spring.datasource.username=dbuser
+#spring.datasource.password=dbpass
+#spring.datasource.driver-class-name=com.mysql.jdbc.Driver
+
+# Enable the H2 Web console for the embedded H2 DB when testing
+spring.h2.console.enabled=true
+spring.h2.console.path=/h2-console
+
 ## Use Googles JSON for (un)marshalling POJOs <-> JSON
 
 spring.http.converters.preferred-json-mapper=gson
 
 ## Logging
+# Since 10 years and three logging frameworks I am always re-learning, how to configure this simple logging format. It gives you clickable Links in your IDE *G*
 
 spring.output.ansi.enabled=ALWAYS
 logging.level.org.doogie.liquido=TRACE
 logging.level.org.springframework.web.filter.CommonsRequestLoggingFilter=DEBUG
-
-# Since 10 years and three logging frameworks I am always re-learning, how to configure this simple logging format. It gives you clickable Links in your IDE *G*
 logging.pattern.console=%highlight(%-5level) %cyan(%-70.70(.\\(%file:%line\\).%method\\(\\))) | %message%n
 
-
 # Spring Data Rest services  are configured in org.doogie.rest.RepositoryRestConfigurer class
-
-# MongoDB via spring-data-mongo
-
-spring.data.mongodb.uri=mongodb://localhost:27017/liquido-test

@@ -40,15 +40,15 @@ public class LiquidoBackendSpringApplication {
 	 * Initialize the H2 DB web console
 	 * https://springframework.guru/using-the-h2-database-console-in-spring-boot-with-spring-security/
 	 * @return
-	 */
+	 // NOT NECESSARY in spring boot this can be done in application.properties
 	@Bean
 	ServletRegistrationBean h2servletRegistration(){
 		log.trace("======= init H2 console WebServlet");
-
 		ServletRegistrationBean registrationBean = new ServletRegistrationBean( new WebServlet());
-		registrationBean.addUrlMappings("/console/*");
+		registrationBean.addUrlMappings("/h2-console/*");
 		return registrationBean;
 	}
+	*/
 
   /**
    * configure logging of HTTP requests

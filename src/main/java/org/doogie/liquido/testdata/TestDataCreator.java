@@ -5,8 +5,10 @@ import org.doogie.liquido.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.integration.IntegrationAutoConfiguration;
+import org.springframework.core.env.Environment;
 import org.springframework.data.domain.Example;
 import org.springframework.stereotype.Component;
 
@@ -16,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Seed the database with test data. This script will upsert entities, ie it will only insert new rows
+ * Seed the database with test data. This script will upsert entities, ie. it will only insert new rows
  * for entities that do not exist yet.
  *
  * For checking whether an entity already exists, the functional primary key is used, not the ID field!
@@ -57,17 +59,29 @@ public class TestDataCreator implements CommandLineRunner {
     // EMPTY
   }
 
+  @Autowired
+  Environment springEnv;   // load settings from application-test.properties
+
+  /**
+   * Seed the DB with some default values, IF
+   *  - the currently active spring profiles contain "test"   OR
+   *  - there is an environment property seedDB==true  OR
+   *  - there is a command line parmaeter "--seedDB"
+   * @param args
+   */
   public void run(String... args) {
+    boolean seedDB =   springEnv.acceptsProfiles("test") || "true".equals(springEnv.getProperty("seedDB"));
     for(String arg : args) {
-      if ("--seedDB".equals(arg)) {
-        log.debug("Populate test DB ...");
-        // order is important here!
-        seedUsers();
-        seedAreas();
-        seedDelegations();
-        seedIdeas();
-        seedLaws();
-      }
+      if ("--seedDB".equals(arg)) { seedDB = true; }
+    }
+    if (seedDB) {
+      log.info("==== Populate test DB ...");
+      // order is important here!
+      seedUsers();
+      seedAreas();
+      seedDelegations();
+      seedIdeas();
+      seedLaws();
     }
   }
 
