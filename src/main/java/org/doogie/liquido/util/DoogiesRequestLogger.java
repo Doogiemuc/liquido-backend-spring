@@ -18,7 +18,7 @@ import java.io.IOException;
 public class DoogiesRequestLogger extends OncePerRequestFilter {
 
   /**
-   * Log each request with ReqID, full Request URI and its duration in ms.
+   * Log each request with s ReqID, full Request URI and its duration in ms.
    * @param req the request
    * @param res the response
    * @param filterChain chain of filteres
@@ -30,7 +30,7 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     long startTime = System.currentTimeMillis();
     StringBuffer reqInfo = new StringBuffer()
      .append("[")
-     .append(startTime % 10000)
+     .append(startTime % 10000)  // request ID
      .append("] ")
      .append(req.getMethod())
      .append(" ")

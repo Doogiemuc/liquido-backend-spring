@@ -1,4 +1,4 @@
-package org.doogie.liquido.rest;
+package org.doogie.liquido.datarepos;
 
 import org.doogie.liquido.datarepos.DelegationValidator;
 import org.slf4j.Logger;
@@ -30,9 +30,10 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
 
   @Override
   public void configureRepositoryRestConfiguration(RepositoryRestConfiguration config) {
-    log.debug("Configuring RepositoryRestconfiguration under /liquido/v2");
+    log.debug("===== Configuring RepositoryRestconfiguration under basePath='"+config.getBasePath().toString()+"',  baseURI='"+config.getBaseUri().toString()+"'");
 
-    config.setBasePath("/liquido/v2");
+    // The base path for our RestControllers. The base path for RepositoryRestResource is configured in application.properties
+    //config.setBasePath("/liquido/v2");
 
     // Only export data repositories that are annotated with @RepositoryRestResource(...)
     // In future versions this will be configurable in application.properties   spring.data.rest.detection-strategy=visibility   https://github.com/spring-projects/spring-boot/issues/7113

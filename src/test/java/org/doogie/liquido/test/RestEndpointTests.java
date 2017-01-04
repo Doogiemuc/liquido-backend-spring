@@ -5,7 +5,6 @@ import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.*;
-import org.doogie.liquido.util.DoogiesUtil;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Before;
@@ -17,11 +16,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.embedded.LocalServerPort;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.client.RootUriTemplateHandler;
-import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
 import org.springframework.http.*;
 import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.ResponseErrorHandler;
 
@@ -39,12 +38,15 @@ import static org.junit.Assert.*;
  * It would be quite costly to mock the complete DB. So we test both layers here.
  */
 @RunWith(SpringRunner.class)
+@ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)  // This is so cool. This automatically sets up everything and starts the server. *like*
 //@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)  // Only run tests. Do not automatically start a server.
 public class RestEndpointTests {
   private Logger log = LoggerFactory.getLogger(this.getClass());
 
   /*
+
+  THESE WERE SOME TRIES TO CONFIGRE TestRestTemplate  WHEN RUNNING WITH WebEnvironment.NONE
   private TestRestTemplate client = new TestRestTemplate();
 
   @TestConfiguration
@@ -58,13 +60,20 @@ public class RestEndpointTests {
     }
 
   }
-  */
-  /*   use with WebEnvironment.RANDOM_PORT   (when SpringBootTest starts the server)
-  @Autowired
-  TestRestTemplate client;    // REST client that is automatically configured with localServerPort of running test server.
-                              // BUG: but wit the wrong base url
+
+  @Bean
+  RestTemplateBuilder restTemplateBuilder() {
+    //BUG: This is never called: https://github.com/spring-projects/spring-boot/issues/6465
+    log.trace("========== resteTemplateBuilder" + localServerPort);
+    return new RestTemplateBuilder();
+  }
+
   */
 
+  /**
+   * REST client that is automatically configured with localServerPort of running test server.
+   * use with WebEnvironment.RANDOM_PORT   (when SpringBootTest starts the server)
+   */
   @Autowired
   TestRestTemplate client;
 
@@ -83,15 +92,9 @@ public class RestEndpointTests {
   @Autowired
   DelegationRepo delegationRepo;
 
-  @Bean
-  RestTemplateBuilder restTemplateBuilder() {
-    //BUG: This is never called: https://github.com/spring-projects/spring-boot/issues/6465
-    log.trace("========== resteTemplateBuilder" + localServerPort);
-    return new RestTemplateBuilder();
-  }
+  @Autowired
+  Environment springEnv;
 
-  /* HTTP body of last error response */
-  String lastErrorResponseBody = "";
 
   // preloaded data that most test cases need.
   List<UserModel> users;
@@ -107,8 +110,8 @@ public class RestEndpointTests {
     }
     @Override
     public void handleError(ClientHttpResponse clientHttpResponse) throws IOException {
-      lastErrorResponseBody = DoogiesUtil._stream2String(clientHttpResponse.getBody());
-      log.error("HTTP error: "+lastErrorResponseBody);
+      //Cannot read the body, cause InputStream can only be read once lastErrorResponseBody = DoogiesUtil._stream2String(clientHttpResponse.getBody());
+      log.error("HTTP error: ("+clientHttpResponse.getRawStatusCode() + ") "+clientHttpResponse.getStatusText());
     }
   }
 
@@ -117,45 +120,47 @@ public class RestEndpointTests {
    */
   @PostConstruct
   public void postConstruct() {
-    log.info("Spring tests started");
     // Here you can do any one time setup necessary
-    log.trace("preloading data from DB");
+    log.trace("PostConstruct: pre-fetching data from DB");
+
+    //client.getRestTemplate().setErrorHandler(new LiquidoTestErrorHandler());
+
+    //BUGFIX: TestRestClient does not take application.properties  spring.data.rest.base-path  into account. We must manually configure this.
+    // https://jira.spring.io/browse/DATAREST-968
+    // https://github.com/spring-projects/spring-boot/issues/7816
+    String basePath = springEnv.getProperty("spring.data.rest.base-path");
+    client.getRestTemplate().setUriTemplateHandler(new RootUriTemplateHandler("http://localhost:"+ localServerPort + basePath));
+
+    //TODO:  for API keys
+    //client.getRestTemplate().setDefaultUriVariables();
+
+    this.users = new ArrayList<>();
     for (UserModel userModel : userRepo.findAll()) {
       this.users.add(userModel);
     }
     log.trace("loaded "+this.users.size()+ " users");
+
+    this.areas = new ArrayList<>();
     for (AreaModel areaModel : areaRepo.findAll()) {
       this.areas.add(areaModel);
     }
     log.trace("loaded "+this.areas.size()+ " areas");
+
+    this.laws = new ArrayList<>();
     for (LawModel lawModel : lawRepo.findAll()) {
       this.laws.add(lawModel);
     }
     log.trace("loaded "+this.laws.size()+ " laws");
 
-    client.getRestTemplate().setErrorHandler(new LiquidoTestErrorHandler());
-    //client.getRestTemplate().setDefaultUriVariables();   //TODO:  for API keys
-    client.getRestTemplate().setUriTemplateHandler(new RootUriTemplateHandler("http://localhost:"+ localServerPort +TestFixtures.BASE_URL));
   }
 
   /**
-   * pre load some data from the DB.
    * Keep in mind that this will run before every single test case!
    */
   @Before
   public void beforeEachTest() {
     log.trace("This runs before each single test case");
-  }
-
-  @Test
-  public void testDelegationObjectIdConversion() {
-    log.trace("TEST testDelegationObjectIdConversion");
-
-    String result = client.getForObject("/delegations", String.class);
-
-    //log.debug(result);
-    //TODO: assert
-    log.info("TEST testDelegationObjectIdConversion");
+    //TODO: handle login  (maybe use a special static APP_ID for tests.
   }
 
   @Test
@@ -167,6 +172,21 @@ public class RestEndpointTests {
 
   }
 
+  /*    Post a new entity with RestTempalte => Do I need this when using TestRestTemplate or are the mappers already ocnfigured?
+
+        // http://stackoverflow.com/questions/27414922/unable-to-post-new-entity-with-relationship-using-resttemplate-and-spring-data-r?rq=1
+        RestTemplate restTemplate = new RestTemplate();
+        restTemplate.getMessageConverters().add(new MappingJacksonHttpMessageConverter());
+        restTemplate.getMessageConverters().add(new StringHttpMessageConverter());
+
+        String uri = new String("url");
+
+        Bar b= new Bar();
+        bar.setName("newWgetBar");
+
+        rt.postForObject(uri, b, Bar.class);
+
+   */
 
   @Test
   public void testPostBallot() {
@@ -181,11 +201,10 @@ public class RestEndpointTests {
     // I am deliberately not creating a new BallotModel(...) here that I could then   postForEntity like this:
     //   ResponseEntity<BallotModel> createdBallot = client.postForEntity("/ballot", newBallot, BallotModel.class);
     // because I do not want the test to success just because of on spring's very clever serialization and deserialization.
-    //
     // Instead I want to post plain JSON as a client would:
     JSONObject newBallotJson = new JSONObject()
         .put("voterHash", VOTER_HASH)
-        .put("initialLawId", this.laws.get(0).getId())
+        .put("initialLaw", this.laws.get(0).getId())
         .put("voteOrder", new JSONArray()
                                 .put(this.laws.get(1).getId())
                                 .put(this.laws.get(2).getId()) );
@@ -205,12 +224,23 @@ public class RestEndpointTests {
   @Test
   public void testPostInvalidBallot() {
     log.trace("TEST postInvalidBallot");
-    BallotModel invalidBallot = new BallotModel(null, new ArrayList<>(), "invalidVoterHash");   // this is an invalid ballot!
 
-    ResponseEntity<BallotModel> response = client.postForEntity("/ballot", invalidBallot, BallotModel.class);
+    //NICE: Lombok is that good, that I can't even use new BallotModel(...) to create an invalid ballot :-)   So we create then JSON and the request entity by hand
+    JSONObject invalidBallot = new JSONObject();
+    invalidBallot.put("voteOrder", new JSONArray());
+    invalidBallot.put("voterHash", "someDummyVoterHash");
+    //this ballot is missing the required "initialLaw"!
 
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    HttpEntity<String> entity = new HttpEntity<>(invalidBallot.toString(), headers);
+
+    log.trace("The next POST request is expected to return an HTTP 400 error");
+    ResponseEntity<String> response = client.exchange("/ballots", HttpMethod.POST, entity, String.class);
+    String responseBody = response.getBody();
     assertEquals(HttpStatus.BAD_REQUEST.value(), response.getStatusCodeValue());  // 400
-    assertTrue(lastErrorResponseBody.contains("NotNull.initialLawId"));
+    log.trace("response.body (that should contain the error): "+responseBody);
+    assertTrue(responseBody.contains("initialLaw"));
     log.trace("TEST postInvalidBallot successful: received correct status and error message in response.");
   }
 
@@ -225,7 +255,7 @@ public class RestEndpointTests {
 
     assertNotNull(numVotes);
     assertEquals("User "+TestFixtures.USER4_EMAIL+" should have "+TestFixtures.USER4_NUM_VOTES+" delegated votes", TestFixtures.USER4_NUM_VOTES, numVotes.intValue());
-    log.trace("TEST SUCCESS: found expected delegations for "+TestFixtures.USER4_EMAIL);
+    log.trace("TEST SUCCESS: found expected "+TestFixtures.USER4_NUM_VOTES+" delegations for "+TestFixtures.USER4_EMAIL);
   }
 
   @Test

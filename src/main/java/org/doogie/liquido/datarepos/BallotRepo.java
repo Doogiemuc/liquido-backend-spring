@@ -2,11 +2,13 @@ package org.doogie.liquido.datarepos;
 
 import org.doogie.liquido.model.BallotModel;
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
 /**
  * Database abstraction for "ballots".
  */
 //NOT exported as @RepositoryRestResource ! Ballots can only be accessed via BallotRestController
+@RepositoryRestResource(collectionResourceRel = "ballots", path = "ballots", itemResourceRel = "ballot")
 public interface BallotRepo extends CrudRepository<BallotModel, Long> {
   // EMPTY
 }

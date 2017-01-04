@@ -55,6 +55,9 @@ public class TestDataCreator implements CommandLineRunner {
   @Autowired
   DelegationRepo delegationRepo;
 
+  @Autowired
+  BallotRepo ballotRepo;
+
   public TestDataCreator() {
     // EMPTY
   }
@@ -82,6 +85,7 @@ public class TestDataCreator implements CommandLineRunner {
       seedDelegations();
       seedIdeas();
       seedLaws();
+      seedBallots();
     }
   }
 
@@ -199,10 +203,15 @@ public class TestDataCreator implements CommandLineRunner {
   private void seedLaws() {
     log.debug("Seeding Laws ...");
     this.laws = new ArrayList<>();
-    for (int i = 0; i < NUM_LAWS; i++) {
+
+    LawModel initialLaw = new LawModel("Initial Law", "Perfect suggestion for a law.", this.users.get(0));
+    initialLaw.setInitialLaw(initialLaw);   // reference to self
+    lawRepo.save(initialLaw);
+
+    for (int i = 1; i < NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
-      LawModel newLaw = new LawModel(lawTitle, "Perfect suggestion for a law", this.users.get(0));
-      newLaw.setInitialLaw(newLaw);
+      LawModel newLaw = new LawModel(lawTitle, "Alternative proposal #"+i, this.users.get(0));
+      newLaw.setInitialLaw(initialLaw);   // reference to initialLaw
 
       LawModel existingLaw = lawRepo.findByTitle(lawTitle);
       if (existingLaw != null) {
@@ -215,6 +224,15 @@ public class TestDataCreator implements CommandLineRunner {
       LawModel savedLaw = lawRepo.save(newLaw);
       this.laws.add(savedLaw);
     }
+  }
+
+  public void seedBallots() {
+    log.debug("Seeding ballots ...");
+    List<LawModel> voteOrder = new ArrayList<>();
+    voteOrder.add(this.laws.get(1));
+    voteOrder.add(this.laws.get(2));
+    BallotModel newBallot = new BallotModel(this.laws.get(0), voteOrder, "dummyVoterHash");
+    ballotRepo.save(newBallot);
   }
 
 

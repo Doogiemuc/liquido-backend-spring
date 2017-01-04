@@ -22,19 +22,18 @@ import java.util.List;
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "ballots")
 public class BallotModel {
-  //protected fields are only possible with Google's GSON lib (not with Jackson)
   @Id
   @GeneratedValue
   private Long id;
 
   @NonNull
   @NotNull
-  @OneToOne
+  @OneToOne(cascade = CascadeType.MERGE, orphanRemoval = false)
   public LawModel initialLaw;
 
   @NonNull
   @NotNull
-  @OneToMany
+  @OneToMany(cascade = CascadeType.MERGE, orphanRemoval = false)
   public List<LawModel> voteOrder;
 
   /** encrypted information about voter that casted this ballot */
@@ -48,5 +47,7 @@ public class BallotModel {
 
   @CreatedDate
   public Date createdAt;
+
+  //no CreatedBy here: When voting it is a secret how casted this ballot!!!
 
 }

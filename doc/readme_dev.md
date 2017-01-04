@@ -29,6 +29,9 @@ Here I write down everything I need durign development of my little backend.
 ## Links
 
  - [H2 DB Web Console](http://localhost:8090/console)   JDBC URL: `jdbc:h2:mem:testdb`   Username: `sa` - no pwd, Driver Class: `org.h2.Driver`  
+ - [Great Hibernate Tutorials](https://vladmihalcea.com/tutorials/hibernate/)  about mappings and sequences
+ - Buch+++: High Performance Java Persistence: https://leanpub.com/high-performance-java-persistence?utm_source=blog&utm_medium=banner&utm_campaign=banner
+
 
 ## Good Spring Boot Resources
 
