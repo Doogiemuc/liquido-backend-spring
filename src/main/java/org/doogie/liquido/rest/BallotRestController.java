@@ -22,6 +22,7 @@ import static org.springframework.web.bind.annotation.RequestMethod.POST;
  *   POST /ballot  -  post a users vote
  */
 @RestController
+@RequestMapping("/liquido/v2")
 public class BallotRestController {
   Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
 
@@ -45,8 +46,13 @@ public class BallotRestController {
    * @return the stored ballot (incl. its new ID)
    * @throws BindException when validation fails. Exception will contain detailed error information (returned a JSON to the client)
    */
-  @RequestMapping(value = "/ballot", method = POST)
+  @RequestMapping(value = "/postBallot", method = POST)   // POST to resource /liquido/v2/ballots
   public BallotModel postBallot(@Valid @RequestBody BallotModel newBallot, BindingResult bindingResult) throws BindException {
+    // Look at JSON-Patch. Could that be used here to post the voteOrder?
+    // http://stackoverflow.com/questions/25311978/posting-a-onetomany-sub-resource-association-in-spring-data-rest
+    // https://github.com/spring-projects/spring-data-rest/commit/ef3720be11f117bb691edbbf63e38ff72e0eb3dd
+    // http://stackoverflow.com/questions/34843297/modify-onetomany-entity-in-spring-data-rest-without-its-repository/34864254#34864254
+
     log.trace("=> POST /ballot "+newBallot);
 
     if (bindingResult.hasErrors()) {
