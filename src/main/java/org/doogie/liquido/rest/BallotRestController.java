@@ -6,13 +6,16 @@ import org.doogie.liquido.model.LawModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.data.rest.webmvc.RepositoryRestController;
 import org.springframework.hateoas.Resource;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
@@ -22,11 +25,10 @@ import static org.springframework.web.bind.annotation.RequestMethod.POST;
  * Resouces:
  *   POST /postBallot  -  post a users vote
  *
- * Example by Oliver Ghierke:  https://github.com/olivergierke/spring-restbucks
  */
-@RepositoryRestController
-@RequestMapping("postBallot")
-//@EnableHypermediaSupport(type = EnableHypermediaSupport.HypermediaType.HAL)
+@BasePathAwareController
+//@RepositoryRestController   nad    @RequestMapping("postBallot")   does not really work
+//@EnableHypermediaSupport(type = EnableHypermediaSupport.HypermediaType.HAL)      //not necessary?
 public class BallotRestController {
   Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
 
@@ -55,6 +57,8 @@ public class BallotRestController {
    * Remark: POST for create, PUT would be for update! See http://stackoverflow.com/questions/630453/put-vs-post-in-rest?rq=1
    *
    * Related resources for @RepositoryRestController
+   * Example by Oliver Ghierke:  https://github.com/olivergierke/spring-restbucks
+   * https://jira.spring.io/browse/DATAREST-972   - creatd by ME
    * https://jira.spring.io/browse/DATAREST-633
    * http://stackoverflow.com/questions/38607421/spring-data-rest-controllers-behaviour-and-usage-of-basepathawarecontroller   +++
    * http://stackoverflow.com/questions/31758862/enable-hal-serialization-in-spring-boot-for-custom-controller-method?rq=1    with reply from Oliver Gierke himself :-)
@@ -68,11 +72,12 @@ public class BallotRestController {
    * @param resourceAssembler injected PersistentEntityResourceAssembler that can build the reply
    * @return the stored ballot (incl. its new ID) as a HATEOAS resource
    */
-  @RequestMapping(value = "testXX", method = POST)   // There must not be a @RequestMapping(value = "somePath") here on type/method level!
+  @RequestMapping(value = "/postBallot", method = POST)   // @RequestMapping(value = "somePath") here on type/method level does not work with @RepositoryRestController
+  @ResponseStatus(HttpStatus.CREATED)
   public @ResponseBody PersistentEntityResource postBallot(@RequestBody Resource<BallotModel> newBallotRes,
                             PersistentEntityResourceAssembler resourceAssembler)
   {
-    log.trace("=> POST /ballot "+newBallotRes);
+    log.trace("=> POST /postBallot "+newBallotRes);
     BallotModel newBallot = newBallotRes.getContent();
 
     // check validity of voterHash
@@ -92,7 +97,7 @@ public class BallotRestController {
     }
 
     BallotModel createdBallot = ballotRepo.save(newBallotRes.getContent());
-    log.trace("<= POST /ballot created: "+createdBallot);
+    log.trace("<= POST /postBallot created: "+createdBallot);
 
     return resourceAssembler.toResource(createdBallot);
     // return ResponseEntity.ok(createdBallot);   this would return a ResponseEntity with the plain serialized JSON  (no HAL links etc.)
