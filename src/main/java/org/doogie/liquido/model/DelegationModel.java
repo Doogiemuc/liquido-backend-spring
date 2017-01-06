@@ -18,7 +18,7 @@ import java.util.Date;
 @Entity
 @Data
 @NoArgsConstructor
-@RequiredArgsConstructor
+@RequiredArgsConstructor(suppressConstructorProperties = true)
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "delegations")
 public class DelegationModel {

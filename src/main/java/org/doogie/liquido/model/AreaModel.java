@@ -13,7 +13,7 @@ import java.util.Date;
 @Data
 @Entity
 @NoArgsConstructor
-@RequiredArgsConstructor
+@RequiredArgsConstructor(suppressConstructorProperties = true)
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "areas")
 public class AreaModel {

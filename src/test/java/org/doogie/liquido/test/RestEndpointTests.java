@@ -1,5 +1,9 @@
 package org.doogie.liquido.test;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.LawRepo;
@@ -15,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.embedded.LocalServerPort;
+import org.springframework.boot.json.GsonJsonParser;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.client.RootUriTemplateHandler;
@@ -168,12 +173,19 @@ public class RestEndpointTests {
   }
 
   @Test
-  public void testFindMostRecentIdeas() {
+  public void testFindMostRecentIdeas() throws IOException {
     log.trace("TEST testFindMostRecentIdeas");
-    List<IdeaModel> recentIdeas = client.getForObject("/getRecentIdeas", List.class);
-    log.debug("Got size="+recentIdeas.size());
-    assertTrue(recentIdeas.size() > 8);
+    String response = client.getForObject("/ideas/search/recentIdeas", String.class);
 
+    log.debug(response);
+
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode node = mapper.readTree(response);
+    JsonNode ideas = node.get("_embedded").get("ideas");
+    assertTrue(ideas.isArray());
+    assertTrue(ideas.size() > 5);
+
+    log.trace("TEST SUCCESSFULL testFindMostRecentIdeas  found "+ideas.size()+" ideas");
   }
 
   /*    Post a new entity with RestTempalte => Do I need this when using TestRestTemplate or are the mappers already ocnfigured?
@@ -199,7 +211,7 @@ public class RestEndpointTests {
     String newLawTitle = "Law from test "+System.currentTimeMillis() % 10000;  // law.title must be unique!!
 
     String initialLawUri = basePath + "/laws/" + this.laws.get(0).getId();
-    String createdByUri = basePath + "/users/" + this.users.get(0);
+    String createdByUri = basePath + "/users/" + this.users.get(0).getId();
 
     // I am deliberately not creating a new BallotModel(...) here that I could then   postForEntity like this:
     //   ResponseEntity<BallotModel> createdBallot = client.postForEntity("/ballot", newBallot, BallotModel.class);
@@ -228,7 +240,11 @@ public class RestEndpointTests {
   public void testPostBallot() {
     log.trace("TEST postBallot");
 
-    //TODO: find a law that is currently in the voting phase
+    //find a proposal  that is currently in the voting phase and its alternatives
+    List<LawModel> inVotingPhase = lawRepo.findByStatus(LawModel.LawStatus.VOTING);
+    assertTrue("Need a proposal that currently is in voting phase", inVotingPhase != null && inVotingPhase.size() > 0);
+    List<LawModel> alternativeProposals = lawRepo.findByInitialLaw(inVotingPhase.get(0));
+
     //TODO: create a random voteOrder of (some of) its competing proposals
     //TODO: calculate new(!) userHash  (make test repeatable!)
 
@@ -243,9 +259,9 @@ public class RestEndpointTests {
     // https://jira.spring.io/browse/DATAREST-884
 
     String voterHash = "dummyUserHashFromTest";
-    String initialLawUri = basePath + "/laws/" + this.laws.get(0).getId();
-    String voteOrderUri1 = basePath + "/laws/" + this.laws.get(1).getId();
-    String voteOrderUri2 = basePath + "/laws/" + this.laws.get(2).getId();
+    String initialLawUri = basePath + "/laws/" + inVotingPhase.get(0).getId();
+    String voteOrderUri1 = basePath + "/laws/" + alternativeProposals.get(0).getId();
+    String voteOrderUri2 = basePath + "/laws/" + alternativeProposals.get(1).getId();
 
     JSONObject newBallotJson = new JSONObject()
         .put("voterHash", voterHash)
@@ -315,26 +331,32 @@ public class RestEndpointTests {
   }
 
   @Test
-  public void testSaveProxy() {
-    log.trace("TEST saveProxy");
+  public void testPostDelegation() {
+    log.trace("TEST postDelegation");
 
-    String url = "/users/"+this.users.get(0).getId()+"/delegations";
     //Implementation note: I tried doing this via the auto generated /liquido/v2/delegations endpoint.  But it only support POST a new item. I need an upsert operation here.
+    //String url = "/users/"+this.users.get(0).getId()+"/delegations";
+    String url = "/delegations";
+
+    String fromUserUri = basePath + "/users/" + this.users.get(0).getId();
+    String toProxyUri  = basePath + "/users/" + this.users.get(1).getId();
+    String areaUri     = basePath + "/areas/" + this.areas.get(0).getId();
 
     //I am deliberately not using DelegationModel here. This is the JSON as a client would send it.
     JSONObject newDelegationJSON = new JSONObject()
-        .put("fromUser", this.users.get(0).getId())
-        .put("toProxy",  this.users.get(1).getId())
-        .put("area",     this.areas.get(3).getId());
+        .put("fromUser", fromUserUri)
+        .put("toProxy",  toProxyUri)
+        .put("area",     areaUri);
+    log.trace("posting JSON Object:\n"+newDelegationJSON.toString(2));
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
     HttpEntity<String> entity = new HttpEntity<String>(newDelegationJSON.toString(), headers);
 
-    ResponseEntity<String> result = client.exchange(url, HttpMethod.PUT, entity, String.class);
+    ResponseEntity<String> response = client.exchange(url, HttpMethod.POST, entity, String.class);
 
-    assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
-
+    log.debug("Response body:\n"+response.getBody());
+    assertEquals(HttpStatus.CREATED, response.getStatusCode());
     log.trace("TEST SUCCESS: saved delegation to proxy successfully");
   }
 
@@ -368,7 +390,6 @@ public class RestEndpointTests {
   public void testPostDuplicateArea() {
     log.trace("TEST postDuplicateArea");
 
-    String url = "/liquido/v2/areas";
     JSONObject duplicateAreaJson = new JSONObject()
       .put("title", TestFixtures.AREA1_TITLE)           // area with that title already exists.
       .put("description", "duplicate Area from test");
@@ -377,7 +398,7 @@ public class RestEndpointTests {
     headers.setContentType(MediaType.APPLICATION_JSON);
     HttpEntity<String> entity = new HttpEntity<String>(duplicateAreaJson.toString(), headers);
 
-    ResponseEntity<String> responseEntity = client.postForEntity(url, entity, String.class);  // This will return HTTP status 409(Conflict) because of the duplicate composite key.
+    ResponseEntity<String> responseEntity = client.postForEntity("/areas", entity, String.class);  // This will return HTTP status 409(Conflict) because of the duplicate composite key.
 
     log.trace("responseEntity:\n" + responseEntity);
     assertEquals(responseEntity.getStatusCode(), HttpStatus.CONFLICT);  // status == 409

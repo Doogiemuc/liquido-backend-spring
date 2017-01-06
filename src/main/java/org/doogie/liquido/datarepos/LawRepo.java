@@ -14,5 +14,7 @@ public interface LawRepo extends CrudRepository<LawModel, Long> {
 
   LawModel findByTitle(String title);
 
-  List<LawModel> findByStatus(int status);
+  List<LawModel> findByStatus(LawModel.LawStatus status);
+
+  List<LawModel> findByInitialLaw(LawModel initialLaw);
 }
