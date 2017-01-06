@@ -1,9 +1,9 @@
 package org.doogie.liquido.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -17,7 +17,6 @@ import java.util.Date;
 @Data
 @Entity
 @NoArgsConstructor
-@RequiredArgsConstructor
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "laws")
 public class LawModel {
@@ -56,28 +55,30 @@ public class LawModel {
    */
   @ManyToOne(optional = false)
   @NotNull
-  //@JoinColumn(name="initialLaw", nullable = false)
+  //@JoinColumn(name="initialLawId", referencedColumnName="id", nullable = false)
+  @JsonBackReference  // necessary to prevent endless cycle when (de)serializing to/from JSON: http://stackoverflow.com/questions/20218568/direct-self-reference-leading-to-cycle-exception
   LawModel initialLaw;
 
-  public enum STATUS {
+  public enum LawStatus {
     NEW_PROPOSAL(0),
     ELABORATION(1),
     VOTING(2),
     LAW(3),
     RETENTION(4);
     int statusId;
-    STATUS(int id) { this.statusId = id; }
+    LawStatus(int id) { this.statusId = id; }
   }
 
-  /** current status of this law, ie. new_proposal, elaboration_phase, voting, law or retention_phase */
-  public int status = 0;
+  /** current status of this law */
+  public LawStatus status = LawStatus.NEW_PROPOSAL;
 
   //TODO: configure createBy User for laws: http://docs.spring.io/spring-data/jpa/docs/current/reference/html/index.html#auditing.auditor-aware
   @CreatedBy
   @NonNull
-  @NotNull
-  @ManyToOne(fetch = FetchType.EAGER)  //TODO: optional = false)
+  @NotNull // can't be set, otherwise hibernate throws "Not-null property references a transient value"  on insert
+  @ManyToOne  //TODO: (optional = true, fetch = FetchType.EAGER)
   public UserModel createdBy;
+
 
   @LastModifiedDate
   public Date updatedAt;
@@ -85,13 +86,38 @@ public class LawModel {
   @CreatedDate
   public Date createdAt;
 
+
+  public LawModel(String title, String description, LawModel initialLaw, LawStatus status, UserModel createdBy) {
+    if (initialLaw == null || createdBy == null) throw new IllegalArgumentException("initialLaw and createdBy must not be null!");
+    this.title = title;
+    this.description = description;
+    this.initialLaw = initialLaw;
+    this.status = status;
+    this.createdBy = createdBy;
+    this.createdAt = new Date();
+    this.updatedAt = new Date();
+  }
+
+  /** builder for an initial law whos field "initialLaw" points to itself. */
+  public static LawModel buildInitialLaw(String title, String description, LawStatus status, UserModel createdBy) {
+    LawModel newLaw = new LawModel();
+    newLaw.title = title;
+    newLaw.description = description;
+    newLaw.status = status;
+    newLaw.initialLaw = newLaw;   // ref to self
+    newLaw.createdBy = createdBy;
+    newLaw.createdAt = new Date();
+    newLaw.updatedAt = new Date();
+    return newLaw;
+  }
+
   @Override
   public String toString() {
     return "LawModel{" +
       "id=" + id +
       ", title='" + title + '\'' +
       ", description='" + description + '\'' +
-      ", initialLaw='" + initialLaw.getTitle() + '\'' +   //BUGFIX: prevent endless loop when initialLaw points to self :-)
+      ", initialLaw='" + (initialLaw != null ? initialLaw.getTitle() : "<null>") + '\'' +  //BUGFIX: prevent endless loop when initialLaw points to self :-)
       ", status=" + status +
       //", createdBy=" + createdBy +
       ", updatedAt=" + updatedAt +

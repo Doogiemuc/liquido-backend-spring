@@ -2,20 +2,19 @@ package org.doogie.liquido.testdata;
 
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
+import org.doogie.liquido.util.DoogiesUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.autoconfigure.integration.IntegrationAutoConfiguration;
 import org.springframework.core.env.Environment;
 import org.springframework.data.domain.Example;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+
+import static org.doogie.liquido.model.LawModel.LawStatus;
 
 /**
  * Seed the database with test data. This script will upsert entities, ie. it will only insert new rows
@@ -34,7 +33,13 @@ public class TestDataCreator implements CommandLineRunner {
   public int NUM_USERS = 10;
   public int NUM_AREAS = 10;
   public int NUM_IDEAS = 10;
-  public int NUM_LAWS  = 10;
+
+  public int NUM_ALTERNATIVE_PROPOSALS = 3;
+  public int NUM_ELABORATION = 1;
+  // proposals currently in voting phase
+  String initialInVotingTitle;
+  List<String> alternativeProposalInVotingTitle;
+  public int NUM_LAWS = 2;
 
   @Autowired
   UserRepo userRepo;
@@ -59,7 +64,10 @@ public class TestDataCreator implements CommandLineRunner {
   BallotRepo ballotRepo;
 
   public TestDataCreator() {
-    // EMPTY
+    initialInVotingTitle = "Initial Proposal in voting phase";
+    alternativeProposalInVotingTitle = new ArrayList<>();
+    alternativeProposalInVotingTitle.add("Alternative proposal #1 in voting phase");
+    alternativeProposalInVotingTitle.add("Alternative proposal #2 in voting phase");
   }
 
   @Autowired
@@ -204,34 +212,72 @@ public class TestDataCreator implements CommandLineRunner {
     log.debug("Seeding Laws ...");
     this.laws = new ArrayList<>();
 
-    LawModel initialLaw = new LawModel("Initial Law", "Perfect suggestion for a law.", this.users.get(0));
-    initialLaw.setInitialLaw(initialLaw);   // reference to self
-    lawRepo.save(initialLaw);
+    // ==== One initial new proposal for a law   and some alternatives with and without quorum
+    LawModel initialProposal = LawModel.buildInitialLaw("Initial Proposal", "Perfect proposal for a law with quorum", LawStatus.ELABORATION, this.users.get(0));
+    upsertLaw(null, initialProposal);
 
-    for (int i = 1; i < NUM_LAWS; i++) {
-      String lawTitle = "Law " + i;
-      LawModel newLaw = new LawModel(lawTitle, "Alternative proposal #"+i, this.users.get(0));
-      newLaw.setInitialLaw(initialLaw);   // reference to initialLaw
-
+    // and some alternative proposals for this initial proposal that did not yet reach the neccassary quorum
+    for (int i = 0; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
+      String lawTitle = "Alternative Proposal " + i;
+      LawModel alternativeProposal = new LawModel(lawTitle, "Alternative proposal #"+i, initialProposal, LawStatus.NEW_PROPOSAL, this.users.get(0));
       LawModel existingLaw = lawRepo.findByTitle(lawTitle);
-      if (existingLaw != null) {
-        log.trace("Updating existing law with id=" + existingLaw.getId());
-        newLaw.setId(existingLaw.getId());
-      } else {
-        log.trace("Creating new law " + newLaw);
-      }
-
-      LawModel savedLaw = lawRepo.save(newLaw);
-      this.laws.add(savedLaw);
+      upsertLaw(existingLaw, alternativeProposal);
     }
+
+    // and some alternative proposals for this initial proposal that did already reach the necessary quorum and are in the elaboration phase
+    for (int i = 0; i < NUM_ELABORATION; i++) {
+      String lawTitle = "Alternative Proposal " + i;
+      LawModel alternativeProposal = new LawModel(lawTitle, "Alternative proposal #"+i+" with quorum", initialProposal, LawStatus.ELABORATION, this.users.get(0));
+      LawModel existingLaw = lawRepo.findByTitle(lawTitle);
+      upsertLaw(existingLaw, alternativeProposal);
+    }
+
+    // ==== Some proposals that currently are in the voting phase (one initial, of course)
+    LawModel initialProposalInVoting = LawModel.buildInitialLaw(initialInVotingTitle, "Proposal that currently is in the voting phase #0", LawStatus.VOTING,this.users.get(0));
+    LawModel existingProposal = lawRepo.findByTitle(initialInVotingTitle);
+    upsertLaw(existingProposal, initialProposalInVoting);
+
+    for (String alternativeInVotingTitle: alternativeProposalInVotingTitle) {
+      LawModel votingLaw = new LawModel(alternativeInVotingTitle, "Alternative proposal that currently is in the voting phase", initialProposalInVoting, LawStatus.VOTING, this.users.get(0));
+      LawModel existingLaw = lawRepo.findByTitle(alternativeInVotingTitle);
+      upsertLaw(existingLaw, votingLaw);
+    }
+
+    // === real laws
+    for (int i = 0; i < NUM_LAWS; i++) {
+      String lawTitle = "Law " + i;
+      LawModel realLaw = LawModel.buildInitialLaw(lawTitle, "Complete description of real law #"+i, LawStatus.LAW, this.users.get(0));
+      realLaw.setCreatedAt(DoogiesUtil.dayAgo(20+i));
+      realLaw.setUpdatedAt(DoogiesUtil.dayAgo(20+i));
+      LawModel existingLaw = lawRepo.findByTitle(lawTitle);
+      upsertLaw(existingLaw, realLaw);
+    }
+  }
+
+  private LawModel upsertLaw(LawModel existingLaw, LawModel newLaw) {
+    if (existingLaw != null) {
+      log.trace("Updating existing law with id=" + existingLaw.getId());
+      newLaw.setId(existingLaw.getId());
+    } else {
+      log.trace("Creating new law " + newLaw);
+    }
+    LawModel savedLaw = lawRepo.save(newLaw);
+    this.laws.add(savedLaw);
+    return savedLaw;
   }
 
   public void seedBallots() {
     log.debug("Seeding ballots ...");
+
+    LawModel initialInVoting = lawRepo.findByTitle(initialInVotingTitle);
+    LawModel alt0 = lawRepo.findByTitle(alternativeProposalInVotingTitle.get(0));
+    LawModel alt1 = lawRepo.findByTitle(alternativeProposalInVotingTitle.get(1));
+
     List<LawModel> voteOrder = new ArrayList<>();
-    voteOrder.add(this.laws.get(1));
-    voteOrder.add(this.laws.get(2));
-    BallotModel newBallot = new BallotModel(this.laws.get(0), voteOrder, "dummyVoterHash");
+    voteOrder.add(initialInVoting);
+    voteOrder.add(alt0);
+    voteOrder.add(alt1);
+    BallotModel newBallot = new BallotModel(initialInVoting, voteOrder, "dummyVoterHash");
     ballotRepo.save(newBallot);
   }
 

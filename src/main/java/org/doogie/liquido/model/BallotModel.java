@@ -14,11 +14,18 @@ import javax.validation.constraints.NotNull;
 import java.util.Date;
 import java.util.List;
 
-/** POJO Entity that represents a vote that a user has casted */
+/**
+ * POJO Entity that represents a vote that a user has casted
+ * Fields:
+ *  - initialLaw, reference to the original proposal for a law
+ *  - voteOrder, ordered list of references to proposals for a law that this user has chosen to order like this.
+ *    May include some or all of the alternative proposals (including or not including the initial proposal)
+ *  - voterHash, encrypted reference to voter user
+ */
 @Data
 @Entity
 @NoArgsConstructor
-@RequiredArgsConstructor
+@RequiredArgsConstructor(suppressConstructorProperties = true)   //BUGFIX: https://jira.spring.io/browse/DATAREST-884
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "ballots")
 public class BallotModel {
@@ -26,14 +33,16 @@ public class BallotModel {
   @GeneratedValue
   private Long id;
 
+  //TODO: combined unique key on initialProposal and voterHash
+
   @NonNull
-  @NotNull
-  @OneToOne(cascade = CascadeType.MERGE, orphanRemoval = false)
-  public LawModel initialLaw;
+  @ManyToOne //(cascade = CascadeType.MERGE)
+  public LawModel initialProposal;
 
   @NonNull
   @NotNull
-  @OneToMany(cascade = CascadeType.MERGE, orphanRemoval = false)
+  @ManyToMany //(cascade = CascadeType.MERGE, orphanRemoval = false)
+  //@Column(name = "lawIdOrder")
   public List<LawModel> voteOrder;
 
   /** encrypted information about voter that casted this ballot */

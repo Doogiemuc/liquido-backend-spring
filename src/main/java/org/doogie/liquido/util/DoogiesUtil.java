@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.util.Date;
 
 public class DoogiesUtil {
 
@@ -25,5 +26,10 @@ public class DoogiesUtil {
       //You should really know "UTF-8" :-)
       return "";  // yeah ... i know
     }
+  }
+
+  /** @return a Data n days ago */
+  public static Date dayAgo(int days) {
+    return new Date(System.currentTimeMillis() - days * 3600*24*1000);
   }
 }
