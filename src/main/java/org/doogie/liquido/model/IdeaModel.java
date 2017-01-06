@@ -1,9 +1,6 @@
 package org.doogie.liquido.model;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -15,10 +12,22 @@ import javax.validation.constraints.NotNull;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * <h2>Model for one Idea</h2>
+ *
+ * Fields:
+ *   - title, mandatory, unique
+ *   - description, mandatory
+ *   - area, reference to area that his idea is created in
+ *   - createdBy, reference to UserModel that created this idea
+ *   - createdAt and updatedAt, handled automatically
+ *
+ * The referenced user and area details {@link org.doogie.liquido.datarepos.IdeaProjection automatically populated} in the exposed HATEOAS endpoint.
+ */
 @Data
 @Entity
 @NoArgsConstructor
-@RequiredArgsConstructor
+@RequiredArgsConstructor(suppressConstructorProperties = true)   //BUGFIX: https://jira.spring.io/browse/DATAREST-884
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "ideas")
 public class IdeaModel {
@@ -38,12 +47,14 @@ public class IdeaModel {
   public String description;
 
   @NonNull
-  @OneToOne
+  @NotNull
+  @ManyToOne
   AreaModel area;
 
-  /** list of users that support this idea */
+  /** list of users that support this idea *
   @ManyToMany(fetch = FetchType.EAGER)    //BUGFIX: EAGER loading is neseccary for testCreateIdeaWithAllRefs to work!
   List<UserModel> supporters;  // need list of all supporters so that no one is allowed to vote twice
+  */
 
   //TODO: configure createBy
   // http://docs.spring.io/spring-data/jpa/docs/current/reference/html/index.html#auditing.auditor-aware
@@ -51,7 +62,7 @@ public class IdeaModel {
   @CreatedBy
   @NonNull
   @NotNull
-  @ManyToOne(fetch = FetchType.EAGER)
+  @ManyToOne    //is that necessary? Seems to work without (fetch = FetchType.EAGER)
   public UserModel createdBy;
 
   @LastModifiedDate

@@ -2,6 +2,7 @@ package org.doogie.liquido.test;
 
 import org.doogie.liquido.datarepos.IdeaRepo;
 import org.doogie.liquido.model.IdeaModel;
+import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.testdata.TestDataCreator;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
@@ -84,7 +85,6 @@ public class RepoTests {
       log.debug(idea.toString());
     }
   }
-
 
   @Test
   public void getNumVotes() {

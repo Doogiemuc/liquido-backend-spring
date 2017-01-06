@@ -13,6 +13,7 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.embedded.LocalServerPort;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -91,6 +92,9 @@ public class RestEndpointTests {
 
   @Autowired
   DelegationRepo delegationRepo;
+
+  @Value(value = "${spring.data.rest.base-path}")   // from application.properties
+  String basePath;
 
   @Autowired
   Environment springEnv;
@@ -189,9 +193,39 @@ public class RestEndpointTests {
    */
 
   @Test
-  public void testPostBallot() {
-    final String VOTER_HASH = "dummyUserHashFromTest";  // test fixture
+  public void testPostProposalForALaw() {
+    log.trace("TEST postBallot");
 
+    String newLawTitle = "Law from test "+System.currentTimeMillis() % 10000;  // law.title must be unique!!
+
+    String initialLawUri = basePath + "/laws/" + this.laws.get(0).getId();
+    String createdByUri = basePath + "/users/" + this.users.get(0);
+
+    // I am deliberately not creating a new BallotModel(...) here that I could then   postForEntity like this:
+    //   ResponseEntity<BallotModel> createdBallot = client.postForEntity("/ballot", newBallot, BallotModel.class);
+    // because I do not want the test to success just because of on spring's very clever serialization and deserialization.
+    // Instead I want to post plain JSON as a client would:
+    JSONObject newLawJson = new JSONObject()
+      .put("title", newLawTitle)
+      .put("description", "Dummy description from testPostProposalForLaw")
+      .put("initialLaw", initialLawUri)
+      .put("createdBy", createdByUri);
+    log.trace("posting JSON Object:\n"+newLawJson.toString(2));
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    HttpEntity<String> entity = new HttpEntity<String>(newLawJson.toString(), headers);
+
+    LawModel createdLaw = client.postForObject("/laws", entity, LawModel.class);  // this actually deserializes the response into a BallotModel. But that's ok. Makes the assertions much easier than digging around in a plain String response.
+    assertNotNull(createdLaw);   // createdLaw will be null, when there was an error.
+    assertEquals(newLawTitle, createdLaw.getTitle());
+
+    log.trace("TEST postBallot successfully created "+createdLaw);
+  }
+
+
+  @Test
+  public void testPostBallot() {
     log.trace("TEST postBallot");
 
     //TODO: find a law that is currently in the voting phase
@@ -202,45 +236,67 @@ public class RestEndpointTests {
     //   ResponseEntity<BallotModel> createdBallot = client.postForEntity("/ballot", newBallot, BallotModel.class);
     // because I do not want the test to success just because of on spring's very clever serialization and deserialization.
     // Instead I want to post plain JSON as a client would:
+
+    //Problems I had
+    // http://stackoverflow.com/questions/40986738/spring-data-rest-no-string-argument-constructor-factory-method-to-deserialize/40986739
+    // https://jira.spring.io/browse/DATAREST-687
+    // https://jira.spring.io/browse/DATAREST-884
+
+    String voterHash = "dummyUserHashFromTest";
+    String initialLawUri = basePath + "/laws/" + this.laws.get(0).getId();
+    String voteOrderUri1 = basePath + "/laws/" + this.laws.get(1).getId();
+    String voteOrderUri2 = basePath + "/laws/" + this.laws.get(2).getId();
+
     JSONObject newBallotJson = new JSONObject()
-        .put("voterHash", VOTER_HASH)
-        .put("initialLaw", this.laws.get(0).getId())
+        .put("voterHash", voterHash)
+        .put("initialProposal", initialLawUri)
         .put("voteOrder", new JSONArray()
-                                .put(this.laws.get(1).getId())
-                                .put(this.laws.get(2).getId()) );
+                                .put(voteOrderUri1)
+                                .put(voteOrderUri2));
     log.trace("posting JSON Object:\n"+newBallotJson.toString(2));
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
     HttpEntity<String> entity = new HttpEntity<String>(newBallotJson.toString(), headers);
 
-    BallotModel createdBallot = client.postForObject("/ballot", entity, BallotModel.class);  // this actually deserializes the response into a BallotModel. But that's ok. Makes the assertions much easier than digging around in a plain String response.
-    assertNotNull(createdBallot);
-    assertEquals(VOTER_HASH, createdBallot.getVoterHash());
+    //do not use client.postForObject   it does not return any error. It simply returns null instead!
+    // correct endpoint is my own /postBallot implementation.    /ballots are not exposed via HATEOAS !!
+    ResponseEntity<String> response = client.exchange("/postBallot", HttpMethod.POST, entity, String.class);
 
-    log.trace("TEST postBallot successfully created "+createdBallot);
+    log.debug("Response body:\n"+response.getBody());
+    assertEquals(HttpStatus.CREATED, response.getStatusCode());
+    assertTrue(response.getBody().contains(voterHash));
+
+    log.trace("TEST SUCCESSFUL: new ballot successfully posted.");
   }
 
   @Test
   public void testPostInvalidBallot() {
     log.trace("TEST postInvalidBallot");
 
-    //NICE: Lombok is that good, that I can't even use new BallotModel(...) to create an invalid ballot :-)   So we create then JSON and the request entity by hand
-    JSONObject invalidBallot = new JSONObject();
-    invalidBallot.put("voteOrder", new JSONArray());
-    invalidBallot.put("voterHash", "someDummyVoterHash");
-    //this ballot is missing the required "initialLaw"!
+    String voterHash = "dummyUserHashFromTest";
+    String initialLawUri = basePath + "/laws/4711"; // This is a nonexistant ID !
+    String voteOrderUri1 = basePath + "/laws/" + this.laws.get(1).getId();
+    String voteOrderUri2 = basePath + "/laws/" + this.laws.get(2).getId();
+
+    JSONObject newBallotJson = new JSONObject()
+      .put("voterHash", voterHash)
+      .put("initialProposal", initialLawUri)
+      .put("voteOrder", new JSONArray()
+        .put(voteOrderUri1)
+        .put(voteOrderUri2));
+    log.trace("posting JSON Object:\n"+newBallotJson.toString(2));
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<>(invalidBallot.toString(), headers);
+    HttpEntity<String> entity = new HttpEntity<String>(newBallotJson.toString(), headers);
 
-    log.trace("The next POST request is expected to return an HTTP 400 error");
-    ResponseEntity<String> response = client.exchange("/ballots", HttpMethod.POST, entity, String.class);
+    ResponseEntity<String> response = client.exchange("/postBallot", HttpMethod.POST, entity, String.class);
+
     String responseBody = response.getBody();
     assertEquals(HttpStatus.BAD_REQUEST.value(), response.getStatusCodeValue());  // 400
     log.trace("response.body (that should contain the error): "+responseBody);
-    assertTrue(responseBody.contains("initialLaw"));
+    assertTrue(responseBody.contains("initialProposal"));
     log.trace("TEST postInvalidBallot successful: received correct status and error message in response.");
   }
 

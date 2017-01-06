@@ -21,9 +21,9 @@ interface IdeaProjection {
   Date getCreatedAt();
   Date getUpdatedAt();
 
-  // this will inline the reference to UserModel into the JSON of every idea
-  UserModel getCreatedBy();
+  // this will inline the reference to User and Area into the JSON of every idea
 
+  UserModel getCreatedBy();
   AreaModel getArea();
 }
 
