@@ -194,6 +194,12 @@ public class TestDataCreator implements CommandLineRunner {
     for (int i = 0; i < NUM_IDEAS; i++) {
       String ideaTitle = "Idea " + i;
       IdeaModel newIdea = new IdeaModel(ideaTitle, "Very nice idea description", this.areas.get(0), this.users.get(i % NUM_USERS));
+      if (i > NUM_IDEAS / 2) {
+        newIdea.addSupporter(this.users.get(1));
+        newIdea.addSupporter(this.users.get(2));
+        newIdea.addSupporter(this.users.get(3));
+      }
+
 
       IdeaModel existingIdea = ideaRepo.findByTitle(ideaTitle);
       if (existingIdea != null) {
@@ -212,14 +218,17 @@ public class TestDataCreator implements CommandLineRunner {
     log.debug("Seeding Laws ...");
     this.laws = new ArrayList<>();
 
+    AreaModel area = this.areas.get(0);
+    UserModel createdBy = this.users.get(0);
+
     // ==== One initial new proposal for a law   and some alternatives with and without quorum
-    LawModel initialProposal = LawModel.buildInitialLaw("Initial Proposal", "Perfect proposal for a law with quorum", LawStatus.ELABORATION, this.users.get(0));
+    LawModel initialProposal = LawModel.buildInitialLaw("Initial Proposal", "Perfect proposal for a law with quorum", area, LawStatus.ELABORATION, createdBy);
     upsertLaw(null, initialProposal);
 
     // and some alternative proposals for this initial proposal that did not yet reach the neccassary quorum
     for (int i = 0; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
       String lawTitle = "Alternative Proposal " + i;
-      LawModel alternativeProposal = new LawModel(lawTitle, "Alternative proposal #"+i, initialProposal, LawStatus.NEW_PROPOSAL, this.users.get(0));
+      LawModel alternativeProposal = new LawModel(lawTitle, "Alternative proposal #"+i, area, initialProposal, LawStatus.NEW_PROPOSAL, createdBy);
       LawModel existingLaw = lawRepo.findByTitle(lawTitle);
       upsertLaw(existingLaw, alternativeProposal);
     }
@@ -227,18 +236,18 @@ public class TestDataCreator implements CommandLineRunner {
     // and some alternative proposals for this initial proposal that did already reach the necessary quorum and are in the elaboration phase
     for (int i = 0; i < NUM_ELABORATION; i++) {
       String lawTitle = "Alternative Proposal " + i;
-      LawModel alternativeProposal = new LawModel(lawTitle, "Alternative proposal #"+i+" with quorum", initialProposal, LawStatus.ELABORATION, this.users.get(0));
+      LawModel alternativeProposal = new LawModel(lawTitle, "Alternative proposal #"+i+" with quorum", area, initialProposal, LawStatus.ELABORATION, createdBy);
       LawModel existingLaw = lawRepo.findByTitle(lawTitle);
       upsertLaw(existingLaw, alternativeProposal);
     }
 
     // ==== Some proposals that currently are in the voting phase (one initial, of course)
-    LawModel initialProposalInVoting = LawModel.buildInitialLaw(initialInVotingTitle, "Proposal that currently is in the voting phase #0", LawStatus.VOTING,this.users.get(0));
+    LawModel initialProposalInVoting = LawModel.buildInitialLaw(initialInVotingTitle, "Proposal that currently is in the voting phase #0", area, LawStatus.VOTING, createdBy);
     LawModel existingProposal = lawRepo.findByTitle(initialInVotingTitle);
     upsertLaw(existingProposal, initialProposalInVoting);
 
     for (String alternativeInVotingTitle: alternativeProposalInVotingTitle) {
-      LawModel votingLaw = new LawModel(alternativeInVotingTitle, "Alternative proposal that currently is in the voting phase", initialProposalInVoting, LawStatus.VOTING, this.users.get(0));
+      LawModel votingLaw = new LawModel(alternativeInVotingTitle, "Alternative proposal that currently is in the voting phase", area, initialProposalInVoting, LawStatus.VOTING, createdBy);
       LawModel existingLaw = lawRepo.findByTitle(alternativeInVotingTitle);
       upsertLaw(existingLaw, votingLaw);
     }
@@ -246,7 +255,7 @@ public class TestDataCreator implements CommandLineRunner {
     // === real laws
     for (int i = 0; i < NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
-      LawModel realLaw = LawModel.buildInitialLaw(lawTitle, "Complete description of real law #"+i, LawStatus.LAW, this.users.get(0));
+      LawModel realLaw = LawModel.buildInitialLaw(lawTitle, "Complete description of real law #"+i, area, LawStatus.LAW, createdBy);
       realLaw.setCreatedAt(DoogiesUtil.dayAgo(20+i));
       realLaw.setUpdatedAt(DoogiesUtil.dayAgo(20+i));
       LawModel existingLaw = lawRepo.findByTitle(lawTitle);

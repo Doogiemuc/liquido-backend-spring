@@ -364,16 +364,21 @@ public class RestEndpointTests {
    * try to save a delegation with an invalid objectID
    */
   @Test
-  public void testSaveInvalidProxy() {
-    log.trace("TEST saveProxy");
+  public void testPostInvalidDelegation() {
+    log.trace("TEST postInvalidDelegation");
 
     String url = "/delegations";
 
+    String fromUserUri = basePath + "/users/" + this.users.get(0).getId();
+    String toProxyUri  = basePath + "/users/" + this.users.get(1).getId();
+    String areaUri     = basePath + "/areas/4711";   // INVALID !
+
     //I am deliberately not using DelegationModel here. This is the JSON as a client would send it.
     JSONObject newDelegationJSON = new JSONObject()
-      .put("fromUser", this.users.get(0).getId())
-      .put("toProxy",  "ffffffffffffffffffffffff")   // invalid userID  (but still a valid mongo ObjectId
-      .put("area",     this.areas.get(3).getId());
+      .put("fromUser", fromUserUri)
+      .put("toProxy",  toProxyUri)
+      .put("area",     areaUri);
+    log.trace("posting JSON Object:\n"+newDelegationJSON.toString(2));
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);

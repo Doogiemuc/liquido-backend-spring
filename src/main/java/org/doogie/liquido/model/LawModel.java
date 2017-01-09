@@ -36,10 +36,18 @@ public class LawModel {
   @Column(unique = true)
   public String title;
 
+  //TODO: lawModel.tagline
+  //TODO: lawModel.tags
+
   @NotNull
   @NonNull
   @NotEmpty
   public String description;
+
+  @NotNull
+  @NonNull
+  @ManyToOne
+  public AreaModel area;
 
   /**
    * Reference to initial proposal. The initial proposal references itself.
@@ -87,10 +95,11 @@ public class LawModel {
   public Date createdAt;
 
 
-  public LawModel(String title, String description, LawModel initialLaw, LawStatus status, UserModel createdBy) {
+  public LawModel(String title, String description, AreaModel area, LawModel initialLaw, LawStatus status, UserModel createdBy) {
     if (initialLaw == null || createdBy == null) throw new IllegalArgumentException("initialLaw and createdBy must not be null!");
     this.title = title;
     this.description = description;
+    this.area = area;
     this.initialLaw = initialLaw;
     this.status = status;
     this.createdBy = createdBy;
@@ -99,10 +108,11 @@ public class LawModel {
   }
 
   /** builder for an initial law whos field "initialLaw" points to itself. */
-  public static LawModel buildInitialLaw(String title, String description, LawStatus status, UserModel createdBy) {
+  public static LawModel buildInitialLaw(String title, String description, AreaModel area, LawStatus status, UserModel createdBy) {
     LawModel newLaw = new LawModel();
     newLaw.title = title;
     newLaw.description = description;
+    newLaw.area = area;
     newLaw.status = status;
     newLaw.initialLaw = newLaw;   // ref to self
     newLaw.createdBy = createdBy;
