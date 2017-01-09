@@ -10,7 +10,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * <h2>Model for one Idea</h2>
@@ -22,7 +24,7 @@ import java.util.List;
  *   - createdBy, reference to UserModel that created this idea
  *   - createdAt and updatedAt, handled automatically
  *
- * The referenced user and area details {@link org.doogie.liquido.datarepos.IdeaProjection automatically populated} in the exposed HATEOAS endpoint.
+ * The referenced user and area details are {@link org.doogie.liquido.datarepos.IdeaProjection automatically populated} in the exposed HATEOAS endpoint.
  */
 @Data
 @Entity
@@ -51,10 +53,12 @@ public class IdeaModel {
   @ManyToOne
   AreaModel area;
 
-  /** list of users that support this idea *
-  @ManyToMany(fetch = FetchType.EAGER)    //BUGFIX: EAGER loading is neseccary for testCreateIdeaWithAllRefs to work!
-  List<UserModel> supporters;  // need list of all supporters so that no one is allowed to vote twice
-  */
+  /**
+   * list of users that support this idea
+   */
+  @ManyToMany    //(fetch = FetchType.EAGER)    //BUGFIX: EAGER loading is neseccary for testCreateIdeaWithAllRefs to work!
+  Set<UserModel> supporters = new HashSet<>();  // I need the full list of names so that no one is allowed to vote twice.
+
 
   //TODO: configure createBy
   // http://docs.spring.io/spring-data/jpa/docs/current/reference/html/index.html#auditing.auditor-aware
@@ -71,4 +75,17 @@ public class IdeaModel {
   @CreatedDate
   public Date createdAt;
 
+  public void addSupporter(UserModel supporter) {
+    this.supporters.add(supporter);
+  }
+
+  /** Only the number of supportes is exposed via REST */
+  public int getNumSupporters() {
+    return this.supporters.size();
+  }
+
+  public boolean getSupportedByCurrentUser() {
+    //if (this.createdBy.equals(getCurrentUser())) return true;
+    return false;
+  }
 }
