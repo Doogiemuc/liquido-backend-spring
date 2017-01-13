@@ -19,7 +19,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Starts the SpringApplication.
  */
 @SpringBootApplication
-@EnableJpaAuditing   // this is necessary so that UpdatedAt and CreatedAt are handled.
 public class LiquidoBackendSpringApplication {
 	static Logger log = LoggerFactory.getLogger(LiquidoBackendSpringApplication.class);
 

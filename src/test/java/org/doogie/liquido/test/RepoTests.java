@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -29,6 +30,7 @@ import static org.junit.Assert.*;
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest
+@EnableJpaAuditing(auditorAwareRef = "mockAuditorAware")
 @ActiveProfiles("test")  // this will also load the settings  from  application-test.properties
 public class RepoTests {
   private Logger log = LoggerFactory.getLogger(this.getClass());
@@ -48,10 +50,10 @@ public class RepoTests {
   @Autowired
   IdeaRepo ideaRepo;
 
-  @PostConstruct
-  public void populateTestDB() {
-    //Test data was automatically injected by the CommandLineRunner
-  }
+//  @PostConstruct
+//  public void populateTestDB() {
+//    //Test data was automatically injected by the CommandLineRunner, but maybe sometime we'll need to do it here.
+//  }
 
 
   @Test

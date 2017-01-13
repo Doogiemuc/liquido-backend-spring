@@ -63,15 +63,18 @@ public class TestDataCreator implements CommandLineRunner {
   @Autowired
   BallotRepo ballotRepo;
 
+  //@Autowired
+  //LiquidoAuditorAware auditorAware;
+
+  @Autowired
+  Environment springEnv;   // load settings from application-test.properties
+
   public TestDataCreator() {
     initialInVotingTitle = "Initial Proposal in voting phase";
     alternativeProposalInVotingTitle = new ArrayList<>();
     alternativeProposalInVotingTitle.add("Alternative proposal #1 in voting phase");
     alternativeProposalInVotingTitle.add("Alternative proposal #2 in voting phase");
   }
-
-  @Autowired
-  Environment springEnv;   // load settings from application-test.properties
 
   /**
    * Seed the DB with some default values, IF
@@ -89,11 +92,13 @@ public class TestDataCreator implements CommandLineRunner {
       log.info("==== Populate test DB ...");
       // order is important here!
       seedUsers();
+      //auditorAware.setMockAuditor(this.users.get(0));   // Simulate that user is logged in.  This user will be set as @createdAt
       seedAreas();
       seedDelegations();
       seedIdeas();
       seedLaws();
       seedBallots();
+      //auditorAware.setMockAuditor(null);
     }
   }
 

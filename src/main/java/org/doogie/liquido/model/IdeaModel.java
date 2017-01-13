@@ -1,6 +1,9 @@
 package org.doogie.liquido.model;
 
-import lombok.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -11,7 +14,6 @@ import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -56,7 +58,7 @@ public class IdeaModel {
   /**
    * list of users that support this idea
    */
-  @ManyToMany    //(fetch = FetchType.EAGER)    //BUGFIX: EAGER loading is neseccary for testCreateIdeaWithAllRefs to work!
+  @ManyToMany(fetch = FetchType.EAGER)    //BUGFIX: EAGER loading is neseccary for testCreateIdeaWithAllRefs to work!
   Set<UserModel> supporters = new HashSet<>();  // I need the full list of names so that no one is allowed to vote twice.
 
 

@@ -2,13 +2,13 @@ package org.doogie.liquido.test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.node.JsonNodeType;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.UserRepo;
-import org.doogie.liquido.model.*;
+import org.doogie.liquido.model.AreaModel;
+import org.doogie.liquido.model.LawModel;
+import org.doogie.liquido.model.UserModel;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Before;
@@ -19,13 +19,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.embedded.LocalServerPort;
-import org.springframework.boot.json.GsonJsonParser;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.client.RootUriTemplateHandler;
+import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.http.*;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.http.client.support.BasicAuthorizationInterceptor;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.ResponseErrorHandler;
@@ -80,7 +82,7 @@ public class RestEndpointTests {
    * REST client that is automatically configured with localServerPort of running test server.
    * use with WebEnvironment.RANDOM_PORT   (when SpringBootTest starts the server)
    */
-  @Autowired
+  //@Autowired
   TestRestTemplate client;
 
   @LocalServerPort
@@ -124,6 +126,20 @@ public class RestEndpointTests {
     }
   }
 
+  @Autowired
+  public void setTestRestTemplate(TestRestTemplate client) {
+    log.debug("configuring TestRestTemplate with basic auth");
+    //BUGFIX: TestRestClient does not take application.properties  spring.data.rest.base-path  into account. We must manually configure this.
+    // https://jira.spring.io/browse/DATAREST-968
+    // https://github.com/spring-projects/spring-boot/issues/7816
+    String basePath = springEnv.getProperty("spring.data.rest.base-path");
+    client.getRestTemplate().setUriTemplateHandler(new RootUriTemplateHandler("http://localhost:"+ localServerPort + basePath));
+    client.getRestTemplate().getInterceptors().add(new BasicAuthorizationInterceptor(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD));
+    //TODO:  for API keys
+    //client.getRestTemplate().setDefaultUriVariables();
+    this.client = client;
+  }
+
   /**
    * this is executed, when the Bean has been created and @Autowired references are injected and ready.
    */
@@ -131,17 +147,6 @@ public class RestEndpointTests {
   public void postConstruct() {
     // Here you can do any one time setup necessary
     log.trace("PostConstruct: pre-fetching data from DB");
-
-    //client.getRestTemplate().setErrorHandler(new LiquidoTestErrorHandler());
-
-    //BUGFIX: TestRestClient does not take application.properties  spring.data.rest.base-path  into account. We must manually configure this.
-    // https://jira.spring.io/browse/DATAREST-968
-    // https://github.com/spring-projects/spring-boot/issues/7816
-    String basePath = springEnv.getProperty("spring.data.rest.base-path");
-    client.getRestTemplate().setUriTemplateHandler(new RootUriTemplateHandler("http://localhost:"+ localServerPort + basePath));
-
-    //TODO:  for API keys
-    //client.getRestTemplate().setDefaultUriVariables();
 
     this.users = new ArrayList<>();
     for (UserModel userModel : userRepo.findAll()) {
@@ -165,19 +170,24 @@ public class RestEndpointTests {
 
   /**
    * Keep in mind that this will run before every single test case!
-   */
+
   @Before
   public void beforeEachTest() {
     log.trace("This runs before each single test case");
-    //TODO: handle login  (maybe use a special static APP_ID for tests.
+
   }
+   */
 
   @Test
+  //@WithUserDetails(value="testuser0@liquido.de", userDetailsServiceBeanName="liquidoUserDetailsService")
   public void testFindMostRecentIdeas() throws IOException {
     log.trace("TEST testFindMostRecentIdeas");
-    String response = client.getForObject("/ideas/search/recentIdeas", String.class);
 
-    log.debug(response);
+    String response = client
+      //.withBasicAuth(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD)
+      .getForObject("/ideas/search/recentIdeas", String.class);
+
+    assertNotNull("Could not get recent ideas", response);
 
     ObjectMapper mapper = new ObjectMapper();
     JsonNode node = mapper.readTree(response);
@@ -188,30 +198,15 @@ public class RestEndpointTests {
     log.trace("TEST SUCCESSFULL testFindMostRecentIdeas  found "+ideas.size()+" ideas");
   }
 
-  /*    Post a new entity with RestTempalte => Do I need this when using TestRestTemplate or are the mappers already ocnfigured?
-
-        // http://stackoverflow.com/questions/27414922/unable-to-post-new-entity-with-relationship-using-resttemplate-and-spring-data-r?rq=1
-        RestTemplate restTemplate = new RestTemplate();
-        restTemplate.getMessageConverters().add(new MappingJacksonHttpMessageConverter());
-        restTemplate.getMessageConverters().add(new StringHttpMessageConverter());
-
-        String uri = new String("url");
-
-        Bar b= new Bar();
-        bar.setName("newWgetBar");
-
-        rt.postForObject(uri, b, Bar.class);
-
-   */
-
   @Test
   public void testPostProposalForALaw() {
     log.trace("TEST postBallot");
 
     String newLawTitle = "Law from test "+System.currentTimeMillis() % 10000;  // law.title must be unique!!
 
-    String initialLawUri = basePath + "/laws/" + this.laws.get(0).getId();
-    String createdByUri = basePath + "/users/" + this.users.get(0).getId();
+    String areaUri       = basePath + "/areas/" + this.areas.get(0).getId();
+    String initialLawUri = basePath + "/laws/"  + this.laws.get(0).getId();
+    String createdByUri  = basePath + "/users/" + this.users.get(0).getId();
 
     // I am deliberately not creating a new BallotModel(...) here that I could then   postForEntity like this:
     //   ResponseEntity<BallotModel> createdBallot = client.postForEntity("/ballot", newBallot, BallotModel.class);
@@ -220,8 +215,10 @@ public class RestEndpointTests {
     JSONObject newLawJson = new JSONObject()
       .put("title", newLawTitle)
       .put("description", "Dummy description from testPostProposalForLaw")
+      .put("area", areaUri)
       .put("initialLaw", initialLawUri)
       .put("createdBy", createdByUri);
+
     log.trace("posting JSON Object:\n"+newLawJson.toString(2));
 
     HttpHeaders headers = new HttpHeaders();
@@ -229,8 +226,8 @@ public class RestEndpointTests {
     HttpEntity<String> entity = new HttpEntity<String>(newLawJson.toString(), headers);
 
     LawModel createdLaw = client.postForObject("/laws", entity, LawModel.class);  // this actually deserializes the response into a BallotModel. But that's ok. Makes the assertions much easier than digging around in a plain String response.
-    assertNotNull(createdLaw);   // createdLaw will be null, when there was an error.
-    assertEquals(newLawTitle, createdLaw.getTitle());
+    assertNotNull("ERROR: could not post proposal for new law", createdLaw);   // createdLaw will be null, when there was an error.
+    assertEquals("ERROR: create law title does not match", newLawTitle, createdLaw.getTitle());
 
     log.trace("TEST postBallot successfully created "+createdLaw);
   }

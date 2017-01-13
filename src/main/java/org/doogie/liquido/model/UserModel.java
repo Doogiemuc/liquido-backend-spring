@@ -1,5 +1,6 @@
 package org.doogie.liquido.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedDate;
@@ -34,9 +35,10 @@ public class UserModel {
   @NotNull
   @NonNull
   @NotEmpty
-  @Getter(AccessLevel.NONE)
+  @JsonIgnore                       // tell jackson to not serialize this field
+  //@Getter(AccessLevel.PUBLIC)
   @RestResource(exported = false)   // private: never exposed via REST!
-  private String passwordHash;
+  private String password;
 
   @Embedded
   public UserProfileModel profile;

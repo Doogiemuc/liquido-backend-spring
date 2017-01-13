@@ -35,11 +35,23 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
      .append(req.getMethod())
      .append(" ")
      .append(req.getRequestURL());
+
     String queryString = req.getQueryString();
     if (queryString != null) {
       reqInfo.append("?").append(queryString);
     }
+
+    if (req.getAuthType() != null) {
+      reqInfo.append(", authType=")
+        .append(req.getAuthType());
+    }
+    if (req.getUserPrincipal() != null) {
+      reqInfo.append(", principalName=")
+        .append(req.getUserPrincipal().getName());
+    }
+
     this.logger.debug("=> " + reqInfo);
+
     /*
       //Keep in mind, that we cannon simply log the body. Because this input stream can only be read once.
       String requestBody = DoogiesUtil._stream2String(req.getInputStream());
