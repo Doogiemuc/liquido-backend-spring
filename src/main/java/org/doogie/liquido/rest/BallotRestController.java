@@ -27,7 +27,7 @@ import static org.springframework.web.bind.annotation.RequestMethod.POST;
  *
  */
 @BasePathAwareController
-//@RepositoryRestController   nad    @RequestMapping("postBallot")   does not really work
+//@RepositoryRestController   nad    @RequestMapping("postBallot")   do not really work
 //@EnableHypermediaSupport(type = EnableHypermediaSupport.HypermediaType.HAL)      //not necessary?
 public class BallotRestController {
   Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
@@ -35,23 +35,10 @@ public class BallotRestController {
   @Autowired
   BallotRepo ballotRepo;
 
-  //TODO: need to move to its own controller
-  /**
-   * Simple is alive test
-   * @return <pre>{"Hello":"World"}</pre>
-
-  @RequestMapping("/ping")
-  public String greeting() {
-    log.trace("=> GET /ping");
-    return "{\"Hello\":\"World\"}";
-  }
-  */
-
-
   /**
    * Post a ballot, ie. a vote from a user
    *
-   * This customizes the default HATEOAS endpoint for /ballots!
+   * This endpoint must be used instead of the default HATEOAS POST endpoint for /ballots!
    * http://docs.spring.io/spring-data/rest/docs/current/reference/html/#customizing-sdr.overriding-sdr-response-handlers
    *
    * Remark: POST for create, PUT would be for update! See http://stackoverflow.com/questions/630453/put-vs-post-in-rest?rq=1
