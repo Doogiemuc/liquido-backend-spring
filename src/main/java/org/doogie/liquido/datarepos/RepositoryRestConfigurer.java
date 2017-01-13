@@ -1,16 +1,16 @@
 package org.doogie.liquido.datarepos;
 
-import org.doogie.liquido.datarepos.DelegationValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.rest.core.config.RepositoryRestConfiguration;
 import org.springframework.data.rest.core.event.ValidatingRepositoryEventListener;
 import org.springframework.data.rest.core.mapping.RepositoryDetectionStrategy;
 import org.springframework.data.rest.webmvc.config.RepositoryRestConfigurerAdapter;
-import org.springframework.stereotype.Component;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
@@ -24,7 +24,8 @@ import org.springframework.web.filter.CorsFilter;
  *
  * https://spring.io/understanding/HATEOAS
  */
-@Component
+@Configuration        // @Configuration is also a @Component
+@EnableJpaAuditing   //(auditorAwareRef = "liquidoAuditorAware")   // this is necessary so that UpdatedAt and CreatedAt are handled.
 public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
   Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
 
@@ -40,6 +41,16 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
     config.setRepositoryDetectionStrategy(RepositoryDetectionStrategy.RepositoryDetectionStrategies.ANNOTATED);
   }
 
+  // And again: This is not necessary. All already handled by spring boo :-)  https://jaxenter.com/rest-api-spring-java-8-112289.html
+  /**
+   * Activating auditing for @createdBy
+   * @return My {@link LiquidoAuditorAware} implementation, that can get currently logged in user as UserModel
+
+  @Bean
+  public AuditorAware<UserModel> auditorProvider() {
+    return new LiquidoAuditorAware();
+  }
+  */
 
   // Do not create an instance with "new". Let Spring inject the dependency, so that it can ba handled by Spring.
   @Autowired
