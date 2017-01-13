@@ -19,6 +19,7 @@ import org.springframework.web.filter.CorsFilter;
  * Configure the exposed REST HATEOAS services.
  *
  *  - Configure the base path for our rest endpoints
+ *  - configure CORS
  *  - add Validators on beforeCreate
  *  - better serialization for MongoDB ObjectIDs  to HEX24 strings
  *
@@ -33,24 +34,20 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
   public void configureRepositoryRestConfiguration(RepositoryRestConfiguration config) {
     log.debug("===== Configuring RepositoryRestconfiguration under basePath='"+config.getBasePath().toString()+"',  baseURI='"+config.getBaseUri().toString()+"'");
 
-    // The base path for our RestControllers. The base path for RepositoryRestResource is configured in application.properties
+    // The base path for RepositoryRestResource is configured in application.properties. It's more prominent there
+    // Keep in mind that this is only the base path for our HATEOAS endpoints. The base path for normel @RestControllers has to configured individually there.
     //config.setBasePath("/liquido/v2");
 
     // Only export data repositories that are annotated with @RepositoryRestResource(...)
     // In future versions this will be configurable in application.properties   spring.data.rest.detection-strategy=visibility   https://github.com/spring-projects/spring-boot/issues/7113
     config.setRepositoryDetectionStrategy(RepositoryDetectionStrategy.RepositoryDetectionStrategies.ANNOTATED);
+
+    //TODO: when available in future version of spring: config.getCorsRegistry()
   }
 
-  // And again: This is not necessary. All already handled by spring boo :-)  https://jaxenter.com/rest-api-spring-java-8-112289.html
-  /**
-   * Activating auditing for @createdBy
-   * @return My {@link LiquidoAuditorAware} implementation, that can get currently logged in user as UserModel
+  // implementing AuditorAware is not necessary. All already handled by spring boot :-)  https://jaxenter.com/rest-api-spring-java-8-112289.html
 
-  @Bean
-  public AuditorAware<UserModel> auditorProvider() {
-    return new LiquidoAuditorAware();
-  }
-  */
+
 
   // Do not create an instance with "new". Let Spring inject the dependency, so that it can ba handled by Spring.
   @Autowired
@@ -63,58 +60,30 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
     validatingListener.addValidator("beforeCreate", delegationValidator);
   }
 
-  /*   This does not work. NO idea why not.
-  @Bean
-  public DelegationValidator beforeCreateDelegationModelValidator() {
-    return delegationValidator;
-  }
-  */
-
-
-//  @Override
-//  public void configureJacksonObjectMapper(ObjectMapper objectMapper) {
-//    log.debug("configureJacksonObjectMapper for (de)serializing ObjectIds to Strings");
-//    SimpleModule myModule = new SimpleModule("ObjectIdJacksonModule");
-//    myModule.addSerializer(ObjectId.class, new MongoObjectIdSerializer());
-//    objectMapper.registerModule(myModule);
-//  }
-//
-//  private class MongoObjectIdSerializer extends JsonSerializer<ObjectId>{
-//    // See also this example: https://github.com/jhiemer/spring-data-rest-sample/blob/master/src/main/java/de/cloudscale/config/CustomRepositoryRestMvcConfiguration.java
-//    //TODO: BUG: This serializer ist not yet picked up in exception handling of spring-data-rest exceptions
-//    @Override
-//    public void serialize(ObjectId objectId, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
-//      //log.debug("serializing ObjectID  from RepositoryRestConfigurer");
-//      jsonGenerator.writeString(objectId.toHexString());
-//    }
-//  }
 
 
   /**
    * http://stackoverflow.com/questions/31724994/spring-data-rest-and-cors
    * http://stackoverflow.com/a/31748398/122441 until https://jira.spring.io/browse/DATAREST-573
    * @return
-   */
+
   @Bean
   public FilterRegistrationBean corsFilter() {
-    log.trace("Setting corsFilter to allow everything from localhost");
+    log.trace("Configuring CORS for RestRepositories");
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    CorsConfiguration config = new CorsConfiguration();
-    config.setAllowCredentials(true);
-    config.addAllowedOrigin("*");
-    config.addAllowedHeader("*");
-    config.addAllowedMethod("OPTIONS");
-    config.addAllowedMethod("HEAD");
-    config.addAllowedMethod("GET");
-    config.addAllowedMethod("PUT");
-    config.addAllowedMethod("POST");
-    config.addAllowedMethod("DELETE");
-    config.addAllowedMethod("PATCH");
+    CorsConfiguration config = new CorsConfiguration().applyPermitDefaultValues();
+
+    //config.setAllowCredentials(true);
+    //config.addAllowedOrigin("http://localhost:8080");
+    //config.addAllowedOrigin("http://localhost");
+    //config.addAllowedHeader("*");
+    //config.addAllowedMethod("*");
+
     source.registerCorsConfiguration("/**", config);
     // return new CorsFilter(source);
     final FilterRegistrationBean bean = new FilterRegistrationBean(new CorsFilter(source));
     bean.setOrder(0);
     return bean;
   }
-
+  */
 }

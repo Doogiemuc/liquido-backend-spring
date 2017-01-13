@@ -11,7 +11,6 @@ import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -22,10 +21,8 @@ import org.springframework.boot.context.embedded.LocalServerPort;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.client.RootUriTemplateHandler;
-import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.http.*;
-import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.support.BasicAuthorizationInterceptor;
 import org.springframework.test.context.ActiveProfiles;
@@ -81,8 +78,8 @@ public class RestEndpointTests {
   /**
    * REST client that is automatically configured with localServerPort of running test server.
    * use with WebEnvironment.RANDOM_PORT   (when SpringBootTest starts the server)
+   * client is further configured in method.
    */
-  //@Autowired
   TestRestTemplate client;
 
   @LocalServerPort

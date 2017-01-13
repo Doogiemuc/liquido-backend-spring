@@ -16,8 +16,7 @@ import java.util.Collection;
 
 /**
  * Adapter between my [@link {@link UserModel} and the {@link org.springframework.security.core.userdetails.User}
- *
- * It loads users from the DB with {@link UserRepo}
+ * This class loads users from the DB via {@link UserRepo} and grants them roles.
  */
 @Slf4j
 public class LiquidioUserDetailsService implements UserDetailsService {
@@ -27,11 +26,11 @@ public class LiquidioUserDetailsService implements UserDetailsService {
 
   @Override
   public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+    //TODO: Remove default admin login
     if ("admin".equals(email)) {
       log.debug("==== ADMIN LOGIN ===");
-      return new User(email, "admin", Arrays.asList(new SimpleGrantedAuthority("ROLE_USER")));
+      return new User(email, "adminpwd", Arrays.asList(new SimpleGrantedAuthority("ROLE_USER")));
     }
-
 
     log.debug("Loading user "+email);
     UserModel user = userRepo.findByEmail(email);
@@ -40,6 +39,7 @@ public class LiquidioUserDetailsService implements UserDetailsService {
   }
 
   private Collection<GrantedAuthority> getGrantedAuthorities(UserModel user) {
+    // if user.email == admin then return "ROLE_ADMIN" else ...
     return Arrays.asList(new SimpleGrantedAuthority("ROLE_USER"));
   }
 }

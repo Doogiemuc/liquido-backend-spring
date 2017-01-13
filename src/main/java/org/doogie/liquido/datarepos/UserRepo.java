@@ -4,6 +4,7 @@ import org.doogie.liquido.model.UserModel;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 /**
  * Database abstraction for "users".
@@ -11,6 +12,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
  * This Repository is exposed as REST service under the endpoint <pre>/liquido/v2/users</pre>
  * see https://spring.io/guides/gs/accessing-mongodb-data-rest/
  */
+//@CrossOrigin(origins = "*")
 @RepositoryRestResource(collectionResourceRel = "users", path = "users", itemResourceRel = "user")
 public interface UserRepo extends CrudRepository<UserModel, Long> {
 

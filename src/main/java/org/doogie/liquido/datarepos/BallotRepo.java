@@ -7,18 +7,28 @@ import org.springframework.data.rest.core.annotation.RestResource;
 
 /**
  * Database abstraction for "ballots".
+ *
+ * All writing methods are not exposed as rest endpoints!
+ * Posting a ballot (ie. cast a vote) is handled in our custom {@link org.doogie.liquido.rest.BallotRestController}
  */
-//TODO: NOT exported as @RepositoryRestResource ! Ballots can only be accessed via BallotRestController
 @RepositoryRestResource(collectionResourceRel = "ballots", path = "ballots", itemResourceRel = "ballot")
 public interface BallotRepo extends CrudRepository<BallotModel, Long> {
-
-  /**
-   * Do not export the save method as rest endpoint that client can POST to.
-   * This is handled in our custom {@link org.doogie.liquido.rest.BallotRestController}
-   * @param ballot the ballot to save
-   * @return the saved ballot incl. ID
-   */
   @Override
   @RestResource(exported = false)
   BallotModel save(BallotModel ballot);
+
+  @RestResource(exported = false)
+  void delete(Long id);
+
+  @Override
+  @RestResource(exported = false)
+  void delete(BallotModel ballotModel);
+
+  @Override
+  @RestResource(exported = false)
+  void delete(Iterable<? extends BallotModel> iterable);
+
+  @Override
+  @RestResource(exported = false)
+  void deleteAll();
 }

@@ -8,12 +8,10 @@
 
 # Port of running backend server  (default: 8080)
 server.port=8090
-
 # This will output SQL statements
 #debug=true
+spring.jpa.show-sql=true
 
-# Uncomment this to see EVERY SQL statement
-#spring.jpa.show-sql=true
 
 ####################################
 # Connection to production DB
@@ -33,8 +31,8 @@ server.port=8090
 spring.h2.console.enabled=true
 spring.h2.console.path=/h2-console
 
-## Use Googles JSON for (un)marshalling POJOs <-> JSON
 
+## Use Googles JSON for (un)marshalling POJOs <-> JSON
 spring.http.converters.preferred-json-mapper=gson
 
 ## Logging
@@ -45,4 +43,8 @@ logging.level.org.doogie.liquido=TRACE
 logging.level.org.springframework.web.filter.CommonsRequestLoggingFilter=DEBUG
 logging.pattern.console=%highlight(%-5level) %cyan(%-70.70(.\\(%file:%line\\).%method\\(\\))) | %message%n
 
-# Spring Data Rest services  are configured in org.doogie.rest.RepositoryRestConfigurer class
+# Endpoint for the HATEOAS resources exposed by spring-data-rest (Which are also further configured in org.doogie.rest.RepositoryRestConfigurer.java)
+spring.data.rest.base-path=/liquido/v2
+
+
+
