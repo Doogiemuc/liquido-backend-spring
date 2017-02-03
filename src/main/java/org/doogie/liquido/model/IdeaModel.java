@@ -26,7 +26,8 @@ import java.util.Set;
  *   - createdBy, reference to UserModel that created this idea
  *   - createdAt and updatedAt, handled automatically
  *
- * The referenced user and area details are {@link org.doogie.liquido.datarepos.IdeaProjection automatically populated} in the exposed HATEOAS endpoint.
+ * The referenced user and area details can be {@link org.doogie.liquido.model.IdeaProjection automatically populated} in the exposed HATEOAS endpoint when querying for the projection:
+ * http://localhost:8090/liquido/v2/ideas/1?projection=ideaProjection
  */
 @Data
 @Entity
@@ -34,9 +35,9 @@ import java.util.Set;
 @RequiredArgsConstructor(suppressConstructorProperties = true)   //BUGFIX: https://jira.spring.io/browse/DATAREST-884
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "ideas")
-public class IdeaModel {
+public class IdeaModel extends BaseModel {
   @Id
-  @GeneratedValue
+  @GeneratedValue(strategy = GenerationType.AUTO)
   public Long id;
 
   @NotNull
@@ -52,40 +53,39 @@ public class IdeaModel {
 
   @NonNull
   @NotNull
-  @ManyToOne
+  @ManyToOne(optional = false)
   AreaModel area;
 
-  /**
-   * list of users that support this idea
-   */
-  @ManyToMany(fetch = FetchType.EAGER)    //BUGFIX: EAGER loading is neseccary for testCreateIdeaWithAllRefs to work!
-  Set<UserModel> supporters = new HashSet<>();  // I need the full list of names so that no one is allowed to vote twice.
-
-
-  //TODO: configure createBy
   // http://docs.spring.io/spring-data/jpa/docs/current/reference/html/index.html#auditing.auditor-aware
   // https://blog.countableset.com/2014/03/08/auditing-spring-data-jpa-java-config/    nice example
   @CreatedBy
   @NonNull
   @NotNull
-  @ManyToOne    //is that necessary? Seems to work without (fetch = FetchType.EAGER)
+  @ManyToOne(optional = false)
   public UserModel createdBy;
 
-  @LastModifiedDate
-  public Date updatedAt;
+  /**
+   * List of users that support this idea.
+   * I need the full list of references, so that no user can support this idea twice.
+   */
+  @ManyToMany(fetch = FetchType.EAGER)    //BUGFIX: EAGER loading is neseccary for testCreateIdeaWithAllRefs to work!
+  Set<UserModel> supporters = new HashSet<>();
 
-  @CreatedDate
-  public Date createdAt;
-
+  /**
+   * Call this when a user wants to discuss this idea further.
+   * No user will be added twice!
+   * @param supporter The user that wants to discuss this idea.
+   */
   public void addSupporter(UserModel supporter) {
     this.supporters.add(supporter);
   }
 
-  /** Only the number of supportes is exposed via REST */
+  /** For convenience we directly expose the number of supporters */
   public int getNumSupporters() {
     return this.supporters.size();
   }
 
+  //TODO: Can I get the currently logged in user here?  Wouldn't want to do this in a IdeaModel ...
   public boolean getSupportedByCurrentUser() {
     //if (this.createdBy.equals(getCurrentUser())) return true;
     return false;

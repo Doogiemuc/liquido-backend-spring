@@ -21,9 +21,9 @@ import java.util.Date;
 @RequiredArgsConstructor(suppressConstructorProperties = true)
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "users")
-public class UserModel {
+public class UserModel extends BaseModel {
   @Id
-  @GeneratedValue
+  @GeneratedValue(strategy = GenerationType.AUTO)
   public Long id;
 
   @NotNull
@@ -36,17 +36,11 @@ public class UserModel {
   @NonNull
   @NotEmpty
   @JsonIgnore                       // tell jackson to not serialize this field
-  //@Getter(AccessLevel.PUBLIC)
+  //@Getter(AccessLevel.PRIVATE)      // Lombok getter cannot be private because I need access to the password in LiquidoUserDetailsService.java
   @RestResource(exported = false)   // private: never exposed via REST!
   private String password;
 
   @Embedded
   public UserProfileModel profile;
-
-  @LastModifiedDate
-  public Date updatedAt;
-
-  @CreatedDate
-  public Date createdAt;
 
 }

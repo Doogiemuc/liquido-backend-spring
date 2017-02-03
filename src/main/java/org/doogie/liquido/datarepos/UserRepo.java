@@ -1,10 +1,13 @@
 package org.doogie.liquido.datarepos;
 
+import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.web.bind.annotation.CrossOrigin;
+
+import java.util.List;
 
 /**
  * Database abstraction for "users".
@@ -25,7 +28,5 @@ public interface UserRepo extends CrudRepository<UserModel, Long> {
    * @return one UserModel or null if no user with that email was found.
    */
   UserModel findByEmail(@Param("email") String email);   // This magically creates a query just from the method name!
-
-
 
 }

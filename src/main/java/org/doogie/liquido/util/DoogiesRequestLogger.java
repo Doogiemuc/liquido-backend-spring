@@ -1,65 +1,100 @@
 package org.doogie.liquido.util;
 
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.ContentCachingRequestWrapper;
+import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 
 /**
  * Doogies very cool HTTP request logging
  *
- * see also {@link org.springframework.web.filter.CommonsRequestLoggingFilter}
+ * There is also {@link org.springframework.web.filter.CommonsRequestLoggingFilter}  but it cannot log request method
+ * And it cannot easily be extended.
  *
  * https://mdeinum.wordpress.com/2015/07/01/spring-framework-hidden-gems/
+ * http://stackoverflow.com/questions/8933054/how-to-read-and-copy-the-http-servlet-response-output-stream-content-for-logging
  */
 public class DoogiesRequestLogger extends OncePerRequestFilter {
 
+  private boolean includeResponsePayload = true;
+  private int maxPayloadLength = 1000;
+
+  private String getContentAsString(byte[] buf, int maxLength, String charsetName) {
+    if (buf == null || buf.length == 0) return "";
+    int length = Math.min(buf.length, this.maxPayloadLength);
+    try {
+      return new String(buf, 0, length, charsetName);
+    } catch (UnsupportedEncodingException ex) {
+      return "Unsupported Encoding";
+    }
+  }
+
   /**
-   * Log each request with s ReqID, full Request URI and its duration in ms.
-   * @param req the request
-   * @param res the response
-   * @param filterChain chain of filteres
+   * Log each request and respponse with full Request URI, content payload and duration of the request in ms.
+   * @param request the request
+   * @param response the response
+   * @param filterChain chain of filters
    * @throws ServletException
    * @throws IOException
    */
   @Override
-  protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain filterChain) throws ServletException, IOException {
+  protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+
     long startTime = System.currentTimeMillis();
     StringBuffer reqInfo = new StringBuffer()
      .append("[")
      .append(startTime % 10000)  // request ID
      .append("] ")
-     .append(req.getMethod())
+     .append(request.getMethod())
      .append(" ")
-     .append(req.getRequestURL());
+     .append(request.getRequestURL());
 
-    String queryString = req.getQueryString();
+    String queryString = request.getQueryString();
     if (queryString != null) {
       reqInfo.append("?").append(queryString);
     }
 
-    if (req.getAuthType() != null) {
+    if (request.getAuthType() != null) {
       reqInfo.append(", authType=")
-        .append(req.getAuthType());
+        .append(request.getAuthType());
     }
-    if (req.getUserPrincipal() != null) {
+    if (request.getUserPrincipal() != null) {
       reqInfo.append(", principalName=")
-        .append(req.getUserPrincipal().getName());
+        .append(request.getUserPrincipal().getName());
     }
 
     this.logger.debug("=> " + reqInfo);
 
-    /*
-      //Keep in mind, that we cannon simply log the body. Because this input stream can only be read once.
-      String requestBody = DoogiesUtil._stream2String(req.getInputStream());
-      this.logger.trace("   " + requestBody);
-    */
-    filterChain.doFilter(req, res);
+    // ========= Log request and response payload ("body") ========
+    // We CANNOT simply read the request payload here, because then the InputStream would be consumed and cannot be read again by the actual processing/server.
+    //    String reqBody = DoogiesUtil._stream2String(request.getInputStream());   // THIS WOULD NOT WORK!
+    // So we need to apply some stronger magic here :-)
+    ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request);
+    ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
+
+    filterChain.doFilter(wrappedRequest, wrappedResponse);     // ======== This performs the actual request!
     long duration = System.currentTimeMillis() - startTime;
-    this.logger.debug("<= " + reqInfo + ": returned status=" + res.getStatus() + " in "+duration + "ms");
+
+    // I can only log the request's body AFTER the request has been made and ContentCachingRequestWrapper did its work.
+    String requestBody = this.getContentAsString(wrappedRequest.getContentAsByteArray(), this.maxPayloadLength, request.getCharacterEncoding());
+    if (requestBody.length() > 0) {
+      this.logger.debug("   Request body:\n" +requestBody);
+    }
+
+    this.logger.debug("<= " + reqInfo + ": returned status=" + response.getStatus() + " in "+duration + "ms");
+    if (includeResponsePayload) {
+      byte[] buf = wrappedResponse.getContentAsByteArray();
+      this.logger.debug("   Response body:\n"+getContentAsString(buf, this.maxPayloadLength, response.getCharacterEncoding()));
+    }
+
+    wrappedResponse.copyBodyToResponse();  // IMPORTANT: copy content of response back into original response
   }
+
 
 }

@@ -1,5 +1,6 @@
 package org.doogie.liquido.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -9,6 +10,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
+import javax.validation.constraints.NotNull;
 import java.util.Date;
 
 /**
@@ -21,30 +23,28 @@ import java.util.Date;
 @RequiredArgsConstructor(suppressConstructorProperties = true)
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "delegations")
-public class DelegationModel {
+public class DelegationModel extends BaseModel {
   @Id
-  @GeneratedValue
-  Long id;
+  @GeneratedValue(strategy = GenerationType.AUTO)
+  public Long id;
 
   /** Area that this delegation is in */
   @NonNull
-  @OneToOne
+  @NotNull
+  @ManyToOne
   public AreaModel area;
 
   /** reference to delegee that delegated his vote */
   @NonNull
-  @OneToOne
+  @NotNull
+  @ManyToOne
   public UserModel fromUser;
 
   /** reference to proxy that receives the delegation */
   @NonNull
-  @OneToOne
+  @NotNull
+  @ManyToOne
   public UserModel toProxy;
 
-  @LastModifiedDate
-  public Date updatedAt;
-
-  @CreatedDate
-  public Date createdAt;
-
+  //A delegation is always implicitly created by "fromUser"
 }

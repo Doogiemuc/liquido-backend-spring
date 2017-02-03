@@ -93,7 +93,7 @@ public class RepoTests {
     log.trace("TEST getNumVotes of "+ TestFixtures.USER4_EMAIL +" in area.title='"+ TestFixtures.AREA1_TITLE +"'");
     UserModel user4 = userRepo.findByEmail(TestFixtures.USER4_EMAIL);
     AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-    int numVotes = delegationRepo.getNumVotes(area1, user4);
+    long numVotes = delegationRepo.getNumVotes(area1, user4);
     assertEquals(TestFixtures.USER4_NUM_VOTES, numVotes);
     log.info("TEST SUCCESS: "+ TestFixtures.USER4_EMAIL +" is proxy for "+ TestFixtures.USER4_NUM_VOTES +" delegates (including himself).");
   }
@@ -120,7 +120,7 @@ public class RepoTests {
     AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
     assertNotNull("Did not find area 1 by title", area);
 
-    AreaModel areaDuplicate = new AreaModel(area.getTitle(), "This is a duplicate");
+    AreaModel areaDuplicate = new AreaModel(area.getTitle(), "This is a duplicate", area.getCreatedBy());
     try {
       areaRepo.save(areaDuplicate);  // should throw DuplicateKeyException
       fail("Did not receive expected DuplicateKeyException");

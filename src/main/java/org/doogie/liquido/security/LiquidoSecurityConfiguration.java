@@ -17,10 +17,16 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 
 import java.util.Arrays;
 
 
+/**
+ * Configure everything related to Spring Security
+ */
 @Slf4j
 @Configuration
 @EnableWebSecurity
@@ -38,7 +44,7 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
   }
 
   /*
-  /*  WORKING: Simplest possible in memory authentication with static default users.
+  /*  FOR TESTING: Simplest possible in memory authentication with static default users.
   @Autowired
   public void configureAuth(AuthenticationManagerBuilder auth) throws Exception {
     log.debug("Adding users to inMemoryAuthentication");
@@ -48,6 +54,8 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
   }
   */
 
+
+  //MAYBE: use Digest Autentication http://stackoverflow.com/questions/33918432/digest-auth-in-spring-security-with-rest-and-javaconfig
 
   /**
    * Configure HttpSecurity:
@@ -63,6 +71,8 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
     //http.authorizeRequests().anyRequest().authenticated().and().formLogin().and().httpBasic();
 
     http
+      .cors().disable()   //TODO: Turn CSRF back on an implement it on the client.
+      .csrf().disable()   //TODO: Turn CORS back on
       .authorizeRequests()
         .antMatchers("/h2-console").permitAll()  // Allow access to H2 DB web console
         .antMatchers(restBasePath+"/_ping").permitAll()        // is alive
@@ -70,17 +80,16 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
       .and()
         .httpBasic()
       .and()
-        .headers().frameOptions().disable()   // TODO: temporary necessary to make /h2-console working
-      .and()
-        .csrf().disable(); // Disable CSRF since it's not critical for the scope of testing.
-  //  .and().cors().disabled();
+        .headers().frameOptions().disable();   // TODO: temporary necessary to make /h2-console working
 
   }
 
   /**
+   * Configure CORS so that access from localhost:3001 is allowed.
    * http://stackoverflow.com/a/31748398/122441 until https://jira.spring.io/browse/DATAREST-573
    * https://spring.io/blog/2015/06/08/cors-support-in-spring-framework#filter-based-cors-support
-   * @return
+   * https://spring.io/guides/gs/rest-service-cors/
+   * @return the FilterRegistrationBean
    */
   @Bean
   public FilterRegistrationBean corsFilter() {
@@ -88,8 +97,9 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     CorsConfiguration config = new CorsConfiguration();
     config.setAllowCredentials(true);
-    config.addAllowedOrigin("http://localhost");
-    config.addAllowedOrigin("http://localhost:3001");
+    config.addAllowedOrigin("*");
+    //config.addAllowedOrigin("http://localhost:8080");
+    //config.addAllowedOrigin("http://localhost:3001");
     config.addAllowedHeader("*");
     config.addAllowedMethod("*");
     source.registerCorsConfiguration("/**", config);
@@ -97,22 +107,18 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
     bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
     return bean;
   }
-/*
+
+  /*
   @Bean
-  public CorsFilter corsFilter() {
-    log.trace("Creating corsFilter in LiquidoSecurityConfiguration");
-    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    CorsConfiguration config = new CorsConfiguration().applyPermitDefaultValues();
-
-    config.
-    //config.setAllowCredentials(true);
-    //config.addAllowedOrigin("http://localhost");
-    //config.addAllowedOrigin("http://localhost:8080");
-    //config.addAllowedHeader("*");
-    //config.addAllowedMethod("*");
-
-    source.registerCorsConfiguration("/**", config);
-    return new CorsFilter(source);
+  public WebMvcConfigurer corsConfigurer() {
+    return new WebMvcConfigurerAdapter() {
+      @Override
+      public void addCorsMappings(CorsRegistry registry) {
+        log.debug("adding CORS mapping for path="+restBasePath);
+        registry.addMapping(restBasePath).allowedOrigins("*").allowedMethods("*");
+      }
+    };
   }
   */
+
 }
