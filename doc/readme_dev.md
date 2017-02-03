@@ -24,6 +24,9 @@ Here I write down everything I need durign development of my little backend.
  - Sort competing proposals into vote order (XXL)
 
 
+# Architecture
+
+https://www.draw.io/#LLiquido%20Architecture
 
 
 ## Links

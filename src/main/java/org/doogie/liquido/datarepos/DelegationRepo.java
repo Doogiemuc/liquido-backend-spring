@@ -24,6 +24,13 @@ public interface DelegationRepo extends JpaRepository<DelegationModel, Long>, De
   //which is checked by DelegationValidator.java
 
   /**
+   * find currently assigned proxies of one user.
+   * @param fromUser the delegee
+   * @return a list of proxies of this delegee
+   */
+  List<DelegationModel> findByFromUser(@Param("fromUser") UserModel fromUser);
+
+  /**
    * find delegations to a given proxy in the given area
    * @param toProxy ID of a proxy user
    * @param area ID of an area

@@ -1,5 +1,6 @@
 package org.doogie.liquido.datarepos;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.UserModel;
 
@@ -14,7 +15,6 @@ public interface DelegationRepoCustom {
    * @param area ObjectId of area
    * @return the number of votes this user may cast (including his own one!)
    */
-  int getNumVotes(AreaModel area, UserModel user);
-
+  long getNumVotes(AreaModel area, UserModel user);
 
 }

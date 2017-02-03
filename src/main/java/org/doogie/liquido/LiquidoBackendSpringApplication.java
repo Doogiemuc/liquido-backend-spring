@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.web.filter.CommonsRequestLoggingFilter;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -49,8 +50,9 @@ public class LiquidoBackendSpringApplication {
 	}
 	*/
 
+
   /**
-   * configure logging of HTTP requests
+   * configure super advanced and elaborate logging of HTTP requests and responses
    * Log each request with ReqID, full Request URI and its duration in ms.
    * @return DoogiesRequestLogger
    */
@@ -59,11 +61,22 @@ public class LiquidoBackendSpringApplication {
 		return new DoogiesRequestLogger();
 	}
 
-  /*
+
+	/* Spring own implementation is nearly ok, but it cannot log the request type
 	@Bean
-	public Validator beforeCreateDelegationModelValidator() {
-		log.info("====== creating BeforeCreateDelegationValidator");
-		return new BeforeCreateDelegationValidator();
+	public CommonsRequestLoggingFilter requestLoggingFilter() {
+		log.debug("Configuring request logging filter");
+		CommonsRequestLoggingFilter crlf = new CommonsRequestLoggingFilter();
+		crlf.setBeforeMessagePrefix(" => [");
+		crlf.setAfterMessagePrefix(" <= [");
+		crlf.setIncludeClientInfo(true);
+		crlf.setIncludeHeaders(true);
+		crlf.setIncludeQueryString(true);
+		crlf.setIncludePayload(true);
+		crlf.setMaxPayloadLength(1000);
+		return crlf;
 	}
-	*/
+*/
+
+
 }

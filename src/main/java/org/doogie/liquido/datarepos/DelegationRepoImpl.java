@@ -1,5 +1,7 @@
 package org.doogie.liquido.datarepos;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
@@ -21,24 +23,26 @@ public class DelegationRepoImpl implements DelegationRepoCustom {
   /**
    * Calculate number of votes that a user has,
    * by recursively checking his proxies (and their proxies ...)
+   *
    * @param user a user
    * @param area check proxies in that area.
    * @return number of votes of the this user (including his own one)
    */
-  public int getNumVotes(AreaModel area, UserModel user) {
+  public long getNumVotes(AreaModel area, UserModel user) {
     return this.getNumVotesInternal(area, user, 0);
   }
 
-  private int getNumVotesInternal(AreaModel area, UserModel user, long recursionDepth) {
-    if (recursionDepth >= Long.MAX_VALUE-1000) {
-      throw new RuntimeException("To many transitive delegations. There seems to be a circular delegation user: "+user);
+  private long getNumVotesInternal(AreaModel area, UserModel user, long recursionDepth) {
+    if (recursionDepth >= Long.MAX_VALUE - 1000) {
+      throw new RuntimeException("To many transitive delegations. There seems to be a circular delegation user: " + user);
     }
     List<DelegationModel> delegations = delegationRepo.findByAreaAndToProxy(area, user);
     if (delegations.size() == 0) return 1;
     int numVotes = 1;
     for (DelegationModel delegation : delegations) {
       //BUGFIX: interrupt recursion, when there are circular delegations in the DB  (GRRRR)
-      numVotes += this.getNumVotesInternal(area, delegation.getFromUser(), recursionDepth+1);
+      if (recursionDepth > Long.MAX_VALUE-5) return numVotes;
+      numVotes += this.getNumVotesInternal(area, delegation.getFromUser(), recursionDepth + 1);
     }
     return numVotes;
   }

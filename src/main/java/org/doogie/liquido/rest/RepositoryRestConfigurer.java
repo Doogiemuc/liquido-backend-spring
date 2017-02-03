@@ -1,5 +1,6 @@
-package org.doogie.liquido.datarepos;
+package org.doogie.liquido.rest;
 
+import org.doogie.liquido.datarepos.DelegationValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,19 +14,19 @@ import org.springframework.data.rest.core.mapping.RepositoryDetectionStrategy;
 import org.springframework.data.rest.webmvc.config.RepositoryRestConfigurerAdapter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CommonsRequestLoggingFilter;
 import org.springframework.web.filter.CorsFilter;
 
 /**
  * Configure the exposed REST HATEOAS services.
  *
- *  - Configure the base path for our rest endpoints
- *  - configure CORS
+ *  - Configure that only annotated repositories will be exposed
+ *  - Remark: base path for REST endpoint is configured in application.properties
  *  - add Validators on beforeCreate
- *  - better serialization for MongoDB ObjectIDs  to HEX24 strings
  *
  * https://spring.io/understanding/HATEOAS
  */
-@Configuration        // @Configuration is also a @Component
+@Configuration       // @Configuration is also a @Component
 @EnableJpaAuditing   //(auditorAwareRef = "liquidoAuditorAware")   // this is necessary so that UpdatedAt and CreatedAt are handled.
 public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
   Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
@@ -48,9 +49,7 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
   // implementing AuditorAware is not necessary. All already handled by spring boot :-)  https://jaxenter.com/rest-api-spring-java-8-112289.html
 
 
-
-  // Do not create an instance with "new". Let Spring inject the dependency, so that it can ba handled by Spring.
-  @Autowired
+  @Autowired        // Do not create an instance with "new". Let Spring inject the dependency, so that it can ba handled by Spring.
   private DelegationValidator delegationValidator;
 
   /** add a custom validator for Delegations */
@@ -60,30 +59,4 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
     validatingListener.addValidator("beforeCreate", delegationValidator);
   }
 
-
-
-  /**
-   * http://stackoverflow.com/questions/31724994/spring-data-rest-and-cors
-   * http://stackoverflow.com/a/31748398/122441 until https://jira.spring.io/browse/DATAREST-573
-   * @return
-
-  @Bean
-  public FilterRegistrationBean corsFilter() {
-    log.trace("Configuring CORS for RestRepositories");
-    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    CorsConfiguration config = new CorsConfiguration().applyPermitDefaultValues();
-
-    //config.setAllowCredentials(true);
-    //config.addAllowedOrigin("http://localhost:8080");
-    //config.addAllowedOrigin("http://localhost");
-    //config.addAllowedHeader("*");
-    //config.addAllowedMethod("*");
-
-    source.registerCorsConfiguration("/**", config);
-    // return new CorsFilter(source);
-    final FilterRegistrationBean bean = new FilterRegistrationBean(new CorsFilter(source));
-    bean.setOrder(0);
-    return bean;
-  }
-  */
 }
