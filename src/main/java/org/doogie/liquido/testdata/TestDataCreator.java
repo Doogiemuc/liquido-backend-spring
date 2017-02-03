@@ -23,7 +23,6 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * For checking whether an entity already exists, the functional primary key is used, not the ID field!
  *
  * This is executed right after SpringApplication.run(...) when the command line parameter "--seedDB" is passed.
- *
  * See http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/htmlsingle/#boot-features-command-line-runner
  */
 @Component
@@ -37,13 +36,12 @@ public class TestDataCreator implements CommandLineRunner {
   public int NUM_ALTERNATIVE_PROPOSALS = 3;
   public int NUM_ELABORATION = 1;
   // proposals currently in voting phase
-  String initialInVotingTitle;
-  List<String> alternativeProposalInVotingTitle;
+
   public int NUM_LAWS = 2;
 
   @Autowired
   UserRepo userRepo;
-  List<UserModel> users;
+  List<UserModel> users;    // will contain the list of created users that can be used in further repos, eg. as "createdBy" value
 
   @Autowired
   AreaRepo areaRepo;
@@ -56,6 +54,8 @@ public class TestDataCreator implements CommandLineRunner {
   @Autowired
   LawRepo lawRepo;
   List<LawModel> laws;
+  String initialProposalInVotingTitle;
+  List<String> alternativeProposalInVotingTitle;
 
   @Autowired
   DelegationRepo delegationRepo;
@@ -70,10 +70,7 @@ public class TestDataCreator implements CommandLineRunner {
   Environment springEnv;   // load settings from application-test.properties
 
   public TestDataCreator() {
-    initialInVotingTitle = "Initial Proposal in voting phase";
-    alternativeProposalInVotingTitle = new ArrayList<>();
-    alternativeProposalInVotingTitle.add("Alternative proposal #1 in voting phase");
-    alternativeProposalInVotingTitle.add("Alternative proposal #2 in voting phase");
+
   }
 
   /**
@@ -129,12 +126,18 @@ public class TestDataCreator implements CommandLineRunner {
     }
   }
 
+  /**
+   * Create some areas with unique titles. All created by user0
+   */
   private void seedAreas() {
     log.debug("Seeding Areas ...");
     this.areas = new ArrayList<>();
+
+    UserModel createdBy = this.users.get(0);
+
     for (int i = 0; i < NUM_AREAS; i++) {
       String areaTitle = "Area " + i;
-      AreaModel newArea = new AreaModel(areaTitle, "Nice description for test area");
+      AreaModel newArea = new AreaModel(areaTitle, "Nice description for test area #"+i, createdBy);
 
       AreaModel existingArea = areaRepo.findByTitle(areaTitle);
       if (existingArea != null) {
@@ -182,12 +185,11 @@ public class TestDataCreator implements CommandLineRunner {
     delegations.add(new DelegationModel(areas.get(2), users.get(2), users.get(0)));
 
     for (DelegationModel newDele : delegations) {
-      List<DelegationModel> existingDelegations = delegationRepo.findAll(Example.of(newDele));  // will at least return an empty list
-      if (existingDelegations.size() > 0) {
-        log.trace("Delegation already exists : " + existingDelegations.get(0));
+      if (delegationRepo.exists(Example.of(newDele))) {
+        log.trace("Delegation already exists: "+newDele);
       } else {
-        log.trace("Creating new delegation " + newDele);
         DelegationModel savedDelegation = delegationRepo.save(newDele);
+        log.trace("Created new delegation " + savedDelegation);
       }
     }
   }
@@ -198,13 +200,14 @@ public class TestDataCreator implements CommandLineRunner {
     this.ideas = new ArrayList<>();
     for (int i = 0; i < NUM_IDEAS; i++) {
       String ideaTitle = "Idea " + i;
-      IdeaModel newIdea = new IdeaModel(ideaTitle, "Very nice idea description", this.areas.get(0), this.users.get(i % NUM_USERS));
+      String ideaDescr = getLoremIpsum(50);
+      UserModel createdBy = this.users.get(i % NUM_USERS);
+      IdeaModel newIdea = new IdeaModel(ideaTitle, ideaDescr, this.areas.get(0), createdBy);
       if (i > NUM_IDEAS / 2) {
         newIdea.addSupporter(this.users.get(1));
         newIdea.addSupporter(this.users.get(2));
         newIdea.addSupporter(this.users.get(3));
       }
-
 
       IdeaModel existingIdea = ideaRepo.findByTitle(ideaTitle);
       if (existingIdea != null) {
@@ -227,13 +230,14 @@ public class TestDataCreator implements CommandLineRunner {
     UserModel createdBy = this.users.get(0);
 
     // ==== One initial new proposal for a law   and some alternatives with and without quorum
-    LawModel initialProposal = LawModel.buildInitialLaw("Initial Proposal", "Perfect proposal for a law with quorum", area, LawStatus.ELABORATION, createdBy);
+    LawModel initialProposal = LawModel.buildInitialLaw("Initial Proposal", "Perfect proposal for a law with quorum. "+getLoremIpsum(100), area, LawStatus.ELABORATION, createdBy);
     upsertLaw(null, initialProposal);
 
     // and some alternative proposals for this initial proposal that did not yet reach the neccassary quorum
     for (int i = 0; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
       String lawTitle = "Alternative Proposal " + i;
-      LawModel alternativeProposal = new LawModel(lawTitle, "Alternative proposal #"+i, area, initialProposal, LawStatus.NEW_PROPOSAL, createdBy);
+      String lawDesc  = "Alternative proposal #"+i+" for "+initialProposal.getTitle()+" that did not reach quorum yet\n"+getLoremIpsum(100);
+      LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, initialProposal, LawStatus.NEW_PROPOSAL, createdBy);
       LawModel existingLaw = lawRepo.findByTitle(lawTitle);
       upsertLaw(existingLaw, alternativeProposal);
     }
@@ -241,14 +245,21 @@ public class TestDataCreator implements CommandLineRunner {
     // and some alternative proposals for this initial proposal that did already reach the necessary quorum and are in the elaboration phase
     for (int i = 0; i < NUM_ELABORATION; i++) {
       String lawTitle = "Alternative Proposal " + i;
-      LawModel alternativeProposal = new LawModel(lawTitle, "Alternative proposal #"+i+" with quorum", area, initialProposal, LawStatus.ELABORATION, createdBy);
+      String lawDesc  = "Alternative proposal #"+i+" for "+initialProposal.getTitle()+" with necessary quorum\n"+getLoremIpsum(100);
+      LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, initialProposal, LawStatus.ELABORATION, createdBy);
       LawModel existingLaw = lawRepo.findByTitle(lawTitle);
       upsertLaw(existingLaw, alternativeProposal);
     }
 
     // ==== Some proposals that currently are in the voting phase (one initial, of course)
-    LawModel initialProposalInVoting = LawModel.buildInitialLaw(initialInVotingTitle, "Proposal that currently is in the voting phase #0", area, LawStatus.VOTING, createdBy);
-    LawModel existingProposal = lawRepo.findByTitle(initialInVotingTitle);
+
+    initialProposalInVotingTitle = "Initial Proposal in voting phase";
+    alternativeProposalInVotingTitle = new ArrayList<>();
+    alternativeProposalInVotingTitle.add("Alternative proposal #1 in voting phase");
+    alternativeProposalInVotingTitle.add("Alternative proposal #2 in voting phase");
+
+    LawModel initialProposalInVoting = LawModel.buildInitialLaw(initialProposalInVotingTitle, "Initial proposal that currently is in the voting phase.", area, LawStatus.VOTING, createdBy);
+    LawModel existingProposal = lawRepo.findByTitle(initialProposalInVotingTitle);
     upsertLaw(existingProposal, initialProposalInVoting);
 
     for (String alternativeInVotingTitle: alternativeProposalInVotingTitle) {
@@ -283,7 +294,7 @@ public class TestDataCreator implements CommandLineRunner {
   public void seedBallots() {
     log.debug("Seeding ballots ...");
 
-    LawModel initialInVoting = lawRepo.findByTitle(initialInVotingTitle);
+    LawModel initialInVoting = lawRepo.findByTitle(initialProposalInVotingTitle);
     LawModel alt0 = lawRepo.findByTitle(alternativeProposalInVotingTitle.get(0));
     LawModel alt1 = lawRepo.findByTitle(alternativeProposalInVotingTitle.get(1));
 
@@ -295,6 +306,12 @@ public class TestDataCreator implements CommandLineRunner {
     ballotRepo.save(newBallot);
   }
 
+
+  /** @return a dummy text that can be used eg. in descriptions */
+  public String getLoremIpsum(int length) {
+    String loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+    return loremIpsum.substring(0, length);
+  }
 
 
 }

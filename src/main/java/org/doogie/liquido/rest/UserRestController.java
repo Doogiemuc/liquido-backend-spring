@@ -21,6 +21,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import javax.websocket.server.PathParam;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.PUT;
 
@@ -52,13 +56,16 @@ public class UserRestController {
   /**
    * calculate the number of votes a user may cast (including his own one) because of (transitive) delegation
    * of votes to this proxy.
+   *
+   * This can also directly be accessed under the delegation
+   *
    * @param userId ID of proxy (as 24 char HEX string)
    * @param areaId URL query param: ID of area
    * @param req HttpServletRequest automatically injected by Spring
    * @return the number of votes this user may cast, including his own one!
    */
   @RequestMapping(value = "/{userId}/getNumVotes", method = GET)
-  public int getNumVotes(@PathVariable Long userId, @PathParam("areaId") Long areaId, HttpServletRequest req) throws Exception {
+  public long getNumVotes(@PathVariable Long userId, @PathParam("areaId") Long areaId, HttpServletRequest req) throws Exception {
     log.trace("=> GET numVotes(userId=" + userId + ", areaId=" + areaId + ")");
     //check that userId and areaId are correct and exist
     UserModel user = userRepo.findOne(userId);
@@ -67,10 +74,32 @@ public class UserRestController {
     if (area == null) throw new Exception("Area with id="+areaId+" does not exist.");
     //TODO: get number of votes from cache if possible
     //calculate number of votes from "delegations" in DB
-    int numVotes = delegationRepo.getNumVotes(area, user);
+    long numVotes = delegationRepo.getNumVotes(area, user);
     log.trace("<= GET numVotes(userId=" + userId + ", areaId=" + areaId + ") = "+numVotes);
     return numVotes;
   }
+
+
+  /**
+   * get all proxies that this user currently has assigned (per area)
+   * @param userId ID of an existing user
+   * @return a map  area.title => proxyUser.id   with one entry for each proxy of that user in that area
+   * @throws Exception when user does not exist
+   */
+  @RequestMapping(value = "/{userId}/getProxyMap", method = GET)
+  public Map getProxyMap(@PathVariable Long userId) throws Exception {
+    UserModel user = userRepo.findOne(userId);
+    if (user == null) throw new Exception("User with id="+userId+" does not exist.");
+    List<DelegationModel> proxies = delegationRepo.findByFromUser(user);
+    Map<String, Long> proxyMap = new HashMap<>();
+    for (DelegationModel delegation : proxies) {
+      proxyMap.put(delegation.getArea().getTitle(), delegation.getToProxy().getId());
+    }
+    return proxyMap;
+  }
+
+
+
 
   /**
    * Save a proxy. This will insert a new delegation or update the existing one

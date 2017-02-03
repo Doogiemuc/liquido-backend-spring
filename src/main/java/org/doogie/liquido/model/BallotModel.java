@@ -28,12 +28,11 @@ import java.util.List;
 @RequiredArgsConstructor(suppressConstructorProperties = true)   //BUGFIX: https://jira.spring.io/browse/DATAREST-884
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "ballots")
-public class BallotModel {
-  @Id
-  @GeneratedValue
-  private Long id;
-
+public class BallotModel extends BaseModel {
   //TODO: combined unique key on initialProposal and voterHash
+  @Id
+  @GeneratedValue(strategy = GenerationType.AUTO)
+  public Long id;
 
   @NonNull
   @ManyToOne //(cascade = CascadeType.MERGE)
@@ -51,12 +50,5 @@ public class BallotModel {
   @NotEmpty
   public String voterHash;
 
-  @LastModifiedDate
-  public Date updatedAt;
-
-  @CreatedDate
-  public Date createdAt;
-
   //no CreatedBy here: When voting it is a secret how casted this ballot!!!
-
 }

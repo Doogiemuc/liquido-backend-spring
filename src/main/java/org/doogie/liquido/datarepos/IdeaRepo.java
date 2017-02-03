@@ -11,7 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import java.util.List;
 
 /**
- * Database abstraction "ideas".
+ * Database abstraction for "ideas".
  * Every idea will automatically have its createdBy user inlined.
  */
 //@PreAuthorize("hasRole('ROLE_ADMIN')")
@@ -23,10 +23,13 @@ public interface IdeaRepo extends CrudRepository<IdeaModel, Long> {
   IdeaModel findByTitle(@Param("title") String title);
 
   /**
+   *
+   *
    * Find the most recently created ideas.
    * published as  /liquido/v2/ideas/search/recentIdeas
    */
   @RestResource(path = "recentIdeas")
   List<IdeaModel> findFirst10ByOrderByCreatedAtDesc();  // http://docs.spring.io/spring-data/data-mongo/docs/1.9.6.RELEASE/reference/html/#repositories.limit-query-result
+  //TODO: This could directly return a IdeaProjection
 
 }

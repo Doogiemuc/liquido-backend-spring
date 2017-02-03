@@ -1,15 +1,15 @@
 package org.doogie.liquido.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
-import org.hibernate.annotations.Type;
-import org.springframework.data.annotation.CreatedBy;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.hateoas.Identifiable;
 
-import javax.persistence.*;
+import javax.persistence.EntityListeners;
+import javax.persistence.MappedSuperclass;
 import javax.validation.constraints.NotNull;
 import java.util.Date;
 
@@ -20,29 +20,30 @@ import java.util.Date;
  */
 @MappedSuperclass
 @Data
+@NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public abstract class BaseModel  implements Identifiable<Long> {
-
-  @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
-  @JsonIgnore
-  private final Long id;
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})  //BUGFIX: http://stackoverflow.com/questions/39854429/bootstraping-with-vue-2-router-and-vue-loader
+public abstract class BaseModel implements Identifiable<Long> {
 
   @CreatedDate
   @NotNull
   //  I am not going to use joda time although it is cool   @Type(type="org.jadira.usertype.dateandtime.joda.PersistentDateTime")
-  private Date createdAt = new Date();
+  public Date createdAt = new Date();
 
   @LastModifiedDate
   @NotNull
-  private Date updatedAt = new Date();
-
-  @CreatedBy
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn
-  @NotNull
-  private UserModel createdBy;
+  public Date updatedAt = new Date();
 
   //I do not need   @LastModifiedBy
+  // @CreatedBy can be added on demand
 
+  /**
+   * expose the internal DB ID of our objects. Actually the client gets URIs for identifying entitires.
+   * But when inlining a child entity via a projection, this UID makes things much easier for the web client.
+   * @return the internal ID as a String value
+
+  public String getURI() {
+    return getId().toString();
+  }
+  */
 }

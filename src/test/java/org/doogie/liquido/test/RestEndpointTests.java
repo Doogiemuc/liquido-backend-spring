@@ -175,8 +175,57 @@ public class RestEndpointTests {
   }
    */
 
+
+
   @Test
-  //@WithUserDetails(value="testuser0@liquido.de", userDetailsServiceBeanName="liquidoUserDetailsService")
+  public void testPostNewArea() {
+    log.trace("TEST POST new area");
+
+    String areaTitle = "This is a newly created Area "+System.currentTimeMillis() % 10000;  // make test repeatable: Title must be unique!
+    JSONObject newAreaJSON = new JSONObject()
+      .put("title", areaTitle)
+      .put("description", "Very nice description for new area")
+      .put("createdBy", "http://localhost:8080/liquido/v2/users/1");
+
+    log.trace("posting JSON Object:\n"+newAreaJSON.toString(2));
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    HttpEntity<String> entity = new HttpEntity<String>(newAreaJSON.toString(), headers);
+
+    ResponseEntity<AreaModel> response = client.exchange("/areas", HttpMethod.POST, entity, AreaModel.class);
+
+    AreaModel createdArea = response.getBody();
+    assertEquals(areaTitle, createdArea.getTitle());
+
+    log.trace("TEST SUCCESSFUL: new area created: "+createdArea);
+  }
+
+  @Test
+  public void testPatchArea() {
+    log.trace("TEST PATCH area");
+
+    String newDescription = "Updated description";
+    JSONObject newAreaJSON = new JSONObject()
+      .put("description", newDescription);
+
+    log.trace("JSON Payload for PATCH request: "+newAreaJSON.toString());
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    HttpEntity<String> entity = new HttpEntity<String>(newAreaJSON.toString(), headers);
+
+    Long areaId = this.areas.get(0).getId();
+    ResponseEntity<AreaModel> response = client.exchange("/areas/"+areaId, HttpMethod.PATCH, entity, AreaModel.class);
+
+    AreaModel updatedArea = response.getBody();
+    assertEquals(newDescription, updatedArea.getDescription());
+
+    log.trace("TEST SUCCESSFUL: updated area : "+updatedArea);
+  }
+
+  @Test
+  //@WithUserDetails(value="testuser0@liquido.de", userDetailsServiceBeanName="liquidoUserDetailsService")    HTTP BasicAuth is alreay configured above
   public void testFindMostRecentIdeas() throws IOException {
     log.trace("TEST testFindMostRecentIdeas");
 

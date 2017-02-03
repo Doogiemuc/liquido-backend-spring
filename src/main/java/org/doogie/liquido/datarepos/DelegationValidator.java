@@ -1,6 +1,7 @@
 package org.doogie.liquido.datarepos;
 
 import org.doogie.liquido.model.DelegationModel;
+import org.doogie.liquido.rest.RepositoryRestConfigurer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

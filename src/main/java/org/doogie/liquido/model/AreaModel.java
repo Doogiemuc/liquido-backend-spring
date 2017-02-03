@@ -2,23 +2,19 @@ package org.doogie.liquido.model;
 
 import lombok.*;
 import org.hibernate.validator.constraints.NotEmpty;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.springframework.data.annotation.CreatedBy;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.util.Date;
 
 @Data
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor(suppressConstructorProperties = true)
-@EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "areas")
-public class AreaModel {
+public class AreaModel extends BaseModel {
   @Id
-  @GeneratedValue
+  @GeneratedValue(strategy = GenerationType.AUTO)
   public Long id;
 
   // public fields are automatically exposed in REST endpoint
@@ -33,10 +29,15 @@ public class AreaModel {
   @NotEmpty
   public String description;
 
-  @LastModifiedDate
-  public Date updatedAt;
+  @CreatedBy
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn
+  @NonNull
+  @NotNull
+  public UserModel createdBy;
 
-  @CreatedDate
-  public Date createdAt;
-
+  /** inline createdBy user information */
+  public UserModel getCreator() {
+    return this.createdBy;
+  }
 }
