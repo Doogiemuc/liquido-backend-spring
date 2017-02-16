@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 /**
- * Custom exception class that can be returned when busienss validation fails.
+ * Custom exception class that can be returned when business validation fails.
  * Will return HttpStatus.BAD_REQUEST  (instead of "internal server error" that a normal exception would set.)
  */
 @ResponseStatus(HttpStatus.BAD_REQUEST)

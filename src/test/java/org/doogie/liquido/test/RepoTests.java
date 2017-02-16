@@ -3,6 +3,7 @@ package org.doogie.liquido.test;
 import org.doogie.liquido.datarepos.IdeaRepo;
 import org.doogie.liquido.model.IdeaModel;
 import org.doogie.liquido.model.LawModel;
+import org.doogie.liquido.rest.LiquidoAuditorAware;
 import org.doogie.liquido.testdata.TestDataCreator;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
@@ -30,10 +31,13 @@ import static org.junit.Assert.*;
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest
-@EnableJpaAuditing(auditorAwareRef = "mockAuditorAware")
+@EnableJpaAuditing(auditorAwareRef = "liquidoAuditorAware")
 @ActiveProfiles("test")  // this will also load the settings  from  application-test.properties
 public class RepoTests {
   private Logger log = LoggerFactory.getLogger(this.getClass());
+
+  @Autowired
+  LiquidoAuditorAware auditorAware;
 
   @Autowired
   TestDataCreator testDataCreator;
@@ -73,13 +77,14 @@ public class RepoTests {
   }
 
   @Test
-  public void testCreateIdeaWithAllRefs() {
+  public void testCreateIdeaWithMockAuditor() {
     UserModel user1 = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
     AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
     IdeaModel newIdea = new IdeaModel("Idea from test"+System.currentTimeMillis(), "Very nice description from test", area1, user1);
 
+    auditorAware.setMockAuditor(user1);     // have to mock the currently logged in user for the @CreatedBy annotation in IdeaModel to work
     IdeaModel insertedIdea = ideaRepo.save(newIdea);
-
+    auditorAware.setMockAuditor(null);
     log.trace("saved Idea "+insertedIdea);
 
     Iterable<IdeaModel> ideas = ideaRepo.findAll();

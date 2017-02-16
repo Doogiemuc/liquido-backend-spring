@@ -20,7 +20,6 @@ import java.util.Date;
  */
 @MappedSuperclass
 @Data
-@NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})  //BUGFIX: http://stackoverflow.com/questions/39854429/bootstraping-with-vue-2-router-and-vue-loader
 public abstract class BaseModel implements Identifiable<Long> {
