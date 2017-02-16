@@ -9,6 +9,8 @@ import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.test.testUtils.LiquidoTestErrorHandler;
+import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Test;
@@ -19,15 +21,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.embedded.LocalServerPort;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.web.client.RootUriTemplateHandler;
-import org.springframework.core.env.Environment;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
-import org.springframework.http.client.ClientHttpResponse;
-import org.springframework.http.client.support.BasicAuthorizationInterceptor;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.web.client.ResponseErrorHandler;
+import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
@@ -49,42 +47,15 @@ import static org.junit.Assert.*;
 public class RestEndpointTests {
   private Logger log = LoggerFactory.getLogger(this.getClass());
 
-  /*
+  /** base URL from application.properties */
+  @Value(value = "${spring.data.rest.base-path}")
+  String basePath;
 
-  THESE WERE SOME TRIES TO CONFIGRE TestRestTemplate  WHEN RUNNING WITH WebEnvironment.NONE
-  private TestRestTemplate client = new TestRestTemplate();
-
-  @TestConfiguration
-  static class Config {
-
-    @Bean
-    public RestTemplateBuilder restTemplateBuilder() {
-      return new RestTemplateBuilder()
-          .additionalMessageConverters(...)
-				.customizers(...);
-    }
-
-  }
-
-  @Bean
-  RestTemplateBuilder restTemplateBuilder() {
-    //BUG: This is never called: https://github.com/spring-projects/spring-boot/issues/6465
-    log.trace("========== resteTemplateBuilder" + localServerPort);
-    return new RestTemplateBuilder();
-  }
-
-  */
-
-  /**
-   * REST client that is automatically configured with localServerPort of running test server.
-   * use with WebEnvironment.RANDOM_PORT   (when SpringBootTest starts the server)
-   * client is further configured in method.
-   */
-  TestRestTemplate client;
-
+  /** (random) port of local backend under test */
   @LocalServerPort
   int localServerPort;
 
+  // My spring-data-jpa repositories for loading test data directly
   @Autowired
   UserRepo userRepo;
 
@@ -97,31 +68,43 @@ public class RestEndpointTests {
   @Autowired
   DelegationRepo delegationRepo;
 
-  @Value(value = "${spring.data.rest.base-path}")   // from application.properties
-  String basePath;
-
-  @Autowired
-  Environment springEnv;
-
 
   // preloaded data that most test cases need.
   List<UserModel> users;
   List<AreaModel> areas;
   List<LawModel>  laws;
 
-  /** Custom ErrorResponseHandler to catch (and store) the response body in case of an HTTP error. */
-  class LiquidoTestErrorHandler implements ResponseErrorHandler {
-    @Override
-    public boolean hasError(ClientHttpResponse clientHttpResponse) throws IOException {
-      return clientHttpResponse.getStatusCode() != HttpStatus.OK &&
-             clientHttpResponse.getStatusCode() != HttpStatus.CREATED;
-    }
-    @Override
-    public void handleError(ClientHttpResponse clientHttpResponse) throws IOException {
-      //Cannot read the body, cause InputStream can only be read once lastErrorResponseBody = DoogiesUtil._stream2String(clientHttpResponse.getBody());
-      log.error("HTTP error: ("+clientHttpResponse.getRawStatusCode() + ") "+clientHttpResponse.getStatusText());
-    }
+  //@Autowired
+  //Environment springEnv;
+
+
+  /** our HTTP REST client */
+  RestTemplate client;
+
+  /** configure HTTP REST client */
+  public void initRestTemplateClient() {
+    String rootUri = "http://localhost:"+localServerPort+basePath;
+    log.trace("====== configuring REST client for "+rootUri);
+    this.client = new RestTemplateBuilder()
+      .basicAuthorization(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD)
+      .errorHandler(new LiquidoTestErrorHandler())
+      //.requestFactory(new HttpComponentsClientHttpRequestFactory())
+      .additionalInterceptors(new LogClientRequestInterceptor())
+      .rootUri(rootUri)
+      .build();
   }
+
+
+
+
+  /*
+   * I tried a lot with this autoinjected TestRestTemplate.  But it doesn't work.   First of all it doesn't take basePath into account :-(
+   *
+   * REST client that is automatically configured with localServerPort of running test server.
+   * use with WebEnvironment.RANDOM_PORT   (when SpringBootTest starts the server)
+   * client is further configured in method.
+
+  TestRestTemplate client;
 
   @Autowired
   public void setTestRestTemplate(TestRestTemplate client) {
@@ -130,18 +113,50 @@ public class RestEndpointTests {
     // https://jira.spring.io/browse/DATAREST-968
     // https://github.com/spring-projects/spring-boot/issues/7816
     String basePath = springEnv.getProperty("spring.data.rest.base-path");
+    //client.getRestTemplate().setRequestFactory(new HttpComponentsClientHttpRequestFactory());  // must replace  default SimpleClientHttpRequestFactory because it cannot handle PATCH requests http://stackoverflow.com/questions/29447382/resttemplate-patch-request
     client.getRestTemplate().setUriTemplateHandler(new RootUriTemplateHandler("http://localhost:"+ localServerPort + basePath));
+    client.getRestTemplate().getInterceptors().add(new LogClientRequestInterceptor());
     client.getRestTemplate().getInterceptors().add(new BasicAuthorizationInterceptor(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD));
     //TODO:  for API keys
     //client.getRestTemplate().setDefaultUriVariables();
     this.client = client;
   }
+  */
+
+
+ /*
+  THESE WERE SOME TRIES TO CONFIGURE TestRestTemplate  WHEN RUNNING WITH WebEnvironment.NONE
+  // http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/htmlsingle/#boot-features-rest-templates-test-utility
+
+  private TestRestTemplate client = new TestRestTemplate();
+
+  @TestConfiguration
+  static class Config {
+
+    @Bean
+    public RestTemplateBuilder restTemplateBuilder() {
+      String rootUri = "http://localhost:"+localServerPort+basePath;
+      log.trace("Creating and configuring RestTemplate for "+rootUri);
+      return new RestTemplateBuilder()
+        .basicAuthorization(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD)
+        .errorHandler(new LiquidoTestErrorHandler())
+        //.requestFactory(new HttpComponentsClientHttpRequestFactory())
+        .additionalInterceptors(new LogRequestInterceptor())
+        .rootUri(rootUri);
+    }
+  }
+
+  */
+
+
 
   /**
    * this is executed, when the Bean has been created and @Autowired references are injected and ready.
    */
   @PostConstruct
   public void postConstruct() {
+    initRestTemplateClient();
+
     // Here you can do any one time setup necessary
     log.trace("PostConstruct: pre-fetching data from DB");
 
@@ -182,10 +197,10 @@ public class RestEndpointTests {
     log.trace("TEST POST new area");
 
     String areaTitle = "This is a newly created Area "+System.currentTimeMillis() % 10000;  // make test repeatable: Title must be unique!
+
     JSONObject newAreaJSON = new JSONObject()
       .put("title", areaTitle)
-      .put("description", "Very nice description for new area")
-      .put("createdBy", "http://localhost:8080/liquido/v2/users/1");
+      .put("description", "Very nice description for new area");
 
     log.trace("posting JSON Object:\n"+newAreaJSON.toString(2));
 
@@ -195,6 +210,7 @@ public class RestEndpointTests {
 
     ResponseEntity<AreaModel> response = client.exchange("/areas", HttpMethod.POST, entity, AreaModel.class);
 
+    assertEquals("expected HttpStatus.CREATED(201)", HttpStatus.CREATED, response.getStatusCode());
     AreaModel createdArea = response.getBody();
     assertEquals(areaTitle, createdArea.getTitle());
 
@@ -225,13 +241,15 @@ public class RestEndpointTests {
   }
 
   @Test
-  //@WithUserDetails(value="testuser0@liquido.de", userDetailsServiceBeanName="liquidoUserDetailsService")    HTTP BasicAuth is alreay configured above
+  //@WithUserDetails(value="testuser0@liquido.de", userDetailsServiceBeanName="liquidoUserDetailsService")    HTTP BasicAuth is already configured above
   public void testFindMostRecentIdeas() throws IOException {
     log.trace("TEST testFindMostRecentIdeas");
 
     String response = client
       //.withBasicAuth(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD)
       .getForObject("/ideas/search/recentIdeas", String.class);
+
+    log.debug("got response: "+response);
 
     assertNotNull("Could not get recent ideas", response);
 
@@ -261,6 +279,7 @@ public class RestEndpointTests {
     JSONObject newLawJson = new JSONObject()
       .put("title", newLawTitle)
       .put("description", "Dummy description from testPostProposalForLaw")
+      .put("status", LawModel.LawStatus.NEW_ALTERNATIVE_PROPOSAL)
       .put("area", areaUri)
       .put("initialLaw", initialLawUri)
       .put("createdBy", createdByUri);
@@ -438,9 +457,12 @@ public class RestEndpointTests {
   public void testPostDuplicateArea() {
     log.trace("TEST postDuplicateArea");
 
+    String createdByUri  = basePath + "/users/" + this.users.get(0).getId();
+
     JSONObject duplicateAreaJson = new JSONObject()
       .put("title", TestFixtures.AREA1_TITLE)           // area with that title already exists.
-      .put("description", "duplicate Area from test");
+      .put("description", "duplicate Area from test")
+      .put("createdBy", createdByUri);
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
@@ -449,7 +471,9 @@ public class RestEndpointTests {
     ResponseEntity<String> responseEntity = client.postForEntity("/areas", entity, String.class);  // This will return HTTP status 409(Conflict) because of the duplicate composite key.
 
     log.trace("responseEntity:\n" + responseEntity);
-    assertEquals(responseEntity.getStatusCode(), HttpStatus.CONFLICT);  // status == 409
+    assertEquals("Expected HTTP error code 409 == conflict", responseEntity.getStatusCode(), HttpStatus.CONFLICT);  // status == 409
     log.trace("TEST postDuplicateArea SUCCESS: Did receive expected HttpStatus=409 (Conflict)");
   }
+
+
 }

@@ -26,6 +26,8 @@ public class LiquidioUserDetailsService implements UserDetailsService {
 
   @Override
   public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+    log.debug("loading user "+email+" from DB for authentication");
+
     //TODO: Remove default admin login!
     /*
     if ("admin".equals(email)) {
@@ -38,6 +40,12 @@ public class LiquidioUserDetailsService implements UserDetailsService {
     UserModel user = userRepo.findByEmail(email);
     if (user == null) throw new UsernameNotFoundException("Could not find user '"+email+"'");
     return new User(user.getEmail(), user.getPassword(), getGrantedAuthorities(user));
+  }
+
+  public UserModel getLiquidoUser(String email) throws Exception {
+    UserModel liquidoUser = userRepo.findByEmail(email);  // may return null!
+    if (liquidoUser == null) throw new Exception("Could not find liquidoUser with email "+email);
+    return liquidoUser;
   }
 
   private Collection<GrantedAuthority> getGrantedAuthorities(UserModel user) {

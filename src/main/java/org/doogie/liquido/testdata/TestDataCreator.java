@@ -2,6 +2,7 @@ package org.doogie.liquido.testdata;
 
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
+import org.doogie.liquido.rest.LiquidoAuditorAware;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,8 +64,8 @@ public class TestDataCreator implements CommandLineRunner {
   @Autowired
   BallotRepo ballotRepo;
 
-  //@Autowired
-  //LiquidoAuditorAware auditorAware;
+  @Autowired
+  LiquidoAuditorAware auditorAware;
 
   @Autowired
   Environment springEnv;   // load settings from application-test.properties
@@ -89,13 +90,13 @@ public class TestDataCreator implements CommandLineRunner {
       log.info("==== Populate test DB ...");
       // order is important here!
       seedUsers();
-      //auditorAware.setMockAuditor(this.users.get(0));   // Simulate that user is logged in.  This user will be set as @createdAt
+      auditorAware.setMockAuditor(this.users.get(0));   // Simulate that user is logged in.  This user will be set as @createdAt
       seedAreas();
       seedDelegations();
       seedIdeas();
       seedLaws();
       seedBallots();
-      //auditorAware.setMockAuditor(null);
+      auditorAware.setMockAuditor(null);
     }
   }
 
@@ -237,7 +238,7 @@ public class TestDataCreator implements CommandLineRunner {
     for (int i = 0; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
       String lawTitle = "Alternative Proposal " + i;
       String lawDesc  = "Alternative proposal #"+i+" for "+initialProposal.getTitle()+" that did not reach quorum yet\n"+getLoremIpsum(100);
-      LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, initialProposal, LawStatus.NEW_PROPOSAL, createdBy);
+      LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, initialProposal, LawStatus.NEW_ALTERNATIVE_PROPOSAL, createdBy);
       LawModel existingLaw = lawRepo.findByTitle(lawTitle);
       upsertLaw(existingLaw, alternativeProposal);
     }

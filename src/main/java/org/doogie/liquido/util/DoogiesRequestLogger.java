@@ -73,7 +73,11 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
 
     // ========= Log request and response payload ("body") ========
     // We CANNOT simply read the request payload here, because then the InputStream would be consumed and cannot be read again by the actual processing/server.
-    //    String reqBody = DoogiesUtil._stream2String(request.getInputStream());   // THIS WOULD NOT WORK!
+    // DO NOT DO THIS:  this.logger.debug("Request body: "+DoogiesUtil._stream2String(request.getInputStream()));
+
+
+
+
     // So we need to apply some stronger magic here :-)
     ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request);
     ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
@@ -84,7 +88,9 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     // I can only log the request's body AFTER the request has been made and ContentCachingRequestWrapper did its work.
     String requestBody = this.getContentAsString(wrappedRequest.getContentAsByteArray(), this.maxPayloadLength, request.getCharacterEncoding());
     if (requestBody.length() > 0) {
-      this.logger.debug("   Request body:\n" +requestBody);
+      this.logger.debug("   "+reqInfo+" Request body was:\n" +requestBody);
+    } else {
+      this.logger.debug("   "+reqInfo+" EMPTY request body");
     }
 
     this.logger.debug("<= " + reqInfo + ": returned status=" + response.getStatus() + " in "+duration + "ms");

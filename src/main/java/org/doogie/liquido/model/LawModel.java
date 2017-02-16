@@ -15,6 +15,9 @@ import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.util.Date;
 
+/**
+ * Data model: proposal for a law.
+ */
 @Data
 @Entity
 @NoArgsConstructor
@@ -70,11 +73,12 @@ public class LawModel extends BaseModel {
   LawModel initialLaw;
 
   public enum LawStatus {
-    NEW_PROPOSAL(0),
-    ELABORATION(1),
-    VOTING(2),
-    LAW(3),
-    RETENTION(4);
+    NEW_ALTERNATIVE_PROPOSAL(0),    // Newly created (alternative) proposal that did not reach its quorum yet
+    ELABORATION(1),     // When an idea or an alternative proposal reaches its quorum it is "moved onto the table" and can be discussed and elaborated.
+    VOTING(2),          // When the voting phase starts, all proposals can be voted upon
+    LAW(3),             // The winning proposal becomes a law.
+    RETENTION(4),       // When a law looses support, it is in the retention phase
+    RETRACTED(5);       // When a law looses support for too long, it will be retracted.
     int statusId;
     LawStatus(int id) { this.statusId = id; }
   }

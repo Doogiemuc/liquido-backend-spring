@@ -1,5 +1,6 @@
 package org.doogie.liquido.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -85,9 +86,4 @@ public class IdeaModel extends BaseModel {
     return this.supporters.size();
   }
 
-  //TODO: Can I get the currently logged in user here?  Wouldn't want to do this in a IdeaModel ...
-  public boolean getSupportedByCurrentUser() {
-    //if (this.createdBy.equals(getCurrentUser())) return true;
-    return false;
-  }
 }

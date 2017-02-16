@@ -31,13 +31,14 @@ public class AreaModel extends BaseModel {
 
   @CreatedBy
   @ManyToOne(fetch = FetchType.EAGER)
-  @JoinColumn
+  //@JoinColumn
   @NonNull
   @NotNull
   public UserModel createdBy;
 
-  /** inline createdBy user information */
+  /** always inline createdBy user information as "creator" field. (This is easier as using a full blown spring projection as in IdeaProjection.java) */
   public UserModel getCreator() {
     return this.createdBy;
   }
+
 }
