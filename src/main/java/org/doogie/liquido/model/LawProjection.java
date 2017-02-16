@@ -15,8 +15,8 @@ import java.util.Date;
 @Projection(name = "lawProjection", types = { LawModel.class })
 public interface LawProjection {
   //Remember that all default fields must be listed here. Otherwise they won't appear in the JSON!
-  //Should I expose the DB _id?  Probably not? http://tommyziegler.com/how-to-expose-the-resourceid-with-spring-data-rest/
 
+  Long getId();
   String getTitle();
   String getDescription();
   LawModel.LawStatus getStatus();

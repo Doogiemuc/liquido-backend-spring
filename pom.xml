@@ -5,11 +5,11 @@
 
 	<groupId>org.doogie.liquido</groupId>
 	<artifactId>liquido-backend-spring</artifactId>
-	<version>0.1.17-SNAPSHOT</version>
+	<version>0.9.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>liquido-backend-spring</name>
-	<description>RESTfull backend for Liquido</description>
+	<description>RESTfull backend for my Liquid Democracy web app "Liquido"</description>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -43,7 +43,14 @@
 			<artifactId>spring-boot-starter-data-rest</artifactId>
 		</dependency>
 
-        <!-- Spring Security -->
+		<!-- Apache Http Client for PATCH requests  https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.5.2</version>
+		</dependency>
+
+		<!-- Spring Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>

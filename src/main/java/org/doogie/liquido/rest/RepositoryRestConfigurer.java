@@ -1,6 +1,7 @@
 package org.doogie.liquido.rest;
 
 import org.doogie.liquido.datarepos.DelegationValidator;
+import org.doogie.liquido.model.IdeaModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,8 @@ import org.springframework.data.rest.core.config.RepositoryRestConfiguration;
 import org.springframework.data.rest.core.event.ValidatingRepositoryEventListener;
 import org.springframework.data.rest.core.mapping.RepositoryDetectionStrategy;
 import org.springframework.data.rest.webmvc.config.RepositoryRestConfigurerAdapter;
+import org.springframework.hateoas.Resource;
+import org.springframework.hateoas.ResourceProcessor;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CommonsRequestLoggingFilter;
@@ -27,7 +30,7 @@ import org.springframework.web.filter.CorsFilter;
  * https://spring.io/understanding/HATEOAS
  */
 @Configuration       // @Configuration is also a @Component
-@EnableJpaAuditing   //(auditorAwareRef = "liquidoAuditorAware")   // this is necessary so that UpdatedAt and CreatedAt are handled.
+@EnableJpaAuditing(auditorAwareRef = "liquidoAuditorAware")   // this is necessary so that UpdatedAt and CreatedAt are handled.
 public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
   Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
 
@@ -42,6 +45,8 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
     // Only export data repositories that are annotated with @RepositoryRestResource(...)
     // In future versions this will be configurable in application.properties   spring.data.rest.detection-strategy=visibility   https://github.com/spring-projects/spring-boot/issues/7113
     config.setRepositoryDetectionStrategy(RepositoryDetectionStrategy.RepositoryDetectionStrategies.ANNOTATED);
+
+    config.exposeIdsFor(IdeaModel.class);
 
     //TODO: when available in future version of spring: config.getCorsRegistry()
   }

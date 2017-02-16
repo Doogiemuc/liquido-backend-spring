@@ -37,9 +37,10 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
   @Value("${spring.data.rest.base-path}")   // value from application.properties file
   String restBasePath;
 
+  //see http://docs.spring.io/spring-security/site/docs/4.2.1.RELEASE/reference/htmlsingle/#jc-authentication-userdetailsservice
   @Bean
   public LiquidioUserDetailsService liquidoUserDetailsService() {
-    log.debug("getting LiquidioUserDetailsService");
+    log.debug("creating LiquidioUserDetailsService");
     return new LiquidioUserDetailsService();
   }
 

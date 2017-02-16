@@ -1,8 +1,10 @@
 package org.doogie.liquido.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.IdeaModel;
 import org.doogie.liquido.model.UserModel;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.rest.core.config.Projection;
 
 import java.util.Date;
@@ -39,18 +41,16 @@ public interface IdeaProjection {
   //Remember that all default fields must be listed here. Otherwise they won't appear in the JSON!
   //Should I expose the DB _id?  Probably not? http://tommyziegler.com/how-to-expose-the-resourceid-with-spring-data-rest/
 
+  Long getId();     // yes I want to expose the internal ID. Makes routing in the client much easier, than using the URIs from _links.self.href
   String getTitle();
   String getDescription();
   Date getCreatedAt();
   Date getUpdatedAt();
   int getNumSupporters();
 
-  /**
-   * @return true  if this idea is supported by the currently logged in user or
-   *               if this idea is created by the currently logged in user,
-   *         false if there is no user logged in
-   */
-  boolean getSupportedByCurrentUser();
+  /** see {@link org.doogie.liquido.datarepos.IdeaUtil} */
+  @Value("#{@ideaUtil.isSupportedByCurrentUser(target)}")   // Spring Expression language (SpEL) FTW
+  boolean isSupportedByCurrentUser();
 
   // this will inline the reference to User and Area into the JSON of every idea
   UserModel getCreatedBy();
