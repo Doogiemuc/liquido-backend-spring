@@ -77,6 +77,7 @@ public class RepoTests {
   }
 
   @Test
+  //TODO: add Test User like this @WithUserDetails("testuserß@liquido.de")  // http://docs.spring.io/spring-security/site/docs/4.2.1.RELEASE/reference/htmlsingle/#test-method-withuserdetails
   public void testCreateIdeaWithMockAuditor() {
     UserModel user1 = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
     AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);

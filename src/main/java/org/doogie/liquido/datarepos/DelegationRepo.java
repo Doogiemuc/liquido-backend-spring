@@ -24,23 +24,31 @@ public interface DelegationRepo extends JpaRepository<DelegationModel, Long>, De
   //which is checked by DelegationValidator.java
 
   /**
-   * find currently assigned proxies of one user.
+   * find all currently assigned proxies of one user.
    * @param fromUser the delegee
    * @return a list of proxies of this delegee
    */
   List<DelegationModel> findByFromUser(@Param("fromUser") UserModel fromUser);
 
   /**
-   * find delegations to a given proxy in the given area
+   * find all delegations to a given proxy in the given area
    * @param toProxy ID of a proxy user
    * @param area ID of an area
    * @return all <b>direct</b> delegations to this proxy in that area as a List of DelegationModels (may be empty list)
    */
   List<DelegationModel> findByAreaAndToProxy(@Param("areaId") AreaModel area, @Param("toProxyId") UserModel toProxy);
 
+  /**
+   * find the delegation of a given user in one area
+   * @param area the area of the delegation
+   * @param fromUser the delegee that delegated his vote to a proxy
+   * @return the delegation or null if that user has no proxy in that area
+   */
+  DelegationModel findByAreaAndFromUser(AreaModel area, UserModel fromUser);
 
   //same as  @Query("select d from delegation_model where d.area_id = ?1 and d.from_user_id = ?2 and d.to_proxy_id = ?3")
-  //same as  delegationRepo.findAll(Example.of(delegationModel));   returns list of delegations
+  //same as  delegationRepo.findOne(Example.of(delegationModel));
+  //         delegationRepo.findAll(Example.of(delegationModel));  would return a list of delegations
   DelegationModel findByAreaAndFromUserAndToProxy(AreaModel area, UserModel fromUser, UserModel toProxy);
 
 }

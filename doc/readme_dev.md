@@ -7,8 +7,8 @@ Here I write down everything I need durign development of my little backend.
 ### Profile
 
  - Make configurable
-   - number of likes to move an idea onto the table
-   - duration of elaboration/discussion phase 
+   - number of likes that are necessary to move an idea onto the table
+   - duration of elaboration phase 
    - duration of voting phase
 
 ### Ideas
@@ -24,6 +24,7 @@ Here I write down everything I need durign development of my little backend.
  - Sort competing proposals into vote order (XXL)
 
 
+
 # Architecture
 
 https://www.draw.io/#LLiquido%20Architecture
@@ -31,7 +32,7 @@ https://www.draw.io/#LLiquido%20Architecture
 
 ## Links
 
- - [H2 DB Web Console](http://localhost:8090/console)   JDBC URL: `jdbc:h2:mem:testdb`   Username: `sa` - no pwd, Driver Class: `org.h2.Driver`  
+ - [H2 DB Web Console](http://localhost:8080/h2-console)   JDBC URL: `jdbc:h2:mem:testdb`   Username: `sa` - no pwd, Driver Class: `org.h2.Driver`  
  - [Great Hibernate Tutorials](https://vladmihalcea.com/tutorials/hibernate/)  about mappings and sequences
  - Buch+++: High Performance Java Persistence: https://leanpub.com/high-performance-java-persistence?utm_source=blog&utm_medium=banner&utm_campaign=banner
 
@@ -47,3 +48,4 @@ https://www.draw.io/#LLiquido%20Architecture
 
  - https://springframework.guru/
  - https://springframework.guru/using-the-h2-database-console-in-spring-boot-with-spring-security/
+ - baeldung

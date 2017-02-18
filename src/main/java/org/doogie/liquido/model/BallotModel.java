@@ -44,11 +44,11 @@ public class BallotModel extends BaseModel {
   //@Column(name = "lawIdOrder")
   public List<LawModel> voteOrder;
 
-  /** encrypted information about voter that casted this ballot */
+  /** encrypted and anonymized information about voter that casted this ballot */
   @NotNull
   @NonNull
   @NotEmpty
   public String voterHash;
 
-  //no CreatedBy here: When voting it is a secret how casted this ballot!!!
+  //There is deliberately no @CreatedBy field here! When voting it is a secret who casted this ballot!!!
 }
