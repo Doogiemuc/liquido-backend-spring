@@ -1,6 +1,7 @@
 package org.doogie.liquido.rest;
 
 import org.doogie.liquido.datarepos.DelegationValidator;
+import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.IdeaModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,22 +47,25 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
     // In future versions this will be configurable in application.properties   spring.data.rest.detection-strategy=visibility   https://github.com/spring-projects/spring-boot/issues/7113
     config.setRepositoryDetectionStrategy(RepositoryDetectionStrategy.RepositoryDetectionStrategies.ANNOTATED);
 
-    config.exposeIdsFor(IdeaModel.class);
+    config.exposeIdsFor(AreaModel.class);
+    config.exposeIdsFor(IdeaModel.class);   // actually IdeaModel has its own IdeaProjection that exposes the ID
 
     //TODO: when available in future version of spring: config.getCorsRegistry()
   }
 
-  // implementing AuditorAware is not necessary. All already handled by spring boot :-)  https://jaxenter.com/rest-api-spring-java-8-112289.html
+  // see also LiquidoAuditorAware for handling @CreatedBy   https://jaxenter.com/rest-api-spring-java-8-112289.html
 
+
+  /*  this manual validator for foreign keys was only necessary with MongoDB. Right now this is handled by MySQL foreign key constraints
 
   @Autowired        // Do not create an instance with "new". Let Spring inject the dependency, so that it can ba handled by Spring.
   private DelegationValidator delegationValidator;
 
-  /** add a custom validator for Delegations */
   @Override
   public void configureValidatingRepositoryEventListener(ValidatingRepositoryEventListener validatingListener) {
     log.info("========== adding beforeCreate validator     in RepositoryRestConfigurer");
     validatingListener.addValidator("beforeCreate", delegationValidator);
   }
+  */
 
 }

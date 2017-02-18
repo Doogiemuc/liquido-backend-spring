@@ -61,7 +61,7 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
   /**
    * Configure HttpSecurity:
    *   - Allow access to H2 DB web console under /h2-console
-   *   - allowe authentication with HTTP basic auth
+   *   - allow authentication with HTTP basic auth
    *   - TODO: digest authentication   http://stackoverflow.com/questions/33918432/digest-auth-in-spring-security-with-rest-and-javaconfig
    * @param http
    * @throws Exception
@@ -75,8 +75,8 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
       .cors().disable()   //TODO: Turn CSRF back on an implement it on the client.
       .csrf().disable()   //TODO: Turn CORS back on
       .authorizeRequests()
-        .antMatchers("/h2-console").permitAll()  // Allow access to H2 DB web console
-        .antMatchers(restBasePath+"/_ping").permitAll()        // is alive
+        .antMatchers("/h2-console/**").permitAll()            // Allow access to H2 DB web console
+        .antMatchers(restBasePath+"/_ping").permitAll()       // is alive
         .anyRequest().authenticated()
       .and()
         .httpBasic()

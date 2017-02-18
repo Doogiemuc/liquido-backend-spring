@@ -1,17 +1,11 @@
 package org.doogie.liquido.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.*;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.util.Date;
+import java.io.Serializable;
 
 /**
  * Delegation from a user to a proxy in a given area.
@@ -20,9 +14,10 @@ import java.util.Date;
 @Entity
 @Data
 @NoArgsConstructor
-@RequiredArgsConstructor(suppressConstructorProperties = true)
+@RequiredArgsConstructor(suppressConstructorProperties = true)  //BUGFIX:  https://jira.spring.io/browse/DATAREST-884
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "delegations")
+//@IdClass(DelegationID.class)    // This way I could also implement the composite primary key
 public class DelegationModel extends BaseModel {
   @Id
   @GeneratedValue(strategy = GenerationType.AUTO)

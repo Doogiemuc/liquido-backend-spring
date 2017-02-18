@@ -14,7 +14,7 @@ import javax.validation.constraints.NotNull;
 import java.util.Date;
 
 /**
- * Base class for all our models.
+ * Base class for all our models that adds CreatedAt and UpdatedAt.
  *
  * Adapted from: https://blog.countableset.com/2014/03/08/auditing-spring-data-jpa-java-config/
  */
@@ -23,6 +23,8 @@ import java.util.Date;
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})  //BUGFIX: http://stackoverflow.com/questions/39854429/bootstraping-with-vue-2-router-and-vue-loader
 public abstract class BaseModel implements Identifiable<Long> {
+
+  // ID field is not in BaseModel, because LawModel needs a different generation strategy.
 
   @CreatedDate
   @NotNull
@@ -34,9 +36,10 @@ public abstract class BaseModel implements Identifiable<Long> {
   public Date updatedAt = new Date();
 
   //I do not need   @LastModifiedBy
-  // @CreatedBy can be added on demand
+  // @CreatedBy is added in parent classes where needed.
 
-  /**
+  /* THIS WAY the ID field could also be exposed. I am doing it in the Projections and in the RepositoryRestConfigurer
+   *
    * expose the internal DB ID of our objects. Actually the client gets URIs for identifying entitires.
    * But when inlining a child entity via a projection, this UID makes things much easier for the web client.
    * @return the internal ID as a String value
