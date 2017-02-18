@@ -19,7 +19,7 @@ import org.springframework.validation.Validator;
  * http://blog.trifork.com/2009/08/04/bean-validation-integrating-jsr-303-with-spring/
  * http://stackoverflow.com/questions/35323974/spring-data-rest-validation-confusion    This looks very close to my problem
  */
-@Component
+//@Component      CURRENTLY NOT USED,  since this is already handled in MySQL
 public class DelegationValidator implements Validator {
   Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
 

@@ -27,7 +27,7 @@ import static org.springframework.web.bind.annotation.RequestMethod.POST;
  *
  */
 @BasePathAwareController
-//@RepositoryRestController   nad    @RequestMapping("postBallot")   do not really work
+//@RepositoryRestController   and    @RequestMapping("postBallot")   do not really work
 //@EnableHypermediaSupport(type = EnableHypermediaSupport.HypermediaType.HAL)      //not necessary?
 public class BallotRestController {
   Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
