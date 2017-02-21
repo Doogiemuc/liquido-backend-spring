@@ -15,7 +15,7 @@ import java.io.Serializable;
 @Data
 @NoArgsConstructor
 @RequiredArgsConstructor(suppressConstructorProperties = true)  //BUGFIX:  https://jira.spring.io/browse/DATAREST-884
-@EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
+//@EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "delegations")
 //@IdClass(DelegationID.class)    // This way I could also implement the composite primary key
 public class DelegationModel extends BaseModel {

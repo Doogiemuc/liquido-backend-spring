@@ -57,6 +57,7 @@ public class IdeaModel extends BaseModel {
   @ManyToOne(optional = false)
   AreaModel area;
 
+  // created by will automatically be set to the currently logged in user on save
   // http://docs.spring.io/spring-data/jpa/docs/current/reference/html/index.html#auditing.auditor-aware
   // https://blog.countableset.com/2014/03/08/auditing-spring-data-jpa-java-config/    nice example
   @CreatedBy
@@ -69,7 +70,7 @@ public class IdeaModel extends BaseModel {
    * List of users that support this idea.
    * I need the full list of references, so that no user can support this idea twice.
    */
-  @ManyToMany(fetch = FetchType.EAGER)    //BUGFIX: EAGER loading is neseccary for testCreateIdeaWithAllRefs to work!
+  @ManyToMany(fetch = FetchType.EAGER)    //BUGFIX: EAGER loading is necessary for testCreateIdeaWithAllRefs to work!
   Set<UserModel> supporters = new HashSet<>();
 
   /**
@@ -78,6 +79,10 @@ public class IdeaModel extends BaseModel {
    * @param supporter The user that wants to discuss this idea.
    */
   public void addSupporter(UserModel supporter) {
+    if (supporter == null) return;
+    if (supporter.equals(this.getCreatedBy())) {
+      throw new RuntimeException("an idea must not be supported by its creator");
+    }
     this.supporters.add(supporter);
   }
 

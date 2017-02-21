@@ -15,31 +15,42 @@ import java.util.Arrays;
 import java.util.Collection;
 
 /**
- * Adapter between my [@link {@link UserModel} and the {@link org.springframework.security.core.userdetails.User}
  * This class loads users from the DB via {@link UserRepo} and grants them roles.
+ *
+ * @see {https://docs.spring.io/spring-security/site/docs/current/reference/htmlsingle/#tech-userdetailsservice}
  */
 @Slf4j
-public class LiquidioUserDetailsService implements UserDetailsService {
+public class LiquidoUserDetailsService implements UserDetailsService {
 
   @Autowired
   UserRepo userRepo;
 
+  /**
+   * load a user by its email and return it as a LiquidoAuthUser class. This class will be used as
+   * principal / authenticatin object throughout the application.
+   *
+   * Remark: LiquidoAuthUser contains the Liquido specific  {@link UserModel}
+   *
+   * @param email Liquido uses email adress as username
+   * @return the currently logged in {@link LiquidoAuthUser} or null if no user is currently logged in
+   * @throws UsernameNotFoundException if email could not be found in the user DB.
+   */
   @Override
-  public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+  public LiquidoAuthUser loadUserByUsername(String email) throws UsernameNotFoundException {
     log.debug("loading user "+email+" from DB for authentication");
 
-    //TODO: Remove default admin login!
+    //Just for testting
     /*
     if ("admin".equals(email)) {
       log.debug("==== ADMIN LOGIN ===");
-      return new User(email, "adminpwd", Arrays.asList(new SimpleGrantedAuthority("ROLE_USER")));
+      return new LiquidoAuthUser(email, "adminpwd", Arrays.asList(new SimpleGrantedAuthority("ROLE_USER")), adminFromDB);
     }
     */
 
-    //log.debug("Security Loading user "+email+ " for granting access");
-    UserModel user = userRepo.findByEmail(email);
-    if (user == null) throw new UsernameNotFoundException("Could not find user '"+email+"'");
-    return new User(user.getEmail(), user.getPassword(), getGrantedAuthorities(user));
+    UserModel userModel = userRepo.findByEmail(email);
+    if (userModel == null) throw new UsernameNotFoundException("Could not find user '"+email+"'");
+
+    return new LiquidoAuthUser(userModel.getEmail(), userModel.getPassword(), getGrantedAuthorities(userModel), userModel);
   }
 
   public UserModel getLiquidoUser(String email) throws Exception {
@@ -48,7 +59,7 @@ public class LiquidioUserDetailsService implements UserDetailsService {
     return liquidoUser;
   }
 
-  private Collection<GrantedAuthority> getGrantedAuthorities(UserModel user) {
+  private Collection<GrantedAuthority> getGrantedAuthorities(UserModel userModel) {
     // if user.email == admin then return "ROLE_ADMIN" else ...
     return Arrays.asList(new SimpleGrantedAuthority("ROLE_USER"));
   }

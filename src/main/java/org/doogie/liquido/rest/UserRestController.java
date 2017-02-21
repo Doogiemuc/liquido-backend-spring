@@ -6,20 +6,20 @@ import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Example;
+import org.springframework.data.rest.webmvc.BasePathAwareController;
+import org.springframework.data.rest.webmvc.PersistentEntityResource;
+import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.hateoas.Resource;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.util.StringUtils;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.websocket.server.PathParam;
-import java.security.Principal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,8 +38,9 @@ import static org.springframework.web.bind.annotation.RequestMethod.PUT;
  *  PUT              /saveProxy     - save a new proxy (upsert: updated existing delegation or insert a new one if that user has no delegation in that area yet.)
  *
  */
-@RestController
-@RequestMapping("/liquido/v2/users")
+@BasePathAwareController
+//@RestController
+//@RequestMapping("/users")
 public class UserRestController {
   Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
 
@@ -50,7 +51,10 @@ public class UserRestController {
   AreaRepo areaRepo;
 
   @Autowired
-  DelegationRepo delegationRepo;  // high level abstraction of repositories in (any) DB.
+  DelegationRepo delegationRepo;
+
+  @Autowired
+  LiquidoAuditorAware liquidoAuditorAware;
 
   /**
    * calculate the number of votes a user may cast (including his own one) because of (transitive) delegation
@@ -63,8 +67,8 @@ public class UserRestController {
    * @param req HttpServletRequest automatically injected by Spring
    * @return the number of votes this user may cast, including his own one!
    */
-  @RequestMapping(value = "/{userId}/getNumVotes", method = GET)
-  public long getNumVotes(@PathVariable Long userId, @PathParam("areaId") Long areaId, HttpServletRequest req) throws Exception {
+  @RequestMapping(value = "/users/{userId}/getNumVotes/{areaId}", method = GET)
+  public @ResponseBody long getNumVotes(@PathVariable Long userId, @PathVariable Long areaId, HttpServletRequest req) throws Exception {
     log.trace("=> GET numVotes(userId=" + userId + ", areaId=" + areaId + ")");
     //check that userId and areaId are correct and exist
     UserModel user = userRepo.findOne(userId);
@@ -85,7 +89,7 @@ public class UserRestController {
    * @return a map  area.title => proxyUser   with one entry for each proxy of that user in that area
    * @throws Exception when user does not exist
    */
-  @RequestMapping(value = "/{userId}/getProxyMap", method = GET)
+  @RequestMapping(value = "/users/{userId}/getProxyMap", method = GET)
   public Map getProxyMap(@PathVariable Long userId) throws Exception {
     UserModel user = userRepo.findOne(userId);
     if (user == null) throw new Exception("User with id="+userId+" does not exist.");
@@ -99,44 +103,46 @@ public class UserRestController {
 
   /**
    * Save a proxy for the logged in user. This will insert a new delegation or update an existing one in that area.
-   * @param delegationResource the new delegation that shall be saved (only area and toProxy need to be filled)
-   * @param principal the currently logged in user
+   * @param delegationResource the new delegation that shall be saved (only 'area' and 'toProxy' need to be filled in the request)
+   * @param auth Authentication information of the currently logged in user (will be autoinjected)
    * @return the created (or updated) delegation
    */
   @RequestMapping(value = "/saveProxy", method = PUT, consumes="application/json")
   @ResponseStatus(HttpStatus.CREATED)
-  //public @ResponseBody PersistentEntityResource
-  public @ResponseBody String saveProxy(
-                      @RequestBody Resource<DelegationModel> delegationResource,
-                      //PersistentEntityResourceAssembler resourceAssembler,
-                      Principal principal)            throws BindException
+  public @ResponseBody PersistentEntityResource saveProxy(
+      @RequestBody Resource<DelegationModel> delegationResource,
+      PersistentEntityResourceAssembler resourceAssembler,
+      Authentication auth)       throws BindException
   {
-    log.trace("saveProxy body="+delegationResource);
-    log.trace("saveProxy principal="+principal);
+    log.trace("saveProxy newDelegation="+delegationResource);
     DelegationModel newDelegation = delegationResource.getContent();
 
-    // Delegations are important. So we do a lot of sanity checks here.
-    if (principal == null || StringUtils.isEmpty(principal.getName())) throw new LiquidoRestException("You must be logged in to save a proxy!");
-    UserModel fromUser = userRepo.findByEmail(principal.getName());
+    UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
+    if (currentUser == null) throw new LiquidoRestException("Cannot save Proxy. Need an authenticated user as fromUser");
+
+    newDelegation.setFromUser(currentUser);     // any user can only add proxies for himself
     UserModel toProxy = newDelegation.getToProxy();
     AreaModel area = newDelegation.getArea();
-    if (fromUser == null) throw new LiquidoRestException("Cannot find user with email "+principal.getName());
+
+    // Delegations are important. So we do a lot of sanity checks here.
     if (toProxy == null) throw new LiquidoRestException("Cannot save Proxy. Need an toProxy");
     if (area == null) throw new LiquidoRestException("Cannot save Proxy. Need an area");
-    if (fromUser.getEmail().equals(toProxy.getEmail())) throw new LiquidoRestException("Cannot save Proxy. You cannot set yourself as proxy.");
+    if (currentUser.getEmail().equals(toProxy.getEmail())) throw new LiquidoRestException("Cannot save Proxy. You cannot set yourself as proxy.");
 
-    DelegationModel existingDelegation = delegationRepo.findByAreaAndFromUser(area, fromUser);
-    DelegationModel result;
+    //TODO: check for circular delegation!
+
+    DelegationModel existingDelegation = delegationRepo.findByAreaAndFromUser(area, currentUser);
+    DelegationModel savedDelegation;
     if (existingDelegation != null) {
       existingDelegation.setToProxy(toProxy);
       log.trace("Updating existing delegation to "+existingDelegation);
-      result = delegationRepo.save(existingDelegation);
+      savedDelegation = delegationRepo.save(existingDelegation);
     } else {
       log.trace("adding new delegation "+newDelegation);
-      result = delegationRepo.save(newDelegation);
+      savedDelegation = delegationRepo.save(newDelegation);
     }
 
-    return result.toString();
+    return resourceAssembler.toResource(savedDelegation);
   }
 
 
