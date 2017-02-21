@@ -13,6 +13,13 @@ public class SchemaUpdater implements CommandLineRunner {
   @Autowired
   JdbcTemplate jdbcTemplate;
 
+  /**
+   * A user can only delegate to exactly one proxy in one give area.
+   * Therefore {@link org.doogie.liquido.model.DelegationModel} will get a combined unique constraint on area and fromUser.
+   * This CommandLineRunner runs right after the app has started and creates that unique constraint.
+   * @param strings not used
+   * @throws Exception when the JDBC operation fails
+   */
   @Override
   public void run(String... strings) throws Exception {
     log.info("Adding UNIQUE constraint for delegations.");

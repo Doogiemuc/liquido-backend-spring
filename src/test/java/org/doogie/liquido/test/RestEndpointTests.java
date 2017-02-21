@@ -2,17 +2,20 @@ package org.doogie.liquido.test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.JsonPath;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
+import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.test.testUtils.LiquidoTestErrorHandler;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -21,8 +24,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.embedded.LocalServerPort;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.json.JacksonTester;
+import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.boot.web.client.RootUriTemplateHandler;
 import org.springframework.http.*;
+import org.springframework.http.client.support.BasicAuthorizationInterceptor;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.RestTemplate;
@@ -77,7 +84,6 @@ public class RestEndpointTests {
   //@Autowired
   //Environment springEnv;
 
-
   /** our HTTP REST client */
   RestTemplate client;
 
@@ -98,28 +104,31 @@ public class RestEndpointTests {
 
 
   /*
-   * I tried a lot with this autoinjected TestRestTemplate.  But it doesn't work.   First of all it doesn't take basePath into account :-(
+   * I tried A LOT with this auto injected TestRestTemplate. But it doesn't work.
+   * - First of all it doesn't take basePath into account :-(
+   * - It doesn't support PATCH requests
+   * -
    *
    * REST client that is automatically configured with localServerPort of running test server.
    * use with WebEnvironment.RANDOM_PORT   (when SpringBootTest starts the server)
    * client is further configured in method.
 
-  TestRestTemplate client;
+  TestRestTemplate testRestTemplate;
 
   @Autowired
-  public void setTestRestTemplate(TestRestTemplate client) {
-    log.debug("configuring TestRestTemplate with basic auth");
+  public void setTestRestTemplate(TestRestTemplate testRestTemplate) {
+    log.debug("configuring TestRestTemplate for " + basePath);
     //BUGFIX: TestRestClient does not take application.properties  spring.data.rest.base-path  into account. We must manually configure this.
     // https://jira.spring.io/browse/DATAREST-968
     // https://github.com/spring-projects/spring-boot/issues/7816
-    String basePath = springEnv.getProperty("spring.data.rest.base-path");
+
     //client.getRestTemplate().setRequestFactory(new HttpComponentsClientHttpRequestFactory());  // must replace  default SimpleClientHttpRequestFactory because it cannot handle PATCH requests http://stackoverflow.com/questions/29447382/resttemplate-patch-request
-    client.getRestTemplate().setUriTemplateHandler(new RootUriTemplateHandler("http://localhost:"+ localServerPort + basePath));
-    client.getRestTemplate().getInterceptors().add(new LogClientRequestInterceptor());
-    client.getRestTemplate().getInterceptors().add(new BasicAuthorizationInterceptor(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD));
+    testRestTemplate.getRestTemplate().setUriTemplateHandler(new RootUriTemplateHandler("http://localhost:"+ localServerPort + basePath));
+    testRestTemplate.getRestTemplate().getInterceptors().add(new LogClientRequestInterceptor());
+    testRestTemplate.getRestTemplate().getInterceptors().add(new BasicAuthorizationInterceptor(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD));
     //TODO:  for API keys
-    //client.getRestTemplate().setDefaultUriVariables();
-    this.client = client;
+    //testRestTemplate.getRestTemplate().setDefaultUriVariables();
+    this.testRestTemplate = testRestTemplate;
   }
   */
 
@@ -147,7 +156,6 @@ public class RestEndpointTests {
   }
 
   */
-
 
 
   /**
@@ -181,14 +189,17 @@ public class RestEndpointTests {
   }
 
   /**
-   * Keep in mind that this will run before every single test case!
-
+   * This will run before every single test case!
+   *
   @Before
   public void beforeEachTest() {
-    log.trace("This runs before each single test case");
-
+    log.trace("Setting up JacksonTester for JSON assertions");
+    ObjectMapper objectMapper = new ObjectMapper();
+    // Possibly configure the mapper
+    JacksonTester.initFields(this, objectMapper);
   }
    */
+
 
 
 
@@ -381,25 +392,24 @@ public class RestEndpointTests {
   @Test
   public void testGetNumVotes() {
     log.trace("TEST getNumVotes");
-    UserModel user4 = userRepo.findByEmail(TestFixtures.USER4_EMAIL);
-    AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-    String uri = "/users/"+user4.getId()+"/getNumVotes?areaId="+area1.getId();
+    long user4_id = this.users.get(4).getId();
+    long area1_id = this.areas.get(1).getId();
+    String uri = "/users/"+user4_id+"/getNumVotes/"+area1_id;
 
-    Integer numVotes = client.getForObject(uri, Integer.class);
+    long numVotes = client.getForObject(uri, Long.class);
 
-    assertNotNull(numVotes);
-    assertEquals("User "+TestFixtures.USER4_EMAIL+" should have "+TestFixtures.USER4_NUM_VOTES+" delegated votes", TestFixtures.USER4_NUM_VOTES, numVotes.intValue());
+    assertEquals("User "+TestFixtures.USER4_EMAIL+" should have "+TestFixtures.USER4_NUM_VOTES+" delegated votes", TestFixtures.USER4_NUM_VOTES, numVotes);
     log.trace("TEST SUCCESS: found expected "+TestFixtures.USER4_NUM_VOTES+" delegations for "+TestFixtures.USER4_EMAIL);
   }
 
+  /**
+   * This creates NEW delegation directly by POSTing to the /delegations rest endpoint.
+   */
   @Test
-  public void testPostDelegation() {
+  public void testPostNewDelegation() {
     log.trace("TEST postDelegation");
 
-    //Implementation note: I tried doing this via the auto generated /liquido/v2/delegations endpoint.  But it only support POST a new item. I need an upsert operation here.
-    //String url = "/users/"+this.users.get(0).getId()+"/delegations";
     String url = "/delegations";
-
     String fromUserUri = basePath + "/users/" + this.users.get(0).getId();
     String toProxyUri  = basePath + "/users/" + this.users.get(1).getId();
     String areaUri     = basePath + "/areas/" + this.areas.get(0).getId();
@@ -421,6 +431,44 @@ public class RestEndpointTests {
     assertEquals(HttpStatus.CREATED, response.getStatusCode());
     log.trace("TEST SUCCESS: saved delegation to proxy successfully");
   }
+
+  /**
+   * This updates an existing delegation and changes the toProxy via PUT to the /saveProxy endpoint
+   */
+  @Test
+  public void testSaveProxy() throws IOException {
+    log.trace("TEST saveProxy");
+
+    String url = "/saveProxy";
+    UserModel toProxy  = this.users.get(2);
+    String toProxyUri  = basePath + "/users/" + toProxy.getId();
+    String areaUri     = basePath + "/areas/" + this.areas.get(0).getId();
+
+    //I am deliberately not using DelegationModel here. This is the plain JSON as any client might send it.
+    JSONObject newDelegationJSON = new JSONObject()
+      //.put("fromUser", fromUserUri)    fromUser is implicitly the currently logged in user!
+      .put("toProxy",  toProxyUri)
+      .put("area",     areaUri);
+    log.trace("posting JSON Object:\n"+newDelegationJSON.toString(2));
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    HttpEntity<String> entity = new HttpEntity<String>(newDelegationJSON.toString(), headers);
+
+    // send PUT that will create the new Delegation
+    ResponseEntity<String> response = client.exchange(url, HttpMethod.PUT, entity, String.class);
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    String updatedDelegationJson = response.getBody();
+
+    // extract URI of toProxy and make an additional request for the full userDetails
+    String proxyURI = JsonPath.read(updatedDelegationJson, "$._links.toProxy.href");
+    log.trace("fetching proxy user information from "+proxyURI);
+    ResponseEntity<UserModel> responseEntity = client.getForEntity(proxyURI, UserModel.class);
+
+    assertEquals("expected toProxy ID to be updated", responseEntity.getBody().getEmail(), toProxy.getEmail());
+    log.trace("TEST SUCCESS: updated proxy successfully to "+toProxy.getEmail());
+  }
+
 
   /**
    * try to save a delegation with an invalid objectID
