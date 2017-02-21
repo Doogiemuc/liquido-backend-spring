@@ -20,19 +20,6 @@ public class IdeaUtil {
   LiquidoAuditorAware liquidoAuditorAware;
 
   /**
-   * Get the currently logged in user as a UserModel class. MAY RETURN NULL!
-   * This method does not do any DB access. The UserModel can be fetched via spring-security Authentication from the contained LiquidoUserDetails object.
-   * @see org.doogie.liquido.security.LiquidoUserDetailsService
-   * @return the currently logged in user or NULL if none is logged in.
-   */
-  public UserModel getCurrentlyLoggedInUserModel() {
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-    if (auth == null || auth.getPrincipal() == null) return null;
-    LiquidoAuthUser authUser = (LiquidoAuthUser)auth.getPrincipal();
-    return authUser.getUserModel();
-  }
-
-  /**
    * Check if a given idea is already supported by the currently logged in user.
    * Remark: Of course one could say that an idea is implicitly supported by its creator. But that is not counted in the list of supporters,
    * because an idea needs "external" supporters, to become a suggestion for a law.
@@ -41,6 +28,7 @@ public class IdeaUtil {
    *         false IF there is no user logged in
    */
   public boolean isSupportedByCurrentUser(IdeaModel idea) {
+    //this is used in IdeaProjection.java
     try {
       UserModel currentlyLoggedInUser = liquidoAuditorAware.getCurrentAuditor();
       return idea.getSupporters().contains(currentlyLoggedInUser);

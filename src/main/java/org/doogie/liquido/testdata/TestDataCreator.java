@@ -105,11 +105,11 @@ public class TestDataCreator implements CommandLineRunner {
     this.users = new ArrayList<>();
 
     for (int i = 0; i < NUM_USERS; i++) {
-      String email = "testuser" + (i+1) + "@liquido.de";    // DB IDs start at 1.  So we let our usernames also start at 1.
+      String email = "testuser" + i + "@liquido.de";    // Remember that DB IDs start at 1.   testuser4 has ID==5 in DB
       UserModel newUser = new UserModel(email, "dummyPasswordHash");
 
       UserProfileModel profile = new UserProfileModel();
-      profile.setName("Test User" + (i+1));
+      profile.setName("Test User" + i);
       profile.setPicture("/static/img/Avatar_32x32.jpeg");
       profile.setWebsite("http://www.liquido.de");
       newUser.setProfile(profile);
@@ -174,7 +174,7 @@ public class TestDataCreator implements CommandLineRunner {
 
 
     List<DelegationModel> delegations = new ArrayList();
-    // User0  is proxy  for users 1,2,3 and 4    in "Area 0"
+    // User0  is proxy  for users 1,2,3    in "Area 1"
     // and  user 0  then also delegated to user 4  (who now has five votes including his own)
     delegations.add(new DelegationModel(areas.get(1), users.get(1), users.get(0)));
     delegations.add(new DelegationModel(areas.get(1), users.get(2), users.get(0)));

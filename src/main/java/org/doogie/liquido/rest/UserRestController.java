@@ -14,7 +14,9 @@ import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.hateoas.Resource;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.annotation.*;
@@ -40,6 +42,7 @@ import static org.springframework.web.bind.annotation.RequestMethod.PUT;
  */
 @BasePathAwareController
 //@RestController
+//@RepositoryRestController
 //@RequestMapping("/users")
 public class UserRestController {
   Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
@@ -104,17 +107,20 @@ public class UserRestController {
   /**
    * Save a proxy for the logged in user. This will insert a new delegation or update an existing one in that area.
    * @param delegationResource the new delegation that shall be saved (only 'area' and 'toProxy' need to be filled in the request)
-   * @param auth Authentication information of the currently logged in user (will be autoinjected)
-   * @return the created (or updated) delegation
+   * @return the created (or updated) delegation as HAL+JSON   (If you you need full detailed data of referenced entities, you can request the delegationProjection.)
    */
   @RequestMapping(value = "/saveProxy", method = PUT, consumes="application/json")
-  @ResponseStatus(HttpStatus.CREATED)
-  public @ResponseBody PersistentEntityResource saveProxy(
+  //@ResponseStatus(HttpStatus.OK)
+  public
+    @ResponseBody PersistentEntityResource   // This returns the DelegationModel as HAL resource
+    // HttpEntity<DelegationModel>    This return the DelegationProjection  (with inlined referenced objects)
+    saveProxy(
       @RequestBody Resource<DelegationModel> delegationResource,
-      PersistentEntityResourceAssembler resourceAssembler,
-      Authentication auth)       throws BindException
+      PersistentEntityResourceAssembler resourceAssembler
+      // Authentication auth  // not needed anymore - spring-security authentication object could be injected like this
+    )
   {
-    log.trace("saveProxy newDelegation="+delegationResource);
+    log.trace("saveProxy delegation="+delegationResource);
     DelegationModel newDelegation = delegationResource.getContent();
 
     UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
@@ -141,6 +147,11 @@ public class UserRestController {
       log.trace("adding new delegation "+newDelegation);
       savedDelegation = delegationRepo.save(newDelegation);
     }
+
+    //Implementation note: This will return the complete HATEOAS representation of the saved delegation.
+    //  NO: return new ResponseEntity<>(savedDelegation, HttpStatus.OK);
+    //  You should not return a DelegationProjection here, because that cannot be used for further updates by the client.
+    //  http://stackoverflow.com/questions/30220333/why-is-an-excerpt-projection-not-applied-automatically-for-a-spring-data-rest-it
 
     return resourceAssembler.toResource(savedDelegation);
   }

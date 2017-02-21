@@ -17,8 +17,9 @@ import java.util.List;
 @RepositoryRestResource(collectionResourceRel = "delegations", path = "delegations", itemResourceRel = "delegation")
 public interface DelegationRepo extends JpaRepository<DelegationModel, Long>, DelegationRepoCustom {
 
-  //Delegations have a combined unique index on area,fromUSer and toProxy
-  //db.delegations.createIndex({ "area":1, "fromUser":1, "toProxy":1 }, { unique: true })
+  //Delegations have a combined unique index on area,fromUSer
+  //  for MongoDB   db.delegations.createIndex({ "area":1, "fromUser":1 }, { unique: true })
+  //  for MySQL     ALTER TABLE delegations ADD CONSTRAINT DELEGATION_COMPOSITE_ID UNIQUE (area_id, from_user_id)
   //
   //And their "foreign keys", the ObjectIDs must actually exist in the referenced user and area collections
   //which is checked by DelegationValidator.java
