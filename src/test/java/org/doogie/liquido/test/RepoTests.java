@@ -2,8 +2,7 @@ package org.doogie.liquido.test;
 
 import org.doogie.liquido.datarepos.IdeaRepo;
 import org.doogie.liquido.model.IdeaModel;
-import org.doogie.liquido.model.LawModel;
-import org.doogie.liquido.rest.LiquidoAuditorAware;
+import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.testdata.TestDataCreator;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
@@ -19,8 +18,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
-
-import javax.annotation.PostConstruct;
 
 import static org.doogie.liquido.test.matchers.UserMatcher.userWithEMail;
 import static org.hamcrest.CoreMatchers.hasItem;

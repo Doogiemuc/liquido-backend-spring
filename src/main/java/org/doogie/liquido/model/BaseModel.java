@@ -21,14 +21,14 @@ import java.util.Date;
 @MappedSuperclass
 @Data
 @EntityListeners(AuditingEntityListener.class)
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})  //BUGFIX: http://stackoverflow.com/questions/39854429/bootstraping-with-vue-2-router-and-vue-loader
+//@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public abstract class BaseModel implements Identifiable<Long> {
 
   // ID field is not in BaseModel, because LawModel needs a different generation strategy.
 
   @CreatedDate
   @NotNull
-  //  I am not going to use joda time although it is cool   @Type(type="org.jadira.usertype.dateandtime.joda.PersistentDateTime")
+  //  I am not going to use joda time although it would be cool   @Type(type="org.jadira.usertype.dateandtime.joda.PersistentDateTime")
   public Date createdAt = new Date();
 
   @LastModifiedDate
