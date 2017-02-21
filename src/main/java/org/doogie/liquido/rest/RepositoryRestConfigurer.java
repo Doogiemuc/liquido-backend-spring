@@ -3,6 +3,7 @@ package org.doogie.liquido.rest;
 import org.doogie.liquido.datarepos.DelegationValidator;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.IdeaModel;
+import org.doogie.liquido.model.UserModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +48,7 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
     // In future versions this will be configurable in application.properties   spring.data.rest.detection-strategy=visibility   https://github.com/spring-projects/spring-boot/issues/7113
     config.setRepositoryDetectionStrategy(RepositoryDetectionStrategy.RepositoryDetectionStrategies.ANNOTATED);
 
+    config.exposeIdsFor(UserModel.class);
     config.exposeIdsFor(AreaModel.class);
     config.exposeIdsFor(IdeaModel.class);   // actually IdeaModel has its own IdeaProjection that exposes the ID
 

@@ -16,6 +16,7 @@ import java.util.Date;
  * One user / voter / citizen
  */
 @Data
+@ToString(exclude="password")   // This is extremely important! Do not exposed password in toString() !!!
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor(suppressConstructorProperties = true)

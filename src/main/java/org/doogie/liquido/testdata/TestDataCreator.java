@@ -2,7 +2,7 @@ package org.doogie.liquido.testdata;
 
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
-import org.doogie.liquido.rest.LiquidoAuditorAware;
+import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.env.Environment;
 import org.springframework.data.domain.Example;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -106,11 +105,11 @@ public class TestDataCreator implements CommandLineRunner {
     this.users = new ArrayList<>();
 
     for (int i = 0; i < NUM_USERS; i++) {
-      String email = "testuser" + i + "@liquido.de";
+      String email = "testuser" + (i+1) + "@liquido.de";    // DB IDs start at 1.  So we let our usernames also start at 1.
       UserModel newUser = new UserModel(email, "dummyPasswordHash");
 
       UserProfileModel profile = new UserProfileModel();
-      profile.setName("Test User" + i);
+      profile.setName("Test User" + (i+1));
       profile.setPicture("/static/img/Avatar_32x32.jpeg");
       profile.setWebsite("http://www.liquido.de");
       newUser.setProfile(profile);
@@ -205,8 +204,8 @@ public class TestDataCreator implements CommandLineRunner {
       String ideaDescr = getLoremIpsum(50);
       UserModel createdBy = this.users.get(i % NUM_USERS);
       IdeaModel newIdea = new IdeaModel(ideaTitle, ideaDescr, this.areas.get(0), createdBy);
-      if (i > NUM_IDEAS / 2) {
-        newIdea.addSupporter(this.users.get(1));
+      if (i > NUM_IDEAS / 2) {                    // the second half of all ideas have three supporters
+        newIdea.addSupporter(this.users.get(1));  //Be careful: an idea must not be supported by its direct creator
         newIdea.addSupporter(this.users.get(2));
         newIdea.addSupporter(this.users.get(3));
       }
@@ -219,6 +218,7 @@ public class TestDataCreator implements CommandLineRunner {
         log.trace("Creating new idea " + newIdea);
       }
 
+      auditorAware.setMockAuditor(this.users.get(i % NUM_USERS));
       IdeaModel savedIdea = ideaRepo.save(newIdea);
       this.ideas.add(savedIdea);
     }
