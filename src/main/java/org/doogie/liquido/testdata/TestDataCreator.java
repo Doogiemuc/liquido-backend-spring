@@ -93,7 +93,7 @@ public class TestDataCreator implements CommandLineRunner {
    *  - the currently active spring profiles contain "test"   OR
    *  - there is an environment property seedDB==true  OR
    *  - there is a command line parmaeter "--seedDB"
-   * @param args
+   * @param args command line args
    */
   public void run(String... args) {
     boolean seedDB =   springEnv.acceptsProfiles("test") || "true".equals(springEnv.getProperty("seedDB"));
@@ -250,18 +250,19 @@ public class TestDataCreator implements CommandLineRunner {
     auditorAware.setMockAuditor(createdBy);
 
     // ==== One initial new proposal for a law   and some alternatives with and without quorum
-    LawModel initialProposal = LawModel.buildInitialLaw("Initial Proposal", "Perfect proposal for a law with quorum. "+getLoremIpsum(100, 400), area, LawStatus.ELABORATION, createdBy);
+    LawModel initialProposal = LawModel.buildInitialLaw("Initial Proposal", "Perfect proposal for a law with quorum. "+getLoremIpsum(100, 400), area, createdBy);
+    initialProposal.setStatus(LawStatus.ELABORATION);
     upsertLaw(initialProposal, 30);
 
-    // and some alternative proposals for this initial proposal that did not yet reach the neccassary quorum
+    // add some alternative proposals for this initial proposal that did NOT yet reach the neccassary quorum
     for (int i = 0; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
       String lawTitle = "Alternative Proposal " + i;
-      String lawDesc  = "Alternative proposal #"+i+" for "+initialProposal.getTitle()+" that did not reach quorum yet\n"+getLoremIpsum(100, 400);
-      LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, initialProposal, LawStatus.NEW_ALTERNATIVE_PROPOSAL, createdBy);
+      String lawDesc  = "Alternative proposal #"+i+" for "+initialProposal.getTitle()+" that did NOT reach quorum yet\n"+getLoremIpsum(100, 400);
+      LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, initialProposal, LawStatus.NEW_PROPOSAL, createdBy);
       upsertLaw(alternativeProposal, 30-i);
     }
 
-    // and some alternative proposals for this initial proposal that did already reach the necessary quorum and are in the elaboration phase
+    // and also add some alternative proposals for this initial proposal that DID already reach the necessary quorum and are in the elaboration phase
     for (int i = 0; i < NUM_ELABORATION; i++) {
       String lawTitle = "Alternative Proposal " + i;
       String lawDesc  = "Alternative proposal #"+i+" for "+initialProposal.getTitle()+" with necessary quorum\n"+getLoremIpsum(100, 400);
@@ -277,7 +278,8 @@ public class TestDataCreator implements CommandLineRunner {
     alternativeProposalInVotingTitle.add("Alternative proposal #2 in voting phase");
 
     String initialDesc  = "Initial proposal in voting phase\n"+getLoremIpsum(100, 400);
-    LawModel initialProposalInVoting = LawModel.buildInitialLaw(initialProposalInVotingTitle, initialDesc, area, LawStatus.VOTING, createdBy);
+    LawModel initialProposalInVoting = LawModel.buildInitialLaw(initialProposalInVotingTitle, initialDesc, area, createdBy);
+    initialProposalInVoting.setStatus(LawStatus.VOTING);
     upsertLaw(initialProposalInVoting, 20);
 
     for (String alternativeInVotingTitle: alternativeProposalInVotingTitle) {
@@ -289,7 +291,8 @@ public class TestDataCreator implements CommandLineRunner {
     // === real laws
     for (int i = 0; i < NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
-      LawModel realLaw = LawModel.buildInitialLaw(lawTitle, "Complete description of real law #"+i, area, LawStatus.LAW, createdBy);
+      LawModel realLaw = LawModel.buildInitialLaw(lawTitle, "Complete description of real law #"+i, area, createdBy);
+      realLaw.setStatus(LawStatus.LAW);
       upsertLaw(realLaw, 20+i);
     }
   }
