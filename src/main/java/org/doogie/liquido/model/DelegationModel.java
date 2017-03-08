@@ -1,11 +1,9 @@
 package org.doogie.liquido.model;
 
 import lombok.*;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.io.Serializable;
 
 /**
  * Delegation from a user to a proxy in a given area.
@@ -16,6 +14,7 @@ import java.io.Serializable;
  */
 @Entity
 @Data
+@EqualsAndHashCode(of = "id", callSuper = false)
 @NoArgsConstructor
 @RequiredArgsConstructor(suppressConstructorProperties = true)  //BUGFIX:  https://jira.spring.io/browse/DATAREST-884
 //@EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
@@ -46,13 +45,8 @@ public class DelegationModel extends BaseModel {
   @ManyToOne
   public UserModel toProxy;
 
-  /** the token that the delegee has created (with his password) so that the proxy can vote on behalf of him
-  @NonNull
-  @NotNull
-  public String voterToken;
+  // Implementation notes:
+  // - A delegation is always implicitly created by "fromUser"
+  // - In case you wonder why we do not store the voterToken together with the this delegation: There must not be a connection between fromUser and voterToken for keeping ballots anonymous.
 
-  TODO: cannot store this here, because there must not be a connection between fromUser and voterToken
-  */
-
-  //A delegation is always implicitly created by "fromUser"
 }

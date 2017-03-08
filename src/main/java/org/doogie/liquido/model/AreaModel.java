@@ -8,6 +8,7 @@ import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 
 @Data
+@EqualsAndHashCode(of = {"id", "title"}, callSuper = false)
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor(suppressConstructorProperties = true)

@@ -3,19 +3,18 @@ package org.doogie.liquido.test;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.ReadContext;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.test.testUtils.LiquidoTestErrorHandler;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -24,12 +23,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.embedded.LocalServerPort;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.json.JacksonTester;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.boot.web.client.RootUriTemplateHandler;
 import org.springframework.http.*;
-import org.springframework.http.client.support.BasicAuthorizationInterceptor;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.RestTemplate;
@@ -38,7 +33,6 @@ import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.Assert.*;
 
@@ -189,7 +183,7 @@ public class RestEndpointTests {
 
   }
 
-  /**
+  /*
    * This will run before every single test case!
    *
   @Before
@@ -218,7 +212,7 @@ public class RestEndpointTests {
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<String>(newAreaJSON.toString(), headers);
+    HttpEntity<String> entity = new HttpEntity<>(newAreaJSON.toString(), headers);
 
     ResponseEntity<AreaModel> response = client.exchange("/areas", HttpMethod.POST, entity, AreaModel.class);
 
@@ -241,7 +235,7 @@ public class RestEndpointTests {
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<String>(newAreaJSON.toString(), headers);
+    HttpEntity<String> entity = new HttpEntity<>(newAreaJSON.toString(), headers);
 
     Long areaId = this.areas.get(0).getId();
     ResponseEntity<AreaModel> response = client.exchange("/areas/"+areaId, HttpMethod.PATCH, entity, AreaModel.class);
@@ -274,15 +268,17 @@ public class RestEndpointTests {
     log.trace("TEST SUCCESSFULL testFindMostRecentIdeas  found "+ideas.size()+" ideas");
   }
 
+  /**
+   * Create a new proposal for a law. This test case posts an alternative proposal to an already existing proposal.
+   */
   @Test
-  public void testPostProposalForALaw() {
+  public void testPostAlternativeProposal() {
     log.trace("TEST postBallot");
 
     String newLawTitle = "Law from test "+System.currentTimeMillis() % 10000;  // law.title must be unique!!
 
     String areaUri       = basePath + "/areas/" + this.areas.get(0).getId();
     String initialLawUri = basePath + "/laws/"  + this.laws.get(0).getId();
-    String createdByUri  = basePath + "/users/" + this.users.get(0).getId();
 
     // I am deliberately not creating a new BallotModel(...) here that I could then   postForEntity like this:
     //   ResponseEntity<BallotModel> createdBallot = client.postForEntity("/ballot", newBallot, BallotModel.class);
@@ -291,54 +287,48 @@ public class RestEndpointTests {
     JSONObject newLawJson = new JSONObject()
       .put("title", newLawTitle)
       .put("description", "Dummy description from testPostProposalForLaw")
-      .put("status", LawModel.LawStatus.NEW_ALTERNATIVE_PROPOSAL)
+      .put("status", LawModel.LawStatus.NEW_PROPOSAL)     //TODO: Actually the server should decide about the status.
       .put("area", areaUri)
-      .put("initialLaw", initialLawUri)
-      .put("createdBy", createdByUri);
+      .put("initialLaw", initialLawUri);
+      // Remark: it is not necessary to send a createdBy user URI
 
     log.trace("posting JSON Object:\n"+newLawJson.toString(2));
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<String>(newLawJson.toString(), headers);
+    HttpEntity<String> entity = new HttpEntity<>(newLawJson.toString(), headers);
 
     LawModel createdLaw = client.postForObject("/laws", entity, LawModel.class);  // this actually deserializes the response into a BallotModel. But that's ok. Makes the assertions much easier than digging around in a plain String response.
-    assertNotNull("ERROR: could not post proposal for new law", createdLaw);   // createdLaw will be null, when there was an error.
+    assertNotNull("ERROR: could not post proposal for new law", createdLaw);   // createdLaw will be null, when there was an error.  (I hate methods that return null instead of throwing exceptions!)
     assertEquals("ERROR: create law title does not match", newLawTitle, createdLaw.getTitle());
 
     log.trace("TEST postBallot successfully created "+createdLaw);
   }
 
+  //Problems I had when implementing this test.
+  // http://stackoverflow.com/questions/40986738/spring-data-rest-no-string-argument-constructor-factory-method-to-deserialize/40986739
+  // https://jira.spring.io/browse/DATAREST-687
+  // https://jira.spring.io/browse/DATAREST-884
 
   @Test
   public void testPostBallot() {
     log.trace("TEST postBallot");
 
-    //find a proposal  that is currently in the voting phase and its alternatives
+    // ====== find a proposal  that is currently in the voting phase and load its alternative proposals
     List<LawModel> inVotingPhase = lawRepo.findByStatus(LawModel.LawStatus.VOTING);
-    assertTrue("Need a proposal that currently is in voting phase", inVotingPhase != null && inVotingPhase.size() > 0);
+    assertTrue("Need a proposal that currently is in voting phase for this test", inVotingPhase != null && inVotingPhase.size() > 0);
     List<LawModel> alternativeProposals = lawRepo.findByInitialLaw(inVotingPhase.get(0));
 
-    //TODO: create a random voteOrder of (some of) its competing proposals
-    //TODO: calculate new(!) userHash  (make test repeatable!)
-
+    // ===== Create a ballot with a voteOrder
     // I am deliberately not creating a new BallotModel(...) here that I could then   postForEntity like this:
     //   ResponseEntity<BallotModel> createdBallot = client.postForEntity("/ballot", newBallot, BallotModel.class);
     // because I do not want the test to success just because of on spring's very clever serialization and deserialization.
     // Instead I want to post plain JSON as a client would:
-
-    //Problems I had
-    // http://stackoverflow.com/questions/40986738/spring-data-rest-no-string-argument-constructor-factory-method-to-deserialize/40986739
-    // https://jira.spring.io/browse/DATAREST-687
-    // https://jira.spring.io/browse/DATAREST-884
-
-    String voterHash = "dummyUserHashFromTest";
     String initialLawUri = basePath + "/laws/" + inVotingPhase.get(0).getId();
     String voteOrderUri1 = basePath + "/laws/" + alternativeProposals.get(0).getId();
     String voteOrderUri2 = basePath + "/laws/" + alternativeProposals.get(1).getId();
 
     JSONObject newBallotJson = new JSONObject()
-        .put("voterHash", voterHash)
         .put("initialProposal", initialLawUri)
         .put("voteOrder", new JSONArray()
                                 .put(voteOrderUri1)
@@ -347,16 +337,19 @@ public class RestEndpointTests {
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<String>(newBallotJson.toString(), headers);
+    HttpEntity<String> entity = new HttpEntity<>(newBallotJson.toString(), headers);
 
-    //do not use client.postForObject   it does not return any error. It simply returns null instead!
-    // correct endpoint is my own /postBallot implementation.    /ballots are not exposed via HATEOAS !!
+    // Do not use client.postForObject   it does not return any error. It simply returns null instead!
+    // Endpoint is /postBallot    /ballots are not exposed as @RepositoryRestResource for writing!
     ResponseEntity<String> response = client.exchange("/postBallot", HttpMethod.POST, entity, String.class);
+    //log.debug("Response body:\n"+response.getBody());
 
-    log.debug("Response body:\n"+response.getBody());
     assertEquals(HttpStatus.CREATED, response.getStatusCode());
-    assertTrue(response.getBody().contains(voterHash));
-
+    ReadContext ctx = JsonPath.parse(response.getBody());
+    String returnedVoterToken = ctx.read("$.voterToken");
+    assertTrue("Expected a voter token", returnedVoterToken != null && returnedVoterToken.length() > 10);
+    List<String> voteOrderJsonArray = ctx.read("$._embedded.voteOrder");
+    assertEquals("Expected to have same number of proposals in the voteOrder", 2, voteOrderJsonArray.size());
     log.trace("TEST SUCCESSFUL: new ballot successfully posted.");
   }
 
@@ -364,13 +357,11 @@ public class RestEndpointTests {
   public void testPostInvalidBallot() {
     log.trace("TEST postInvalidBallot");
 
-    String voterHash = "dummyUserHashFromTest";
     String initialLawUri = basePath + "/laws/4711"; // This is a nonexistant ID !
     String voteOrderUri1 = basePath + "/laws/" + this.laws.get(1).getId();
     String voteOrderUri2 = basePath + "/laws/" + this.laws.get(2).getId();
 
     JSONObject newBallotJson = new JSONObject()
-      .put("voterHash", voterHash)
       .put("initialProposal", initialLawUri)
       .put("voteOrder", new JSONArray()
         .put(voteOrderUri1)
@@ -379,19 +370,20 @@ public class RestEndpointTests {
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<String>(newBallotJson.toString(), headers);
+    HttpEntity<String> entity = new HttpEntity<>(newBallotJson.toString(), headers);
 
     ResponseEntity<String> response = client.exchange("/postBallot", HttpMethod.POST, entity, String.class);
 
     String responseBody = response.getBody();
     assertEquals(HttpStatus.BAD_REQUEST.value(), response.getStatusCodeValue());  // 400
     log.trace("response.body (that should contain the error): "+responseBody);
+    assertTrue(responseBody.contains("\"status\":400"));
     assertTrue(responseBody.contains("initialProposal"));
     log.trace("TEST postInvalidBallot successful: received correct status and error message in response.");
   }
 
   /**
-   * User4 should have 5 votes (including his own
+   * User4 should have 5 votes (including his own) in area1
    */
   @Test
   public void testGetNumVotes() {
@@ -402,7 +394,7 @@ public class RestEndpointTests {
 
     long numVotes = client.getForObject(uri, Long.class);
 
-    assertEquals("User "+TestFixtures.USER4_EMAIL+" should have "+TestFixtures.USER4_NUM_VOTES+" delegated votes", TestFixtures.USER4_NUM_VOTES, numVotes);
+    assertEquals("User "+TestFixtures.USER4_EMAIL+" should have "+TestFixtures.USER4_NUM_VOTES+" delegated votes in area='"+TestFixtures.AREA1_TITLE+"'", TestFixtures.USER4_NUM_VOTES, numVotes);
     log.trace("TEST SUCCESS: found expected "+TestFixtures.USER4_NUM_VOTES+" delegations for "+TestFixtures.USER4_EMAIL);
   }
 
@@ -444,7 +436,7 @@ public class RestEndpointTests {
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<String>(newDelegationJSON.toString(), headers);
+    HttpEntity<String> entity = new HttpEntity<>(newDelegationJSON.toString(), headers);
 
     ResponseEntity<String> response = client.exchange(url, HttpMethod.POST, entity, String.class);
 
@@ -474,7 +466,7 @@ public class RestEndpointTests {
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<String>(newDelegationJSON.toString(), headers);
+    HttpEntity<String> entity = new HttpEntity<>(newDelegationJSON.toString(), headers);
 
     // send PUT that will create the new Delegation
     ResponseEntity<String> response = client.exchange(url, HttpMethod.PUT, entity, String.class);
@@ -513,7 +505,7 @@ public class RestEndpointTests {
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<String>(newDelegationJSON.toString(), headers);
+    HttpEntity<String> entity = new HttpEntity<>(newDelegationJSON.toString(), headers);
 
     ResponseEntity<String> result = client.exchange(url, HttpMethod.POST, entity, String.class);
 
@@ -535,7 +527,7 @@ public class RestEndpointTests {
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<String>(duplicateAreaJson.toString(), headers);
+    HttpEntity<String> entity = new HttpEntity<>(duplicateAreaJson.toString(), headers);
 
     ResponseEntity<String> responseEntity = client.postForEntity("/areas", entity, String.class);  // This will return HTTP status 409(Conflict) because of the duplicate composite key.
 
