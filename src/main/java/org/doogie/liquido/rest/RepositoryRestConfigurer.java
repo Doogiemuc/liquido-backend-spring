@@ -17,10 +17,16 @@ import org.springframework.data.rest.core.mapping.RepositoryDetectionStrategy;
 import org.springframework.data.rest.webmvc.config.RepositoryRestConfigurerAdapter;
 import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.ResourceProcessor;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CommonsRequestLoggingFilter;
 import org.springframework.web.filter.CorsFilter;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Configure the exposed REST HATEOAS services.
@@ -56,6 +62,25 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
   }
 
   // see also LiquidoAuditorAware for handling @CreatedBy   https://jaxenter.com/rest-api-spring-java-8-112289.html
+
+  /**
+   * This is necessary for being able to return plain JSON strings from REST controllers
+   * http://stackoverflow.com/questions/15507064/return-literal-json-strings-in-spring-mvc-responsebody
+   * @param messageConverters
+
+  @Override
+  public void configureHttpMessageConverters(List<HttpMessageConverter<?>> messageConverters) {
+    StringHttpMessageConverter stringConverter = new StringHttpMessageConverter();
+    stringConverter.setSupportedMediaTypes(Arrays.asList(
+      MediaType.APPLICATION_JSON,
+      MediaType.APPLICATION_JSON_UTF8,
+      MediaType.TEXT_PLAIN
+    ));
+    messageConverters.add(stringConverter);
+  }
+  */
+
+
 
 
   /*  this manual validator for foreign keys was only necessary with MongoDB. Right now this is handled by MySQL foreign key constraints

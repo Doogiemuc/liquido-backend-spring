@@ -38,6 +38,7 @@ import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.*;
 
@@ -389,6 +390,9 @@ public class RestEndpointTests {
     log.trace("TEST postInvalidBallot successful: received correct status and error message in response.");
   }
 
+  /**
+   * User4 should have 5 votes (including his own
+   */
   @Test
   public void testGetNumVotes() {
     log.trace("TEST getNumVotes");
@@ -401,6 +405,23 @@ public class RestEndpointTests {
     assertEquals("User "+TestFixtures.USER4_EMAIL+" should have "+TestFixtures.USER4_NUM_VOTES+" delegated votes", TestFixtures.USER4_NUM_VOTES, numVotes);
     log.trace("TEST SUCCESS: found expected "+TestFixtures.USER4_NUM_VOTES+" delegations for "+TestFixtures.USER4_EMAIL);
   }
+
+  /**
+   * User0 should have delegated his vote to User4 in Area1
+   */
+  @Test
+  public void testGetProxyMap() {
+    log.trace("TEST getProxyMap");
+    long user0_id = this.users.get(0).getId();
+    String uri = "/users/"+user0_id+"/getProxyMap";
+
+    String proxyMapJson = client.getForObject(uri, String.class);
+    String proxyInArea1_email = JsonPath.read(proxyMapJson, "$['"+TestFixtures.AREA1_TITLE+"'].email");
+
+    assertEquals("User "+TestFixtures.USER0_EMAIL+" should have "+TestFixtures.USER4_EMAIL+" as proxy", TestFixtures.USER4_EMAIL, proxyInArea1_email);
+    log.trace("TEST SUCCESS: found expected "+TestFixtures.USER4_NUM_VOTES+" delegations for "+TestFixtures.USER4_EMAIL);
+  }
+
 
   /**
    * This creates NEW delegation directly by POSTing to the /delegations rest endpoint.

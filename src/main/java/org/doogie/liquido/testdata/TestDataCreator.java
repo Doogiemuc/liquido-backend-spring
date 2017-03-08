@@ -10,10 +10,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.env.Environment;
 import org.springframework.data.domain.Example;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import javax.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import static org.doogie.liquido.model.LawModel.LawStatus;
 
@@ -25,6 +28,11 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  *
  * This is executed right after SpringApplication.run(...) when the command line parameter "--seedDB" is passed.
  * See http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/htmlsingle/#boot-features-command-line-runner
+ *
+ * Other possibilities for initializing a DB with Spring and Hibernate:
+ * https://docs.spring.io/spring-boot/docs/current/reference/html/howto-database-initialization.html
+ * http://www.sureshpw.com/2014/05/importing-json-with-references-into.html
+ * http://www.generatedata.com/
  */
 @Component
 public class TestDataCreator implements CommandLineRunner {
@@ -65,13 +73,19 @@ public class TestDataCreator implements CommandLineRunner {
   BallotRepo ballotRepo;
 
   @Autowired
+  JdbcTemplate jdbcTemplate;
+
+  @Autowired
   LiquidoAuditorAware auditorAware;
 
   @Autowired
   Environment springEnv;   // load settings from application-test.properties
 
-  public TestDataCreator() {
+  // very simple random number generator
+  Random rand;
 
+  public TestDataCreator() {
+    this.rand = new Random(System.currentTimeMillis());
   }
 
   /**
@@ -200,15 +214,18 @@ public class TestDataCreator implements CommandLineRunner {
     log.debug("Seeding Ideas ...");
     this.ideas = new ArrayList<>();
     for (int i = 0; i < NUM_IDEAS; i++) {
-      String ideaTitle = "Idea " + i;
-      String ideaDescr = getLoremIpsum(50);
+      String ideaTitle = "Idea " + i + " that suggest that we defenitely need a longer title for ideas";
+      String ideaDescr = getLoremIpsum(100,+ 400);
       UserModel createdBy = this.users.get(i % NUM_USERS);
       IdeaModel newIdea = new IdeaModel(ideaTitle, ideaDescr, this.areas.get(0), createdBy);
-      if (i > NUM_IDEAS / 2) {                    // the second half of all ideas have three supporters
-        newIdea.addSupporter(this.users.get(1));  //Be careful: an idea must not be supported by its direct creator
-        newIdea.addSupporter(this.users.get(2));
-        newIdea.addSupporter(this.users.get(3));
+      // add 0 to 3 supporters != createdBy
+      for (int j = 0; j < rand.nextInt(4); j++) {
+        int supporterNo = rand.nextInt(NUM_USERS);
+        if (supporterNo != (i % NUM_USERS)) {           // creator is implicitly aready a supporter
+          newIdea.addSupporter(users.get(supporterNo));
+        }
       }
+
 
       IdeaModel existingIdea = ideaRepo.findByTitle(ideaTitle);
       if (existingIdea != null) {
@@ -218,7 +235,7 @@ public class TestDataCreator implements CommandLineRunner {
         log.trace("Creating new idea " + newIdea);
       }
 
-      auditorAware.setMockAuditor(this.users.get(i % NUM_USERS));
+      auditorAware.setMockAuditor(createdBy);
       IdeaModel savedIdea = ideaRepo.save(newIdea);
       this.ideas.add(savedIdea);
     }
@@ -230,27 +247,26 @@ public class TestDataCreator implements CommandLineRunner {
 
     AreaModel area = this.areas.get(0);
     UserModel createdBy = this.users.get(0);
+    auditorAware.setMockAuditor(createdBy);
 
     // ==== One initial new proposal for a law   and some alternatives with and without quorum
-    LawModel initialProposal = LawModel.buildInitialLaw("Initial Proposal", "Perfect proposal for a law with quorum. "+getLoremIpsum(100), area, LawStatus.ELABORATION, createdBy);
-    upsertLaw(null, initialProposal);
+    LawModel initialProposal = LawModel.buildInitialLaw("Initial Proposal", "Perfect proposal for a law with quorum. "+getLoremIpsum(100, 400), area, LawStatus.ELABORATION, createdBy);
+    upsertLaw(initialProposal, 30);
 
     // and some alternative proposals for this initial proposal that did not yet reach the neccassary quorum
     for (int i = 0; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
       String lawTitle = "Alternative Proposal " + i;
-      String lawDesc  = "Alternative proposal #"+i+" for "+initialProposal.getTitle()+" that did not reach quorum yet\n"+getLoremIpsum(100);
+      String lawDesc  = "Alternative proposal #"+i+" for "+initialProposal.getTitle()+" that did not reach quorum yet\n"+getLoremIpsum(100, 400);
       LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, initialProposal, LawStatus.NEW_ALTERNATIVE_PROPOSAL, createdBy);
-      LawModel existingLaw = lawRepo.findByTitle(lawTitle);
-      upsertLaw(existingLaw, alternativeProposal);
+      upsertLaw(alternativeProposal, 30-i);
     }
 
     // and some alternative proposals for this initial proposal that did already reach the necessary quorum and are in the elaboration phase
     for (int i = 0; i < NUM_ELABORATION; i++) {
       String lawTitle = "Alternative Proposal " + i;
-      String lawDesc  = "Alternative proposal #"+i+" for "+initialProposal.getTitle()+" with necessary quorum\n"+getLoremIpsum(100);
+      String lawDesc  = "Alternative proposal #"+i+" for "+initialProposal.getTitle()+" with necessary quorum\n"+getLoremIpsum(100, 400);
       LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, initialProposal, LawStatus.ELABORATION, createdBy);
-      LawModel existingLaw = lawRepo.findByTitle(lawTitle);
-      upsertLaw(existingLaw, alternativeProposal);
+      upsertLaw(alternativeProposal, 30-i);
     }
 
     // ==== Some proposals that currently are in the voting phase (one initial, of course)
@@ -260,35 +276,51 @@ public class TestDataCreator implements CommandLineRunner {
     alternativeProposalInVotingTitle.add("Alternative proposal #1 in voting phase");
     alternativeProposalInVotingTitle.add("Alternative proposal #2 in voting phase");
 
-    LawModel initialProposalInVoting = LawModel.buildInitialLaw(initialProposalInVotingTitle, "Initial proposal that currently is in the voting phase.", area, LawStatus.VOTING, createdBy);
-    LawModel existingProposal = lawRepo.findByTitle(initialProposalInVotingTitle);
-    upsertLaw(existingProposal, initialProposalInVoting);
+    String initialDesc  = "Initial proposal in voting phase\n"+getLoremIpsum(100, 400);
+    LawModel initialProposalInVoting = LawModel.buildInitialLaw(initialProposalInVotingTitle, initialDesc, area, LawStatus.VOTING, createdBy);
+    upsertLaw(initialProposalInVoting, 20);
 
     for (String alternativeInVotingTitle: alternativeProposalInVotingTitle) {
-      LawModel votingLaw = new LawModel(alternativeInVotingTitle, "Alternative proposal that currently is in the voting phase", area, initialProposalInVoting, LawStatus.VOTING, createdBy);
-      LawModel existingLaw = lawRepo.findByTitle(alternativeInVotingTitle);
-      upsertLaw(existingLaw, votingLaw);
+      String altDesc  = "Alternative proposal in voting phase\n"+getLoremIpsum(100, 400);
+      LawModel votingLaw = new LawModel(alternativeInVotingTitle, altDesc, area, initialProposalInVoting, LawStatus.VOTING, createdBy);
+      upsertLaw(votingLaw, 18);
     }
 
     // === real laws
     for (int i = 0; i < NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
       LawModel realLaw = LawModel.buildInitialLaw(lawTitle, "Complete description of real law #"+i, area, LawStatus.LAW, createdBy);
-      realLaw.setCreatedAt(DoogiesUtil.dayAgo(20+i));
-      realLaw.setUpdatedAt(DoogiesUtil.dayAgo(20+i));
-      LawModel existingLaw = lawRepo.findByTitle(lawTitle);
-      upsertLaw(existingLaw, realLaw);
+      upsertLaw(realLaw, 20+i);
     }
   }
 
-  private LawModel upsertLaw(LawModel existingLaw, LawModel newLaw) {
+  /**
+   * Will create a new law or update an existing one with matching title.
+   * And will set the createdAt date to n days ago
+   * @param lawModel the new law to create (or update)
+   * @param ageInDays will setCreatedAt to so many days ago (measured from now)
+   * @return the saved law
+   */
+  private LawModel upsertLaw(LawModel lawModel, int ageInDays) {
+    LawModel existingLaw = lawRepo.findByTitle(lawModel.getTitle());  // may return null!
     if (existingLaw != null) {
       log.trace("Updating existing law with id=" + existingLaw.getId());
-      newLaw.setId(existingLaw.getId());
+      lawModel.setId(existingLaw.getId());
     } else {
-      log.trace("Creating new law " + newLaw);
+      log.trace("Creating new law " + lawModel);
     }
-    LawModel savedLaw = lawRepo.save(newLaw);
+    LawModel savedLaw = lawRepo.save(lawModel);
+
+    if (ageInDays > 0) {
+      Table tableAnnotation = LawModel.class.getAnnotation(javax.persistence.Table.class);
+      String tableName = tableAnnotation.name();
+      String sql = "UPDATE " + tableName + " SET created_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + savedLaw.getId() + "'";
+      log.trace(sql);
+      jdbcTemplate.execute(sql);
+      savedLaw.setCreatedAt(DoogiesUtil.dayAgo(ageInDays));
+      //MAYBE: setUpdatedAt(...)
+    }
+
     this.laws.add(savedLaw);
     return savedLaw;
   }
@@ -310,8 +342,12 @@ public class TestDataCreator implements CommandLineRunner {
 
 
   /** @return a dummy text that can be used eg. in descriptions */
-  public String getLoremIpsum(int length) {
-    String loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+  public String getLoremIpsum(int minLength, int maxLength) {
+    String loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, nam urna. Vitae aenean velit, voluptate velit rutrum. Elementum integer rhoncus rutrum morbi aliquam metus, morbi nulla, nec est phasellus dolor eros in libero. Volutpat dui feugiat, non magna, parturient dignissim lacus ipsum in adipiscing ut. Et quis adipiscing perferendis et, id consequat ac, dictum dui fermentum ornare rhoncus lobortis amet. Eveniet nulla sollicitudin, dolore nullam massa tortor ullamcorper mauris. Lectus ipsum lacus.\n" +
+      "Vivamus placerat a sodales est, vestibulum nec cursus eros fermentum. Felis orci nunc quis suspendisse dignissim justo, sed proin metus, nunc elit ac aliquam. Sed tellus ante ipsum erat platea nulla, enim bibendum gravida condimentum, imperdiet in vitae faucibus ultrices, aenean fringilla at. Rhoncus et sint volutpat, bibendum neque arcu, posuere viverra in, imperdiet duis. Eget erat condimentum congue ipsam. Tortor nostra, adipiscing facilisis donec elit pellentesque natoque integer. Ipsum id. Aenean suspendisse et eros hymenaeos in auctor, porttitor amet id pellentesque tempor, praesent aliquam rhoncus convallis vel, tempor fusce wisi enim aliquam ut nisl, nullam dictum etiam. Nisi accumsan augue sapiente dui, pulvinar cras sapien mus quam nonummy vivamus, in vitae, sociis pede, convallis mollis id mauris. Vestibulum ac quis scelerisque magnis pede in, duis ullamcorper a ipsum ante ornare.\n" +
+      "Quam amet. Risus lorem nibh consequat volutpat. Bibendum lorem, mauris sed quisque. Pellentesque augue eros nibh, iaculis maecenas facilisis amet. Nam laoreet elit litora justo, morbi in vitae nisl nulla vestibulum maecenas. Scelerisque lacinia id eget pede nunc in, id a nullam nunc velit mauris class. Duis dui ullamcorper vestibulum, turpis mi eu, arcu pellentesque sit. Arcu nibh elit. Vitae magna magna auctor, class pariatur, tortor eget amet mi pede accumsan, ut quam ut ante nibh vivamus quisque. Magna praesent tortor praesent.";
+    int length = minLength + rand.nextInt(maxLength - minLength);
+    if (length >= loremIpsum.length()) length = loremIpsum.length()-1;
     return loremIpsum.substring(0, length);
   }
 

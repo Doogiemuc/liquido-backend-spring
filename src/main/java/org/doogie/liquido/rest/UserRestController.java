@@ -1,5 +1,8 @@
 package org.doogie.liquido.rest;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.util.JSONWrappedObject;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.UserRepo;
@@ -14,20 +17,18 @@ import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.hateoas.Resource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.validation.BindException;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
-import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.springframework.web.bind.annotation.RequestMethod.GET;
-import static org.springframework.web.bind.annotation.RequestMethod.PUT;
+import static org.springframework.web.bind.annotation.RequestMethod.*;
 
 /**
  * Controller for our RESTfull endpoint for user management.
@@ -67,11 +68,10 @@ public class UserRestController {
    *
    * @param userId ID of proxy (as 24 char HEX string)
    * @param areaId URL query param: ID of area
-   * @param req HttpServletRequest automatically injected by Spring
    * @return the number of votes this user may cast, including his own one!
    */
   @RequestMapping(value = "/users/{userId}/getNumVotes/{areaId}", method = GET)
-  public @ResponseBody long getNumVotes(@PathVariable Long userId, @PathVariable Long areaId, HttpServletRequest req) throws Exception {
+  public @ResponseBody long getNumVotes(@PathVariable Long userId, @PathVariable Long areaId) throws Exception {
     log.trace("=> GET numVotes(userId=" + userId + ", areaId=" + areaId + ")");
     //check that userId and areaId are correct and exist
     UserModel user = userRepo.findOne(userId);
@@ -92,10 +92,10 @@ public class UserRestController {
    * @return a map  area.title => proxyUser   with one entry for each proxy of that user in that area
    * @throws Exception when user does not exist
    */
-  @RequestMapping(value = "/users/{userId}/getProxyMap", method = GET)
-  public Map getProxyMap(@PathVariable Long userId) throws Exception {
+  @RequestMapping(value = "/users/{userId}/getProxyMap", method = GET, produces = MediaType.APPLICATION_JSON_VALUE)
+  public @ResponseBody Map getProxyMap(@PathVariable Long userId) throws LiquidoRestException {
     UserModel user = userRepo.findOne(userId);
-    if (user == null) throw new Exception("User with id="+userId+" does not exist.");
+    if (user == null) throw new LiquidoRestException("User with id="+userId+" does not exist.");
     List<DelegationModel> proxies = delegationRepo.findByFromUser(user);
     Map<String, UserModel> proxyMap = new HashMap<>();
     for (DelegationModel delegation : proxies) {
@@ -107,9 +107,11 @@ public class UserRestController {
   /**
    * Save a proxy for the logged in user. This will insert a new delegation or update an existing one in that area.
    * @param delegationResource the new delegation that shall be saved (only 'area' and 'toProxy' need to be filled in the request)
-   * @return the created (or updated) delegation as HAL+JSON   (If you you need full detailed data of referenced entities, you can request the delegationProjection.)
+   * @return the created (or updated) delegation as HAL+JSON
+   *         If you you need full detailed data of all referenced entities, you can request the delegationProjection.
+   *         Or you can send additional requests for example for the "_links.toProxy.href" URI
    */
-  @RequestMapping(value = "/saveProxy", method = PUT, consumes="application/json")
+  @RequestMapping(value = "/saveProxy", method = PUT, consumes="application/json", produces = MediaType.APPLICATION_JSON_VALUE)
   //@ResponseStatus(HttpStatus.OK)
   public
     @ResponseBody PersistentEntityResource   // This returns the DelegationModel as HAL resource
@@ -131,8 +133,8 @@ public class UserRestController {
     AreaModel area = newDelegation.getArea();
 
     // Delegations are important. So we do a lot of sanity checks here.
-    if (toProxy == null) throw new LiquidoRestException("Cannot save Proxy. Need an toProxy");
     if (area == null) throw new LiquidoRestException("Cannot save Proxy. Need an area");
+    if (toProxy == null) throw new LiquidoRestException("Cannot save Proxy: Need a toProxy");
     if (currentUser.getEmail().equals(toProxy.getEmail())) throw new LiquidoRestException("Cannot save Proxy. You cannot set yourself as proxy.");
 
     //TODO: check for circular delegation!
@@ -148,42 +150,38 @@ public class UserRestController {
       savedDelegation = delegationRepo.save(newDelegation);
     }
 
-    //Implementation note: This will return the complete HATEOAS representation of the saved delegation.
-    //  NO: return new ResponseEntity<>(savedDelegation, HttpStatus.OK);
-    //  You should not return a DelegationProjection here, because that cannot be used for further updates by the client.
-    //  http://stackoverflow.com/questions/30220333/why-is-an-excerpt-projection-not-applied-automatically-for-a-spring-data-rest-it
-
+    //return the complete HATEOAS representation of the saved delegation.
     return resourceAssembler.toResource(savedDelegation);
+
+    // You should not return a DelegationProjection here, as this code would:
+    //   return new ResponseEntity<>(savedDelegation, HttpStatus.OK);
+    // because that cannot be used for further updates by the client.
+    // http://stackoverflow.com/questions/30220333/why-is-an-excerpt-projection-not-applied-automatically-for-a-spring-data-rest-it
   }
 
+  /**
+   * delete a proxy of the currently logged in user in one area.
+   * @param area the area where to delete the proxy
+   * @return HTTP status 204 (NoContent) on success
+   */
+  @RequestMapping(value = "/deleteProxy/{areaId}", method = DELETE, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+  public @ResponseBody Map deleteProxy(@PathVariable(name="areaId") AreaModel area) {
+    log.trace("deleteProxy in area="+area);
 
+    UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
+    if (currentUser == null) throw new LiquidoRestException("Cannot delete Proxy. Need an authenticated user as fromUser");
 
-  /*
-  @RequestMapping(value = "/{userId}/delegations", method = PUT)
-  public String saveProxy(@PathVariable Long userId, @Valid @RequestBody DelegationModel newDelegation, BindingResult bindingResult, HttpServletRequest req) throws Exception {
-    log.trace("=> PUT saveProxy: newDelegation="+newDelegation);
-    // validation did happen in DelegationValidator.java  This includes checking foreign keys!
-    if (bindingResult.hasErrors()) {
-      log.trace("   newDelegation is invalid: " + bindingResult.getAllErrors());
-      throw new BindException(bindingResult);  // this generates a cool error message. Undocumented spring feature :-)
-    }
-
-    //Do not create the delegation twice if it already exists. (There is also a combined unique constraint on  (area, fromUser, toProxy)
-    DelegationModel existingDelegation = delegationRepo.findOne(Example.of(newDelegation));
+    DelegationModel existingDelegation = delegationRepo.findByAreaAndFromUser(area, currentUser);
     if (existingDelegation != null) {
-      log.trace("   update existing delegation with id="+existingDelegation.getId());
-      newDelegation.setId(existingDelegation.getId());
-      delegationRepo.save(newDelegation);  //TODO: This is actually not necessary. A delegatino consinsts only of foreign keys. Nothing to update. (except maybe timestamp)
+      log.trace("Removing proxy. Deleting existing delegation: " + existingDelegation);
+      delegationRepo.delete(existingDelegation);
+      return Collections.singletonMap("msg", "Successfully removed proxy.");   // cannot return simple string in Spring :-( http://stackoverflow.com/questions/30895286/spring-mvc-how-to-return-simple-string-as-json-in-rest-controller/30895501
     } else {
-      log.trace("   insert new delegation");
-      delegationRepo.insert(newDelegation);
+      return Collections.singletonMap("msg", "You already did not have any proxy in that area.");
     }
-    //MAYBE: Screw all this Spring Repository stuff and code by hand with full pure mongo power  mongoTemplate.upsert(query, update, DelegationModel.class);
 
-    log.trace("<= PUT saveProxy successful.");
-    return "Proxy saved successfully";
   }
-*/
+
 }
 
 
