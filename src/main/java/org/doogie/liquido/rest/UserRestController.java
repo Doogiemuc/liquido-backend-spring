@@ -1,8 +1,5 @@
 package org.doogie.liquido.rest;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.util.JSONWrappedObject;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.UserRepo;
@@ -46,7 +43,7 @@ import static org.springframework.web.bind.annotation.RequestMethod.*;
 //@RepositoryRestController
 //@RequestMapping("/users")
 public class UserRestController {
-  Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
+  private Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
 
   @Autowired
   UserRepo userRepo;
@@ -90,7 +87,7 @@ public class UserRestController {
    * get all proxies that this user currently has assigned (per area)
    * @param userId ID of an existing user
    * @return a map  area.title => proxyUser   with one entry for each proxy of that user in that area
-   * @throws Exception when user does not exist
+   * @throws LiquidoRestException when user does not exist
    */
   @RequestMapping(value = "/users/{userId}/getProxyMap", method = GET, produces = MediaType.APPLICATION_JSON_VALUE)
   public @ResponseBody Map getProxyMap(@PathVariable Long userId) throws LiquidoRestException {
@@ -115,7 +112,7 @@ public class UserRestController {
   //@ResponseStatus(HttpStatus.OK)
   public
     @ResponseBody PersistentEntityResource   // This returns the DelegationModel as HAL resource
-    // HttpEntity<DelegationModel>    This return the DelegationProjection  (with inlined referenced objects)
+    // HttpEntity<DelegationModel>    This would return the DelegationProjection  (with inlined referenced objects)  but that cannot be used by the client for further updates
     saveProxy(
       @RequestBody Resource<DelegationModel> delegationResource,
       PersistentEntityResourceAssembler resourceAssembler

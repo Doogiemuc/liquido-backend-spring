@@ -3,21 +3,19 @@ package org.doogie.liquido.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.hibernate.validator.constraints.NotEmpty;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.data.rest.core.annotation.RestResource;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.util.Date;
 import java.util.List;
 
 /**
  * One user / voter / citizen
  */
 @Data
-@ToString(exclude="password")   // This is extremely important! Do not exposed password in toString() !!!
+@EqualsAndHashCode(of = {"id", "email"}, callSuper = false)
+@ToString(exclude="passwordHash")   // This is extremely important! Do not exposed password in toString() !!!
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor(suppressConstructorProperties = true)

@@ -1,32 +1,15 @@
 package org.doogie.liquido.rest;
 
-import org.doogie.liquido.datarepos.DelegationValidator;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.IdeaModel;
 import org.doogie.liquido.model.UserModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.rest.core.config.RepositoryRestConfiguration;
-import org.springframework.data.rest.core.event.ValidatingRepositoryEventListener;
 import org.springframework.data.rest.core.mapping.RepositoryDetectionStrategy;
 import org.springframework.data.rest.webmvc.config.RepositoryRestConfigurerAdapter;
-import org.springframework.hateoas.Resource;
-import org.springframework.hateoas.ResourceProcessor;
-import org.springframework.http.MediaType;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.StringHttpMessageConverter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CommonsRequestLoggingFilter;
-import org.springframework.web.filter.CorsFilter;
-
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Configure the exposed REST HATEOAS services.
@@ -40,7 +23,7 @@ import java.util.List;
 @Configuration       // @Configuration is also a @Component
 @EnableJpaAuditing(auditorAwareRef = "liquidoAuditorAware")   // this is necessary so that UpdatedAt and CreatedAt are handled.
 public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
-  Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
+  private Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
 
   @Override
   public void configureRepositoryRestConfiguration(RepositoryRestConfiguration config) {
@@ -58,12 +41,12 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
     config.exposeIdsFor(AreaModel.class);
     config.exposeIdsFor(IdeaModel.class);   // actually IdeaModel has its own IdeaProjection that exposes the ID
 
-    //TODO: when available in future version of spring: config.getCorsRegistry()
+    //MAYBE: when available in future version of spring: config.getCorsRegistry()
   }
 
   // see also LiquidoAuditorAware for handling @CreatedBy   https://jaxenter.com/rest-api-spring-java-8-112289.html
 
-  /**
+  /*
    * This is necessary for being able to return plain JSON strings from REST controllers
    * http://stackoverflow.com/questions/15507064/return-literal-json-strings-in-spring-mvc-responsebody
    * @param messageConverters

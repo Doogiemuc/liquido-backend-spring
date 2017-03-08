@@ -6,7 +6,6 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.data.rest.core.annotation.RestResource;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -23,13 +22,10 @@ public interface IdeaRepo extends CrudRepository<IdeaModel, Long> {
   IdeaModel findByTitle(@Param("title") String title);
 
   /**
-   *
-   *
-   * Find the most recently created ideas.
+   * Finds the most recently created ideas.
    * published as  /liquido/v2/ideas/search/recentIdeas
    */
   @RestResource(path = "recentIdeas")
   List<IdeaModel> findFirst10ByOrderByCreatedAtDesc();  // http://docs.spring.io/spring-data/data-mongo/docs/1.9.6.RELEASE/reference/html/#repositories.limit-query-result
-  //TODO: This could directly return a IdeaProjection
 
 }

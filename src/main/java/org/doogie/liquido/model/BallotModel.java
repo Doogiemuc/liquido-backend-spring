@@ -1,17 +1,11 @@
 package org.doogie.liquido.model;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 import org.hibernate.validator.constraints.NotEmpty;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -23,6 +17,7 @@ import java.util.List;
  *  - voterHash, encrypted reference to voter user
  */
 @Data
+@EqualsAndHashCode(of = "id", callSuper = false)
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor(suppressConstructorProperties = true)   //BUGFIX: https://jira.spring.io/browse/DATAREST-884

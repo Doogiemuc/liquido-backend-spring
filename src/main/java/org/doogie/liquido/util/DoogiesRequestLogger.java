@@ -29,7 +29,9 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     if (buf == null || buf.length == 0) return "";
     int length = Math.min(buf.length, this.maxPayloadLength);
     try {
-      return new String(buf, 0, length, charsetName);
+      String s = new String(buf, 0, length, charsetName);
+      if (buf.length > maxLength) s = s + "...";
+      return s;
     } catch (UnsupportedEncodingException ex) {
       return "Unsupported Encoding";
     }
@@ -40,14 +42,14 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
    * @param request the request
    * @param response the response
    * @param filterChain chain of filters
-   * @throws ServletException
-   * @throws IOException
+   * @throws ServletException sometimes
+   * @throws IOException some other times
    */
   @Override
   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
     long startTime = System.currentTimeMillis();
-    StringBuffer reqInfo = new StringBuffer()
+    StringBuilder reqInfo = new StringBuilder()
      .append("[")
      .append(startTime % 10000)  // request ID
      .append("] ")

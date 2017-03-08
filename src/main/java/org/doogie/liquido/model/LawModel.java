@@ -1,15 +1,9 @@
 package org.doogie.liquido.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
@@ -20,6 +14,7 @@ import java.util.Date;
  * Data model: proposal for a law.
  */
 @Data
+@EqualsAndHashCode(of = {"id", "title"}, callSuper = false)
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor(suppressConstructorProperties = true)
@@ -75,7 +70,7 @@ public class LawModel extends BaseModel {
   LawModel initialLaw;
 
   public enum LawStatus {
-    NEW_ALTERNATIVE_PROPOSAL(0),    // Newly created (alternative) proposal that did not reach its quorum yet
+    NEW_PROPOSAL(0),    // Newly created proposal that did not reach its quorum yet. This is an initialLaw, when this.initialLaw == this
     ELABORATION(1),     // When an idea or an alternative proposal reaches its quorum it is "moved onto the table" and can be discussed and elaborated.
     VOTING(2),          // When the voting phase starts, all proposals can be voted upon
     LAW(3),             // The winning proposal becomes a law.
@@ -90,7 +85,6 @@ public class LawModel extends BaseModel {
   @NonNull
   public LawStatus status;
 
-  //TODO: configure createBy User for laws: http://docs.spring.io/spring-data/jpa/docs/current/reference/html/index.html#auditing.auditor-aware
   @CreatedBy
   @NonNull
   @NotNull
@@ -98,12 +92,12 @@ public class LawModel extends BaseModel {
   public UserModel createdBy;
 
   /** builder for an initial law who's field "initialLaw" points to itself. */
-  public static LawModel buildInitialLaw(String title, String description, AreaModel area, LawStatus status, UserModel createdBy) {
+  public static LawModel buildInitialLaw(String title, String description, AreaModel area, UserModel createdBy) {
     LawModel newLaw = new LawModel();
     newLaw.title = title;
     newLaw.description = description;
     newLaw.area = area;
-    newLaw.status = status;
+    newLaw.status = LawStatus.NEW_PROPOSAL;
     newLaw.initialLaw = newLaw;   // ref to self
     newLaw.createdBy = createdBy;
     newLaw.createdAt = new Date();
@@ -114,7 +108,8 @@ public class LawModel extends BaseModel {
   /** need some tweaking for a nice and short representation as a string */
   @Override
   public String toString() {
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
+
     buf.append("LawModel{");
     buf.append("id=" + id);
     buf.append(", title='" + title + '\'');
@@ -128,41 +123,11 @@ public class LawModel extends BaseModel {
     buf.append('\'');
     buf.append(", initialLaw.title='" + (initialLaw != null ? initialLaw.getTitle() : "<null>") + '\'');  //BUGFIX: prevent endless loop when initialLaw points to self :-)
     buf.append(", status=" + status);
-    buf.append(", createdBy.email=" + createdBy.getEmail());
+    buf.append(", createdBy.email=" + (createdBy != null ? createdBy.getEmail() : "<null>"));
     buf.append(", updatedAt=" + updatedAt);
     buf.append(", createdAt=" + createdAt);
     buf.append('}');
     return buf.toString();
   }
 
-  /**
-   * Two laws are equal, when their id and title are equal.
-   * Be careful: Correct equals() and hashCode() methods are crucial for the internals of Hibernate!
-   */
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-
-    LawModel that = (LawModel) o;
-
-    if (title != that.title) return false;
-    if (id != that.id) return false;
-
-    return title != null ? title.equals(that.title) : that.title == null;
-  }
-
-  /**
-   * Hash code calculate only from ID and title.
-   * Keep to contract for evey hashCode() implementation in mind:
-   * Two equal objects must have the same hashcode. The inverse is not necessarily true: Two objects with
-   * the same hashCode must not necessarily be equal.
-   * @return hash code value
-   */
-  @Override
-  public int hashCode() {
-    int result = id != null ? id.hashCode() : 0;
-    result = 31 * result + (title != null ? title.hashCode() : 0);
-    return result;
-  }
 }

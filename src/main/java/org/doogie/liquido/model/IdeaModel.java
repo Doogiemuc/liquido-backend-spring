@@ -1,19 +1,12 @@
 package org.doogie.liquido.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -31,6 +24,7 @@ import java.util.Set;
  * http://localhost:8090/liquido/v2/ideas/1?projection=ideaProjection
  */
 @Data
+@EqualsAndHashCode(of = {"id", "title"}, callSuper = false)
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor(suppressConstructorProperties = true)   //BUGFIX: https://jira.spring.io/browse/DATAREST-884
