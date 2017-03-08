@@ -36,9 +36,10 @@ public class AreaModel extends BaseModel {
   @NotNull
   public UserModel createdBy;
 
-  /** always inline createdBy user information as "creator" field. (This is easier as using a full blown spring projection as in IdeaProjection.java) */
+  /* This way one could inline createdBy user information as "creator" field.  But this would unconditionally ALWAYS inline that informatin.  e.g. also  as law.area.creator  in list of laws which I do not want
   public UserModel getCreator() {
     return this.createdBy;
   }
+   */
 
 }

@@ -33,10 +33,10 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
         log.warn("Cannot getCurrentAuditor. No one is currently authenticated");
         return null;
       }
-      LiquidoAuthUser authUser = (LiquidoAuthUser)authentication.getPrincipal();
+      LiquidoAuthUser authUser = (LiquidoAuthUser)authentication.getPrincipal();   // principal _IS_ a LiquidoAuthUser, because I put one in there   in LiquidoUserDetailsService.java
       return authUser.getUserModel();
 
-      //BUGFIX:  Must not do this, since this will leed to an endless loop StackOverflowException
+      //BUGFIX:  Must not do this, since this will lead to an endless loop StackOverflowException
       //http://stackoverflow.com/questions/42315960/stackoverflowexception-in-spring-data-jpa-app-with-spring-security-auditoraware
       //UserModel currentlyLoggedInUser = userRepo.findByEmail(principal.getUsername()) ;
     } catch (Exception e) {

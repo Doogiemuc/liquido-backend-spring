@@ -5,6 +5,7 @@ package org.doogie.liquido.test;
  */
 public class TestFixtures {
 
+  public static final String USER0_EMAIL = "testuser0@liquido.de";      // testuser0 has  ID 1 in the DB ! :-(
   public static final String USER1_EMAIL = "testuser1@liquido.de";
   public static final String USER1_PWD   = "dummyPasswordHash";
   public static final String USER4_EMAIL = "testuser4@liquido.de";

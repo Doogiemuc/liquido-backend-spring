@@ -4,6 +4,8 @@ import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.IdeaModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.rest.core.config.Projection;
 
 import java.util.Date;
@@ -28,6 +30,10 @@ public interface LawProjection {
 
   Date getCreatedAt();
   Date getUpdatedAt();
+
+  /* expose the number of alternative proposals */
+  @Value("#{@lawUtil.getNumCompetingProposals(target)}")   // Spring Expression language (SpEL) FTW
+  int getNumCompetingProposals();
 
 }
 

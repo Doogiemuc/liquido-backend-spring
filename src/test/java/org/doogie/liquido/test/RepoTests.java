@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -74,15 +75,15 @@ public class RepoTests {
   }
 
   @Test
-  //TODO: add Test User like this @WithUserDetails("testuserß@liquido.de")  // http://docs.spring.io/spring-security/site/docs/4.2.1.RELEASE/reference/htmlsingle/#test-method-withuserdetails
+  @WithUserDetails("testuser1@liquido.de")  // http://docs.spring.io/spring-security/site/docs/4.2.1.RELEASE/reference/htmlsingle/#test-method-withuserdetails
   public void testCreateIdeaWithMockAuditor() {
     UserModel user1 = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
     AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
     IdeaModel newIdea = new IdeaModel("Idea from test"+System.currentTimeMillis(), "Very nice description from test", area1, user1);
 
-    auditorAware.setMockAuditor(user1);     // have to mock the currently logged in user for the @CreatedBy annotation in IdeaModel to work
+    //auditorAware.setMockAuditor(user1);     //not necessary anymore. Replaced by @WithUserDetails annotation.     // have to mock the currently logged in user for the @CreatedBy annotation in IdeaModel to work
     IdeaModel insertedIdea = ideaRepo.save(newIdea);
-    auditorAware.setMockAuditor(null);
+    //auditorAware.setMockAuditor(null);
     log.trace("saved Idea "+insertedIdea);
 
     Iterable<IdeaModel> ideas = ideaRepo.findAll();
@@ -102,6 +103,7 @@ public class RepoTests {
   }
 
   @Test
+  @WithUserDetails("testuser1@liquido.de")
   public void testUpdate() {
     log.trace("TEST update");
     long count1 = areaRepo.count();

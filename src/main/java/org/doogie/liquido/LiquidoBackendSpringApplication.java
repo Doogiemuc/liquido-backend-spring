@@ -23,8 +23,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class LiquidoBackendSpringApplication {
 	static Logger log = LoggerFactory.getLogger(LiquidoBackendSpringApplication.class);
 
+	/*
 	@Autowired
 	TestDataCreator testDataCreator;
+	*/
 
   /**
    * main method when run without an application container.
@@ -60,23 +62,6 @@ public class LiquidoBackendSpringApplication {
 	public OncePerRequestFilter requestLoggingFilter() {
 		return new DoogiesRequestLogger();
 	}
-
-
-	/* Spring own implementation is nearly ok, but it cannot log the request type
-	@Bean
-	public CommonsRequestLoggingFilter requestLoggingFilter() {
-		log.debug("Configuring request logging filter");
-		CommonsRequestLoggingFilter crlf = new CommonsRequestLoggingFilter();
-		crlf.setBeforeMessagePrefix(" => [");
-		crlf.setAfterMessagePrefix(" <= [");
-		crlf.setIncludeClientInfo(true);
-		crlf.setIncludeHeaders(true);
-		crlf.setIncludeQueryString(true);
-		crlf.setIncludePayload(true);
-		crlf.setMaxPayloadLength(1000);
-		return crlf;
-	}
-*/
 
 
 }

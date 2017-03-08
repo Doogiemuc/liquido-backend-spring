@@ -50,6 +50,7 @@ public class IdeaModel extends BaseModel {
   @NotNull
   @NonNull
   @NotEmpty
+  @Column(length = 1000)
   public String description;
 
   @NonNull

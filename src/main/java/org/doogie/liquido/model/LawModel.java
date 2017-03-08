@@ -1,6 +1,7 @@
 package org.doogie.liquido.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -48,6 +49,7 @@ public class LawModel extends BaseModel {
   @NotNull
   @NonNull
   @NotEmpty
+  @Column(length = 1000)
   public String description;
 
   @NotNull
@@ -88,16 +90,6 @@ public class LawModel extends BaseModel {
   @NonNull
   public LawStatus status;
 
-  /*
-  @CreatedDate
-  @NotNull
-  public Date createdAt = new Date();
-
-  @LastModifiedDate
-  @NotNull
-  public Date updatedAt = new Date();
-  */
-
   //TODO: configure createBy User for laws: http://docs.spring.io/spring-data/jpa/docs/current/reference/html/index.html#auditing.auditor-aware
   @CreatedBy
   @NonNull
@@ -119,18 +111,28 @@ public class LawModel extends BaseModel {
     return newLaw;
   }
 
+  /** need some tweaking for a nice and short representation as a string */
   @Override
   public String toString() {
-    return "LawModel{" +
-      "id=" + id +
-      ", title='" + title + '\'' +
-      ", description='" + description + '\'' +
-      ", initialLaw='" + (initialLaw != null ? initialLaw.getTitle() : "<null>") + '\'' +  //BUGFIX: prevent endless loop when initialLaw points to self :-)
-      ", status=" + status +
-      //", createdBy=" + createdBy +
-      ", updatedAt=" + updatedAt +
-      ", createdAt=" + createdAt +
-      '}';
+    StringBuffer buf = new StringBuffer();
+    buf.append("LawModel{");
+    buf.append("id=" + id);
+    buf.append(", title='" + title + '\'');
+    buf.append(", description='");
+    if (description != null && description.length() > 100) {
+      buf.append(description.substring(0, 100));
+      buf.append("...");
+    } else {
+      buf.append(description);
+    }
+    buf.append('\'');
+    buf.append(", initialLaw.title='" + (initialLaw != null ? initialLaw.getTitle() : "<null>") + '\'');  //BUGFIX: prevent endless loop when initialLaw points to self :-)
+    buf.append(", status=" + status);
+    buf.append(", createdBy.email=" + createdBy.getEmail());
+    buf.append(", updatedAt=" + updatedAt);
+    buf.append(", createdAt=" + createdAt);
+    buf.append('}');
+    return buf.toString();
   }
 
   /**
