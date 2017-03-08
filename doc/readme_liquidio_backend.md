@@ -1,6 +1,16 @@
 # Liquido-backend-spring Development Scratchpad
 
-Here I write down everything I need durign development of my little backend. 
+Here I write down everything I need during development of my little backend. 
+
+## Process Model from an idea to a Law
+
+ - At first there is an idea  (NEW_IDEA)
+ - When an idea reaches the quorum, then it becomes a proposal. (INITIAL_PROPOSAL)
+ - Alternative proposals can be added. But the need to reach a certain quorum too. (ALTERNATIVE_PROPOSAL)
+ - Each proposal can be discussed (ELABORATION)
+ - n days after the initial proposal reached its quorum, then the voting phase starts. 
+   All competing proposals can be voted upon. (VOTING_PHASE)
+ - The winning proposal becomes a law  (LAW) 
 
 ## Backlog / User Stories
 
@@ -49,3 +59,12 @@ https://www.draw.io/#LLiquido%20Architecture
  - https://springframework.guru/
  - https://springframework.guru/using-the-h2-database-console-in-spring-boot-with-spring-security/
  - baeldung
+ 
+ 
+ ### Old conneetion to MongoDB
+ 
+    # MongoDB via spring-data-mongo
+    spring.data.mongodb.uri=mongodb://testuser:PASSWORD@ds019664.mlab.com:19664/liquido-test
+    spring.data.mongodb.uri=mongodb://localhost:27017/liquido-test
+    
+    

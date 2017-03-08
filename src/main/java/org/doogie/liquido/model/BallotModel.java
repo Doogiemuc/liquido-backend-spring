@@ -27,28 +27,34 @@ import java.util.List;
 @NoArgsConstructor
 @RequiredArgsConstructor(suppressConstructorProperties = true)   //BUGFIX: https://jira.spring.io/browse/DATAREST-884
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
-@Table(name = "ballots")
+@Table(name = "ballots", uniqueConstraints= {
+  @UniqueConstraint(columnNames = {"INITIAL_PROPOSAL_ID", "voterToken"})   // a voter is only allowed to vote once per poll!
+})
+
 public class BallotModel extends BaseModel {
-  //TODO: combined unique key on initialProposal and voterHash
   @Id
   @GeneratedValue(strategy = GenerationType.AUTO)
   public Long id;
 
+  /** reference to the first proposal in this poll */
+  @NotNull
   @NonNull
   @ManyToOne //(cascade = CascadeType.MERGE)
   public LawModel initialProposal;
 
+  /** preferred order of proposals of this specific voter */
   @NonNull
   @NotNull
   @ManyToMany //(cascade = CascadeType.MERGE, orphanRemoval = false)
-  //@Column(name = "lawIdOrder")
+  //@Column(name = "voteOrder")
   public List<LawModel> voteOrder;
 
-  /** encrypted and anonymized information about voter that casted this ballot */
+  /** encrypted and anonymized information about the voter that casted this ballot */
   @NotNull
   @NonNull
   @NotEmpty
-  public String voterHash;
+  public String voterToken;
 
   //There is deliberately no @CreatedBy field here! When voting it is a secret who casted this ballot!!!
+
 }

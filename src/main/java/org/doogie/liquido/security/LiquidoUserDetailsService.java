@@ -50,7 +50,7 @@ public class LiquidoUserDetailsService implements UserDetailsService {
     UserModel userModel = userRepo.findByEmail(email);
     if (userModel == null) throw new UsernameNotFoundException("Could not find user '"+email+"'");
 
-    return new LiquidoAuthUser(userModel.getEmail(), userModel.getPassword(), getGrantedAuthorities(userModel), userModel);
+    return new LiquidoAuthUser(userModel.getEmail(), userModel.getPasswordHash(), getGrantedAuthorities(userModel), userModel);
   }
 
   public UserModel getLiquidoUser(String email) throws Exception {

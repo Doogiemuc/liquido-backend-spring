@@ -3,15 +3,18 @@ package org.doogie.liquido.rest;
 import org.doogie.liquido.datarepos.BallotRepo;
 import org.doogie.liquido.model.BallotModel;
 import org.doogie.liquido.model.LawModel;
+import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.security.LiquidoAnonymizer;
+import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
-import org.springframework.data.rest.webmvc.RepositoryRestController;
 import org.springframework.hateoas.Resource;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -20,14 +23,14 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
 /**
- * Controller for our RESTfull endpoint: /ballot
+ * Controller for posting a ballot
  *
  * Resouces:
  *   POST /postBallot  -  post a users vote
  *
  */
 @BasePathAwareController
-//@RepositoryRestController   and    @RequestMapping("postBallot")   do not really work
+//@RepositoryRestController   and    @RequestMapping("postBallot")    Both do not really work
 //@EnableHypermediaSupport(type = EnableHypermediaSupport.HypermediaType.HAL)      //not necessary?
 public class BallotRestController {
   Logger log = LoggerFactory.getLogger(this.getClass());  // Simple Logging Facade 4 Java
@@ -35,8 +38,16 @@ public class BallotRestController {
   @Autowired
   BallotRepo ballotRepo;
 
+  @Autowired
+  LiquidoAuditorAware liquidoAuditorAware;
+
+  @Autowired
+  LiquidoAnonymizer anonymizer;
+
   /**
-   * Post a ballot, ie. a vote from a user
+   * Post a ballot, called when a User casts his vote.
+   * Each ballot is signed with a voter's token. When a user is proxy for some other users, then this method
+   * will create one ballot for each voterToken that has been assigned to this proxy.
    *
    * This endpoint must be used instead of the default HATEOAS POST endpoint for /ballots!
    * http://docs.spring.io/spring-data/rest/docs/current/reference/html/#customizing-sdr.overriding-sdr-response-handlers
@@ -55,27 +66,58 @@ public class BallotRestController {
    * ERROR: "no String-argument constructor/factory method to deserialize from String value"
    * Solution: http://stackoverflow.com/questions/40986738/spring-data-rest-no-string-argument-constructor-factory-method-to-deserialize/40986739
    *
-   * @param newBallotRes the posted ballot as a REST resource
+   * @param ballotResource the posted ballot as a REST resource
    * @param resourceAssembler injected PersistentEntityResourceAssembler that can build the reply
    * @return the stored ballot (incl. its new ID) as a HATEOAS resource
    */
   @RequestMapping(value = "/postBallot", method = POST)   // @RequestMapping(value = "somePath") here on type/method level does not work with @RepositoryRestController
   @ResponseStatus(HttpStatus.CREATED)
-  public @ResponseBody PersistentEntityResource postBallot(@RequestBody Resource<BallotModel> newBallotRes,
-                            PersistentEntityResourceAssembler resourceAssembler)
+  public @ResponseBody PersistentEntityResource postBallot(
+      @RequestBody Resource<BallotModel> ballotResource,
+      PersistentEntityResourceAssembler resourceAssembler)
   {
-    log.trace("=> POST /postBallot "+newBallotRes);
-    BallotModel newBallot = newBallotRes.getContent();
+    log.trace("=> POST /postBallot "+ballotResource);
+    BallotModel postedBallot = ballotResource.getContent();
+    //Implementation note: I use a Resource<BallotModel> as RequestBody, because this way the lookup of the proposals
+    // (convert from URI to LawModel) is automatically handled by spring-data.
 
+    UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
+    if (currentUser == null) throw new LiquidoRestException("Cannot postBallot. Need an authenticated user as fromUser");
+
+    //create a voterToken for currentUser and store a ballot for him
+    String voterTokenBCrypt = anonymizer.getBCryptVoterToken(currentUser, "1234", postedBallot.getInitialProposal());  //TODO: where to get user Password from?
+    postedBallot.setVoterToken(voterTokenBCrypt);
+    checkBallot(postedBallot);
+    BallotModel createdBallot = ballotRepo.save(postedBallot);    //TODO: create test case, when user has already voted => expect unique constraint to fail.
+
+    //If this user is a proxy, then post a ballot for each delegation
+    for (String delegatedToken : currentUser.getVoterTokens()) {
+      BallotModel ballotForDelegee = new BallotModel(postedBallot.getInitialProposal(), postedBallot.getVoteOrder(), delegatedToken);
+      checkBallot(ballotForDelegee);
+      log.trace("Saving ballot for delegee: "+ballotForDelegee);
+      ballotRepo.save(ballotForDelegee);
+    }
+
+    log.trace("<= POST /postBallot created: "+createdBallot);
+    return resourceAssembler.toResource(createdBallot);
+    // return ResponseEntity.ok(createdBallot);   this would return a ResponseEntity with the plain serialized JSON  (no HAL links etc.)
+  }
+
+  /**
+   * Check if the passed ballot is valid.
+   * @param newBallot a casted vote
+   * @throws LiquidoRestException when something inside newBallot is invalid
+   */
+  private void checkBallot(BallotModel newBallot) throws LiquidoRestException {
     // check validity of voterHash
-    if (newBallot.getVoterHash() == null || newBallot.getVoterHash().length() < 5) {
-      throw new LiquidoRestException("ERROR: Cannot post ballot: Invalid voterHash: '"+newBallot.getVoterHash()+"'. Must be at least 5 chars!");
+    if (newBallot.getVoterToken() == null || newBallot.getVoterToken().length() < 5) {
+      throw new LiquidoRestException("ERROR: Cannot post ballot: Invalid voterToken: '"+newBallot.getVoterToken()+"'. Must be at least 5 chars!");
     }
 
     // check that initialProposal is actually in voting phase
     LawModel initialProposal = newBallot.getInitialProposal();
     if (initialProposal == null || !LawModel.LawStatus.VOTING.equals(initialProposal.getStatus())) {
-      throw new LiquidoRestException("ERROR: Cannot post ballot: InitialLaw must be in voting phase.");
+      throw new LiquidoRestException("ERROR: Cannot post ballot: InitialProposal must be in voting phase.");
     }
 
     // check that voter Order is not empty
@@ -83,17 +125,35 @@ public class BallotRestController {
       throw new LiquidoRestException("ERROR: Cannot post ballot: VoteOrder is empty!");
     }
 
-    BallotModel createdBallot = ballotRepo.save(newBallotRes.getContent());
-    log.trace("<= POST /postBallot created: "+createdBallot);
-
-    return resourceAssembler.toResource(createdBallot);
-    // return ResponseEntity.ok(createdBallot);   this would return a ResponseEntity with the plain serialized JSON  (no HAL links etc.)
+    // check that all proposals you wanna vote for are also in voting phase
+    for(LawModel proposal : newBallot.getVoteOrder()) {
+      if (!LawModel.LawStatus.VOTING.equals(proposal.getStatus())) {
+        throw new LiquidoRestException(("ERROR: Cannot pst ballot: proposals must be in voting phase."));
+      }
+    }
   }
 
   // MAYBE also look at JSON-Patch. Could that be used here to post the voteOrder?
   // http://stackoverflow.com/questions/25311978/posting-a-onetomany-sub-resource-association-in-spring-data-rest
   // https://github.com/spring-projects/spring-data-rest/commit/ef3720be11f117bb691edbbf63e38ff72e0eb3dd
   // http://stackoverflow.com/questions/34843297/modify-onetomany-entity-in-spring-data-rest-without-its-repository/34864254#34864254
+
+
+  /* This is how to manually create a HASH with Java's built-in SHA-256
+
+  try {
+    MessageDigest md = MessageDigest.getInstance("SHA-256");
+    md.update(DoogiesUtil.longToBytes(userId));
+    md.update(DoogiesUtil.longToBytes(initialPropId));
+    md.update(userPassword.getBytes());
+    byte[] digest = md.digest();
+    String voterTokenSHA256 = DoogiesUtil.bytesToString(digest);
+  } catch (NoSuchAlgorithmException e) {
+    log.error("FATAL: cannot create SHA-256 MessageDigest: "+e);
+    throw new LiquidoRestException("Internal error in backend");
+  }
+  */
+
 
 }
 

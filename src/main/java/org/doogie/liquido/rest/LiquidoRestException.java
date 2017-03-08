@@ -10,10 +10,18 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 @ResponseStatus(HttpStatus.BAD_REQUEST)
 public class LiquidoRestException extends RuntimeException {
 
+  int error_code;
+
   public LiquidoRestException() {}
 
+  //TODO: remove this constructor and only allow errors with code
   public LiquidoRestException(String message) {
     super(message);
+  }
+
+  public LiquidoRestException(String message, int code) {
+    super(message);
+    this.error_code = code;
   }
 
   public LiquidoRestException(String message, Throwable cause) {

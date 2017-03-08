@@ -89,6 +89,8 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     String requestBody = this.getContentAsString(wrappedRequest.getContentAsByteArray(), this.maxPayloadLength, request.getCharacterEncoding());
     if (requestBody.length() > 0) {
       this.logger.debug("   "+reqInfo+" Request body was:\n" +requestBody);
+      if (requestBody.length() > maxPayloadLength)
+        this.logger.debug("[...]");
     } else {
       this.logger.debug("   "+reqInfo+" EMPTY request body");
     }
@@ -102,5 +104,20 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     wrappedResponse.copyBodyToResponse();  // IMPORTANT: copy content of response back into original response
   }
 
+	/* Spring own implementation is nearly ok, but it cannot log the request type
+	@Bean
+	public CommonsRequestLoggingFilter requestLoggingFilter() {
+		log.debug("Configuring request logging filter");
+		CommonsRequestLoggingFilter crlf = new CommonsRequestLoggingFilter();
+		crlf.setBeforeMessagePrefix(" => [");
+		crlf.setAfterMessagePrefix(" <= [");
+		crlf.setIncludeClientInfo(true);
+		crlf.setIncludeHeaders(true);
+		crlf.setIncludeQueryString(true);
+		crlf.setIncludePayload(true);
+		crlf.setMaxPayloadLength(1000);
+		return crlf;
+	}
+*/
 
 }
