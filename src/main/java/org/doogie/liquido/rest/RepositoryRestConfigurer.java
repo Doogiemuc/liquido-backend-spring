@@ -1,8 +1,6 @@
 package org.doogie.liquido.rest;
 
-import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.IdeaModel;
-import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
@@ -39,6 +37,10 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
 
     config.exposeIdsFor(UserModel.class);
     config.exposeIdsFor(AreaModel.class);
+    config.exposeIdsFor(BallotModel.class);
+    config.exposeIdsFor(DelegationModel.class);
+
+    config.exposeIdsFor(LawModel.class);
     config.exposeIdsFor(IdeaModel.class);   // actually IdeaModel has its own IdeaProjection that exposes the ID
 
     //MAYBE: when available in future version of spring: config.getCorsRegistry()
