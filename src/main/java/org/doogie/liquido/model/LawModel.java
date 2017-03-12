@@ -105,11 +105,12 @@ public class LawModel extends BaseModel {
     return newLaw;
   }
 
+
+
   /** need some tweaking for a nice and short representation as a string */
   @Override
   public String toString() {
     StringBuilder buf = new StringBuilder();
-
     buf.append("LawModel{");
     buf.append("id=" + id);
     buf.append(", title='" + title + '\'');

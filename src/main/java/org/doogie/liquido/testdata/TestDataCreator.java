@@ -101,7 +101,7 @@ public class TestDataCreator implements CommandLineRunner {
       if ("--seedDB".equals(arg)) { seedDB = true; }
     }
     if (seedDB) {
-      log.info("==== Populate test DB ...");
+      log.info("==== Populate test DB: "+ jdbcTemplate.getDataSource().toString());
       // order is important here!
       seedUsers();
       auditorAware.setMockAuditor(this.users.get(0));   // Simulate that user is logged in.  This user will be set as @createdAt
@@ -339,7 +339,7 @@ public class TestDataCreator implements CommandLineRunner {
     voteOrder.add(initialInVoting);
     voteOrder.add(alt0);
     voteOrder.add(alt1);
-    BallotModel newBallot = new BallotModel(initialInVoting, voteOrder, "dummyVoterHash");
+    BallotModel newBallot = new BallotModel(initialInVoting, voteOrder, "dummyVoterToken");
     ballotRepo.save(newBallot);
   }
 

@@ -17,7 +17,7 @@ public class LiquidoTestErrorHandler implements ResponseErrorHandler {
   }
   @Override
   public void handleError(ClientHttpResponse clientHttpResponse) throws IOException {
-    //Cannot read the body, cause InputStream can only be read once lastErrorResponseBody = DoogiesUtil._stream2String(clientHttpResponse.getBody());
+    //Cannot read the body here, cause InputStream can only be read once lastErrorResponseBody = DoogiesUtil._stream2String(clientHttpResponse.getBody());
     log.error("HTTP error: ("+clientHttpResponse.getRawStatusCode() + ") "+clientHttpResponse.getStatusText());
   }
 }
