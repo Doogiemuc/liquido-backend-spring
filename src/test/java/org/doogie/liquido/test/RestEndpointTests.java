@@ -154,7 +154,8 @@ public class RestEndpointTests {
 
 
   /**
-   * this is executed, when the Bean has been created and @Autowired references are injected and ready.
+   * This is executed, when the Bean has been created and @Autowired references are injected and ready.
+   * This runs before each test.
    */
   @PostConstruct
   public void postConstruct() {
@@ -342,7 +343,7 @@ public class RestEndpointTests {
     // Do not use client.postForObject   it does not return any error. It simply returns null instead!
     // Endpoint is /postBallot    /ballots are not exposed as @RepositoryRestResource for writing!
     ResponseEntity<String> response = client.exchange("/postBallot", HttpMethod.POST, entity, String.class);
-    //log.debug("Response body:\n"+response.getBody());
+    log.debug("Response body:\n"+response.getBody());
 
     assertEquals(HttpStatus.CREATED, response.getStatusCode());
     ReadContext ctx = JsonPath.parse(response.getBody());
@@ -377,7 +378,6 @@ public class RestEndpointTests {
     String responseBody = response.getBody();
     assertEquals(HttpStatus.BAD_REQUEST.value(), response.getStatusCodeValue());  // 400
     log.trace("response.body (that should contain the error): "+responseBody);
-    assertTrue(responseBody.contains("\"status\":400"));
     assertTrue(responseBody.contains("initialProposal"));
     log.trace("TEST postInvalidBallot successful: received correct status and error message in response.");
   }
@@ -415,10 +415,11 @@ public class RestEndpointTests {
   }
 
 
-  /**
+  /* DEPRECATED  =>   must not post to /delegations directly. POST to   /saveProxy  insted
+   *
    * This creates NEW delegation directly by POSTing to the /delegations rest endpoint.
    */
-  @Test
+  //@Test
   public void testPostNewDelegation() {
     log.trace("TEST postDelegation");
 
@@ -446,7 +447,7 @@ public class RestEndpointTests {
   }
 
   /**
-   * This updates an existing delegation and changes the toProxy via PUT to the /saveProxy endpoint
+   * This updates a delegation and changes the toProxy via PUT to the /saveProxy endpoint
    */
   @Test
   public void testSaveProxy() throws IOException {

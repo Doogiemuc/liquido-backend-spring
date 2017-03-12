@@ -24,6 +24,8 @@ public interface DelegationRepo extends JpaRepository<DelegationModel, Long>, De
   //And their "foreign keys", the ObjectIDs must actually exist in the referenced user and area collections
   //which is checked by DelegationValidator.java
 
+  //TODO: do not allow posting to /delegations directly. Only allowed via /saveProxy  => do not expose Delegations as REST endpoint at all?
+
   /**
    * find all currently assigned proxies of one user.
    * @param fromUser the delegee

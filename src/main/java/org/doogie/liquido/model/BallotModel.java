@@ -11,10 +11,11 @@ import java.util.List;
 /**
  * POJO Entity that represents a vote that a user has casted
  * Fields:
- *  - initialLaw, reference to the original proposal for a law
- *  - voteOrder, ordered list of references to proposals for a law that this user has chosen to order like this.
- *    May include some or all of the alternative proposals (including or not including the initial proposal)
- *  - voterHash, encrypted reference to voter user
+ *  - initialLaw: reference to the original proposal for a law
+ *  - voteOrder: ordered list of references to proposals for a law that this user has chosen to order like this.
+ *    May include some or all of the alternative proposals (including or not including the initial proposal).
+ *    Must not be null.
+ *  - voterHash: anonymized reference to the voter
  */
 @Data
 @EqualsAndHashCode(of = "id", callSuper = false)
@@ -25,7 +26,6 @@ import java.util.List;
 @Table(name = "ballots", uniqueConstraints= {
   @UniqueConstraint(columnNames = {"INITIAL_PROPOSAL_ID", "voterToken"})   // a voter is only allowed to vote once per poll!
 })
-
 public class BallotModel extends BaseModel {
   @Id
   @GeneratedValue(strategy = GenerationType.AUTO)
@@ -34,14 +34,14 @@ public class BallotModel extends BaseModel {
   /** reference to the first proposal in this poll */
   @NotNull
   @NonNull
-  @ManyToOne //(cascade = CascadeType.MERGE)
+  @ManyToOne
   public LawModel initialProposal;
 
   /** preferred order of proposals of this specific voter */
   @NonNull
   @NotNull
-  @ManyToMany //(cascade = CascadeType.MERGE, orphanRemoval = false)
-  //@Column(name = "voteOrder")
+  @ManyToMany   //(cascade = CascadeType.MERGE, orphanRemoval = false)
+  @OrderColumn  // keep order in DB
   public List<LawModel> voteOrder;
 
   /** encrypted and anonymized information about the voter that casted this ballot */
