@@ -4,22 +4,37 @@ Here I write down everything I need during development of my little backend.
 
 ## Process Model from an idea to a Law
 
- - At first there is an idea  (NEW_IDEA)
- - When an idea reaches the quorum, then it becomes a proposal. (INITIAL_PROPOSAL)
- - Alternative proposals can be added. But the need to reach a certain quorum too. (ALTERNATIVE_PROPOSAL)
- - Each proposal can be discussed (ELABORATION)
+ - At first there is an short rough idea. (NEW_IDEA)
+ - When an idea reaches its quorum, then it becomes a proposal. (NEW_PROPOSAL)
+ - Alternative proposals can be added to that initial proposal. (NEW_PROPOSAL) 
+   But they first need to reach a certain quorum too, before they can be voted upon.
+ - Each proposal can be discussed. Comments can be voted up and down. (ELABORATION)
  - n days after the initial proposal reached its quorum, then the voting phase starts. 
    All competing proposals can be voted upon. (VOTING_PHASE)
- - The winning proposal becomes a law  (LAW) 
+ - The winning proposal becomes a law (LAW) and all other proposals are (DECLINED)
+
+## Wording
+
+"idea"          := rough and short
+"proposal"      := reached its quorum
+"law"           := won a vote
+
 
 ## Backlog / User Stories
 
-### Profile
+## Global configuration / settings
 
- - Make configurable
    - number of likes that are necessary to move an idea onto the table
-   - duration of elaboration phase 
-   - duration of voting phase
+   - number of supporters that are necessary for a proposal to reach its quorum
+
+## "Profile" default values for new polls
+
+  - when does a voting phase / poll start
+    a) n days after the initial proposal reached its quorum
+    b) when there are at least n alternative proposals (with quorum each)
+    c) manually started by the admin
+  - duration of elaboration phase
+  - duration of voting phase
 
 ### Ideas
 
