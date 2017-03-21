@@ -70,8 +70,9 @@ public class LawModel extends BaseModel {
   LawModel initialLaw;
 
   public enum LawStatus {
-    NEW_PROPOSAL(0),    // Newly created proposal that did not reach its quorum yet. This is an initialLaw, when this.initialLaw == this
-    ELABORATION(1),     // When an idea or an alternative proposal reaches its quorum it is "moved onto the table" and can be discussed and elaborated.
+    NEW_PROPOSAL(0),    // Newly created proposal that did not reach its quorum yet.
+                        // This is an initialLaw, when this.initialLaw == this
+    ELABORATION(1),     // When proposal reaches its quorum it is "moved onto the table" and can be discussed and elaborated.
     VOTING(2),          // When the voting phase starts, all proposals can be voted upon
     LAW(3),             // The winning proposal becomes a law.
     RETENTION(4),       // When a law looses support, it is in the retention phase

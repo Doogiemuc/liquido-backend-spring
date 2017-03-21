@@ -1,14 +1,14 @@
 package org.doogie.liquido.test;
 
-import org.doogie.liquido.datarepos.IdeaRepo;
-import org.doogie.liquido.model.IdeaModel;
-import org.doogie.liquido.security.LiquidoAuditorAware;
-import org.doogie.liquido.testdata.TestDataCreator;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
+import org.doogie.liquido.datarepos.IdeaRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
+import org.doogie.liquido.model.IdeaModel;
 import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.testdata.TestDataCreator;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -25,7 +25,7 @@ import static org.hamcrest.CoreMatchers.hasItem;
 import static org.junit.Assert.*;
 
 /**
- * Unit Test for UserService class.
+ * Unit Test for Spring DB Repositories
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest
@@ -51,12 +51,6 @@ public class RepoTests {
 
   @Autowired
   IdeaRepo ideaRepo;
-
-//  @PostConstruct
-//  public void populateTestDB() {
-//    //Test data was automatically injected by the CommandLineRunner, but maybe sometime we'll need to do it here.
-//  }
-
 
   @Test
   public void findAllUsers() {
