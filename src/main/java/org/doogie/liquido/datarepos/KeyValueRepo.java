@@ -9,5 +9,5 @@ import org.springframework.data.repository.CrudRepository;
  * This repository is *not* exposed as RestResource!
  */
 public interface KeyValueRepo extends CrudRepository<KeyValueModel, Long> {
-  // EMTPY
+  public KeyValueModel findByKey(String key);
 }

@@ -1,0 +1,319 @@
+{
+	"variables": [],
+	"info": {
+		"name": "Liquido",
+		"_postman_id": "7fcf3ada-3d46-c736-7b9e-9de885960919",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "GET /liquido/v2/",
+			"request": {
+				"url": "{{host}}{{basePath}}/ideas",
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic dGVzdHVzZXIyQGxpcXVpZG8uZGU6ZHVtbXlQYXNzd29yZEhhc2g=",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "GET /liquido/v2/delegations",
+			"request": {
+				"url": "http://localhost:8080/liquido/v2/delegations",
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "GET getNumVotes",
+			"request": {
+				"url": "{{host}}{{basePath}}/users/5/getNumVotes/12",
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic dGVzdHVzZXIwQGxpcXVpZG8uZGU6ZHVtbXlQYXNzd29yZEhhc2g=",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": "calculate the number of votes a user may cast"
+			},
+			"response": []
+		},
+		{
+			"name": "GET proxyMap",
+			"request": {
+				"url": "{{host}}{{basePath}}/users/1/getProxyMap",
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic dGVzdHVzZXIxQGxpcXVpZG8uZGU6ZHVtbXlQYXNzd29yZEhhc2g=",
+						"description": ""
+					},
+					{
+						"key": "Accept",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": "receive the ProxyMap of one given user"
+			},
+			"response": []
+		},
+		{
+			"name": "PUT /saveProxy",
+			"request": {
+				"url": "http://localhost:8080/liquido/v2/saveProxy",
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "Authorization",
+						"value": "Basic dGVzdHVzZXIyQGxpcXVpZG8uZGU6ZHVtbXlQYXNzd29yZEhhc2g=",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"toProxy\":  \"/liquido/v2/users/4\",\n  \"area\": \"/liquido/v2/areas/12\"\n}"
+				},
+				"description": "Add a new delegation"
+			},
+			"response": []
+		},
+		{
+			"name": "DELETE deleteProxy",
+			"request": {
+				"url": "{{host}}{{basePath}}/deleteProxy/13",
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic dGVzdHVzZXIyQGxpcXVpZG8uZGU6ZHVtbXlQYXNzd29yZEhhc2g=",
+						"description": ""
+					},
+					{
+						"key": "Accept",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "PATCH /liquido/v2/area/11",
+			"request": {
+				"url": "http://localhost:8080/liquido/v2/areas/11",
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic dGVzdHVzZXIwQGxpcXVpZG8uZGU6ZHVtbXlQYXNzd29yZEhhc2g=",
+						"description": ""
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"description\": \"PATCH updated description2\"\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "POST user",
+			"request": {
+				"url": "http://localhost:8090/liquido/v2/users",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"insertedUser@liquido.de\",\n    \"passwordHash\": \"dummyPwdHash\",\n    \"profile\": {\n      \"name\": \"Inserted User\",\n      \"website\": \"http://www.liquido.de\",\n      \"picture\": \"/static/img/Avatar_32x32.jpeg\"\n    }\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "POST idea",
+			"request": {
+				"url": "http://localhost:8080/liquido/v2/ideas",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "Authorization",
+						"value": "Basic dGVzdHVzZXI5QGxpcXVpZG8uZGU6ZHVtbXlQYXNzd29yZEhhc2g=",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": " {\n    \"title\": \"Inserted Idea 47128\",\n    \"description\": \"Very nice RequiredArgsConstructor\",\n    \"area\": \"/liquido/v2/areas/11\"\n }"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "POST law",
+			"request": {
+				"url": "http://localhost:8090/liquido/v2/laws",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"title\": \"Inserted Law 4713\",\n  \"description\": \"Alternative proposal #2\",\n  \"status\": 0,\n    \"initialLaw\": \"/liquido/v2/laws/12\",\n    \"createdBy\": \"/liquido/v2/users/1\"\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Post Law (without CreatedBy)",
+			"request": {
+				"url": "http://localhost:8090/liquido/v2/laws",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"title\": \"POSTed Law 6\",\n  \"description\": \"Alternative proposal for 'Law 1'\",\n  \"initialLaw\": \"/liquido/v2/laws/11\"\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "POST ballot",
+			"request": {
+				"url": "http://localhost:8080/liquido/v2/postBallot",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "Authorization",
+						"value": "Basic dGVzdHVzZXIwQGxpcXVpZG8uZGU6ZHVtbXlQYXNzd29yZEhhc2g=",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": " {\n    \"voterToken\": \"someDummyVoterHash\",\n    \"initialProposal\": \"/liquido/v2/laws/41\",\n    \"voteOrder\": [\n    \"/liquido/v2/laws/41\",\n    \"/liquido/v2/laws/42\"\n  ]\n }"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "POST supporter for an idea",
+			"request": {
+				"url": "{{host}}{{basePath}}/ideas/27/supporters",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "text/uri-list",
+						"description": ""
+					},
+					{
+						"key": "Authorization",
+						"value": "Basic dGVzdHVzZXIxQGxpcXVpZG8uZGU6ZHVtbXlQYXNzd29yZEhhc2g=",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "http://localhost:8090/liquido/v2/users/2"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Search proxies",
+			"request": {
+				"url": "http://localhost:8080/liquido/v2/delegations/search/findByFromUser?fromUser=/liquido/v2/users/4&projection=delegationProjection",
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic dGVzdHVzZXIwQGxpcXVpZG8uZGU6ZHVtbXlQYXNzd29yZEhhc2g=",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "ideas/search/recentIdeas",
+			"request": {
+				"url": "http://localhost:8080/liquido/v2/ideas/search/recentIdeas",
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Basic dGVzdHVzZXIwQGxpcXVpZG8uZGU6ZHVtbXlQYXNzd29yZEhhc2g=",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		}
+	]
+}

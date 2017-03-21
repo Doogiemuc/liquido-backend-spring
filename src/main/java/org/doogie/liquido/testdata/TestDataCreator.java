@@ -4,10 +4,14 @@ import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.util.DoogiesUtil;
+import org.doogie.liquido.util.LiquidoProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.data.domain.Example;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -35,6 +39,7 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * http://www.generatedata.com/
  */
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE)   // seed DB first, then run the other CommandLineRunners
 public class TestDataCreator implements CommandLineRunner {
   private Logger log = LoggerFactory.getLogger(this.getClass());
 
@@ -73,6 +78,9 @@ public class TestDataCreator implements CommandLineRunner {
   BallotRepo ballotRepo;
 
   @Autowired
+  KeyValueRepo keyValueRepo;
+
+  @Autowired
   JdbcTemplate jdbcTemplate;
 
   @Autowired
@@ -81,10 +89,14 @@ public class TestDataCreator implements CommandLineRunner {
   @Autowired
   Environment springEnv;   // load settings from application-test.properties
 
+  @Value("${liquido.likes.for.quorum}")
+  public int likesForQuorum;
+
   // very simple random number generator
   Random rand;
 
   public TestDataCreator() {
+    log.trace("=== ENTER TestDataCreator");
     this.rand = new Random(System.currentTimeMillis());
   }
 
@@ -96,15 +108,17 @@ public class TestDataCreator implements CommandLineRunner {
    * @param args command line args
    */
   public void run(String... args) {
+    log.trace("=== running TestDataCreator");
     boolean seedDB =   springEnv.acceptsProfiles("test") || "true".equals(springEnv.getProperty("seedDB"));
     for(String arg : args) {
       if ("--seedDB".equals(arg)) { seedDB = true; }
     }
     if (seedDB) {
-      log.info("==== Populate test DB: "+ jdbcTemplate.getDataSource().toString());
+      log.info("Populate test DB: "+ jdbcTemplate.getDataSource().toString());
       // order is important here!
       seedUsers();
       auditorAware.setMockAuditor(this.users.get(0));   // Simulate that user is logged in.  This user will be set as @createdAt
+      seedGlobalProperties();               // e.g. time for voting etc
       seedAreas();
       seedDelegations();
       seedIdeas();
@@ -115,7 +129,7 @@ public class TestDataCreator implements CommandLineRunner {
   }
 
   private void seedUsers() {
-    log.debug("Seeding Users ...");
+    log.trace("Seeding Users ...");
     this.users = new ArrayList<>();
 
     for (int i = 0; i < NUM_USERS; i++) {
@@ -141,11 +155,19 @@ public class TestDataCreator implements CommandLineRunner {
     }
   }
 
+  public void seedGlobalProperties() {
+    log.trace("Seeding global properties ...");
+    List<KeyValueModel> propKV = new ArrayList<>();
+    propKV.add(new KeyValueModel(LiquidoProperties.KEY.LIKES_FOR_QUORUM.toString(), "10"));
+    propKV.add(new KeyValueModel(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL.toString(), "5"));
+    keyValueRepo.save(propKV);
+  }
+
   /**
    * Create some areas with unique titles. All created by user0
    */
   private void seedAreas() {
-    log.debug("Seeding Areas ...");
+    log.trace("Seeding Areas ...");
     this.areas = new ArrayList<>();
 
     UserModel createdBy = this.users.get(0);
@@ -225,7 +247,6 @@ public class TestDataCreator implements CommandLineRunner {
           newIdea.addSupporter(users.get(supporterNo));
         }
       }
-
 
       IdeaModel existingIdea = ideaRepo.findByTitle(ideaTitle);
       if (existingIdea != null) {
