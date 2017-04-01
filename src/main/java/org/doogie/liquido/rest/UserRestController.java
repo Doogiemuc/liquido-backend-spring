@@ -35,6 +35,7 @@ import static org.springframework.web.bind.annotation.RequestMethod.*;
  *  BASE_URL     /liquido/v2/users
  *  RESOURCE       /{userId}
  *  GET              /getNumVotes   - return the number of votes that this user may cast
+ *  GET              /getProxyMap   - return each currently assigned proxy per area of this user
  *  PUT              /saveProxy     - save a new proxy (upsert: updated existing delegation or insert a new one if that user has no delegation in that area yet.)
  *
  */

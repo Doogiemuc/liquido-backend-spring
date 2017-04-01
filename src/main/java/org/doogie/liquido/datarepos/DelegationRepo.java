@@ -3,7 +3,7 @@ package org.doogie.liquido.datarepos;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
@@ -12,10 +12,10 @@ import java.util.List;
 /**
  * Database abstraction for "delegations".
  *
- * This is a JpaRepository so that I can query by Example.
+ * http://stackoverflow.com/questions/14014086/what-is-difference-between-crudrepository-and-jparepository-interfaces-in-spring
  */
 @RepositoryRestResource(collectionResourceRel = "delegations", path = "delegations", itemResourceRel = "delegation")
-public interface DelegationRepo extends JpaRepository<DelegationModel, Long>, DelegationRepoCustom {
+public interface DelegationRepo extends CrudRepository<DelegationModel, Long>, DelegationRepoCustom {
 
   //Delegations have a combined unique index on area,fromUSer
   //  for MongoDB   db.delegations.createIndex({ "area":1, "fromUser":1 }, { unique: true })
@@ -45,7 +45,7 @@ public interface DelegationRepo extends JpaRepository<DelegationModel, Long>, De
    * find the delegation of a given user in one area
    * @param area the area of the delegation
    * @param fromUser the delegee that delegated his vote to a proxy
-   * @return the delegation or null if that user has no proxy in that area
+   * @return the one delegation in that area or null if that user has no proxy in that area
    */
   DelegationModel findByAreaAndFromUser(AreaModel area, UserModel fromUser);
 

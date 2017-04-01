@@ -2,7 +2,7 @@ package org.doogie.liquido.security;
 
 import org.doogie.liquido.datarepos.KeyValueRepo;
 import org.doogie.liquido.model.KeyValueModel;
-import org.doogie.liquido.model.LawModel;
+import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.model.UserModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,14 +42,14 @@ public class LiquidoAnonymizer implements CommandLineRunner {
 
   /**
    * create a bcrypt (hash) token for this user and this poll.
-   * @param currentUser
-   * @param initialProposal
-   * @return
+   * @param votingUser the user that casts the vote
+   * @param poll the poll that the vote is casted for
+   * @return a bcrypt hash token
    */
-  public String getBCryptVoterToken(UserModel currentUser, String userPassword, LawModel initialProposal) {
+  public String getBCryptVoterToken(UserModel votingUser, String userPassword, PollModel poll) {
     StringBuffer inputStr = new StringBuffer();
-    inputStr.append(currentUser.getId());
-    inputStr.append(initialProposal.getId());
+    inputStr.append(votingUser.getId());
+    inputStr.append(poll.getId());
     inputStr.append(userPassword);
     String voterToken = BCrypt.hashpw(inputStr.toString(), this.salt);
     //TODO: a bcrypt hash contains its salt. MAYBE split string and store hash part seperately

@@ -4,6 +4,7 @@ import org.doogie.liquido.datarepos.BallotRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.model.BallotModel;
 import org.doogie.liquido.model.LawModel;
+import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAnonymizer;
 import org.doogie.liquido.security.LiquidoAuditorAware;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
+
+import java.util.HashSet;
 
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
@@ -92,7 +95,7 @@ public class BallotRestController {
       @RequestBody Resource<BallotModel> ballotResource,
       PersistentEntityResourceAssembler resourceAssembler)
   {
-    // Implementation note: You must use a Resource<BallotModel> as RequestBody instead of just a BallotModel, because only this way the deserialization
+    // Implementation note: Must use a Resource<BallotModel> as RequestBody instead of just a BallotModel, because only this way the deserialization
     // from URI to models is automatically handled by spring-data.
 
     log.trace("=> POST /postBallot");
@@ -101,20 +104,20 @@ public class BallotRestController {
 
     // Check validity of posted values (remark: client does not send a voterToken)
     BallotModel postedBallot = ballotResource.getContent();
-    if (postedBallot.getInitialProposal() == null) throw new LiquidoRestException("ERROR: Need URI of initial proposal!");
+    if (postedBallot.getPoll() == null) throw new LiquidoRestException("ERROR: Need URI of poll!");
     if (postedBallot.getVoteOrder() == null || postedBallot.getVoteOrder().size() == 0) throw new LiquidoRestException("ERROR: voteOrder must not be empty!");
-    long numVotes = delegationRepo.getNumVotes(postedBallot.getInitialProposal().getArea(), currentUser);
+    long numVotes = delegationRepo.getNumVotes(postedBallot.getPoll().getInitialProposal().getArea(), currentUser);
     if (numVotes != currentUser.getVoterTokens().size()+1)
       throw new LiquidoRestException("ERROR: Inconsistency detected: number of voter tokens does not match number of delegations. User '"+currentUser.getEmail()+"' (id="+currentUser.getId()+")");
 
     // Create a voterToken for currentUser and store a ballot for him
-    String voterTokenBCrypt = anonymizer.getBCryptVoterToken(currentUser, currentUser.getPasswordHash(), postedBallot.getInitialProposal());
+    String voterTokenBCrypt = anonymizer.getBCryptVoterToken(currentUser, currentUser.getPasswordHash(), postedBallot.getPoll());
     postedBallot.setVoterToken(voterTokenBCrypt);
     checkBallot(postedBallot);
 
     // Check if user has already voted. If so, then update his voteOrder
     BallotModel savedBallot = null;
-    BallotModel existingBallot = ballotRepo.findByInitialProposalAndVoterToken(postedBallot.getInitialProposal(), postedBallot.getVoterToken());
+    BallotModel existingBallot = ballotRepo.findByPollAndVoterToken(postedBallot.getPoll(), postedBallot.getVoterToken());
     if (existingBallot != null) {
       existingBallot.setVoteOrder(postedBallot.getVoteOrder());
       log.trace("Updating existing ballot");
@@ -127,7 +130,7 @@ public class BallotRestController {
     //If this user is a proxy, then post a ballot for each delegation
     for (String delegatedToken : currentUser.getVoterTokens()) {
       //TODO: check if delegee already voted for himself.  Never overwrite ballots with   ownVote == true
-      BallotModel ballotForDelegee = new BallotModel(postedBallot.getInitialProposal(), postedBallot.getVoteOrder(), delegatedToken);
+      BallotModel ballotForDelegee = new BallotModel(postedBallot.getPoll(), postedBallot.getVoteOrder(), delegatedToken);
       checkBallot(ballotForDelegee);
       log.trace("Saving ballot for delegee: "+ballotForDelegee);
       ballotRepo.save(ballotForDelegee);
@@ -149,15 +152,25 @@ public class BallotRestController {
       throw new LiquidoRestException("ERROR: Cannot post ballot: Invalid voterToken: '"+newBallot.getVoterToken()+"'. Must be at least 5 chars!");
     }
 
-    // check that initialProposal is actually in voting phase
-    LawModel initialProposal = newBallot.getInitialProposal();
-    if (initialProposal == null || !LawModel.LawStatus.VOTING.equals(initialProposal.getStatus())) {
-      throw new LiquidoRestException("ERROR: Cannot post ballot: InitialProposal must be in voting phase.");
+    // check that poll is actually in voting phase
+    PollModel poll = newBallot.getPoll();
+    if (poll == null || !PollModel.PollStatus.VOTING.equals(poll.getStatus())) {
+      throw new LiquidoRestException("ERROR: Cannot post ballot: Poll must be in voting phase.");
     }
 
     // check that voter Order is not empty
     if (newBallot.getVoteOrder() == null || newBallot.getVoteOrder().size() == 0) {
       throw new LiquidoRestException("ERROR: Cannot post ballot: VoteOrder is empty!");
+    }
+
+    // check that there is no duplicate vote for any one proposal    //TODO: write a TEST for this
+    HashSet<Long> proposalIds = new HashSet<>();
+    for(LawModel proposal : newBallot.getVoteOrder()) {
+      if (proposalIds.contains(proposal.getId())) {
+        throw new LiquidoRestException("ERROR: Cannot post ballot: Duplicate vote for proposal_id="+proposal.getId());
+      } else {
+        proposalIds.add(proposal.getId());
+      }
     }
 
     // check that all proposals you wanna vote for are also in voting phase
