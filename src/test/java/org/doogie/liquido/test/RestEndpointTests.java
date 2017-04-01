@@ -275,23 +275,26 @@ public class RestEndpointTests {
    */
   @Test
   public void testPostAlternativeProposal() {
-    log.trace("TEST postBallot");
+    log.trace("TEST postAlternativeProposal");
 
-    String newLawTitle = "Law from test "+System.currentTimeMillis() % 10000;  // law.title must be unique!!
-
-    String areaUri       = basePath + "/areas/" + this.areas.get(0).getId();
-    String initialLawUri = basePath + "/laws/"  + this.laws.get(0).getId();
+    // ===== Find a poll that is in VOTING phase
+    List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.ELABORATION);
+    assertTrue("Need a poll that currently is in ELABORATION phase for this test", polls != null && polls.size() > 0);
 
     // I am deliberately not creating a new BallotModel(...) here that I could then   postForEntity like this:
     //   ResponseEntity<BallotModel> createdBallot = client.postForEntity("/ballot", newBallot, BallotModel.class);
     // because I do not want the test to success just because of on spring's very clever serialization and deserialization.
     // Instead I want to post plain JSON as a client would:
+    String areaUri  = basePath + "/areas/" + this.areas.get(0).getId();
+    String pollUri  = basePath + "/polls/" + polls.get(0).getId();
+    String newLawTitle = "Law from test "+System.currentTimeMillis() % 10000;  // law.title must be unique!!
+
     JSONObject newLawJson = new JSONObject()
       .put("title", newLawTitle)
       .put("description", "Dummy description from testPostProposalForLaw")
       .put("status", LawModel.LawStatus.NEW_PROPOSAL)     //TODO: Actually the server should decide about the status.
       .put("area", areaUri)
-      .put("initialLaw", initialLawUri);
+      .put("poll", pollUri);
       // Remark: it is not necessary to send a createdBy user URI
 
     log.trace("posting JSON Object:\n"+newLawJson.toString(2));
@@ -300,11 +303,11 @@ public class RestEndpointTests {
     headers.setContentType(MediaType.APPLICATION_JSON);
     HttpEntity<String> entity = new HttpEntity<>(newLawJson.toString(), headers);
 
-    LawModel createdLaw = client.postForObject("/laws", entity, LawModel.class);  // this actually deserializes the response into a BallotModel. But that's ok. Makes the assertions much easier than digging around in a plain String response.
+    LawModel createdLaw = client.postForObject("/laws", entity, LawModel.class);  // this actually deserializes the response into a LawModel. But that's ok. Makes the assertions much easier than digging around in a plain String response.
     assertNotNull("ERROR: could not post proposal for new law", createdLaw);   // createdLaw will be null, when there was an error.  (I hate methods that return null instead of throwing exceptions!)
     assertEquals("ERROR: create law title does not match", newLawTitle, createdLaw.getTitle());
 
-    log.trace("TEST postBallot successfully created "+createdLaw);
+    log.trace("TEST postAlternativeProposal successfully created "+createdLaw);
   }
 
   //Problems I had when implementing this test.
@@ -316,23 +319,19 @@ public class RestEndpointTests {
   public void testPostBallot() {
     log.trace("TEST postBallot");
 
-    // ===== Find a poll
+    // ===== Find a poll tha is in VOTING phase
     List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
     assertTrue("Need a poll that currently is in VOTING phase for this test", polls != null && polls.size() > 0);
     PollModel pollVoting = polls.get(0);
     List<LawModel> alternativeProposals = pollVoting.getProposals();
 
     // ===== Create a ballot with a voteOrder
-    // I am deliberately not creating a new BallotModel(...) here that I could then  call client.postForEntity() like this:
-    //   ResponseEntity<BallotModel> createdBallot = client.postForEntity("/ballot", newBallot, BallotModel.class);
-    // because I do not want the test to success just because of on spring's very clever serialization and deserialization.
-    // Instead I want to post plain JSON as a client would:
-    String initialLawUri = basePath + "/laws/" + pollVoting.getInitialProposal().getId();
+    String pollUri       = basePath + "/polls/" + polls.get(0).getId();
     String voteOrderUri1 = basePath + "/laws/" + alternativeProposals.get(0).getId();
     String voteOrderUri2 = basePath + "/laws/" + alternativeProposals.get(1).getId();
 
     JSONObject newBallotJson = new JSONObject()
-        .put("initialProposal", initialLawUri)
+        .put("poll", pollUri)
         .put("voteOrder", new JSONArray()
                                 .put(voteOrderUri1)
                                 .put(voteOrderUri2));
@@ -342,10 +341,10 @@ public class RestEndpointTests {
     headers.setContentType(MediaType.APPLICATION_JSON);
     HttpEntity<String> entity = new HttpEntity<>(newBallotJson.toString(), headers);
 
-    // Do not use client.postForObject   it does not return any error. It simply returns null instead!
+    // Do not use client.postForObject here. It does not return any error. It simply returns null instead!
     // Endpoint is /postBallot    /ballots are not exposed as @RepositoryRestResource for writing!
     ResponseEntity<String> response = client.exchange("/postBallot", HttpMethod.POST, entity, String.class);
-    log.debug("Response body:\n"+response.getBody());
+    //log.debug("Response body:\n"+response.getBody());
 
     assertEquals(HttpStatus.CREATED, response.getStatusCode());
     ReadContext ctx = JsonPath.parse(response.getBody());
@@ -357,18 +356,21 @@ public class RestEndpointTests {
   }
 
   @Test
-  public void testPostInvalidBallot() {
-    log.trace("TEST postInvalidBallot");
+  public void testPostDuplicateVote() {
+    log.trace("TEST postDuplicateVote");
 
-    String initialLawUri = basePath + "/laws/4711"; // This is a nonexistant ID !
-    String voteOrderUri1 = basePath + "/laws/" + this.laws.get(1).getId();
-    String voteOrderUri2 = basePath + "/laws/" + this.laws.get(2).getId();
+    // ===== Find a poll tha is in VOTING phase
+    List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
+    assertTrue("Need a poll that currently is in VOTING phase for this test", polls != null && polls.size() > 0);
+
+    String pollUri     = basePath + "/polls/" + polls.get(0).getId();
+    String proposalUri = basePath + "/laws/" + this.laws.get(0).getId();
 
     JSONObject newBallotJson = new JSONObject()
-      .put("initialProposal", initialLawUri)
+      .put("poll", pollUri)
       .put("voteOrder", new JSONArray()
-        .put(voteOrderUri1)
-        .put(voteOrderUri2));
+        .put(proposalUri)
+        .put(proposalUri));    // <======== try to vote for them same proposal twice
     log.trace("posting JSON Object:\n"+newBallotJson.toString(2));
 
     HttpHeaders headers = new HttpHeaders();
@@ -380,7 +382,7 @@ public class RestEndpointTests {
     String responseBody = response.getBody();
     assertEquals(HttpStatus.BAD_REQUEST.value(), response.getStatusCodeValue());  // 400
     log.trace("response.body (that should contain the error): "+responseBody);
-    assertTrue(responseBody.contains("initialProposal"));
+    assertTrue(responseBody.contains("Duplicate vote for proposal"));
     log.trace("TEST postInvalidBallot successful: received correct status and error message in response.");
   }
 
