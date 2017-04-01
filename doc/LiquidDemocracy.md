@@ -48,10 +48,11 @@ Adapted from process used in the software aula.de by Marina Weisband
  4. During the elaboration phase **competing proposals** can also be created. Again a new 
     competing proposal must first find a minimum number of supporters before it is moved 
     onto the table.
- 5. The **Voting phase** runs over a defined period of time. Users don't just vote for or 
+ 5. The **Voting phase** starts n days after the initial proposal reached its quorum.
+    It will run over a defined period of time. Users don't just vote for or 
     against one proposal, but instead, each voter sorts (some or all of) the proposals into 
     his personally preferred order.   
- 6. When voting is finished, the winning propsal becomes a real **law** - at least for a 
+ 6. When the voting phase is finished, then the winning propsal becomes a real **law** - at least for a 
     defined minimum time.
  7. But voters may still change their mind after that. If a standing law looses support
     from more than 50% of its original supporters for more than n consecutive days, then 

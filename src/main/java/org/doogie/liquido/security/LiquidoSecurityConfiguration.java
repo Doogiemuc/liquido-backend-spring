@@ -68,6 +68,7 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
       .authorizeRequests()
         .antMatchers("/h2-console/**").permitAll()            // Allow access to H2 DB web console
         .antMatchers(restBasePath+"/_ping").permitAll()       // is alive
+        .antMatchers(restBasePath+"/globalProperties").permitAll()
         .anyRequest().authenticated()
       .and()
         .httpBasic()

@@ -9,6 +9,10 @@ import org.hibernate.validator.constraints.NotEmpty;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 
+/**
+ * General purpose model for key=value properties.
+ * Mainly used for global configuration variables that are stored in the DB.
+ */
 @Data
 @NoArgsConstructor
 @RequiredArgsConstructor
@@ -22,6 +26,7 @@ public class KeyValueModel {
   @NonNull
   @NotNull
   @NotEmpty
+  @Column(unique = true)
   public String key;
 
   @NonNull

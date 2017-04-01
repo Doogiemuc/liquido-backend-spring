@@ -18,6 +18,7 @@ import java.util.Map;
 @Slf4j
 @Component
 public class LiquidoProperties implements CommandLineRunner {
+  //Implementation note: Making this a CommandLine runner was the only way I found to make this run AFTER TestDataCreator.
 
   /**
    * List of all KEYs
@@ -28,7 +29,9 @@ public class LiquidoProperties implements CommandLineRunner {
    */
   public enum KEY {
     LIKES_FOR_QUORUM("liquido.likes.for.quorum"),
-    SUPPORTERS_FOR_PROPOSAL("liquido.supporters.for.proposal");
+    SUPPORTERS_FOR_PROPOSAL("liquido.supporters.for.proposal"),
+    DAYS_UNTIL_VOTING_STARTS("liquido.days.until.voting.starts"),
+    DURATION_OF_VOTING_PHASE("liquido.duration.of.voting.phase");
     //TODO: BCRYPT_SALT("liquido.bcrypt.salt");
 
     String keyName;
@@ -41,14 +44,14 @@ public class LiquidoProperties implements CommandLineRunner {
     }
   }
 
-  private static Map<KEY, String> props;
+  private Map<KEY, String> props;
 
   @Autowired
   KeyValueRepo keyValueRepo;
 
   /** Load initial values for all KEYs from the DB */
   @Override
-  public void run(String... strings) throws Exception {
+  public void run(String... args) throws Exception {
     log.debug("Loading properties from DB");
     this.props = new HashMap<>();
     for(KEY key : KEY.values()) {
@@ -59,11 +62,15 @@ public class LiquidoProperties implements CommandLineRunner {
     }
   }
 
-  public static String get(KEY key) {
-    return props.get(key.toString());
+
+  public String get(KEY key) {
+    return props.get(key);
+  }
+  public Integer getInt(KEY key) {
+    return Integer.valueOf(props.get(key));
   }
 
-  public static void set(KEY key, String value) {
+  public void set(KEY key, String value) {
     props.put(key, value);
   }
 

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.util.Calendar;
 import java.util.Date;
 
 public class DoogiesUtil {
@@ -30,9 +31,20 @@ public class DoogiesUtil {
   }
 
   /** @return a Data n days ago */
-  public static Date dayAgo(int days) {
+  public static Date daysAgo(int days) {
     return new Date(System.currentTimeMillis() - days * 3600*24*1000);
   }
+
+  /** add or subtract n days from the given date */
+  public static Date addDays(Date date, int days)
+  {
+    Calendar cal = Calendar.getInstance();
+    cal.setTime(date);
+    cal.add(Calendar.DATE, days); //minus number would decrement the days
+    return cal.getTime();
+  }
+
+
 
   private static ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
 

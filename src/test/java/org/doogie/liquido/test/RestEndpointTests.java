@@ -4,12 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.ReadContext;
-import org.doogie.liquido.datarepos.AreaRepo;
-import org.doogie.liquido.datarepos.DelegationRepo;
-import org.doogie.liquido.datarepos.LawRepo;
-import org.doogie.liquido.datarepos.UserRepo;
+import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.LawModel;
+import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.test.testUtils.LiquidoTestErrorHandler;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
@@ -66,6 +64,9 @@ public class RestEndpointTests {
 
   @Autowired
   LawRepo lawRepo;
+
+  @Autowired
+  PollRepo pollRepo;
 
   @Autowired
   DelegationRepo delegationRepo;
@@ -315,17 +316,18 @@ public class RestEndpointTests {
   public void testPostBallot() {
     log.trace("TEST postBallot");
 
-    // ====== find a proposal  that is currently in the voting phase and load its alternative proposals
-    List<LawModel> inVotingPhase = lawRepo.findByStatus(LawModel.LawStatus.VOTING);
-    assertTrue("Need a proposal that currently is in voting phase for this test", inVotingPhase != null && inVotingPhase.size() > 0);
-    List<LawModel> alternativeProposals = lawRepo.findByInitialLaw(inVotingPhase.get(0));
+    // ===== Find a poll
+    List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
+    assertTrue("Need a poll that currently is in VOTING phase for this test", polls != null && polls.size() > 0);
+    PollModel pollVoting = polls.get(0);
+    List<LawModel> alternativeProposals = pollVoting.getProposals();
 
     // ===== Create a ballot with a voteOrder
-    // I am deliberately not creating a new BallotModel(...) here that I could then   postForEntity like this:
+    // I am deliberately not creating a new BallotModel(...) here that I could then  call client.postForEntity() like this:
     //   ResponseEntity<BallotModel> createdBallot = client.postForEntity("/ballot", newBallot, BallotModel.class);
     // because I do not want the test to success just because of on spring's very clever serialization and deserialization.
     // Instead I want to post plain JSON as a client would:
-    String initialLawUri = basePath + "/laws/" + inVotingPhase.get(0).getId();
+    String initialLawUri = basePath + "/laws/" + pollVoting.getInitialProposal().getId();
     String voteOrderUri1 = basePath + "/laws/" + alternativeProposals.get(0).getId();
     String voteOrderUri2 = basePath + "/laws/" + alternativeProposals.get(1).getId();
 
@@ -537,5 +539,13 @@ public class RestEndpointTests {
     log.trace("TEST postDuplicateArea SUCCESS: Did receive expected HttpStatus=409 (Conflict)");
   }
 
+  @Test
+  public void testGetGlobalProperties() {
+    log.trace("TEST getGlobalProperties");
+
+    String responseJSON = client.getForObject("/globalProperties", String.class);
+
+    assertNotNull(responseJSON);
+  }
 
 }

@@ -1,0 +1,202 @@
+@startuml
+
+' Split into 4 pages
+page 2x2
+skinparam pageMargin 10
+skinparam pageExternalColor gray
+skinparam pageBorderColor black
+
+
+
+package liquido.model {
+
+interface Identifyable<Long>
+
+Identifyable <|-- BaseModel
+BaseModel <|-- IdeaModel
+IdeaModel ..> UserModel
+IdeaModel ..> AreaModel
+DelegationModel ..> UserModel
+DelegationModel ..> AreaModel
+LawModel ..> UserModel
+LawModel ..> AreaModel
+PollModel ..> LawModel
+
+interface Identifyable {
+  Long getId()
+}
+
+class BaseModel {
+  Date createdAt
+  Date updatedAt
+}
+
+class AreaModel {
+  Long id
+  String title
+  String description
+  UserModel createdBy
+
+}
+
+class UserModel {
+  Long id
+  String email
+  String passwordHash
+  UserProfileModel profile
+  List<String> voterTokens
+}
+
+class IdeaModel {
+  Long id
+  String title
+  String description
+  AreaModel area
+  UserModel createdBy
+  Set<UserModel> supporters
+
+  void addSupporter(UserModel supporter)
+  int getNumSupporters()
+
+  boolean equals()
+  String toString()
+  long hashCode()
+}
+
+class DelegationModel {
+  // ID is the composite key of all three fields
+  AreaModel area
+  UserModel fromUser
+  UserModel toProxy
+}
+
+class LawModel {
+  Long id  // GenerationType.SEQUENCE
+  String title
+  String description
+  AreaModel area
+  PollModel poll
+  Date reachedQuorumAt
+  LawStatus status
+  UserModel createdBy
+
+  LawModel buildInitialLaw(...)
+
+}
+
+class PollModel {
+  Long id
+  LawModel initialLaw
+  List<LawModel> proposals
+  Date createdAt // date when initial proposal reached its quorum
+  Date votingStarts
+  Date votingEnds
+  pollStatus = [ELABORATION, VOTING, FINISHED]
+  int getNumCompetingProposals()
+}
+
+}
+
+' -------------------------------------------------------------------------
+
+package liquido.datarepos {
+
+
+
+class AreaRepo <<CrudRepository>> {
+  AreaModel findByTitle(String title)
+}
+
+class BallotRepo <<CrudRepository>> {
+  --
+  // all writing methods are not exposed via REST!
+  BallotModel findByInitialProposalAndVoterToken(LawModel initialProposal, String voterToken)
+}
+
+
+class DelegationRepo <<CrudRepository>> {
+  List<DelegationModel> findByFromUser(UserModel fromUser)
+  List<DelegationModel> findByAreaAndToProxy(AreaModel area, UserModel toProxy)
+  DelegationModel findByAreaAndFromUser(AreaModel area, UserModel fromUser)
+  DelegationModel findByAreaAndFromUserAndToProxy(AreaModel area, UserModel fromUser, UserModel toProxy)
+  -- DelegationRepoCustom --
+  long getNumVotes(AreaModel area, UserModel user)
+}
+
+class IdeaRepo <<CrudRepository>> {
+  IdeaModel findByTitle(String title)
+  List<IdeaModel> findFirst10ByOrderByCreatedAtDesc()  // recenetIdeas
+  --IdeaService--
+  boolean isSupportedByCurrentUser(IdeaModel idea)
+}
+
+class KeyValueRepo <<CrudRepository>> {
+  KeyValueModel findByKey(String key)
+}
+
+class LawRepo <<CrudRepository>> {
+  LawModel findByTitle(String title)
+  List<LawModel> findByStatus(LawStatus status)
+  List<LawModel> findByInitialLaw(LawModel initialLaw)
+  Long countByInitialLaw(LawModel initialLaw)
+  List<LawModel> findCompeting(LawModel proposal)
+}
+
+}
+
+' -------------------------------------------------------------------------
+
+package liquido.rest {
+
+class PingController <<RestController>> {
+  +String isAlive()  // GET /_ping
+}
+
+class BallotRestController <<BasePathAwareController>> {
+  BallotRepo ballotRepo
+  DelegationRepo delegationRepo
+  LiquidoAuditAware auditAware  // for getCurrentAuditor
+  LiquidoAnomyizer anomyizer    // for getBCryptVoterToken
+  --
+  // POST /postBallot
+  +SavedBallotResource postBallot(BallotModel)
+  -checkBallot(BallotModel)
+}
+
+class PropertiesController <<BasePathAwareController>> {
+  LiquidoProperties props
+  +JSON getGlobalProperties()
+}
+
+class UserRestController <<BasePathAwareController>> {
+  UserRepo userRepo
+  AreaRepo areaRepo
+  DelegationRepo delegationRepo
+  LiquidoAuditorAware liquidoAuditorAware
+  --
+  // GET /users/{userId}/getNumVotes/{areaId}
+  +long getNumVotes(@PathVariable Long userId, @PathVariable Long areaId)
+
+  // GET /users/{userId}/getProxyMap
+  +Map getProxyMap(@PathVariable Long userId)
+
+  // PUT /saveProxy
+  +SavedDelegationHAL saveProxy(DelegationModel delegationResource)
+}
+
+}
+
+liquido.rest --down---> liquido.datarepos
+liquido.datarepos ----down-> liquido.model
+
+' These are just for layout
+AreaRepo -[hidden]right-> KeyValueRepo
+KeyValueRepo -[hidden]right-> BallotRepo
+
+AreaRepo -[hidden]down-> LawRepo
+KeyValueRepo -[hidden]down-> IdeaRepo
+BallotRepo -[hidden]down-> DelegationRepo
+
+LawRepo -[hidden]down-> PollModel
+
+@enduml
