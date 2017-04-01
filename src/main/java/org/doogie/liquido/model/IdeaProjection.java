@@ -1,9 +1,6 @@
 package org.doogie.liquido.model;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.IdeaModel;
-import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.services.IdeaUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.rest.core.config.Projection;
 
@@ -48,7 +45,7 @@ public interface IdeaProjection {
   Date getUpdatedAt();
   int getNumSupporters();
 
-  /** see {@link org.doogie.liquido.datarepos.IdeaUtil} */
+  /** see {@link IdeaUtil} */
   @Value("#{@ideaUtil.isSupportedByCurrentUser(target)}")   // Spring Expression language (SpEL) FTW
   boolean isSupportedByCurrentUser();
 

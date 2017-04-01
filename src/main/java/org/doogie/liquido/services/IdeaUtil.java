@@ -1,16 +1,9 @@
-package org.doogie.liquido.datarepos;
+package org.doogie.liquido.services;
 
 import org.doogie.liquido.model.IdeaModel;
 import org.doogie.liquido.model.UserModel;
-import org.doogie.liquido.rest.LiquidoRestException;
 import org.doogie.liquido.security.LiquidoAuditorAware;
-import org.doogie.liquido.security.LiquidoAuthUser;
-import org.doogie.liquido.security.LiquidoUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.AuditorAware;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Component;
 
 @Component
