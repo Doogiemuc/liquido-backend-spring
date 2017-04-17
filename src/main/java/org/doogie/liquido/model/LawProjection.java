@@ -24,6 +24,7 @@ public interface LawProjection {
   UserModel getCreatedBy();
   AreaModel getArea();
   boolean isInitialProposal();
+  int getNumSupporters();
 
   Date getReachedQuorumAt();
   Date getCreatedAt();
@@ -43,7 +44,7 @@ public interface LawProjection {
   Date getVotingEndsAt();
 }
 
-/*  example JSON of exposed REST HATEOAS resource "idea"
+/*  example JSON of exposed REST HATEOAS resource "law"
 
 
  */

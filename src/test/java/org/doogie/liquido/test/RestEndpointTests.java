@@ -5,10 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.ReadContext;
 import org.doogie.liquido.datarepos.*;
-import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.LawModel;
-import org.doogie.liquido.model.PollModel;
-import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.model.*;
 import org.doogie.liquido.test.testUtils.LiquidoTestErrorHandler;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.json.JSONArray;
@@ -22,6 +19,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.embedded.LocalServerPort;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.data.rest.webmvc.RestMediaTypes;
+import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -35,10 +34,9 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 /**
- * Integration test for Liquiodo REST endpoint and mongoDB.
+ * Integration test for Liquiodo REST endpoint.
  *
- * These test cases test the Liquido Java backend together with the mongo database behind it.
- * It would be quite costly to mock the complete DB. So we test both layers here.
+ * These test cases test the Liquido Java backend via its REST interface.
  */
 @RunWith(SpringRunner.class)
 @ActiveProfiles("test")
@@ -70,6 +68,10 @@ public class RestEndpointTests {
 
   @Autowired
   DelegationRepo delegationRepo;
+
+  @Autowired
+  RepositoryEntityLinks entityLinks;
+
 
 
   // preloaded data that most test cases need.
@@ -385,6 +387,65 @@ public class RestEndpointTests {
     assertTrue(responseBody.contains("Duplicate vote for proposal"));
     log.trace("TEST postInvalidBallot successful: received correct status and error message in response.");
   }
+
+
+  /**
+   * Create a new idea. Then add as many supporters, so that the idea reaches its quorum.
+   * A new poll will then automatically be created.
+   * Test for {@link org.doogie.liquido.services.PollService#ideaReachesQuorum(IdeaModel)}
+   */
+  @Test
+  // USER1 is logged in via client.
+  // This Does not work: @WithUserDetails(value=TestFixtures.USER0_EMAIL, userDetailsServiceBeanName="liquidoUserDetailsService")
+  public void testIdeaReachesQuorum() {
+    log.trace("TEST ideaReachesQuorum");
+
+    //===== create a new idea
+    String ideaTitle = "Idea created from test that reaches its quorum";
+    String ideaDescr = "This idea was created from a test case";
+    String areaUri   = basePath + "/areas/" + this.areas.get(0).getId();
+
+    JSONObject ideaJson = new JSONObject()
+            .put("title", ideaTitle)
+            .put("description", ideaDescr)
+            .put("area", areaUri);
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    HttpEntity<String> entity = new HttpEntity<>(ideaJson.toString(), headers);
+
+    ResponseEntity<String> responseEntity = client.postForEntity("/ideas", entity, String.class);
+    assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
+
+    // check that new idea has no supporters yet
+    int numSupporters = JsonPath.read(responseEntity.getBody(), "$.numSupporters");
+    assertEquals(0, numSupporters);
+
+    // check that new idea is created by currently logged in user
+    String createdByUri = JsonPath.read(responseEntity.getBody(), "$._links.createdBy.href");
+    HttpEntity<UserModel> createdByResponse = client.getForEntity(createdByUri, UserModel.class);
+    assertEquals("Idea should have been created by currently logged in user "+TestFixtures.USER1_EMAIL, TestFixtures.USER1_EMAIL, createdByResponse.getBody().getEmail());
+
+    //===== add Supporters so that idea reaches its quorum
+    String supportersURL = JsonPath.read(responseEntity.getBody(), "$._links.supporters.href");
+    for (int j = 0; j < this.users.size(); j++) {
+      if (!this.users.get(j).getEmail().equals(TestFixtures.USER1_EMAIL)) {   // creator is implicitly already a supporter
+        String userURI = basePath + "/users/" + this.users.get(j).getId();
+        HttpHeaders headers2 = new HttpHeaders();
+        headers2.setContentType(RestMediaTypes.TEXT_URI_LIST);
+        HttpEntity<String> entity2 = new HttpEntity<>(userURI, headers2);
+        ResponseEntity<String> addSupporterResponse = client.postForEntity(supportersURL, entity2, String.class);
+        assertEquals(HttpStatus.NO_CONTENT, addSupporterResponse.getStatusCode());   // 204
+        log.debug("Added supporter to idea: "+userURI);
+      }
+    }
+
+    //===== now a poll should have been created
+
+
+  }
+
+
 
   /**
    * User4 should have 5 votes (including his own) in area1

@@ -3,6 +3,7 @@ package org.doogie.liquido.services;
 import org.doogie.liquido.model.IdeaModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.util.LiquidoProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +12,12 @@ public class IdeaUtil {
 
   @Autowired
   LiquidoAuditorAware liquidoAuditorAware;
+
+  @Autowired
+  LiquidoProperties props;
+
+  @Autowired
+  PollService pollService;
 
   /**
    * Check if a given idea is already supported by the currently logged in user.
@@ -30,4 +37,15 @@ public class IdeaUtil {
     }
   }
 
+  /**
+   * Checks if an idea has reached its quorum.
+   * Called from {@link org.doogie.liquido.datarepos.IdeaEventHandler}
+   * Will call {@link PollService#ideaReachesQuorum(IdeaModel)} when idea has enough likes.
+   * @param idea the IdeaModel to check
+   */
+  public void checkQuorum(IdeaModel idea) {
+    if (idea.getNumSupporters() == props.getInt(LiquidoProperties.KEY.LIKES_FOR_QUORUM)) {
+      pollService.ideaReachesQuorum(idea);
+    }
+  }
 }

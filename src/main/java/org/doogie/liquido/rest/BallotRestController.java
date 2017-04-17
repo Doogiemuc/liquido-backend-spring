@@ -163,7 +163,7 @@ public class BallotRestController {
       throw new LiquidoRestException("ERROR: Cannot post ballot: VoteOrder is empty!");
     }
 
-    // check that there is no duplicate vote for any one proposal    //TODO: write a TEST for this
+    // check that there is no duplicate vote for any one proposal
     HashSet<Long> proposalIds = new HashSet<>();
     for(LawModel proposal : newBallot.getVoteOrder()) {
       if (proposalIds.contains(proposal.getId())) {
