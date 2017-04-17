@@ -1,4 +1,4 @@
-# Liquido Democracy
+# Liquido - Liquid Democracy
 
 ## A modern aproach to interactive representative direct democracy
 

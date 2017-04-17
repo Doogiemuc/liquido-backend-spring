@@ -8,6 +8,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Data model: proposal for a law.
@@ -37,7 +39,6 @@ public class LawModel extends BaseModel {
   @Column(unique = true)
   public String title;
 
-  //TODO: supporters   //for alternative proposals
   //TODO: lawModel.tagline
   //TODO: lawModel.tags
 
@@ -52,6 +53,10 @@ public class LawModel extends BaseModel {
   @ManyToOne(optional = false)
   public AreaModel area;
 
+  @ManyToMany
+  Set<UserModel> supporters = new HashSet<>();
+
+  //TODO:  make poll optional and remove IdeaModel completely?  Create poll when NEW_PROPOSAL reaches its quorum...
   /**
    * A poll is automatically created, when the initial law reaches its quorum.
    * All alternative proposals point to the same poll.
@@ -85,8 +90,9 @@ public class LawModel extends BaseModel {
    */
   Date reachedQuorumAt;
 
+
   public enum LawStatus {
-    NEW_PROPOSAL(0),    // Newly created proposal that did not reach its quorum yet.
+    NEW_PROPOSAL(0),    // Newly created proposal for a law that did not reach its quorum yet.
                         // This is an initialLaw, when this.initialLaw == this
     ELABORATION(1),     // When a proposal reaches its quorum, then a poll is created and further alternative proposals can be added.
     VOTING(2),          // When the voting phase starts, these proposals can be voted upon.
@@ -109,28 +115,35 @@ public class LawModel extends BaseModel {
   public UserModel createdBy;
 
   /**
-   * Builder for an initial proposal which will be in ELABORATION phase.
-   * This will also create a new PollModel for this initial proposal.
-   */
-  public static LawModel buildInitialProposal(String title, String description, AreaModel area, UserModel createdBy) {
-    LawModel newLaw = new LawModel();
-    newLaw.title = title;
-    newLaw.description = description;
-    newLaw.area = area;
-    newLaw.status = LawStatus.ELABORATION;
-    newLaw.createdBy = createdBy;
-    newLaw.createdAt = new Date();
-    newLaw.updatedAt = new Date();
-    newLaw.reachedQuorumAt = new Date(newLaw.createdAt.getTime());
-    //newLaw.poll = new PollModel(newLaw);
-    return newLaw;
-  }
-
-  /**
    * @return true when this is the initial proposal of the poll
    */
   public boolean isInitialProposal() {
-    return getPoll() != null && this.equals(getPoll().getInitialProposal());
+    return (getPoll() != null) && this.equals(getPoll().getInitialProposal());
+  }
+
+  /**
+   * Call this when a user 'likes' a proposal
+   * No user will be added twice and the creator of this proposal cannot be added as supporter.
+   * @param supporter The user that wants to discuss this idea. Must not be the creator!
+   * @throws RuntimeException When you try to add the creator as supporter.
+   */
+  public void addSupporter(UserModel supporter) {
+    if (supporter == null) return;
+    if (supporter.equals(this.getCreatedBy())) {
+      throw new RuntimeException("a proposal for a law cannot be supported by its creator");
+    }
+    this.supporters.add(supporter);
+  }
+
+  public void addSupporters(Set<UserModel> supporters) {
+    for(UserModel supporter : supporters) {
+      this.addSupporter(supporter);
+    }
+  }
+
+
+  public int getNumSupporters() {
+    return this.supporters.size();
   }
 
   /** need some tweaking for a nice and short representation as a string */
@@ -150,6 +163,7 @@ public class LawModel extends BaseModel {
     buf.append('\'');
     buf.append(", poll.id=" + (poll != null ? poll.getId() : "<null>"));
     buf.append(", status=" + status);
+    buf.append(", numSupporters=" + getNumSupporters());
     buf.append(", createdBy.email=" + (createdBy != null ? createdBy.getEmail() : "<null>"));
     buf.append(", reachedQuorumAt=" + reachedQuorumAt);
     buf.append(", updatedAt=" + updatedAt);

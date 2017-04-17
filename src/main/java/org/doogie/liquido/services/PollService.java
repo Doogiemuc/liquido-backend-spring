@@ -1,5 +1,9 @@
 package org.doogie.liquido.services;
 
+import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.datarepos.PollRepo;
+import org.doogie.liquido.model.IdeaModel;
+import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoProperties;
@@ -9,8 +13,9 @@ import org.springframework.stereotype.Component;
 import java.util.Date;
 
 /**
- * This spring component provides some utility methods for {@link org.doogie.liquido.model.PollModel}
+ * This spring component implements the business logic for {@link org.doogie.liquido.model.PollModel}
  */
+@Slf4j
 @Component
 public class PollService {
   //Implementation note: Actually these are just some getters for PollModel. But I do not want PollModel
@@ -18,6 +23,9 @@ public class PollService {
 
   @Autowired
   LiquidoProperties props;
+
+  @Autowired
+  PollRepo pollRepo;
 
   /**
    * The voting phase of a poll starts n days after the initial proposal has reached its quorum.
@@ -43,6 +51,49 @@ public class PollService {
     if (votingStartsAt == null) return null;
     int durationOfVotingPhase = props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE);
     return DoogiesUtil.addDays(votingStartsAt, durationOfVotingPhase);
+  }
+
+  /**
+   * Create an initial proposal from an idea that reached its quorum. The returned LawModel will be in ELABORATION phase.
+   * Will also set "reachedQuorumAt" field.
+   * You have to link this initial proposal to a poll and then save that poll.
+   */
+  LawModel buildInitialProposal(IdeaModel idea) {
+    LawModel newLaw = new LawModel();
+    newLaw.title = idea.getTitle();
+    newLaw.description = idea.getDescription();
+    newLaw.area = idea.getArea();
+    newLaw.status = LawModel.LawStatus.ELABORATION;
+    newLaw.createdBy = idea.getCreatedBy();
+    newLaw.createdAt = new Date();
+    newLaw.updatedAt = new Date();
+    newLaw.setReachedQuorumAt(new Date(newLaw.createdAt.getTime()));
+    newLaw.addSupporters(idea.getSupporters());
+    return newLaw;
+  }
+
+  /**
+   * When an idea reaches its quorum, then a poll is started. The idea becomes the initial proposal of this poll.
+   * @param idea the idea that reached its quorum, ie. has at least n supporters.
+   * @throws RuntimeException if idea did not reach its quorum yet.
+   */
+  public void ideaReachesQuorum(IdeaModel idea) {
+    //===== sanity check
+    if (idea == null) throw new IllegalArgumentException("idea must not be null");
+    if (idea.getNumSupporters() < props.getInt(LiquidoProperties.KEY.LIKES_FOR_QUORUM))
+      throw new RuntimeException("Idea did not reach its quorum yet.");
+
+
+    //===== create new Poll with initial proposal
+    log.debug("Idea '{}'(id={}) reached its quorum. Will create new poll.", idea.getTitle(), idea.getId());
+    PollModel poll = new PollModel();
+    LawModel initialProposal = buildInitialProposal(idea);
+    try {
+      poll.addProposal(initialProposal);
+    } catch (Exception e) {
+      log.warn("This should never have happened: "+e);
+    }
+    pollRepo.save(poll);
   }
 
   //TODO: getCurrentResult()   sum up current votes

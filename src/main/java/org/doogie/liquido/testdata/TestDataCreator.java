@@ -161,7 +161,7 @@ public class TestDataCreator implements CommandLineRunner {
   public void seedGlobalProperties() {
     log.trace("Seeding global properties ...");
     List<KeyValueModel> propKV = new ArrayList<>();
-    propKV.add(new KeyValueModel(LiquidoProperties.KEY.LIKES_FOR_QUORUM.toString(), "10"));
+    propKV.add(new KeyValueModel(LiquidoProperties.KEY.LIKES_FOR_QUORUM.toString(), "3"));   // should be less than NUM_USERS
     propKV.add(new KeyValueModel(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL.toString(), "5"));
     propKV.add(new KeyValueModel(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS.toString(), "7"));
     propKV.add(new KeyValueModel(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE.toString(), "7"));
@@ -243,14 +243,14 @@ public class TestDataCreator implements CommandLineRunner {
     log.debug("Seeding Ideas ...");
     this.ideas = new ArrayList<>();
     for (int i = 0; i < NUM_IDEAS; i++) {
-      String ideaTitle = "Idea " + i + " that suggest that we defenitely need a longer title for ideas";
+      String ideaTitle = "Idea " + i + " that suggest that we definitely need a longer title for ideas";
       String ideaDescr = getLoremIpsum(100,+ 400);
       UserModel createdBy = this.users.get(i % NUM_USERS);
       IdeaModel newIdea = new IdeaModel(ideaTitle, ideaDescr, this.areas.get(0), createdBy);
       // add 0 to 3 supporters != createdBy
       for (int j = 0; j < rand.nextInt(4); j++) {
         int supporterNo = rand.nextInt(NUM_USERS);
-        if (supporterNo != (i % NUM_USERS)) {           // creator is implicitly aready a supporter
+        if (supporterNo != (i % NUM_USERS)) {           // creator is implicitly already a supporter
           newIdea.addSupporter(users.get(supporterNo));
         }
       }
@@ -284,6 +284,7 @@ public class TestDataCreator implements CommandLineRunner {
       String descr = "Initial proposal for a law with quorum. " + getLoremIpsum(100, 400);
       LawModel initialProposal = new LawModel("Initial Proposal of course with quorum", descr, area, poll, LawStatus.ELABORATION, createdBy);
       //TODO: add supporters to initial proposal.
+      initialProposal.
       poll.addProposal(initialProposal);
       //upsertLaw(initialProposal, 30);
 
@@ -392,27 +393,21 @@ public class TestDataCreator implements CommandLineRunner {
     return savedLaw;
   }
 
-  private void fakeCreateAt(LawModel lawModel, int ageInDays) {
-    if (ageInDays < 0) throw new IllegalArgumentException("ageInDays must be positive");
-    Table tableAnnotation = LawModel.class.getAnnotation(javax.persistence.Table.class);
-    String tableName = tableAnnotation.name();
-    String sql = "UPDATE " + tableName + " SET created_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + lawModel.getId() + "'";
-    log.trace(sql);
-    jdbcTemplate.execute(sql);
-    Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
-    lawModel.setCreatedAt(daysAgo);
-    //MAYBE: setUpdatedAt(...)
-  }
 
-  private void fakeCreateAt(PollModel poll, int ageInDays) {
+  /**
+   * Fake the created at data to be n days in the past
+   * @param model any domain model class derived from BaseModel
+   * @param ageInDays the number of days to set the createAt field into the past.
+   */
+  private void fakeCreateAt(BaseModel model, int ageInDays) {
     if (ageInDays < 0) throw new IllegalArgumentException("ageInDays must be positive");
-    Table tableAnnotation = PollModel.class.getAnnotation(javax.persistence.Table.class);
+    Table tableAnnotation = model.getClass().getAnnotation(javax.persistence.Table.class);
     String tableName = tableAnnotation.name();
-    String sql = "UPDATE " + tableName + " SET created_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + poll.getId() + "'";
+    String sql = "UPDATE " + tableName + " SET created_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
     log.trace(sql);
     jdbcTemplate.execute(sql);
     Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
-    poll.setCreatedAt(daysAgo);
+    model.setCreatedAt(daysAgo);
     //MAYBE: setUpdatedAt(...)
   }
 
