@@ -42,7 +42,7 @@ public class BallotModel extends BaseModel {
   @NotNull
   @ManyToMany   //(cascade = CascadeType.MERGE, orphanRemoval = false)
   @OrderColumn  // keep order in DB
-  public List<LawModel> voteOrder;   //TODO: laws in voteOrder must not be duplicate!!!
+  public List<LawModel> voteOrder;   //laws in voteOrder must not be duplicate! This is checked in BallotRestController.
 
   /** encrypted and anonymized information about the voter that casted this ballot */
   @NotNull

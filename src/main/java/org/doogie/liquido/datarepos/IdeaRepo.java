@@ -17,7 +17,7 @@ import java.util.List;
 @RepositoryRestResource(collectionResourceRel = "ideas", path = "ideas", itemResourceRel = "idea", excerptProjection = IdeaProjection.class)
 public interface IdeaRepo extends CrudRepository<IdeaModel, Long> {
 
-  //TODO: make Ideas.getAll() pageable?  need to be in sync with client implementation
+  //TODO: make Ideas.getAll() pageable?  need to be in sync with client implementation:  PagingAndSortingRepository
 
   IdeaModel findByTitle(@Param("title") String title);
 

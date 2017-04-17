@@ -38,5 +38,5 @@ public class LiquidoBackendSpringApplication {
 	}
 
 
-
+  //TODO: package-by-feature  http://www.javapractices.com/topic/TopicAction.do?Id=205
 }
