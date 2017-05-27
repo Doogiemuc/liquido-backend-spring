@@ -40,8 +40,7 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
     config.exposeIdsFor(BallotModel.class);
     config.exposeIdsFor(DelegationModel.class);
 
-    config.exposeIdsFor(LawModel.class);
-    config.exposeIdsFor(IdeaModel.class);   // actually IdeaModel has its own IdeaProjection that exposes the ID
+    config.exposeIdsFor(LawModel.class);  // actually LawModel has its own LawProjection which exposes IDs.
 
     //MAYBE: when available in future version of spring: config.getCorsRegistry()
   }

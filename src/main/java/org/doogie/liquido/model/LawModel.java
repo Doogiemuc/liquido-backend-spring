@@ -7,6 +7,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -56,14 +57,12 @@ public class LawModel extends BaseModel {
   @ManyToMany
   Set<UserModel> supporters = new HashSet<>();
 
-  //TODO:  make poll optional and remove IdeaModel completely?  Create poll when NEW_PROPOSAL reaches its quorum...
   /**
-   * A poll is automatically created, when the initial law reaches its quorum.
+   * When in status proposal this is the link to the poll.
    * All alternative proposals point to the same poll.
+   * Can be NULL, when this is still an idea!
    */
-  @NotNull
-  @NonNull
-  @ManyToOne(optional = false)
+  @ManyToOne(optional = true)
   public PollModel poll;
 
   /*   DEPRECATED
@@ -85,17 +84,15 @@ public class LawModel extends BaseModel {
 
   /**
    * Date when this proposal reached its quorum.
-   * Will be set, when new likes are added.
-   * n days after the initialProposal reaches its quorum, then the voting phase starts.
+   * Will be set, when enough likes are added.
    */
   Date reachedQuorumAt;
 
 
   public enum LawStatus {
-    NEW_PROPOSAL(0),    // Newly created proposal for a law that did not reach its quorum yet.
-                        // This is an initialLaw, when this.initialLaw == this
-    ELABORATION(1),     // When a proposal reaches its quorum, then a poll is created and further alternative proposals can be added.
-    VOTING(2),          // When the voting phase starts, these proposals can be voted upon.
+    IDEA(0),            // An idea is a newly created proposal for a law that did not reach its quorum yet.
+    PROPOSAL(1),        // When an idea reaches its quorum, then it becomes a proposal and a poll CAN be created.
+    VOTING(2),          // When the voting phase starts, the description of proposals cannot be changed anymore.
     LAW(3),             // The winning proposal becomes a law.
     RETENTION(4),       // When a law looses support, it is in the retention phase
     RETRACTED(5);       // When a law looses support for too long, it will be retracted.
@@ -125,25 +122,30 @@ public class LawModel extends BaseModel {
    * Call this when a user 'likes' a proposal
    * No user will be added twice and the creator of this proposal cannot be added as supporter.
    * @param supporter The user that wants to discuss this idea. Must not be the creator!
-   * @throws RuntimeException When you try to add the creator as supporter.
    */
   public void addSupporter(UserModel supporter) {
     if (supporter == null) return;
-    if (supporter.equals(this.getCreatedBy())) {
-      throw new RuntimeException("a proposal for a law cannot be supported by its creator");
-    }
+    if (supporter.equals(this.getCreatedBy())) return;
     this.supporters.add(supporter);
   }
 
-  public void addSupporters(Set<UserModel> supporters) {
+  public void addSupporters(Collection<UserModel> supporters) {
     for(UserModel supporter : supporters) {
       this.addSupporter(supporter);
     }
   }
 
-
   public int getNumSupporters() {
     return this.supporters.size();
+  }
+
+  public void setDescription(String description) {
+    if (LawStatus.IDEA.equals(this.getStatus()) ||
+        LawStatus.PROPOSAL.equals(this.getStatus())) {
+      this.description = description;
+    } else {
+      throw new RuntimeException("Must not change description in status "+this.getStatus());
+    }
   }
 
   /** need some tweaking for a nice and short representation as a string */

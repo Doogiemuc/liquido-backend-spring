@@ -2,7 +2,6 @@ package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.PollRepo;
-import org.doogie.liquido.model.IdeaModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.util.DoogiesUtil;
@@ -54,45 +53,20 @@ public class PollService {
   }
 
   /**
-   * Create an initial proposal from an idea that reached its quorum. The returned LawModel will be in ELABORATION phase.
-   * Will also set "reachedQuorumAt" field.
-   * You have to link this initial proposal to a poll and then save that poll.
+   * Start a new poll
+   * @param proposal the initial proposal
+   * @throws IllegalArgumentException if passed LawModel is not in state PROPOSAL.
    */
-  LawModel buildInitialProposal(IdeaModel idea) {
-    LawModel newLaw = new LawModel();
-    newLaw.title = idea.getTitle();
-    newLaw.description = idea.getDescription();
-    newLaw.area = idea.getArea();
-    newLaw.status = LawModel.LawStatus.ELABORATION;
-    newLaw.createdBy = idea.getCreatedBy();
-    newLaw.createdAt = new Date();
-    newLaw.updatedAt = new Date();
-    newLaw.setReachedQuorumAt(new Date(newLaw.createdAt.getTime()));
-    newLaw.addSupporters(idea.getSupporters());
-    return newLaw;
-  }
-
-  /**
-   * When an idea reaches its quorum, then a poll is started. The idea becomes the initial proposal of this poll.
-   * @param idea the idea that reached its quorum, ie. has at least n supporters.
-   * @throws RuntimeException if idea did not reach its quorum yet.
-   */
-  public void ideaReachesQuorum(IdeaModel idea) {
+  public void createPoll(LawModel proposal) throws Exception {
     //===== sanity check
-    if (idea == null) throw new IllegalArgumentException("idea must not be null");
-    if (idea.getNumSupporters() < props.getInt(LiquidoProperties.KEY.LIKES_FOR_QUORUM))
-      throw new RuntimeException("Idea did not reach its quorum yet.");
-
+    if (proposal == null) throw new IllegalArgumentException("Proposal must not be null");
+    if (proposal.getStatus() != LawModel.LawStatus.PROPOSAL)
+      throw new IllegalArgumentException("Need proposal with quorum for creating a poll!");
 
     //===== create new Poll with initial proposal
-    log.debug("Idea '{}'(id={}) reached its quorum. Will create new poll.", idea.getTitle(), idea.getId());
+    log.debug("Will create new poll. InitialProposal (id={}): {}", proposal.getId(), proposal.getTitle());
     PollModel poll = new PollModel();
-    LawModel initialProposal = buildInitialProposal(idea);
-    try {
-      poll.addProposal(initialProposal);
-    } catch (Exception e) {
-      log.warn("This should never have happened: "+e);
-    }
+    poll.addProposal(proposal);
     pollRepo.save(poll);
   }
 
