@@ -47,27 +47,22 @@ public class TestDataCreator implements CommandLineRunner {
   public int NUM_AREAS = 10;
   public int NUM_IDEAS = 10;
 
-  public int NUM_ALTERNATIVE_PROPOSALS = 2;   // alternative proposals that did not yet reach their quorum.
-  public int NUM_ELABORATION = 4;             // alternative proposals that did already reach their quorum and are in their ELABORATION PHASE.
+  public int NUM_ALTERNATIVE_PROPOSALS = 2;   // proposals in poll
   public int NUM_PROPOSALS_IN_VOTING = 4;     // proposals currently in voting phase
 
   public int NUM_LAWS = 2;
 
   @Autowired
   UserRepo userRepo;
-  List<UserModel> users;    // will contain the list of created users that can be used in further repos, eg. as "createdBy" value
+  List<UserModel> users = new ArrayList();;    // will contain the list of created users that can be used in further repos, eg. as "createdBy" value
 
   @Autowired
   AreaRepo areaRepo;
-  List<AreaModel> areas;
-
-  @Autowired
-  IdeaRepo ideaRepo;
-  List<IdeaModel> ideas;
+  List<AreaModel> areas = new ArrayList();
 
   @Autowired
   LawRepo lawRepo;
-  List<LawModel> laws;
+  List<LawModel> lawModels = new ArrayList();    // ideas, proposals and laws
 
   @Autowired
   DelegationRepo delegationRepo;
@@ -241,12 +236,11 @@ public class TestDataCreator implements CommandLineRunner {
 
   private void seedIdeas() {
     log.debug("Seeding Ideas ...");
-    this.ideas = new ArrayList<>();
     for (int i = 0; i < NUM_IDEAS; i++) {
       String ideaTitle = "Idea " + i + " that suggest that we definitely need a longer title for ideas";
       String ideaDescr = getLoremIpsum(100,+ 400);
       UserModel createdBy = this.users.get(i % NUM_USERS);
-      IdeaModel newIdea = new IdeaModel(ideaTitle, ideaDescr, this.areas.get(0), createdBy);
+      LawModel newIdea = new LawModel(ideaTitle, ideaDescr, this.areas.get(0), LawStatus.IDEA, createdBy);
       // add 0 to 3 supporters != createdBy
       for (int j = 0; j < rand.nextInt(4); j++) {
         int supporterNo = rand.nextInt(NUM_USERS);
@@ -255,7 +249,7 @@ public class TestDataCreator implements CommandLineRunner {
         }
       }
 
-      IdeaModel existingIdea = ideaRepo.findByTitle(ideaTitle);
+      LawModel existingIdea = lawRepo.findByTitle(ideaTitle);
       if (existingIdea != null) {
         log.trace("Updating existing idea with id=" + existingIdea.getId());
         newIdea.setId(existingIdea.getId());
@@ -264,68 +258,52 @@ public class TestDataCreator implements CommandLineRunner {
       }
 
       auditorAware.setMockAuditor(createdBy);
-      IdeaModel savedIdea = ideaRepo.save(newIdea);
-      this.ideas.add(savedIdea);
+      LawModel savedIdea = lawRepo.save(newIdea);
+      this.lawModels.add(savedIdea);
     }
   }
 
   private void seedPollInElaborationPhase() {
-    log.debug("Seeding poll in elaboration phase ...");
-    this.laws = new ArrayList<>();
+    log.debug("Seeding one poll in elaboration phase ...");
 
     AreaModel area = this.areas.get(0);
     UserModel createdBy = this.users.get(0);
     auditorAware.setMockAuditor(createdBy);
 
-    //==== A poll in ELABORATION with some first alternatives proposals. Some with and some without quorum yet.
+    //==== A poll in PROPOSAL with some first alternatives proposals. Some with and some without quorum yet.
     PollModel poll = new PollModel();
     try {
       poll.setStatus(PollModel.PollStatus.ELABORATION);
       String descr = "Initial proposal for a law with quorum. " + getLoremIpsum(100, 400);
-      LawModel initialProposal = new LawModel("Initial Proposal of course with quorum", descr, area, poll, LawStatus.ELABORATION, createdBy);
-      //TODO: add supporters to initial proposal.
-      initialProposal.
+      LawModel initialProposal = new LawModel("Initial Proposal of course with quorum", descr, area, LawStatus.PROPOSAL, createdBy);
+      //add supporters to initial proposal.
+      initialProposal.addSupporters(this.users);
       poll.addProposal(initialProposal);
-      //upsertLaw(initialProposal, 30);
+      upsertLawModel(initialProposal, 30);
 
-      //===== add some alternative proposals for this initial proposal that did NOT yet reach the neccassary quorum
+      //===== add some alternative proposals
       for (int i = 0; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
         String lawTitle = "New Alternative Proposal (without quorum)" + i;
-        String lawDesc = "Alternative proposal #" + i + " for " + initialProposal.getTitle() + " that did NOT reach quorum yet\n" + getLoremIpsum(100, 400);
-        LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, poll, LawStatus.NEW_PROPOSAL, createdBy);
+        String lawDesc = "Alternative proposal #" + i + " for initial proposal (" + initialProposal.getTitle() + ")\n" + getLoremIpsum(100, 400);
+        LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, LawStatus.PROPOSAL, createdBy);
+        alternativeProposal.addSupporters(this.users);
         poll.addProposal(alternativeProposal);
-        //upsertLaw(alternativeProposal, 30-i);
-      }
-
-      //===== and also add some alternative proposals for this initial proposal that DID already reach the necessary quorum and are in the elaboration phase
-      for (int i = 0; i < NUM_ELABORATION; i++) {
-        String lawTitle = "Alternative Proposal in elaboration (with quorum) " + i;
-        String lawDesc = "Alternative proposal #" + i + " for " + initialProposal.getTitle() + " with necessary quorum\n" + getLoremIpsum(100, 400);
-        LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, poll, LawStatus.ELABORATION, createdBy);
-        alternativeProposal.setReachedQuorumAt(DoogiesUtil.daysAgo(i));
-        poll.addProposal(alternativeProposal);
-        //upsertLaw(alternativeProposal, 30-i);
+        upsertLawModel(alternativeProposal, 30-i);
       }
 
       //===== save poll. This will automatically also save all proposals
-      log.trace("saving poll in elaboration");
-      pollRepo.save(poll);
+      PollModel savedPoll = pollRepo.save(poll);
+      fakeCreateAt(savedPoll, 10);
+      log.trace("Created poll in elaboration phase: "+savedPoll);
     } catch (Exception e) {
       log.error("Cannot seed Poll: " + e);
       return;
     }
 
-    // ===== fake the createdAt date of the poll and all proposals to be in the past.
-    fakeCreateAt(poll, 10);
-    for (LawModel proposal : poll.getProposals()) {
-      fakeCreateAt(proposal, 10);
-    }
-
   }
 
   public void seedPollInVotingPhase() {
-    log.debug("Seeding poll in voting phase ...");
-    this.laws = new ArrayList<>();
+    log.debug("Seeding one poll in voting phase ...");
 
     AreaModel area = this.areas.get(0);
     UserModel createdBy = this.users.get(0);
@@ -339,17 +317,18 @@ public class TestDataCreator implements CommandLineRunner {
       for (int i = 0; i < NUM_PROPOSALS_IN_VOTING; i++) {
         String lawTitle = "Proposal in voting " + i;
         String lawDesc = "Proposal #" + i + " in voting phase\n" + getLoremIpsum(100, 400);
-        LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, poll, LawStatus.VOTING, createdBy);
-        alternativeProposal.setReachedQuorumAt(DoogiesUtil.daysAgo(i));
-        poll.addProposal(alternativeProposal);
+        LawModel proposalInVoting = new LawModel(lawTitle, lawDesc, area, LawStatus.VOTING, createdBy);
+        proposalInVoting.addSupporters(this.users);
+        proposalInVoting.setReachedQuorumAt(DoogiesUtil.daysAgo(i));  // fake date in the past
+        poll.addProposal(proposalInVoting);
       }
 
       //===== save poll. This will automatically also save all proposals
       log.trace("saving poll that is in voting phase");
       poll.setStatus(PollModel.PollStatus.VOTING);
       PollModel savedPoll = pollRepo.save(poll);
+      fakeCreateAt(savedPoll, 10);
       log.debug("savedPoll: "+savedPoll);
-      //TODO: fake createAt dates
     } catch (Exception e) {
       log.error("Cannot seed Poll: " + e);
       return;
@@ -362,13 +341,17 @@ public class TestDataCreator implements CommandLineRunner {
     AreaModel area = this.areas.get(0);
     UserModel createdBy = this.users.get(0);
     auditorAware.setMockAuditor(createdBy);
-    PollModel poll = new PollModel();
-    pollRepo.save(poll);
+
+    // These laws are not linked to a poll.      At the moment I do not need that yet...
+    //PollModel poll = new PollModel();
+    //pollRepo.save(poll);
+
     for (int i = 0; i < NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
-      LawModel realLaw = new LawModel(lawTitle, "Complete description of real law #"+i, area, poll, LawStatus.LAW, createdBy);
+      LawModel realLaw = new LawModel(lawTitle, "Complete description of real law #"+i, area, LawStatus.LAW, createdBy);
+      realLaw.addSupporters(this.users);
       realLaw.setReachedQuorumAt(DoogiesUtil.daysAgo(24));
-      upsertLaw(realLaw, 20+i);
+      upsertLawModel(realLaw, 20+i);
     }
   }
 
@@ -379,7 +362,7 @@ public class TestDataCreator implements CommandLineRunner {
    * @param ageInDays will setCreatedAt to so many days ago (measured from now)
    * @return the saved law
    */
-  private LawModel upsertLaw(LawModel lawModel, int ageInDays) {
+  private LawModel upsertLawModel(LawModel lawModel, int ageInDays) {
     LawModel existingLaw = lawRepo.findByTitle(lawModel.getTitle());  // may return null!
     if (existingLaw != null) {
       log.trace("Updating existing law with id=" + existingLaw.getId());
@@ -388,7 +371,7 @@ public class TestDataCreator implements CommandLineRunner {
       log.trace("Creating new law " + lawModel);
     }
     LawModel savedLaw = lawRepo.save(lawModel);
-    this.laws.add(savedLaw);
+    this.lawModels.add(savedLaw);
     fakeCreateAt(savedLaw, ageInDays);
     return savedLaw;
   }
@@ -427,6 +410,8 @@ public class TestDataCreator implements CommandLineRunner {
     BallotModel newBallot = new BallotModel(pollInVoting, voteOrder, "dummyVoterToken");
     ballotRepo.save(newBallot);
   }
+
+
 
 
   /** @return a dummy text that can be used eg. in descriptions */

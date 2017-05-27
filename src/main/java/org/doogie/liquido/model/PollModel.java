@@ -1,9 +1,7 @@
 package org.doogie.liquido.model;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
+import lombok.*;
+import org.doogie.liquido.services.LiquidoException;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
@@ -13,8 +11,8 @@ import java.util.List;
 
 /**
  * Data model for a poll. A poll has a list of competing proposals
- * A poll starts n days after the initial proposal reached its quorum.
- * And a poll then runs for a configurable number of days.
+ * A poll CAN be started by the creator of an idea, when this idea reaches its quorum and becomes a proposal.
+ * A poll then runs for a configurable number of days.
  */
 @Data
 @EqualsAndHashCode(of = {"id"}, callSuper = false)
@@ -59,15 +57,24 @@ public class PollModel extends BaseModel {
   }
 
   /**
-   * Adds an alternative proposal to this post and sets up the two way relationship between them.
+   * Adds an alternative proposal to this poll and sets up the two way relationship between them.
    * Alternative proposals can only be added while a poll is in its ELABORATION phase and voting has not yet started.
-   * @param alternativeProposal the alternative proposal to add. This poll will be set inside the alternativeProposal
-   * @throws Exception when poll is not in its ELABORATION pase any more and voting has already started or is even already finished.
+   * @param proposal the proposal to add. This poll will also be linked from proposal. MUST NOT BE NULL.
+   * @throws LiquidoException When passed object is not in state PROPOSAL or when poll is not in its ELABORATION phase.
    */
-  public void addProposal(LawModel alternativeProposal) throws Exception {
-    if (this.getStatus() != PollStatus.ELABORATION) throw new Exception("Cannot add proposal, because poll id="+id+" is not in ELABORATION phase");
-    this.proposals.add(alternativeProposal);
-    alternativeProposal.setPoll(this);
+  public void addProposal(@NotNull LawModel proposal) throws LiquidoException {
+    if (proposal.getStatus() != LawModel.LawStatus.PROPOSAL) throw new LiquidoException("Cannot add proposal(id="+proposal.getId()+") to poll(id="+id+", because proposal is not in state PROPOSAL.");
+    if (this.getStatus() != PollStatus.ELABORATION) throw new LiquidoException("Cannot add proposal, because poll id="+id+" is not in ELABORATION phase");
+    this.proposals.add(proposal);
+    proposal.setPoll(this);
   }
 
+  @Override
+  public String toString() {
+    return "PollModel{" +
+        "id=" + id +
+        ", numProposals=" + (proposals != null ? proposals.size() : "<NULL>") +
+        ", status=" + status +
+        '}';
+  }
 }

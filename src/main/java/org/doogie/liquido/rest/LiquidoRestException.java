@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 @ResponseStatus(HttpStatus.BAD_REQUEST)
 public class LiquidoRestException extends RuntimeException {
 
+  //TODO: make error codes an ENUM. With EN_EN descriptions.
   int error_code;
 
   public LiquidoRestException() {}

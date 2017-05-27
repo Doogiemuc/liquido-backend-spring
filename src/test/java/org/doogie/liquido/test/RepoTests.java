@@ -2,10 +2,10 @@ package org.doogie.liquido.test;
 
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
-import org.doogie.liquido.datarepos.IdeaRepo;
+import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.IdeaModel;
+import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.testdata.TestDataCreator;
@@ -47,10 +47,10 @@ public class RepoTests {
   DelegationRepo delegationRepo;
 
   @Autowired
-  AreaRepo areaRepo;
+  LawRepo lawRepo;
 
   @Autowired
-  IdeaRepo ideaRepo;
+  AreaRepo areaRepo;
 
   @Test
   public void findAllUsers() {
@@ -73,15 +73,15 @@ public class RepoTests {
   public void testCreateIdeaWithMockAuditor() {
     UserModel user1 = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
     AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-    IdeaModel newIdea = new IdeaModel("Idea from test"+System.currentTimeMillis(), "Very nice description from test", area1, user1);
+    LawModel newIdea = new LawModel("Idea from test"+System.currentTimeMillis(), "Very nice description from test", area1, LawModel.LawStatus.IDEA, user1);
 
-    //auditorAware.setMockAuditor(user1);     //not necessary anymore. Replaced by @WithUserDetails annotation.     // have to mock the currently logged in user for the @CreatedBy annotation in IdeaModel to work
-    IdeaModel insertedIdea = ideaRepo.save(newIdea);
+    //auditorAware.setMockAuditor(user1);     //not necessary anymore. Replaced by @WithUserDetails annotation.     // have to mock the currently logged in user for the @CreatedBy annotation in LawModel to work
+    LawModel insertedIdea = lawRepo.save(newIdea);
     //auditorAware.setMockAuditor(null);
     log.trace("saved Idea "+insertedIdea);
 
-    Iterable<IdeaModel> ideas = ideaRepo.findAll();
-    for(IdeaModel idea : ideas) {
+    Iterable<LawModel> ideas = lawRepo.findAll();
+    for(LawModel idea : ideas) {
       log.debug(idea.toString());
     }
   }

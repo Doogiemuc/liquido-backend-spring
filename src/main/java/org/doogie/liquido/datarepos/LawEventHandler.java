@@ -1,9 +1,9 @@
 package org.doogie.liquido.datarepos;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.model.IdeaModel;
+import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
-import org.doogie.liquido.services.IdeaUtil;
+import org.doogie.liquido.services.LawService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.core.annotation.HandleAfterLinkSave;
 import org.springframework.data.rest.core.annotation.RepositoryEventHandler;
@@ -13,16 +13,16 @@ import java.util.Set;
 
 @Slf4j
 @Component
-@RepositoryEventHandler(IdeaModel.class)
-public class IdeaEventHandler {
+@RepositoryEventHandler(LawModel.class)
+public class LawEventHandler {
 
   @Autowired
-  IdeaUtil ideaUtil;
+  LawService lawService;
 
   @HandleAfterLinkSave
-  public void handleIdeaLinkSave(IdeaModel idea, Set<UserModel> supporters) {
-    //log.debug("handleIdeaLinkSave");
-    ideaUtil.checkQuorum(idea);
+  public void handleLawLinkSave(LawModel idea, Set<UserModel> supporters) {
+    log.debug("handleLawLinkSave: supporter added: "+supporters);
+    lawService.checkQuorum(idea);
   }
 
   /*
