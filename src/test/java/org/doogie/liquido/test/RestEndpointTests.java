@@ -281,7 +281,7 @@ public class RestEndpointTests {
 
     // ===== Find a poll that is in VOTING phase
     List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.ELABORATION);
-    assertTrue("Need a poll that currently is in ELABORATION phase for this test", polls != null && polls.size() > 0);
+    assertTrue("Need a poll that currently is in PROPOSAL phase for this test", polls != null && polls.size() > 0);
 
     // I am deliberately not creating a new BallotModel(...) here that I could then   postForEntity like this:
     //   ResponseEntity<BallotModel> createdBallot = client.postForEntity("/ballot", newBallot, BallotModel.class);
@@ -294,7 +294,7 @@ public class RestEndpointTests {
     JSONObject newLawJson = new JSONObject()
       .put("title", newLawTitle)
       .put("description", "Dummy description from testPostProposalForLaw")
-      .put("status", LawModel.LawStatus.NEW_PROPOSAL)     //TODO: Actually the server should decide about the status.
+      .put("status", LawModel.LawStatus.IDEA)     //TODO: Actually the server should decide about the status.
       .put("area", areaUri)
       .put("poll", pollUri);
       // Remark: it is not necessary to send a createdBy user URI
@@ -392,7 +392,7 @@ public class RestEndpointTests {
   /**
    * Create a new idea. Then add as many supporters, so that the idea reaches its quorum.
    * A new poll will then automatically be created.
-   * Test for {@link org.doogie.liquido.services.PollService#ideaReachesQuorum(IdeaModel)}
+   * Test for {@link org.doogie.liquido.services.LawService#checkQuorum(LawModel)}
    */
   @Test
   // USER1 is logged in via client.
