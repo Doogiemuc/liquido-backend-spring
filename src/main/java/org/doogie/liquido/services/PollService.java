@@ -9,6 +9,7 @@ import org.doogie.liquido.util.LiquidoProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import javax.validation.constraints.NotNull;
 import java.util.Date;
 
 /**
@@ -54,10 +55,10 @@ public class PollService {
 
   /**
    * Start a new poll
-   * @param proposal the initial proposal
+   * @param proposal an idea that reached its quorum and became a proposal. MUST be in status proposal!
    * @throws IllegalArgumentException if passed LawModel is not in state PROPOSAL.
    */
-  public void createPoll(LawModel proposal) throws Exception {
+  public void createPoll(@NotNull LawModel proposal) throws LiquidoException {
     //===== sanity check
     if (proposal == null) throw new IllegalArgumentException("Proposal must not be null");
     if (proposal.getStatus() != LawModel.LawStatus.PROPOSAL)
@@ -70,5 +71,9 @@ public class PollService {
     pollRepo.save(poll);
   }
 
+
+
   //TODO: getCurrentResult()   sum up current votes
+
+  //TODO: votingFinished(): winning proposal becomes a law, and all others fall back to status=proposal  (then can join further polls later on)
 }

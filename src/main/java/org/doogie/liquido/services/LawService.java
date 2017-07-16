@@ -1,6 +1,8 @@
 package org.doogie.liquido.services;
 
+import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.LawEventHandler;
+import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
@@ -13,6 +15,7 @@ import java.util.Date;
 /**
  * Utility methods for a Law. These are for example used by {@link org.doogie.liquido.model.LawProjection}
  */
+@Slf4j
 @Component
 public class LawService {
 
@@ -32,10 +35,13 @@ public class LawService {
   LiquidoAuditorAware liquidoAuditorAware;
 
   @Autowired
-  LiquidoProperties props;
+  LawRepo lawRepo;
 
   @Autowired
-  PollService pollService;
+  LiquidoProperties props;
+
+  //@Autowired
+  //PollService pollService;
 
   /**
    * Check if a given idea is already supported by the currently logged in user.
@@ -46,10 +52,9 @@ public class LawService {
    *         false IF there is no user logged in
    */
   public boolean isSupportedByCurrentUser(LawModel law) {
-    //this is used in IdeaProjection.java
+    //this is used in LawProjection.java
     UserModel currentlyLoggedInUser = liquidoAuditorAware.getCurrentAuditor();
     return law.getSupporters().contains(currentlyLoggedInUser);
-
   }
 
   /**
@@ -58,10 +63,13 @@ public class LawService {
    * @param idea an idea where a supporter has been added.
    */
   public void checkQuorum(LawModel idea) {
-    if (idea.getStatus().equals(LawModel.LawStatus.IDEA) &&
+    if (idea != null &&
+        idea.getStatus().equals(LawModel.LawStatus.IDEA) &&
         idea.getNumSupporters() >= props.getInt(LiquidoProperties.KEY.LIKES_FOR_QUORUM) ) {
+      log.info("Idea (id="+idea.getId()+") '"+idea.getTitle()+"' reached its quorum with "+idea.getNumSupporters()+" supporters.");
       idea.setStatus(LawModel.LawStatus.PROPOSAL);
       idea.setReachedQuorumAt(new Date());
+      lawRepo.save(idea);
     }
   }
 }
