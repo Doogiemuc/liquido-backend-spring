@@ -10,12 +10,6 @@ import java.util.List;
 
 /**
  * POJO Entity that represents a vote that a user has casted
- * Fields:
- *  - initialLaw: reference to the original proposal for a law
- *  - voteOrder: ordered list of references to proposals for a law that this user has chosen to order like this.
- *    May include some or all of the alternative proposals (including or not including the initial proposal).
- *    Must not be null.
- *  - voterHash: anonymized reference to the voter
  */
 @Data
 @EqualsAndHashCode(of = "id", callSuper = false)

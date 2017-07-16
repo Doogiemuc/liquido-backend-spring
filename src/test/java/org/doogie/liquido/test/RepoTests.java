@@ -9,6 +9,7 @@ import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.testdata.TestDataCreator;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -69,21 +70,20 @@ public class RepoTests {
   }
 
   @Test
-  @WithUserDetails("testuser1@liquido.de")  // http://docs.spring.io/spring-security/site/docs/4.2.1.RELEASE/reference/htmlsingle/#test-method-withuserdetails
+  @WithUserDetails(TestFixtures.USER1_EMAIL)  // http://docs.spring.io/spring-security/site/docs/4.2.1.RELEASE/reference/htmlsingle/#test-method-withuserdetails
   public void testCreateIdeaWithMockAuditor() {
+    log.trace("TEST CreateIdeaWithMockAuditor");
     UserModel user1 = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
     AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-    LawModel newIdea = new LawModel("Idea from test"+System.currentTimeMillis(), "Very nice description from test", area1, LawModel.LawStatus.IDEA, user1);
+    LawModel newIdea = new LawModel("Idea from test"+System.currentTimeMillis(), "Very nice description from test", area1, user1);
 
     //auditorAware.setMockAuditor(user1);     //not necessary anymore. Replaced by @WithUserDetails annotation.     // have to mock the currently logged in user for the @CreatedBy annotation in LawModel to work
     LawModel insertedIdea = lawRepo.save(newIdea);
     //auditorAware.setMockAuditor(null);
     log.trace("saved Idea "+insertedIdea);
 
-    Iterable<LawModel> ideas = lawRepo.findAll();
-    for(LawModel idea : ideas) {
-      log.debug(idea.toString());
-    }
+    Assert.assertEquals("Expected idea to be created by "+TestFixtures.USER1_EMAIL, TestFixtures.USER1_EMAIL, insertedIdea.getCreatedBy().getEmail());
+    log.trace("TEST CreateIdeaWithMockAuditor SUCCESSFULL");
   }
 
   @Test

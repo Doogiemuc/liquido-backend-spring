@@ -23,14 +23,17 @@ import java.util.Set;
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "laws")
 public class LawModel extends BaseModel {
-  /**
-   * We must use a sequence for generating Law IDs,
+  /*
+   * DEPRECATED
+   * When a class uses a self references (as we formerly had it in initialLawId, then
+   * you must use a sequence for generating IDs,
    * because of the self reference via field "initialLawId".
    * https://vladmihalcea.com/2014/07/15/from-jpa-to-hibernates-legacy-and-enhanced-identifier-generators/
    * https://docs.jboss.org/hibernate/orm/5.0/mappingGuide/en-US/html_single/#identifiers-generators-sequence
    */
   @Id
-  @GeneratedValue(strategy=GenerationType.SEQUENCE)
+  @GeneratedValue(strategy = GenerationType.AUTO)
+  //@GeneratedValue(strategy=GenerationType.SEQUENCE)
   //@SequenceGenerator(name = "sequence", allocationSize = 10)
   public Long id;
 
@@ -42,6 +45,7 @@ public class LawModel extends BaseModel {
 
   //TODO: lawModel.tagline
   //TODO: lawModel.tags
+  //TODO: related ideas? => realations built automatically, when a proposal is added to a running poll.
 
   @NotNull
   @NonNull
@@ -103,7 +107,7 @@ public class LawModel extends BaseModel {
   /** current status of this law */
   @NotNull
   @NonNull
-  public LawStatus status;
+  public LawStatus status =  LawStatus.IDEA;
 
   @CreatedBy
   @NonNull
@@ -140,7 +144,8 @@ public class LawModel extends BaseModel {
   }
 
   public void setDescription(String description) {
-    if (LawStatus.IDEA.equals(this.getStatus()) ||
+    if (this.getStatus() == null ||
+        LawStatus.IDEA.equals(this.getStatus()) ||
         LawStatus.PROPOSAL.equals(this.getStatus())) {
       this.description = description;
     } else {

@@ -26,6 +26,9 @@ public interface LawProjection {
   boolean isInitialProposal();
   int getNumSupporters();
 
+  @Value("#{@lawService.isSupportedByCurrentUser(target)}")
+  boolean isSupportedByCurrentUser();
+
   Date getReachedQuorumAt();
   Date getCreatedAt();
   Date getUpdatedAt();
@@ -33,10 +36,10 @@ public interface LawProjection {
   /* expose the number of alternative proposals */
   @Value("#{@lawService.getNumCompetingProposals(target)}")   // Spring Expression language (SpEL) FTW
   int getNumCompetingProposals();
-
-  @Value("#{target.getPoll().getCreatedAt()}")
+/*
+  @Value("#{target.getPoll().getCreatedAt()}")   //FIXME: Poll is null for ideas
   Date getElaborationStartsAt();
-
+*/
   @Value("#{@pollService.getVotingStartsAt(target.getPoll())}")
   Date getVotingStartsAt();
 
