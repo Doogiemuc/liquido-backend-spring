@@ -240,7 +240,7 @@ public class TestDataCreator implements CommandLineRunner {
       String ideaTitle = "Idea " + i + " that suggest that we definitely need a longer title for ideas";
       String ideaDescr = getLoremIpsum(100,+ 400);
       UserModel createdBy = this.users.get(i % NUM_USERS);
-      LawModel newIdea = new LawModel(ideaTitle, ideaDescr, this.areas.get(0), LawStatus.IDEA, createdBy);
+      LawModel newIdea = new LawModel(ideaTitle, ideaDescr, this.areas.get(0), createdBy);
       // add 0 to 3 supporters != createdBy
       for (int j = 0; j < rand.nextInt(4); j++) {
         int supporterNo = rand.nextInt(NUM_USERS);
@@ -272,12 +272,15 @@ public class TestDataCreator implements CommandLineRunner {
 
     //==== A poll in PROPOSAL with some first alternatives proposals. Some with and some without quorum yet.
     PollModel poll = new PollModel();
+    pollRepo.save(poll);                     // need to save poll here for being able to call upsertLawModel
     try {
       poll.setStatus(PollModel.PollStatus.ELABORATION);
       String descr = "Initial proposal for a law with quorum. " + getLoremIpsum(100, 400);
-      LawModel initialProposal = new LawModel("Initial Proposal of course with quorum", descr, area, LawStatus.PROPOSAL, createdBy);
+      LawModel initialProposal = new LawModel("Initial Proposal of course with quorum", descr, area, createdBy);
       //add supporters to initial proposal.
       initialProposal.addSupporters(this.users);
+      initialProposal.setReachedQuorumAt(DoogiesUtil.daysAgo(10));  //TODO: is this called automatically by LawEventHandler ?
+      initialProposal.setStatus(LawStatus.PROPOSAL);
       poll.addProposal(initialProposal);
       upsertLawModel(initialProposal, 30);
 
@@ -285,8 +288,10 @@ public class TestDataCreator implements CommandLineRunner {
       for (int i = 0; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
         String lawTitle = "New Alternative Proposal (without quorum)" + i;
         String lawDesc = "Alternative proposal #" + i + " for initial proposal (" + initialProposal.getTitle() + ")\n" + getLoremIpsum(100, 400);
-        LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, LawStatus.PROPOSAL, createdBy);
+        LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, createdBy);
         alternativeProposal.addSupporters(this.users);
+        alternativeProposal.setReachedQuorumAt(DoogiesUtil.daysAgo(i));
+        alternativeProposal.setStatus(LawStatus.PROPOSAL);
         poll.addProposal(alternativeProposal);
         upsertLawModel(alternativeProposal, 30-i);
       }
@@ -297,7 +302,7 @@ public class TestDataCreator implements CommandLineRunner {
       log.trace("Created poll in elaboration phase: "+savedPoll);
     } catch (Exception e) {
       log.error("Cannot seed Poll: " + e);
-      return;
+      throw new RuntimeException("Cannot seed Pool", e);
     }
 
   }
@@ -317,10 +322,13 @@ public class TestDataCreator implements CommandLineRunner {
       for (int i = 0; i < NUM_PROPOSALS_IN_VOTING; i++) {
         String lawTitle = "Proposal in voting " + i;
         String lawDesc = "Proposal #" + i + " in voting phase\n" + getLoremIpsum(100, 400);
-        LawModel proposalInVoting = new LawModel(lawTitle, lawDesc, area, LawStatus.VOTING, createdBy);
+        LawModel proposalInVoting = new LawModel(lawTitle, lawDesc, area, createdBy);
         proposalInVoting.addSupporters(this.users);
         proposalInVoting.setReachedQuorumAt(DoogiesUtil.daysAgo(i));  // fake date in the past
+        //lawRepo.save(proposalInVoting);
+        proposalInVoting.setStatus(LawStatus.PROPOSAL); // must be set before adding proposal to poll
         poll.addProposal(proposalInVoting);
+        proposalInVoting.setStatus(LawStatus.VOTING);   // must be set after adding proposal to poll!
       }
 
       //===== save poll. This will automatically also save all proposals
@@ -328,10 +336,10 @@ public class TestDataCreator implements CommandLineRunner {
       poll.setStatus(PollModel.PollStatus.VOTING);
       PollModel savedPoll = pollRepo.save(poll);
       fakeCreateAt(savedPoll, 10);
-      log.debug("savedPoll: "+savedPoll);
+      log.debug("Created poll in voting phase: "+savedPoll);
     } catch (Exception e) {
-      log.error("Cannot seed Poll: " + e);
-      return;
+      log.error("Cannot seed Poll in voting phase: " + e);
+      throw new RuntimeException("Cannot seed Pool in vorting phase", e);
     }
   }
 
@@ -348,9 +356,10 @@ public class TestDataCreator implements CommandLineRunner {
 
     for (int i = 0; i < NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
-      LawModel realLaw = new LawModel(lawTitle, "Complete description of real law #"+i, area, LawStatus.LAW, createdBy);
+      LawModel realLaw = new LawModel(lawTitle, "Complete description of real law #"+i, area, createdBy);
       realLaw.addSupporters(this.users);
       realLaw.setReachedQuorumAt(DoogiesUtil.daysAgo(24));
+      realLaw.setStatus(LawStatus.LAW);
       upsertLawModel(realLaw, 20+i);
     }
   }

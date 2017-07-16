@@ -127,7 +127,7 @@ public class BallotRestController {
       savedBallot = ballotRepo.save(postedBallot);    // insert a new BallotModel
     }
 
-    //If this user is a proxy, then post a ballot for each delegation
+    //If this user is a proxy, then also post a ballot for each of his delegations
     for (String delegatedToken : currentUser.getVoterTokens()) {
       //TODO: check if delegee already voted for himself.  Never overwrite ballots with   ownVote == true
       BallotModel ballotForDelegee = new BallotModel(postedBallot.getPoll(), postedBallot.getVoteOrder(), delegatedToken);

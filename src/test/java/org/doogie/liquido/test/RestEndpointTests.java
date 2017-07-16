@@ -4,12 +4,20 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.ReadContext;
-import org.doogie.liquido.datarepos.*;
-import org.doogie.liquido.model.*;
+import org.doogie.liquido.datarepos.AreaRepo;
+import org.doogie.liquido.datarepos.LawRepo;
+import org.doogie.liquido.datarepos.PollRepo;
+import org.doogie.liquido.datarepos.UserRepo;
+import org.doogie.liquido.model.AreaModel;
+import org.doogie.liquido.model.LawModel;
+import org.doogie.liquido.model.PollModel;
+import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.test.testUtils.LiquidoTestErrorHandler;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
+import org.doogie.liquido.util.LiquidoProperties;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -67,7 +75,10 @@ public class RestEndpointTests {
   PollRepo pollRepo;
 
   @Autowired
-  DelegationRepo delegationRepo;
+  LiquidoProperties props;
+
+  //@Autowired
+  //DelegationRepo delegationRepo;
 
   @Autowired
   RepositoryEntityLinks entityLinks;
@@ -395,39 +406,30 @@ public class RestEndpointTests {
    * Test for {@link org.doogie.liquido.services.LawService#checkQuorum(LawModel)}
    */
   @Test
-  // USER1 is logged in via client.
-  // This Does not work: @WithUserDetails(value=TestFixtures.USER0_EMAIL, userDetailsServiceBeanName="liquidoUserDetailsService")
+  // USER1 is logged in via HTTP client.
+  // This does not work for REST tests: @WithUserDetails(value=TestFixtures.USER0_EMAIL, userDetailsServiceBeanName="liquidoUserDetailsService")
   public void testIdeaReachesQuorum() {
     log.trace("TEST ideaReachesQuorum");
+    LawModel idea = createIdea("Idea from testIdeaReachesQuorum");
 
-    //===== create a new idea
-    String ideaTitle = "Idea created from test that reaches its quorum";
-    String ideaDescr = "This idea was created from a test case";
-    String areaUri   = basePath + "/areas/" + this.areas.get(0).getId();
-
-    JSONObject ideaJson = new JSONObject()
-            .put("title", ideaTitle)
-            .put("description", ideaDescr)
-            .put("area", areaUri);
-
-    HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<>(ideaJson.toString(), headers);
-
-    ResponseEntity<String> responseEntity = client.postForEntity("/ideas", entity, String.class);
-    assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
+    log.trace("======="+idea.toString());
 
     // check that new idea has no supporters yet
-    int numSupporters = JsonPath.read(responseEntity.getBody(), "$.numSupporters");
-    assertEquals(0, numSupporters);
+    //int numSupporters = JsonPath.read(responseEntity.getBody(), "$.numSupporters");
+    assertEquals(0, idea.getNumSupporters());
 
     // check that new idea is created by currently logged in user
-    String createdByUri = JsonPath.read(responseEntity.getBody(), "$._links.createdBy.href");
-    HttpEntity<UserModel> createdByResponse = client.getForEntity(createdByUri, UserModel.class);
-    assertEquals("Idea should have been created by currently logged in user "+TestFixtures.USER1_EMAIL, TestFixtures.USER1_EMAIL, createdByResponse.getBody().getEmail());
+    //String createdByUri = JsonPath.read(responseEntity.getBody(), "$._links.createdBy.href");
+    //HttpEntity<UserModel> createdByResponse = client.getForEntity(createdByUri, UserModel.class);
+    //assertEquals("Idea should have been created by currently logged in user "+TestFixtures.USER1_EMAIL, TestFixtures.USER1_EMAIL, idea.getCreatedBy().getEmail());
 
-    //===== add Supporters so that idea reaches its quorum
-    String supportersURL = JsonPath.read(responseEntity.getBody(), "$._links.supporters.href");
+    //===== add Supporters via JSON, so that idea reaches its quorum
+    //String supportersURL = JsonPath.read(responseEntity.getBody(), "$._links.supporters.href");
+
+    int likesForQuorum = props.getInt(LiquidoProperties.KEY.LIKES_FOR_QUORUM);
+    Assert.assertTrue("Need at least "+likesForQuorum+" users to run this test", this.users.size() >= likesForQuorum);
+
+    String supportersURL = "/laws/"+idea.getId()+"/supporters";
     for (int j = 0; j < this.users.size(); j++) {
       if (!this.users.get(j).getEmail().equals(TestFixtures.USER1_EMAIL)) {   // creator is implicitly already a supporter
         String userURI = basePath + "/users/" + this.users.get(j).getId();
@@ -440,11 +442,40 @@ public class RestEndpointTests {
       }
     }
 
-    //===== now a poll should have been created
+    //===== idea should now have reached its quorum
+    //need to reload idea!
 
+    LawModel updatedIdea = client.getForObject("/laws/"+idea.getId(), LawModel.class);
+    Assert.assertEquals("Idea should have reached its quorum and be in status PROPOSAL", LawModel.LawStatus.PROPOSAL, updatedIdea.getStatus());
 
+    log.trace("TEST ideaReachesQuorum SUCCESSFULL");
   }
 
+  /**
+   * Helper to create a new idea (via REST)
+   * @param ideaTitlePrefix the title of the idea. A random number will be added,
+   *                        because title MUST be unique.
+   * @return the created idea
+   */
+  private LawModel createIdea(String ideaTitlePrefix) {
+    long now = System.currentTimeMillis() % 10000;
+    String ideaTitle = ideaTitlePrefix+" "+now;  // title must be unique!
+    String ideaDesc  = "This idea was created from a test case";
+    String areaUri   = basePath + "/areas/" + this.areas.get(0).getId();
+
+    JSONObject ideaJson = new JSONObject()
+            .put("title", ideaTitle)
+            .put("description", ideaDesc)
+            .put("area", areaUri);
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    HttpEntity<String> entity = new HttpEntity<>(ideaJson.toString(), headers);
+
+    ResponseEntity<LawModel> createdIdea = client.postForEntity("/laws", entity, LawModel.class);
+    assertEquals(HttpStatus.CREATED, createdIdea.getStatusCode());
+    return createdIdea.getBody();
+  }
 
 
   /**
@@ -609,6 +640,17 @@ public class RestEndpointTests {
     String responseJSON = client.getForObject("/globalProperties", String.class);
 
     assertNotNull(responseJSON);
+  }
+
+  /**
+   * GIVEN an idea that reached its quorum and became a proposal
+   * WHEN  author of this idea creates a poll
+   * THEN  the poll is in state ELABORATION
+   * AND   the idea is the initial proposal in this poll.
+   */
+  @Test
+  public void testCreatePoll() {
+
   }
 
 }
