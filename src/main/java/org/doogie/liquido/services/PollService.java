@@ -71,7 +71,10 @@ public class PollService {
     pollRepo.save(poll);
   }
 
-
+  public void addProposalToPoll(@NotNull LawModel proposal, @NotNull PollModel poll) throws LiquidoException {
+    poll.addProposal(proposal);
+    pollRepo.save(poll);
+  }
 
   //TODO: getCurrentResult()   sum up current votes
 

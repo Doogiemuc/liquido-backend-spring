@@ -127,7 +127,7 @@ public class TestDataCreator implements CommandLineRunner {
   }
 
   private void seedUsers() {
-    log.trace("Seeding Users ...");
+    log.trace("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
     this.users = new ArrayList<>();
 
     for (int i = 0; i < NUM_USERS; i++) {
@@ -150,6 +150,7 @@ public class TestDataCreator implements CommandLineRunner {
 
       UserModel savedUser = userRepo.save(newUser);
       this.users.add(savedUser);
+      if (i==0) auditorAware.setMockAuditor(this.users.get(0));   // prevent some warnings
     }
   }
 
@@ -288,7 +289,7 @@ public class TestDataCreator implements CommandLineRunner {
       for (int i = 0; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
         String lawTitle = "New Alternative Proposal (without quorum)" + i;
         String lawDesc = "Alternative proposal #" + i + " for initial proposal (" + initialProposal.getTitle() + ")\n" + getLoremIpsum(100, 400);
-        LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, createdBy);
+        LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, this.users.get(1));   // createdBy another user (so that user 0 also supports something
         alternativeProposal.addSupporters(this.users);
         alternativeProposal.setReachedQuorumAt(DoogiesUtil.daysAgo(i));
         alternativeProposal.setStatus(LawStatus.PROPOSAL);

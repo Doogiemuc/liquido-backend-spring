@@ -1,7 +1,5 @@
 package org.doogie.liquido.datarepos;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
@@ -32,6 +30,7 @@ public class DelegationRepoImpl implements DelegationRepoCustom {
     return this.getNumVotesInternal(area, user, 0);
   }
 
+  /* internal call with recoursion depth counter */
   private long getNumVotesInternal(AreaModel area, UserModel user, long recursionDepth) {
     if (recursionDepth >= Long.MAX_VALUE - 1000) {
       throw new RuntimeException("To many transitive delegations. There seems to be a circular delegation user: " + user);

@@ -34,7 +34,7 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
         return null;
       }
       LiquidoAuthUser authUser = (LiquidoAuthUser)authentication.getPrincipal();   // principal _IS_ a LiquidoAuthUser, because I put one in there   in LiquidoUserDetailsService.java
-      return authUser.getUserModel();
+      return authUser.getLiquidoUserModel();
 
       //BUGFIX:  Must not do this, since this will lead to an endless loop StackOverflowException
       //http://stackoverflow.com/questions/42315960/stackoverflowexception-in-spring-data-jpa-app-with-spring-security-auditoraware
