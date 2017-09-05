@@ -7,22 +7,21 @@ import org.springframework.security.core.userdetails.User;
 import java.util.Collection;
 
 /**
- * Adapter between my [@link {@link UserModel} and Spring-securitie's {@link org.springframework.security.core.userdetails.User}
- *
+ * Adapter between my Liquido {@link UserModel} and Spring-securitie's {@link org.springframework.security.core.userdetails.User}
  */
 public class LiquidoAuthUser extends User {
-  private UserModel userModel;
+  private UserModel liquidoUserModel;
 
-  public LiquidoAuthUser(String username, String password, Collection<? extends GrantedAuthority> authorities, UserModel userModel) {
+  public LiquidoAuthUser(String username, String password, Collection<? extends GrantedAuthority> authorities, UserModel liquidoUserModel) {
     super(username, password, authorities);
-    this.userModel = userModel;
+    this.liquidoUserModel = liquidoUserModel;
   }
 
-  public UserModel getUserModel() {
-    return userModel;
+  public UserModel getLiquidoUserModel() {
+    return liquidoUserModel;
   }
 
-  public void setUserModel(UserModel userModel) {
-    this.userModel = userModel;
+  public void setLiquidoUserModel(UserModel userModel) {
+    this.liquidoUserModel = userModel;
   }
 }

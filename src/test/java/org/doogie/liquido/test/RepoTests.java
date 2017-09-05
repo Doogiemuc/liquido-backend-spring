@@ -21,6 +21,8 @@ import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.util.List;
+
 import static org.doogie.liquido.test.matchers.UserMatcher.userWithEMail;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.junit.Assert.*;
@@ -126,5 +128,13 @@ public class RepoTests {
     } catch ( Exception e) {
       log.trace("TEST testSaveDuplicateArea SUCCESS: did receive expected exception: "+e);
     }
+  }
+
+  @Test
+  public void testFindSupportedProposals() {
+    UserModel supporter = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
+    List<LawModel> supportedLaws = lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.PROPOSAL, supporter);
+    assertTrue("Expected at least 2 proposals that user "+TestFixtures.USER1_EMAIL+" supports", supportedLaws.size() >= 2);
+    log.debug("User "+supporter.getEmail()+" supports "+supportedLaws.size()+" proposals");
   }
 }

@@ -7,11 +7,12 @@ import org.springframework.data.annotation.CreatedBy;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 
-@Data
+@Getter
+@Setter
 @EqualsAndHashCode(of = {"id", "title"}, callSuper = false)
-@Entity
 @NoArgsConstructor
-@RequiredArgsConstructor(suppressConstructorProperties = true)
+@RequiredArgsConstructor
+@Entity
 @Table(name = "areas")
 public class AreaModel extends BaseModel {
   @Id
