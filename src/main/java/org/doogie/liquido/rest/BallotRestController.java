@@ -84,6 +84,7 @@ public class BallotRestController {
    *
    * ERROR: "no String-argument constructor/factory method to deserialize from String value"
    * Solution: http://stackoverflow.com/questions/40986738/spring-data-rest-no-string-argument-constructor-factory-method-to-deserialize/40986739
+   *           https://jira.spring.io/browse/DATAREST-884   =>
    *
    * @param ballotResource the posted ballot as a REST resource
    * @param resourceAssembler injected PersistentEntityResourceAssembler that can build the reply

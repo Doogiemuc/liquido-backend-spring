@@ -15,11 +15,13 @@ import java.util.Set;
 /**
  * Data model: proposal for a law.
  */
-@Data
+//Lombok @Data does not work very well with spring. Need to use the individual annotations
+@Getter
+@Setter
 @EqualsAndHashCode(of = {"id", "title"}, callSuper = false)
-@Entity
 @NoArgsConstructor
-@RequiredArgsConstructor(suppressConstructorProperties = true)
+@RequiredArgsConstructor
+@Entity
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "laws")
 public class LawModel extends BaseModel {
@@ -92,7 +94,7 @@ public class LawModel extends BaseModel {
    */
   Date reachedQuorumAt;
 
-
+  /** enumeration of law status */
   public enum LawStatus {
     IDEA(0),            // An idea is a newly created proposal for a law that did not reach its quorum yet.
     PROPOSAL(1),        // When an idea reaches its quorum, then it becomes a proposal and a poll CAN be created.

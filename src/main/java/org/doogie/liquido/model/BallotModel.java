@@ -15,7 +15,7 @@ import java.util.List;
 @EqualsAndHashCode(of = "id", callSuper = false)
 @Entity
 @NoArgsConstructor
-@RequiredArgsConstructor(suppressConstructorProperties = true)   //BUGFIX: https://jira.spring.io/browse/DATAREST-884
+@RequiredArgsConstructor  //BUGFIX: https://jira.spring.io/browse/DATAREST-884
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "ballots", uniqueConstraints= {
   @UniqueConstraint(columnNames = {"POLL_ID", "voterToken"})   // a voter is only allowed to vote once per poll!

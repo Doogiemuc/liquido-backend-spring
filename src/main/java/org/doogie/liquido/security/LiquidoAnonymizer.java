@@ -44,7 +44,7 @@ public class LiquidoAnonymizer implements CommandLineRunner {
    * create a bcrypt (hash) token for this user and this poll.
    * @param votingUser the user that casts the vote
    * @param poll the poll that the vote is casted for
-   * @return a bcrypt hash token
+   * @return a bcrypt hash calculated from the userId, pollId and the user's password.
    */
   public String getBCryptVoterToken(UserModel votingUser, String userPassword, PollModel poll) {
     StringBuffer inputStr = new StringBuffer();

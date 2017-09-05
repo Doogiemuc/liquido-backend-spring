@@ -16,7 +16,7 @@ import javax.validation.constraints.NotNull;
 @Data
 @EqualsAndHashCode(of = "id", callSuper = false)
 @NoArgsConstructor
-@RequiredArgsConstructor(suppressConstructorProperties = true)  //BUGFIX:  https://jira.spring.io/browse/DATAREST-884
+@RequiredArgsConstructor  //BUGFIX:  https://jira.spring.io/browse/DATAREST-884
 //@EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "delegations", uniqueConstraints= {
   @UniqueConstraint(columnNames = {"area_id", "from_user_id"})

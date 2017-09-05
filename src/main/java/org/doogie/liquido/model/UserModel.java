@@ -18,7 +18,7 @@ import java.util.List;
 @ToString(exclude="passwordHash")   // This is extremely important! Do not exposed password in toString() !!!
 @Entity
 @NoArgsConstructor
-@RequiredArgsConstructor(suppressConstructorProperties = true)
+@RequiredArgsConstructor
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "users")
 public class UserModel extends BaseModel {
