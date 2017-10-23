@@ -1,5 +1,6 @@
 package org.doogie.liquido.testdata;
 
+import net.bytebuddy.utility.RandomString;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.security.LiquidoAuditorAware;
@@ -17,10 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.persistence.Table;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 import static org.doogie.liquido.model.LawModel.LawStatus;
 
@@ -34,6 +32,7 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * See http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/htmlsingle/#boot-features-command-line-runner
  *
  * Other possibilities for initializing a DB with Spring and Hibernate:
+ * https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#core.repository-populators
  * https://docs.spring.io/spring-boot/docs/current/reference/html/howto-database-initialization.html
  * http://www.sureshpw.com/2014/05/importing-json-with-references-into.html
  * http://www.generatedata.com/
@@ -43,9 +42,9 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
 public class TestDataCreator implements CommandLineRunner {
   private Logger log = LoggerFactory.getLogger(this.getClass());
 
-  public int NUM_USERS = 10;
+  public int NUM_USERS = 20;
   public int NUM_AREAS = 10;
-  public int NUM_IDEAS = 10;
+  public int NUM_IDEAS = 111;
 
   public int NUM_ALTERNATIVE_PROPOSALS = 2;   // proposals in poll
   public int NUM_PROPOSALS_IN_VOTING = 4;     // proposals currently in voting phase
@@ -126,6 +125,26 @@ public class TestDataCreator implements CommandLineRunner {
     }
   }
 
+  private void seedGlobalProperties() {
+    log.trace("Seeding global properties ...");
+    List<KeyValueModel> propKV = new ArrayList<>();
+    propKV.add(new KeyValueModel(LiquidoProperties.KEY.LIKES_FOR_QUORUM.toString(), "5"));   // should be less than NUM_USERS
+    propKV.add(new KeyValueModel(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL.toString(), "5"));
+    propKV.add(new KeyValueModel(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS.toString(), "7"));
+    propKV.add(new KeyValueModel(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE.toString(), "7"));
+    keyValueRepo.save(propKV);
+  }
+
+
+  private String getGlobalProperty(LiquidoProperties.KEY key) {
+    KeyValueModel kv = keyValueRepo.findByKey(key.toString());
+    return kv.getValue();
+  }
+
+  private Integer getGlobalPropertyAsInt(LiquidoProperties.KEY key) {
+    return Integer.valueOf(getGlobalProperty(key));
+  }
+
   private void seedUsers() {
     log.trace("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
     this.users = new ArrayList<>();
@@ -152,16 +171,6 @@ public class TestDataCreator implements CommandLineRunner {
       this.users.add(savedUser);
       if (i==0) auditorAware.setMockAuditor(this.users.get(0));   // prevent some warnings
     }
-  }
-
-  public void seedGlobalProperties() {
-    log.trace("Seeding global properties ...");
-    List<KeyValueModel> propKV = new ArrayList<>();
-    propKV.add(new KeyValueModel(LiquidoProperties.KEY.LIKES_FOR_QUORUM.toString(), "3"));   // should be less than NUM_USERS
-    propKV.add(new KeyValueModel(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL.toString(), "5"));
-    propKV.add(new KeyValueModel(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS.toString(), "7"));
-    propKV.add(new KeyValueModel(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE.toString(), "7"));
-    keyValueRepo.save(propKV);
   }
 
   /**
@@ -208,7 +217,6 @@ public class TestDataCreator implements CommandLineRunner {
     log.info("existing:*********** "+existingDelegation);
     */
 
-
     List<DelegationModel> delegations = new ArrayList();
     // User0  is proxy  for users 1,2,3    in "Area 1"
     // and  user 0  then also delegated to user 4  (who now has five votes including his own)
@@ -239,16 +247,20 @@ public class TestDataCreator implements CommandLineRunner {
     log.debug("Seeding Ideas ...");
     for (int i = 0; i < NUM_IDEAS; i++) {
       String ideaTitle = "Idea " + i + " that suggest that we definitely need a longer title for ideas";
-      String ideaDescr = getLoremIpsum(100,+ 400);
+      StringBuffer ideaDescr = new StringBuffer();
+      ideaDescr.append(RandomString.make(8));    // prepend with some random chars to test sorting
+      ideaDescr.append(" ");
+      ideaDescr.append(getLoremIpsum(0,400));
+
       UserModel createdBy = this.users.get(i % NUM_USERS);
-      LawModel newIdea = new LawModel(ideaTitle, ideaDescr, this.areas.get(0), createdBy);
-      // add 0 to 3 supporters != createdBy
-      for (int j = 0; j < rand.nextInt(4); j++) {
-        int supporterNo = rand.nextInt(NUM_USERS);
-        if (supporterNo != (i % NUM_USERS)) {           // creator is implicitly already a supporter
-          newIdea.addSupporter(users.get(supporterNo));
-        }
+      LawModel newIdea = new LawModel(ideaTitle, ideaDescr.toString(), this.areas.get(0), createdBy);
+      if (i == NUM_IDEAS - 1) {
+        newIdea.setTitle("Idea "+i+" that reached its quorum");
+        addSupportersToIdea(newIdea, getGlobalPropertyAsInt(LiquidoProperties.KEY.LIKES_FOR_QUORUM));
+      } else {
+        addSupportersToIdea(newIdea, rand.nextInt(4));   // add 0-4 supporters
       }
+
 
       LawModel existingIdea = lawRepo.findByTitle(ideaTitle);
       if (existingIdea != null) {
@@ -261,6 +273,27 @@ public class TestDataCreator implements CommandLineRunner {
       auditorAware.setMockAuditor(createdBy);
       LawModel savedIdea = lawRepo.save(newIdea);
       this.lawModels.add(savedIdea);
+    }
+  }
+
+
+  /**
+   * Add num supporters to idea.
+   * This is actually a quite interesting algorithm, because the initial creator of the idea must not be added as supporter
+   * and supporters must not be added twice.
+   * @param idea the idea to add to
+   * @param num number of new supporters to add.
+   */
+  private void addSupportersToIdea(LawModel idea, int num) {
+    if (num >= users.size()-1) throw new RuntimeException("Cannot at "+num+" supporters to idea. There are not enough users.");
+    // https://stackoverflow.com/questions/8378752/pick-multiple-random-elements-from-a-list-in-java
+    LinkedList<UserModel> otherUsers = new LinkedList<>();
+    for (UserModel user: this.users) {
+      if (!user.equals(idea.getCreatedBy()))   otherUsers.add(user);
+    }
+    Collections.shuffle(otherUsers);
+    for (UserModel supporter: otherUsers.subList(0, num)) {
+      idea.addSupporter(supporter);
     }
   }
 
@@ -422,16 +455,15 @@ public class TestDataCreator implements CommandLineRunner {
   }
 
 
-
+  private static final String loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, nam urna. Vitae aenean velit, voluptate velit rutrum. Elementum integer rhoncus rutrum morbi aliquam metus, morbi nulla, nec est phasellus dolor eros in libero. Volutpat dui feugiat, non magna, parturient dignissim lacus ipsum in adipiscing ut. Et quis adipiscing perferendis et, id consequat ac, dictum dui fermentum ornare rhoncus lobortis amet. Eveniet nulla sollicitudin, dolore nullam massa tortor ullamcorper mauris. Lectus ipsum lacus.\n" +
+      "Vivamus placerat a sodales est, vestibulum nec cursus eros fermentum. Felis orci nunc quis suspendisse dignissim justo, sed proin metus, nunc elit ac aliquam. Sed tellus ante ipsum erat platea nulla, enim bibendum gravida condimentum, imperdiet in vitae faucibus ultrices, aenean fringilla at. Rhoncus et sint volutpat, bibendum neque arcu, posuere viverra in, imperdiet duis. Eget erat condimentum congue ipsam. Tortor nostra, adipiscing facilisis donec elit pellentesque natoque integer. Ipsum id. Aenean suspendisse et eros hymenaeos in auctor, porttitor amet id pellentesque tempor, praesent aliquam rhoncus convallis vel, tempor fusce wisi enim aliquam ut nisl, nullam dictum etiam. Nisi accumsan augue sapiente dui, pulvinar cras sapien mus quam nonummy vivamus, in vitae, sociis pede, convallis mollis id mauris. Vestibulum ac quis scelerisque magnis pede in, duis ullamcorper a ipsum ante ornare.\n" +
+      "Quam amet. Risus lorem nibh consequat volutpat. Bibendum lorem, mauris sed quisque. Pellentesque augue eros nibh, iaculis maecenas facilisis amet. Nam laoreet elit litora justo, morbi in vitae nisl nulla vestibulum maecenas. Scelerisque lacinia id eget pede nunc in, id a nullam nunc velit mauris class. Duis dui ullamcorper vestibulum, turpis mi eu, arcu pellentesque sit. Arcu nibh elit. Vitae magna magna auctor, class pariatur, tortor eget amet mi pede accumsan, ut quam ut ante nibh vivamus quisque. Magna praesent tortor praesent.";
 
   /** @return a dummy text that can be used eg. in descriptions */
   public String getLoremIpsum(int minLength, int maxLength) {
-    String loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, nam urna. Vitae aenean velit, voluptate velit rutrum. Elementum integer rhoncus rutrum morbi aliquam metus, morbi nulla, nec est phasellus dolor eros in libero. Volutpat dui feugiat, non magna, parturient dignissim lacus ipsum in adipiscing ut. Et quis adipiscing perferendis et, id consequat ac, dictum dui fermentum ornare rhoncus lobortis amet. Eveniet nulla sollicitudin, dolore nullam massa tortor ullamcorper mauris. Lectus ipsum lacus.\n" +
-      "Vivamus placerat a sodales est, vestibulum nec cursus eros fermentum. Felis orci nunc quis suspendisse dignissim justo, sed proin metus, nunc elit ac aliquam. Sed tellus ante ipsum erat platea nulla, enim bibendum gravida condimentum, imperdiet in vitae faucibus ultrices, aenean fringilla at. Rhoncus et sint volutpat, bibendum neque arcu, posuere viverra in, imperdiet duis. Eget erat condimentum congue ipsam. Tortor nostra, adipiscing facilisis donec elit pellentesque natoque integer. Ipsum id. Aenean suspendisse et eros hymenaeos in auctor, porttitor amet id pellentesque tempor, praesent aliquam rhoncus convallis vel, tempor fusce wisi enim aliquam ut nisl, nullam dictum etiam. Nisi accumsan augue sapiente dui, pulvinar cras sapien mus quam nonummy vivamus, in vitae, sociis pede, convallis mollis id mauris. Vestibulum ac quis scelerisque magnis pede in, duis ullamcorper a ipsum ante ornare.\n" +
-      "Quam amet. Risus lorem nibh consequat volutpat. Bibendum lorem, mauris sed quisque. Pellentesque augue eros nibh, iaculis maecenas facilisis amet. Nam laoreet elit litora justo, morbi in vitae nisl nulla vestibulum maecenas. Scelerisque lacinia id eget pede nunc in, id a nullam nunc velit mauris class. Duis dui ullamcorper vestibulum, turpis mi eu, arcu pellentesque sit. Arcu nibh elit. Vitae magna magna auctor, class pariatur, tortor eget amet mi pede accumsan, ut quam ut ante nibh vivamus quisque. Magna praesent tortor praesent.";
-    int length = minLength + rand.nextInt(maxLength - minLength);
-    if (length >= loremIpsum.length()) length = loremIpsum.length()-1;
-    return loremIpsum.substring(0, length);
+    int endIndex = minLength + rand.nextInt(maxLength - minLength);
+    if (endIndex >= loremIpsum.length()) endIndex = loremIpsum.length()-1;
+    return loremIpsum.substring(0, endIndex);
   }
 
 

@@ -15,7 +15,7 @@ import java.util.List;
  */
 @Data
 @EqualsAndHashCode(of = {"id", "email"}, callSuper = false)
-@ToString(exclude="passwordHash")   // This is extremely important! Do not exposed password in toString() !!!
+@ToString(of="id, email, profile")   // This is extremely important! Do not exposed password in toString() !!!
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor

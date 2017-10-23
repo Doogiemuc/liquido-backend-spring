@@ -19,6 +19,12 @@ public class LawEventHandler {
   @Autowired
   LawService lawService;
 
+  /**
+   * This is called when a supporter is added from an idea.
+   * Then we'll check if the quorum has been reached.
+   * @param idea a supported has been added to this idea
+   * @param supporters the new set of supporters
+   */
   @HandleAfterLinkSave
   public void handleLawLinkSave(LawModel idea, Set<UserModel> supporters) {
     log.debug("handleLawLinkSave: supporter added: "+supporters);
