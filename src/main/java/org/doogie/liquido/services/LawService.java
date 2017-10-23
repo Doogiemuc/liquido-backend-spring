@@ -28,7 +28,7 @@ public class LawService {
    */
   public long getNumCompetingProposals(LawModel law) {
     if (law == null || law.getPoll() == null) return 0;
-    return law.getPoll().getNumCompetingProposals();               //this is used in LawProjection.java
+    return law.getPoll().getNumCompetingProposals();
   }
 
   @Autowired
@@ -46,7 +46,7 @@ public class LawService {
   /**
    * Check if a given idea is already supported by the currently logged in user.
    * Remark: Of course one could say that an idea is implicitly supported by its creator. But that is not counted in the list of supporters,
-   * because an idea needs "external" supporters, to become a suggestion for a law.
+   * because an idea needs "external" supporters, to become a proposal for a law.
    * @param law a LawModel
    * @return true  IF this idea is supported by the currently logged in user
    *         false IF there is no user logged in
@@ -71,6 +71,7 @@ public class LawService {
       idea.setReachedQuorumAt(new Date());
       lawRepo.save(idea);
     }
+    //TODO: What happens with a law when a supporter gets removed?
   }
 }
 

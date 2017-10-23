@@ -32,7 +32,7 @@ Keep in mind that in Liquid Democracy everyone in the delegation chain may alway
 
 Adapted from process used in the software aula.de by Marina Weisband
 
-![](./Liquido FLowchart.png)
+![](./Liquido Flowchart.png)
 
  0. Setup: Initially some **areas of disussion** are created, e.g. topics, categories or departments.
  1. Everyone can **add an idea** no matter how unripe the idea might
