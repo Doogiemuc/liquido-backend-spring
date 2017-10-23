@@ -7,9 +7,11 @@ import org.springframework.data.annotation.CreatedBy;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 
+// Using all three lombok annotations Getter,Setter and EqualsAndHashCode does not exactly(!) seem to be the same as the all-in-one @Data annotation
 @Getter
 @Setter
 @EqualsAndHashCode(of = {"id", "title"}, callSuper = false)
+@ToString
 @NoArgsConstructor
 @RequiredArgsConstructor
 @Entity

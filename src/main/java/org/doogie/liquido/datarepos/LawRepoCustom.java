@@ -5,6 +5,7 @@ import org.doogie.liquido.model.UserModel;
 
 import java.util.List;
 
+//TODO: not yet used
 /**
  * Custom query and search methods for laws.
  */

@@ -12,9 +12,9 @@ spring.data.rest.base-path=/liquido/v2
 # Port of running backend server  (default: 8080)
 server.port=8080
 
-# This will output SQL statements
-# debug=true
-# spring.jpa.show-sql=true
+# This will output the SQL statements that spring magically creates from your JPA queries.
+#debug=true
+#spring.jpa.show-sql=true
 
 
 ####################################
