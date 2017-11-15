@@ -4,6 +4,7 @@ import org.doogie.liquido.model.PollModel;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
+import org.springframework.data.rest.core.annotation.RestResource;
 
 import java.util.List;
 
@@ -23,4 +24,13 @@ public interface PollRepo extends CrudRepository<PollModel, Long> {
   @Query("select l from LawModel l where l.initialLaw = :#{#proposal.initialLaw} order by l.createdAt")   //see https://spring.io/blog/2014/07/15/spel-support-in-spring-data-jpa-query-definitions
   List<LawModel> findCompeting(@Param("proposal") LawModel proposal);
   */
+
+  //----- polls must be created through PollService
+
+  @RestResource(exported = false)
+  PollModel save(PollModel pollModel);
+
+  @RestResource(exported = false)
+  Iterable<PollModel> save(Iterable pollModels);
+
 }

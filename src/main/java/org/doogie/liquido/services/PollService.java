@@ -14,12 +14,12 @@ import java.util.Date;
 
 /**
  * This spring component implements the business logic for {@link org.doogie.liquido.model.PollModel}
+ * I am trying to keep the Models as dumb as possible.
+ * All business rules and security checks are implemented here.
  */
 @Slf4j
 @Component
 public class PollService {
-  //Implementation note: Actually these are just some getters for PollModel. But I do not want PollModel
-  // to depend on LiquidoProperties. So I refactored these getters into their own Service class.
 
   @Autowired
   LiquidoProperties props;
@@ -27,31 +27,6 @@ public class PollService {
   @Autowired
   PollRepo pollRepo;
 
-  /**
-   * The voting phase of a poll starts n days after the initial proposal has reached its quorum.
-   * The value of n is one of the {@link LiquidoProperties} in the DB.
-   * @param poll a PollModel
-   * @return The date when voting starts for this proposal or
-   *         <b>null</b> if you pass in null or the poll's initial proposal did not yet reach its quorum.
-   */
-  public Date getVotingStartsAt(PollModel poll) {
-    if (poll == null || poll.getInitialProposal() == null || poll.getInitialProposal().getReachedQuorumAt() == null) return null;
-    int daysUntilVotingStarts = props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS);
-    return DoogiesUtil.addDays(poll.getInitialProposal().getReachedQuorumAt(), daysUntilVotingStarts);
-  }
-
-  /**
-   * The duration of the voting phase is configured via @{@link LiquidoProperties}
-   * @param poll a PollModel
-   * @return the date when the voting phase of this poll ends or
-   *         <b>null</b> when you pass in null
-   */
-  public Date getVotingEndsAt(PollModel poll) {
-    Date votingStartsAt = getVotingStartsAt(poll);
-    if (votingStartsAt == null) return null;
-    int durationOfVotingPhase = props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE);
-    return DoogiesUtil.addDays(votingStartsAt, durationOfVotingPhase);
-  }
 
   /**
    * Start a new poll
@@ -62,7 +37,7 @@ public class PollService {
     //===== sanity check
     if (proposal == null) throw new IllegalArgumentException("Proposal must not be null");
     if (proposal.getStatus() != LawModel.LawStatus.PROPOSAL)
-      throw new IllegalArgumentException("Need proposal with quorum for creating a poll!");
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Need proposal with quorum for creating a poll!");
 
     //===== create new Poll with initial proposal
     log.debug("Will create new poll. InitialProposal (id={}): {}", proposal.getId(), proposal.getTitle());
@@ -71,12 +46,35 @@ public class PollService {
     pollRepo.save(poll);
   }
 
+  /**
+   * Add a proposals (ie. an ideas that reached its quorum) to an existing poll and save the poll.
+   * @param proposal a proposal (in status PROPOSAL)
+   * @param poll a poll in status ELABORATION
+   * @throws LiquidoException if any status is wrong
+   */
   public void addProposalToPoll(@NotNull LawModel proposal, @NotNull PollModel poll) throws LiquidoException {
     poll.addProposal(proposal);
     pollRepo.save(poll);
   }
 
+  /**
+   * Start the voting phase of the given poll.
+   * Poll must contain at least two proposals
+   * @param poll
+   */
+  public void startVotingPhase(@NotNull PollModel poll) throws LiquidoException {
+    if (poll.getStatus() != PollModel.PollStatus.ELABORATION)
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Poll must be in status ELABORATION");
+    if (poll.getProposals().size() < 2)
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Poll must have at least two alternative proposals");
+    for (LawModel proposal : poll.getProposals()) {
+      proposal.setStatus(LawModel.LawStatus.VOTING);
+    }
+    poll.setStatus(PollModel.PollStatus.VOTING);
+    poll.setVotingStartedAt(new Date());
+  }
+
   //TODO: getCurrentResult()   sum up current votes
 
-  //TODO: votingFinished(): winning proposal becomes a law, and all others fall back to status=proposal  (then can join further polls later on)
+  //TODO: endVotingPhase(): winning proposal becomes a law, and all others fall back to status=proposal  (then can join further polls later on)
 }
