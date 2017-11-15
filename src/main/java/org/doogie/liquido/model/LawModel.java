@@ -69,7 +69,7 @@ public class LawModel extends BaseModel {
    * Can be NULL, when this is still an idea!
    */
   @ManyToOne(optional = true)
-  public PollModel poll;
+  public PollModel poll = null;
 
   /*   DEPRECATED
    * Reference to initial proposal. The initial proposal references itself.
@@ -119,10 +119,11 @@ public class LawModel extends BaseModel {
 
   /**
    * @return true when this is the initial proposal of the poll
-   */
+
   public boolean isInitialProposal() {
     return (getPoll() != null) && this.equals(getPoll().getInitialProposal());
   }
+  */
 
   /**
    * Call this when a user 'likes' a proposal
