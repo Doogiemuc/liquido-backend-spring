@@ -10,6 +10,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -46,13 +47,18 @@ public class PollModel extends BaseModel {
   /** initially a poll is in its elaboration phase, where further proposals can be added */
   PollStatus status = PollStatus.ELABORATION;
 
+  Date votingStartedAt;
+  Date votingEndedAt;
+
   public Long getId() {
     return this.id;
   }
 
+  /*
   public LawModel getInitialProposal() {
     return proposals.get(0);
   }
+  */
 
   public int getNumCompetingProposals() {
     if (proposals == null) return 0;
@@ -66,8 +72,10 @@ public class PollModel extends BaseModel {
    * @throws LiquidoException When passed object is not in state PROPOSAL or when poll is not in its ELABORATION phase.
    */
   public void addProposal(@NotNull LawModel proposal) throws LiquidoException {
-    if (proposal.getStatus() != LawModel.LawStatus.PROPOSAL) throw new LiquidoException("Cannot add proposal(id="+proposal.getId()+") to poll(id="+id+", because proposal is not in state PROPOSAL.");
-    if (this.getStatus() != PollStatus.ELABORATION) throw new LiquidoException("Cannot add proposal, because poll id="+id+" is not in ELABORATION phase");
+    if (proposal.getStatus() != LawModel.LawStatus.PROPOSAL)
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot add proposal(id="+proposal.getId()+") to poll(id="+id+", because proposal is not in state PROPOSAL.");
+    if (this.getStatus() != PollStatus.ELABORATION)
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot add proposal, because poll id="+id+" is not in ELABORATION phase");
     this.proposals.add(proposal);
     proposal.setPoll(this);
   }

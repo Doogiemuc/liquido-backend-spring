@@ -2,10 +2,7 @@ package org.doogie.liquido.rest;
 
 import org.doogie.liquido.datarepos.BallotRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
-import org.doogie.liquido.model.BallotModel;
-import org.doogie.liquido.model.LawModel;
-import org.doogie.liquido.model.PollModel;
-import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.model.*;
 import org.doogie.liquido.security.LiquidoAnonymizer;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.slf4j.Logger;
@@ -107,7 +104,8 @@ public class BallotRestController {
     BallotModel postedBallot = ballotResource.getContent();
     if (postedBallot.getPoll() == null) throw new LiquidoRestException("ERROR: Need URI of poll!");
     if (postedBallot.getVoteOrder() == null || postedBallot.getVoteOrder().size() == 0) throw new LiquidoRestException("ERROR: voteOrder must not be empty!");
-    long numVotes = delegationRepo.getNumVotes(postedBallot.getPoll().getInitialProposal().getArea(), currentUser);
+    AreaModel area = postedBallot.getPoll().getProposals().get(0).getArea();
+    long numVotes = delegationRepo.getNumVotes(area, currentUser);
     if (numVotes != currentUser.getVoterTokens().size()+1)
       throw new LiquidoRestException("ERROR: Inconsistency detected: number of voter tokens does not match number of delegations. User '"+currentUser.getEmail()+"' (id="+currentUser.getId()+")");
 
@@ -153,11 +151,13 @@ public class BallotRestController {
       throw new LiquidoRestException("ERROR: Cannot post ballot: Invalid voterToken: '"+newBallot.getVoterToken()+"'. Must be at least 5 chars!");
     }
 
-    // check that poll is actually in voting phase
+    // check that poll is actually in voting phase and has at least two alternative proposals
     PollModel poll = newBallot.getPoll();
     if (poll == null || !PollModel.PollStatus.VOTING.equals(poll.getStatus())) {
       throw new LiquidoRestException("ERROR: Cannot post ballot: Poll must be in voting phase.");
     }
+    if (poll.getProposals().size() < 2)
+      throw new LiquidoRestException("ERROR: Cannot post ballot: Poll must have at least two alternative proposals.");
 
     // check that voter Order is not empty
     if (newBallot.getVoteOrder() == null || newBallot.getVoteOrder().size() == 0) {
@@ -177,7 +177,7 @@ public class BallotRestController {
     // check that all proposals you wanna vote for are also in voting phase
     for(LawModel proposal : newBallot.getVoteOrder()) {
       if (!LawModel.LawStatus.VOTING.equals(proposal.getStatus())) {
-        throw new LiquidoRestException(("ERROR: Cannot pst ballot: proposals must be in voting phase."));
+        throw new LiquidoRestException(("ERROR: Cannot post ballot: proposals must be in voting phase."));
       }
     }
   }

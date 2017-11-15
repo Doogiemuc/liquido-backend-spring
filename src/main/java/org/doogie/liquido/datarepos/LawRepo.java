@@ -17,6 +17,9 @@ import java.util.List;
 
 // https://docs.spring.io/spring-data/rest/docs/current/reference/html/
 
+//TODO:   implement queries with offset+count param: https://gist.github.com/tcollins/0ebd1dfa78028ecdef0b
+
+
 /**
  * This Spring-data repository is a database abstraction layer for "laws".
  */
@@ -59,7 +62,6 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>  // 
       ")")
   Page<LawModel> fulltextSearch(@Param("s") String searchterm, @Param("status") LawModel.LawStatus status, Pageable p);
 
-
   //Or the spring data way, but this cannot search in multiple fields
   //Page<LawModel> findByTitleContainingIgnoreCase(@Param("s") String searchterm, Pageable p);
 
@@ -77,6 +79,15 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>  // 
   //List<LawModel> findByReachedQuorumAtGreaterThanEqual(@DateTimeFormat(pattern = "yyyy-MM-dd") @Param("since") Date since);
 
   /**
+   * Find ideas or proposals that were created by a given user
+   * @param status idea, proposal or law
+   * @param user a user that created them
+   * @return list of LawModels that were created by this user
+   */
+  @RestResource(path = "findCreatedBy")
+  List<LawModel> findDistinctByStatusAndCreatedBy(@Param("status") LawModel.LawStatus status, @Param("user") UserModel user);
+
+  /**
    * Find ideas, proposals or laws that are supported by a given user.
    * @param status  pass as number
    * @param user the supporter
@@ -87,14 +98,4 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>  // 
   List<LawModel> findDistinctByStatusAndSupportersContains(@Param("status") LawModel.LawStatus status, @Param("user") UserModel user);
 
 
-
-  /*  @Deprecated
-   * Find competing proposals
-   * @param proposal any proposal (not necessarily the iniital one)
-   * @return the list of alternative/competing proposals
-   *
-  @Query("select l from LawModel l where l.initialLaw = :#{#proposal.initialLaw} order by l.createdAt")   //see https://spring.io/blog/2014/07/15/spel-support-in-spring-data-jpa-query-definitions
-  List<LawModel> findCompeting(@Param("proposal") LawModel proposal);
-
-  */
 }
