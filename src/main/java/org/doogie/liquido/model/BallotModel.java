@@ -31,7 +31,13 @@ public class BallotModel extends BaseModel {
   @ManyToOne
   public PollModel poll;
 
-  /** preferred order of proposals of this specific voter */
+  //TODO: private boolean ownVote = true;
+
+  /**
+   * One vote puts some proposals of this poll into his personally preferred order.
+   * One voter may put some or all proposals of the poll into his (ordered) ballot. But of course he may only vote at maximum once for every proposal.
+   * And one proposal may be voted for by several voters => ManyToMany relationship
+   */
   @NonNull
   @NotNull
   @ManyToMany   //(cascade = CascadeType.MERGE, orphanRemoval = false)

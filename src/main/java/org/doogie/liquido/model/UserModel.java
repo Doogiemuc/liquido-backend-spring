@@ -44,7 +44,7 @@ public class UserModel extends BaseModel {
   public UserProfileModel profile;
 
   /** all the delegees that this proxy may vote for */
-  @ElementCollection(fetch = FetchType.EAGER)  //BUGFIX: needed to prevant LazyInitializationException   http://stackoverflow.com/questions/22821695/lazyinitializationexception-failed-to-lazily-initialize-a-collection-of-roles
+  @ElementCollection(fetch = FetchType.EAGER)  //BUGFIX: needed to prevent LazyInitializationException   http://stackoverflow.com/questions/22821695/lazyinitializationexception-failed-to-lazily-initialize-a-collection-of-roles
   @CollectionTable(name = "USERS_VOTER_TOKENS")
   @JsonIgnore  // do not expose externally
   @RestResource(exported = false)

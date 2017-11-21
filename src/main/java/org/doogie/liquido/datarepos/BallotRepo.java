@@ -3,18 +3,17 @@ package org.doogie.liquido.datarepos;
 import org.doogie.liquido.model.BallotModel;
 import org.doogie.liquido.model.PollModel;
 import org.springframework.data.repository.CrudRepository;
-import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.data.rest.core.annotation.RestResource;
 
 /**
  * Database abstraction for "ballots".
  *
- * All writing methods are not exposed as rest endpoints!
+ * Ballots are not exposed as RepositoryRestResource at all.
  * Posting a ballot (ie. cast a vote) is handled in our custom {@link org.doogie.liquido.rest.BallotRestController}
  */
-@RepositoryRestResource(collectionResourceRel = "ballots", path = "ballots", itemResourceRel = "ballot")
+//@RepositoryRestResource(collectionResourceRel = "ballots", path = "ballots", itemResourceRel = "ballot")
 public interface BallotRepo extends CrudRepository<BallotModel, Long> {
-  //TODO: do not expose Ballots as rest resource at all. Clients must use /postBallot in BallotRestController instead
+  //We do not expose Ballots as rest resource at all. Clients must use /postBallot in BallotRestController instead
 
   @Override
   @RestResource(exported = false)
