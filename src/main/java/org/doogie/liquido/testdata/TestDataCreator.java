@@ -45,6 +45,7 @@ public class TestDataCreator implements CommandLineRunner {
   public int NUM_USERS = 20;
   public int NUM_AREAS = 10;
   public int NUM_IDEAS = 111;
+  public int NUM_PROPOSALS = 10;
 
   public int NUM_ALTERNATIVE_PROPOSALS = 2;   // proposals in poll
   public int NUM_PROPOSALS_IN_VOTING = 4;     // proposals currently in voting phase
@@ -117,6 +118,7 @@ public class TestDataCreator implements CommandLineRunner {
       seedAreas();
       seedDelegations();
       seedIdeas();
+      seedProposals();
       seedPollInElaborationPhase();
       seedPollInVotingPhase();
       seedLaws();
@@ -254,13 +256,7 @@ public class TestDataCreator implements CommandLineRunner {
 
       UserModel createdBy = this.users.get(i % NUM_USERS);
       LawModel newIdea = new LawModel(ideaTitle, ideaDescr.toString(), this.areas.get(0), createdBy);
-      if (i == NUM_IDEAS - 1) {
-        newIdea.setTitle("Idea "+i+" that reached its quorum");
-        addSupportersToIdea(newIdea, getGlobalPropertyAsInt(LiquidoProperties.KEY.LIKES_FOR_QUORUM));
-      } else {
-        addSupportersToIdea(newIdea, rand.nextInt(4));   // add 0-4 supporters
-      }
-
+      addSupportersToIdea(newIdea, rand.nextInt(4));   // add 0-4 supporters
 
       LawModel existingIdea = lawRepo.findByTitle(ideaTitle);
       if (existingIdea != null) {
@@ -269,16 +265,38 @@ public class TestDataCreator implements CommandLineRunner {
       } else {
         log.trace("Creating new idea " + newIdea);
       }
-
       auditorAware.setMockAuditor(createdBy);
       LawModel savedIdea = lawRepo.save(newIdea);
       this.lawModels.add(savedIdea);
     }
   }
 
+  /** seed polls, ie. ideas that have already reached their quorum */
+  private void seedProposals() {
+    log.debug("Seeding Proposals ...");
+
+    for (int i = 0; i < NUM_PROPOSALS; i++) {
+      String ideaTitle = "Proposal " + i + " that reached its quorum";
+      StringBuffer proposalDescr = new StringBuffer();
+      proposalDescr.append(RandomString.make(8));    // prepend with some random chars to test sorting
+      proposalDescr.append(" ");
+      proposalDescr.append(getLoremIpsum(0,400));
+
+      UserModel createdBy = this.users.get(i % NUM_USERS);
+      LawModel proposal = new LawModel(ideaTitle, proposalDescr.toString(), this.areas.get(0), createdBy);
+      addSupportersToIdea(proposal, getGlobalPropertyAsInt(LiquidoProperties.KEY.LIKES_FOR_QUORUM));
+      proposal.setStatus(LawStatus.PROPOSAL);
+      auditorAware.setMockAuditor(createdBy);
+      LawModel savedProposal = lawRepo.save(proposal);
+      this.lawModels.add(savedProposal);
+    }
+  }
+
+
+
 
   /**
-   * Add num supporters to idea.
+   * Add num supporters to idea/proposal.   This only adds the references. It does not save/persist anything.
    * This is actually a quite interesting algorithm, because the initial creator of the idea must not be added as supporter
    * and supporters must not be added twice.
    * @param idea the idea to add to
@@ -304,30 +322,22 @@ public class TestDataCreator implements CommandLineRunner {
     UserModel createdBy = this.users.get(0);
     auditorAware.setMockAuditor(createdBy);
 
-    //==== A poll in PROPOSAL with some first alternatives proposals. Some with and some without quorum yet.
+    //==== A poll in status ELABORATION with some first alternatives proposals. Some with and some without quorum yet.
     PollModel poll = new PollModel();
     pollRepo.save(poll);                     // need to save poll here for being able to call upsertLawModel
     try {
       poll.setStatus(PollModel.PollStatus.ELABORATION);
-      String descr = "Initial proposal for a law with quorum. " + getLoremIpsum(100, 400);
-      LawModel initialProposal = new LawModel("Initial Proposal of course with quorum", descr, area, createdBy);
-      //add supporters to initial proposal.
-      initialProposal.addSupporters(this.users);
-      initialProposal.setReachedQuorumAt(DoogiesUtil.daysAgo(10));  //TODO: is this called automatically by LawEventHandler ?
-      initialProposal.setStatus(LawStatus.PROPOSAL);
-      poll.addProposal(initialProposal);
-      upsertLawModel(initialProposal, 30);
 
-      //===== add some alternative proposals
+      //===== add proposals
       for (int i = 0; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
-        String lawTitle = "New Alternative Proposal (without quorum)" + i;
-        String lawDesc = "Alternative proposal #" + i + " for initial proposal (" + initialProposal.getTitle() + ")\n" + getLoremIpsum(100, 400);
-        LawModel alternativeProposal = new LawModel(lawTitle, lawDesc, area, this.users.get(1));   // createdBy another user (so that user 0 also supports something
-        alternativeProposal.addSupporters(this.users);
-        alternativeProposal.setReachedQuorumAt(DoogiesUtil.daysAgo(i));
-        alternativeProposal.setStatus(LawStatus.PROPOSAL);
-        poll.addProposal(alternativeProposal);
-        upsertLawModel(alternativeProposal, 30-i);
+        String lawTitle = "Proposal" + i;
+        String lawDesc = "proposal #" + i + " in poll." + getLoremIpsum(100, 400);
+        LawModel proposal = new LawModel(lawTitle, lawDesc, area, this.users.get(1));   // createdBy another user (so that user 0 also supports something
+        proposal.setReachedQuorumAt(DoogiesUtil.daysAgo(i));
+        proposal.setStatus(LawStatus.PROPOSAL);
+        addSupportersToIdea(proposal, getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
+        poll.addProposal(proposal);
+        upsertLawModel(proposal, 30-i);
       }
 
       //===== save poll. This will automatically also save all proposals
@@ -445,9 +455,10 @@ public class TestDataCreator implements CommandLineRunner {
     PollModel pollInVoting = polls.get(0);
     if (pollInVoting.getNumCompetingProposals() < 2) throw new RuntimeException("Cannot seed ballots. Need at least two alternative proposals in VOTING phase");
 
+    Iterator<LawModel> proposals = pollInVoting.getProposals().iterator();
     List<LawModel> voteOrder = new ArrayList<>();
-    voteOrder.add(pollInVoting.getProposals().get(0));
-    voteOrder.add(pollInVoting.getProposals().get(1));
+    voteOrder.add(proposals.next());
+    voteOrder.add(proposals.next());
     //TODO: create real BCRYPT token in TestDataCreator   => Can TestDataCreator depend on LiquidoAnonymizer?  => Yes, but need to seed   salt value first!
     //String voterTokenBCrypt = anonymizer.getBCryptVoterToken(currentUser, currentUser.getPasswordHash(), poll);
     BallotModel newBallot = new BallotModel(pollInVoting, voteOrder, "dummyVoterToken");

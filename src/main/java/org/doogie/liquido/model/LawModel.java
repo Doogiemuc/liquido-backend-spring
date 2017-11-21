@@ -27,8 +27,7 @@ import java.util.Set;
 public class LawModel extends BaseModel {
   /*
    * DEPRECATED
-   * When a class uses a self references (as we formerly had it in initialLawId, then
-   * you must use a sequence for generating IDs,
+   * When a class uses a self references (as we formerly had it in initialLawId, then you must use a sequence for generating IDs,
    * because of the self reference via field "initialLawId".
    * https://vladmihalcea.com/2014/07/15/from-jpa-to-hibernates-legacy-and-enhanced-identifier-generators/
    * https://docs.jboss.org/hibernate/orm/5.0/mappingGuide/en-US/html_single/#identifiers-generators-sequence
@@ -60,13 +59,15 @@ public class LawModel extends BaseModel {
   @ManyToOne(optional = false)
   public AreaModel area;
 
-  @ManyToMany
+  @ManyToMany(fetch = FetchType.EAGER)
   Set<UserModel> supporters = new HashSet<>();
 
   /**
    * When in status proposal this is the link to the poll.
    * All alternative proposals point to the same poll.
    * Can be NULL, when this is still an idea!
+   * https://vladmihalcea.com/2017/03/29/the-best-way-to-map-a-onetomany-association-with-jpa-and-hibernate/
+   *
    */
   @ManyToOne(optional = true)
   public PollModel poll = null;
@@ -97,8 +98,8 @@ public class LawModel extends BaseModel {
   /** enumeration of law status */
   public enum LawStatus {
     IDEA(0),            // An idea is a newly created proposal for a law that did not reach its quorum yet.
-    PROPOSAL(1),        // When an idea reaches its quorum, then it becomes a proposal and a poll CAN be created.
-    VOTING(2),          // When the voting phase starts, the description of proposals cannot be changed anymore.
+    PROPOSAL(1),        // When an idea reaches its quorum, then it becomes a proposal.
+    VOTING(2),          // When the voting phase starts, the description of a proposals cannot be changed anymore.
     LAW(3),             // The winning proposal becomes a law.
     RETENTION(4),       // When a law looses support, it is in the retention phase
     RETRACTED(5);       // When a law looses support for too long, it will be retracted.
@@ -143,6 +144,7 @@ public class LawModel extends BaseModel {
   }
 
   public int getNumSupporters() {
+    if (this.supporters == null) return 0;
     return this.supporters.size();
   }
 
@@ -162,7 +164,8 @@ public class LawModel extends BaseModel {
     StringBuilder buf = new StringBuilder();
     buf.append("LawModel{");
     buf.append("id=" + id);
-    buf.append(", title='" + title + '\'');
+    buf.append(", title='" + title + "'");
+    buf.append(", area='" + (area != null ? area.getTitle() : "") + "'");
     buf.append(", description='");
     if (description != null && description.length() > 100) {
       buf.append(description.substring(0, 100));

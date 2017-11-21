@@ -9,9 +9,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Data model for a poll. A poll has a list of competing proposals
@@ -31,10 +31,11 @@ public class PollModel extends BaseModel {
   public Long id;
 
   //Beginners guide to Hibernate Cascade types:  https://vladmihalcea.com/2015/03/05/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
-  @OneToMany(cascade = CascadeType.ALL, mappedBy="poll", fetch = FetchType.EAGER) //, orphanRemoval = true/false ??? ) Should proposals be removed when the poll is deleted?
+  // https://vladmihalcea.com/2017/03/29/the-best-way-to-map-a-onetomany-association-with-jpa-and-hibernate/
+  @OneToMany(cascade = CascadeType.ALL, mappedBy="poll", fetch = FetchType.EAGER) //, orphanRemoval = true/false ??  Should a proposals be removed when the poll is deleted?
   @NotNull
   @NonNull
-  List<LawModel> proposals = new ArrayList<>(); //  ordered by date createdAt, so first in list is the initial proposal
+  Set<LawModel> proposals = new HashSet<>();         //  ordered by date createdAt, so first in list is the initial proposal
 
   public enum PollStatus {
     ELABORATION(0),     // When the initial proposal reaches its quorum, the poll is created. Alternative proposals can be added in this phase.
@@ -54,12 +55,6 @@ public class PollModel extends BaseModel {
     return this.id;
   }
 
-  /*
-  public LawModel getInitialProposal() {
-    return proposals.get(0);
-  }
-  */
-
   public int getNumCompetingProposals() {
     if (proposals == null) return 0;
     return proposals.size();
@@ -76,9 +71,12 @@ public class PollModel extends BaseModel {
       throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot add proposal(id="+proposal.getId()+") to poll(id="+id+", because proposal is not in state PROPOSAL.");
     if (this.getStatus() != PollStatus.ELABORATION)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot add proposal, because poll id="+id+" is not in ELABORATION phase");
+    if (this.proposals.size() > 0 && !proposal.getArea().equals(this.proposals.iterator().next().getArea()))
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Added proposal must be in the same area as the other proposals in this poll.");
     this.proposals.add(proposal);
     proposal.setPoll(this);
   }
+
 
   @Override
   public String toString() {

@@ -19,18 +19,6 @@ import java.util.Date;
 @Component
 public class LawService {
 
-  /**
-   * get the number of competing laws that have the same initial law as the passed law.
-   * This is used in {@link org.doogie.liquido.model.LawProjection}
-   * @param law a LawModel (not necessarily the initial proposal)
-   * @return the total number of competing proposals (including the passed one)
-   * @See org.doogie.liquido.services.PollService#getNumCompetingProposals
-   */
-  public long getNumCompetingProposals(LawModel law) {
-    if (law == null || law.getPoll() == null) return 0;
-    return law.getPoll().getNumCompetingProposals();
-  }
-
   @Autowired
   LiquidoAuditorAware liquidoAuditorAware;
 
@@ -40,12 +28,9 @@ public class LawService {
   @Autowired
   LiquidoProperties props;
 
-  //@Autowired
-  //PollService pollService;
-
   /**
    * Check if a given idea is already supported by the currently logged in user.
-   * Remark: Of course one could say that an idea is implicitly supported by its creator. But that is not counted in the list of supporters,
+   * Remark: The creator is not counted as a supporter! Of course one could say that an idea is implicitly supported by its creator. But that is not counted in the list of supporters,
    * because an idea needs "external" supporters, to become a proposal for a law.
    * @param law a LawModel
    * @return true  IF this idea is supported by the currently logged in user

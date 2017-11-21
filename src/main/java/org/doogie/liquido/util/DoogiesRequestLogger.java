@@ -12,7 +12,8 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 
 /**
- * Doogies very cool HTTP request logging
+ * Doogies very cool HTTP request logging.
+ * Yes I am completely fanatic about logging HTTP requests. But believe me, this has saved me hours of debugging.
  *
  * There is also {@link org.springframework.web.filter.CommonsRequestLoggingFilter}  but it cannot log request method
  * And it cannot easily be extended.
