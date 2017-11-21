@@ -50,14 +50,21 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
     config.exposeIdsFor(AreaModel.class);
     config.exposeIdsFor(BallotModel.class);
     config.exposeIdsFor(DelegationModel.class);
-
-    config.exposeIdsFor(LawModel.class);  // actually LawModel has its own LawProjection which exposes IDs.
+    config.exposeIdsFor(LawModel.class);          // actually LawModel has its own LawProjection which exposes IDs.
+    config.exposeIdsFor(PollModel.class);
 
     //MAYBE: when available in future version of spring: config.getCorsRegistry()
   }
 
   // see also LiquidoAuditorAware for handling @CreatedBy   https://jaxenter.com/rest-api-spring-java-8-112289.html
 
+  /*
+  @Override
+  public void configureConversionService(ConfigurableConversionService conversionService) {
+    super.configureConversionService(conversionService);
+    conversionService.addConverter();
+  }
+  */
 
   /**
    * Automatically generated Swagger REST API documentation

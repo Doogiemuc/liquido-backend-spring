@@ -37,6 +37,7 @@ import org.springframework.web.client.RestTemplate;
 import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -335,13 +336,14 @@ public class RestEndpointTests {
     // ===== Find a poll tha is in VOTING phase
     List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
     assertTrue("Need a poll that currently is in VOTING phase for this test", polls != null && polls.size() > 0);
-    PollModel pollVoting = polls.get(0);
-    List<LawModel> alternativeProposals = pollVoting.getProposals();
+    PollModel pollInVoting = polls.get(0);
+    assertTrue("Need a poll that has at least two alternative proposals", pollInVoting.getProposals().size() >= 2);
 
     // ===== Create a ballot with a voteOrder
-    String pollUri       = basePath + "/polls/" + polls.get(0).getId();
-    String voteOrderUri1 = basePath + "/laws/" + alternativeProposals.get(0).getId();
-    String voteOrderUri2 = basePath + "/laws/" + alternativeProposals.get(1).getId();
+    Iterator<LawModel> alternativeProposals = pollInVoting.getProposals().iterator();
+    String pollUri       = basePath + "/polls/" + pollInVoting.getId();
+    String voteOrderUri1 = basePath + "/laws/" + alternativeProposals.next().getId();
+    String voteOrderUri2 = basePath + "/laws/" + alternativeProposals.next().getId();
 
     JSONObject newBallotJson = new JSONObject()
         .put("poll", pollUri)
@@ -455,7 +457,7 @@ public class RestEndpointTests {
    * Helper to create a new idea (via REST)
    * @param ideaTitlePrefix the title of the idea. A random number will be added,
    *                        because title MUST be unique.
-   * @return the created idea
+   * @return the created idea (but without area filled!)
    */
   private LawModel createIdea(String ideaTitlePrefix) {
     long now = System.currentTimeMillis() % 10000;

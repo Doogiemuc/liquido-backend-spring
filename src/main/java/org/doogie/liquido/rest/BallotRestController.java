@@ -9,18 +9,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
-import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.hateoas.Resource;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.HashSet;
-
-import static org.springframework.web.bind.annotation.RequestMethod.POST;
+import java.util.Map;
 
 /**
  * Controller for posting a ballot
@@ -79,17 +75,21 @@ public class BallotRestController {
    * http://stackoverflow.com/questions/31924980/filling-entity-links-in-custom-repositoryrestcontroller-methods
    * http://stackoverflow.com/questions/39612434/repositoryrestcontroller-makes-rest-api-not-available
    *
+   * Posting to One-To-Many subresource via REST (in HATEOAS) this is what I am overwriting here.
+   * https://stackoverflow.com/questions/25311978/posting-a-onetomany-sub-resource-association-in-spring-data-rest
+   * https://stackoverflow.com/questions/37902946/add-item-to-the-collection-with-foreign-key-via-rest-call
+   *
    * ERROR: "no String-argument constructor/factory method to deserialize from String value"
    * Solution: http://stackoverflow.com/questions/40986738/spring-data-rest-no-string-argument-constructor-factory-method-to-deserialize/40986739
    *           https://jira.spring.io/browse/DATAREST-884   =>
    *
    * @param ballotResource the posted ballot as a REST resource
    * @param resourceAssembler injected PersistentEntityResourceAssembler that can build the reply
-   * @return the stored ballot (incl. its new ID) as a HATEOAS resource
+   * @return an default ok message (JSON)
    */
-  @RequestMapping(value = "/postBallot", method = POST)   // @RequestMapping(value = "somePath") here on type/method level does not work with @RepositoryRestController
+  @RequestMapping(value = "/postBallot", method = RequestMethod.POST)   // @RequestMapping(value = "somePath") here on type/method level does not work with @RepositoryRestController. But it seems to work with BasePathAwareController
   @ResponseStatus(HttpStatus.CREATED)
-  public @ResponseBody PersistentEntityResource postBallot(
+  public @ResponseBody /*PersistentEntityResource*/ Map postBallot(
       @RequestBody Resource<BallotModel> ballotResource,
       PersistentEntityResourceAssembler resourceAssembler)
   {
@@ -100,21 +100,20 @@ public class BallotRestController {
     UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
     if (currentUser == null) throw new LiquidoRestException("Cannot postBallot. Need an authenticated user as fromUser");
 
-    // Check validity of posted values (remark: client does not send a voterToken)
+    // Check validity of posted ballot JSON
     BallotModel postedBallot = ballotResource.getContent();
-    if (postedBallot.getPoll() == null) throw new LiquidoRestException("ERROR: Need URI of poll!");
-    if (postedBallot.getVoteOrder() == null || postedBallot.getVoteOrder().size() == 0) throw new LiquidoRestException("ERROR: voteOrder must not be empty!");
-    AreaModel area = postedBallot.getPoll().getProposals().get(0).getArea();
-    long numVotes = delegationRepo.getNumVotes(area, currentUser);
-    if (numVotes != currentUser.getVoterTokens().size()+1)
-      throw new LiquidoRestException("ERROR: Inconsistency detected: number of voter tokens does not match number of delegations. User '"+currentUser.getEmail()+"' (id="+currentUser.getId()+")");
-
     // Create a voterToken for currentUser and store a ballot for him
     String voterTokenBCrypt = anonymizer.getBCryptVoterToken(currentUser, currentUser.getPasswordHash(), postedBallot.getPoll());
     postedBallot.setVoterToken(voterTokenBCrypt);
     checkBallot(postedBallot);
 
-    // Check if user has already voted. If so, then update his voteOrder
+    // Check that this voter (if he is a proxy) has as many voter tokens as he has delegations
+    AreaModel area = postedBallot.getPoll().getProposals().iterator().next().getArea();
+    long numVotes = delegationRepo.getNumVotes(area, currentUser);
+    if (numVotes != currentUser.getVoterTokens().size()+1)
+      throw new LiquidoRestException("ERROR: Inconsistency detected: number of voter tokens does not match number of delegations. User '"+currentUser.getEmail()+"' (id="+currentUser.getId()+")");
+
+    // Check if user has already voted. If so, then update the voteOrder in his existing ballot
     BallotModel savedBallot = null;
     BallotModel existingBallot = ballotRepo.findByPollAndVoterToken(postedBallot.getPoll(), postedBallot.getVoterToken());
     if (existingBallot != null) {
@@ -135,9 +134,16 @@ public class BallotRestController {
       ballotRepo.save(ballotForDelegee);
     }
 
-    log.trace("<= POST /postBallot:\n"+savedBallot);
-    return resourceAssembler.toResource(savedBallot);
-    // return ResponseEntity.ok(createdBallot);   this would return a ResponseEntity with the plain serialized JSON  (no HAL links etc.)
+    // Keep in mind that the savedBallot object is not completely filled, e.g. you cannot call toString on it.
+    log.trace("<= POST /postBallot: pollId="+savedBallot.getPoll().getId()+", voterToken="+savedBallot.getVoterToken());
+    //return resourceAssembler.toResource(savedBallot);
+
+    // cannot return simple string in Spring :-( http://stackoverflow.com/questions/30895286/spring-mvc-how-to-return-simple-string-as-json-in-rest-controller/30895501
+    Map<String, String> result = new HashMap<>();
+    result.put("msg", "OK, your ballot was counted.");
+    result.put("voterToken", savedBallot.getVoterToken());
+    result.put("delegees", currentUser.getVoterTokens().size()+"");
+    return result;
   }
 
   /**
@@ -146,11 +152,6 @@ public class BallotRestController {
    * @throws LiquidoRestException when something inside newBallot is invalid
    */
   private void checkBallot(BallotModel newBallot) throws LiquidoRestException {
-    // check validity of voterHash
-    if (newBallot.getVoterToken() == null || newBallot.getVoterToken().length() < 5) {
-      throw new LiquidoRestException("ERROR: Cannot post ballot: Invalid voterToken: '"+newBallot.getVoterToken()+"'. Must be at least 5 chars!");
-    }
-
     // check that poll is actually in voting phase and has at least two alternative proposals
     PollModel poll = newBallot.getPoll();
     if (poll == null || !PollModel.PollStatus.VOTING.equals(poll.getStatus())) {
@@ -179,6 +180,11 @@ public class BallotRestController {
       if (!LawModel.LawStatus.VOTING.equals(proposal.getStatus())) {
         throw new LiquidoRestException(("ERROR: Cannot post ballot: proposals must be in voting phase."));
       }
+    }
+
+    // check validity of voterToken
+    if (newBallot.getVoterToken() == null || newBallot.getVoterToken().length() < 5) {
+      throw new LiquidoRestException("ERROR: Cannot post ballot: Invalid voterToken: '"+newBallot.getVoterToken()+"'. Must be at least 5 chars!");
     }
   }
 
