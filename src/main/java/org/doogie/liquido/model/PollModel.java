@@ -63,10 +63,13 @@ public class PollModel extends BaseModel {
   /**
    * Adds an alternative proposal to this poll and sets up the two way relationship between them.
    * Alternative proposals can only be added while a poll is in its ELABORATION phase and voting has not yet started.
+   *
    * @param proposal the proposal to add. This poll will also be linked from proposal. MUST NOT BE NULL.
-   * @throws LiquidoException When passed object is not in state PROPOSAL or when poll is not in its ELABORATION phase.
+   * @throws LiquidoException When passed object is not in state PROPOSAL or when poll is not in its ELABORATION phase or not in correct area.
    */
   public void addProposal(@NotNull LawModel proposal) throws LiquidoException {
+    //implementation note: I check all business rules down here. As a consequence every caller has to handle the LiquidoException.
+    //  Alternative would be to check all this in PollService.java ?
     if (proposal.getStatus() != LawModel.LawStatus.PROPOSAL)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot add proposal(id="+proposal.getId()+") to poll(id="+id+", because proposal is not in state PROPOSAL.");
     if (this.getStatus() != PollStatus.ELABORATION)
