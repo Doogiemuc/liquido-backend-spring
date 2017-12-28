@@ -63,9 +63,10 @@ public class LawModel extends BaseModel {
   Set<UserModel> supporters = new HashSet<>();
 
   /**
-   * When in status proposal this is the link to the poll.
+   * When in status PROPOSAL this is the link to the poll.
    * All alternative proposals point to the same poll.
    * Can be NULL, when this is still an idea!
+   * This is the many side of a bidirectional ManyToOne aggregation relationship.
    * https://vladmihalcea.com/2017/03/29/the-best-way-to-map-a-onetomany-association-with-jpa-and-hibernate/
    *
    */
