@@ -38,18 +38,18 @@ public class PollService {
    * @param proposal an idea that reached its quorum and became a proposal. MUST be in status proposal!
    * @param resourceAssembler
    * @return the newly created poll
-   * @throws IllegalArgumentException if passed LawModel is not in state PROPOSAL.
+   * @throws LiquidoException if passed LawModel is not in state PROPOSAL.
    */
   @Transactional    // This should run inside a transaction (all or nothing)
   public PollModel createPoll(@NotNull LawModel proposal, PersistentEntityResourceAssembler resourceAssembler) throws LiquidoException {
-    //===== sanity check
+    //===== sanity checks: There must be at least one proposal (in status PROPOSAL)
     if (proposal == null)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Proposal must not be null");
     if (!LawModel.LawStatus.PROPOSAL.equals(proposal.getStatus()))
       throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Need proposal with quorum for creating a poll!");
+    // that proposal must not already be linked to another poll
     if (proposal.getPoll() != null)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Proposal (id="+proposal.getId()+") is already part of another poll!");
-    //TODO: All proposal within a poll must be in the same area!
 
     //===== create new Poll with one initial proposal
     log.debug("Will create new poll. InitialProposal (id={}): {}", proposal.getId(), proposal.getTitle());
