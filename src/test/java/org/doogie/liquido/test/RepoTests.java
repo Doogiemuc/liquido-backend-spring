@@ -131,10 +131,10 @@ public class RepoTests {
   }
 
   @Test
-  public void testFindSupportedProposals() {
+  public void testFindSupportedIdeas() {
     UserModel supporter = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
-    List<LawModel> supportedLaws = lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.PROPOSAL, supporter);
-    assertTrue("Expected at least 2 proposals that user "+TestFixtures.USER1_EMAIL+" supports", supportedLaws.size() >= 2);
-    log.debug("User "+supporter.getEmail()+" supports "+supportedLaws.size()+" proposals");
+    List<LawModel> supportedLaws = lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.IDEA, supporter);
+    assertTrue("Expected at least 2 ideas that user "+TestFixtures.USER1_EMAIL+" supports", supportedLaws.size() >= 2);
+    log.debug("User "+supporter.getEmail()+" supports "+supportedLaws.size()+" ideas.");
   }
 }

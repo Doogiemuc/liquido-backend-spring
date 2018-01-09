@@ -50,7 +50,7 @@ public class LawService {
   public void checkQuorum(LawModel idea) {
     if (idea != null &&
         idea.getStatus().equals(LawModel.LawStatus.IDEA) &&
-        idea.getNumSupporters() >= props.getInt(LiquidoProperties.KEY.LIKES_FOR_QUORUM) ) {
+        idea.getNumSupporters() >= props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL) ) {
       log.info("Idea (id="+idea.getId()+") '"+idea.getTitle()+"' reached its quorum with "+idea.getNumSupporters()+" supporters.");
       idea.setStatus(LawModel.LawStatus.PROPOSAL);
       idea.setReachedQuorumAt(new Date());
