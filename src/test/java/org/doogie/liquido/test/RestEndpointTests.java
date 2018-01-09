@@ -269,7 +269,7 @@ public class RestEndpointTests {
 
     String response = client
       //.withBasicAuth(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD)
-      .getForObject("/ideas/search/recentIdeas", String.class);
+      .getForObject("/laws/search/recentIdeas", String.class);
 
     log.debug("got response: "+response);
 
@@ -277,7 +277,7 @@ public class RestEndpointTests {
 
     ObjectMapper mapper = new ObjectMapper();
     JsonNode node = mapper.readTree(response);
-    JsonNode ideas = node.get("_embedded").get("ideas");
+    JsonNode ideas = node.get("_embedded").get("laws");
     assertTrue(ideas.isArray());
     assertTrue(ideas.size() > 5);
 

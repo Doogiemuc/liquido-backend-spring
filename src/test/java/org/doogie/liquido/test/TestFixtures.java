@@ -13,4 +13,5 @@ public class TestFixtures {
   public static final long   USER4_NUM_VOTES = 5;     // testuser4@liquido.de  has 5 votes (including his own) due to (transitive) delegations
 
 
+  //TODO: Should REST URLs alse be part of these TestFixtures?
 }
