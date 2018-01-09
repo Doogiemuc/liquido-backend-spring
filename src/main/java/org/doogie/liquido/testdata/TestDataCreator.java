@@ -9,7 +9,6 @@ import org.doogie.liquido.util.LiquidoProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -85,8 +84,6 @@ public class TestDataCreator implements CommandLineRunner {
   @Autowired
   Environment springEnv;   // load settings from application-test.properties
 
-  @Value("${liquido.likes.for.quorum}")
-  public int likesForQuorum;
 
   // very simple random number generator
   Random rand;
@@ -104,12 +101,12 @@ public class TestDataCreator implements CommandLineRunner {
    * @param args command line args
    */
   public void run(String... args) {
-    log.trace("=== running TestDataCreator");
-    boolean seedDB =   springEnv.acceptsProfiles("test") || "true".equals(springEnv.getProperty("seedDB"));
+    boolean seedDB = springEnv.acceptsProfiles("test") || "true".equals(springEnv.getProperty("seedDB"));
     for(String arg : args) {
       if ("--seedDB".equals(arg)) { seedDB = true; }
     }
     if (seedDB) {
+      log.trace("=== running TestDataCreator");
       log.info("Populate test DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
       seedUsers();
@@ -130,10 +127,7 @@ public class TestDataCreator implements CommandLineRunner {
   private void seedGlobalProperties() {
     log.trace("Seeding global properties ...");
     List<KeyValueModel> propKV = new ArrayList<>();
-    propKV.add(new KeyValueModel(LiquidoProperties.KEY.LIKES_FOR_QUORUM.toString(), "5"));   // should be less than NUM_USERS
     propKV.add(new KeyValueModel(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL.toString(), "5"));
-    propKV.add(new KeyValueModel(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS.toString(), "7"));
-    propKV.add(new KeyValueModel(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE.toString(), "7"));
     keyValueRepo.save(propKV);
   }
 
@@ -284,7 +278,7 @@ public class TestDataCreator implements CommandLineRunner {
 
       UserModel createdBy = this.users.get(i % NUM_USERS);
       LawModel proposal = new LawModel(ideaTitle, proposalDescr.toString(), this.areas.get(0), createdBy);
-      addSupportersToIdea(proposal, getGlobalPropertyAsInt(LiquidoProperties.KEY.LIKES_FOR_QUORUM));
+      addSupportersToIdea(proposal, getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
       proposal.setStatus(LawStatus.PROPOSAL);
       auditorAware.setMockAuditor(createdBy);
       LawModel savedProposal = lawRepo.save(proposal);

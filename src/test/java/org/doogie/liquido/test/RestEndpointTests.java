@@ -365,8 +365,13 @@ public class RestEndpointTests {
     ReadContext ctx = JsonPath.parse(response.getBody());
     String returnedVoterToken = ctx.read("$.voterToken");
     assertTrue("Expected a voter token", returnedVoterToken != null && returnedVoterToken.length() > 10);
-    List<String> voteOrderJsonArray = ctx.read("$._embedded.voteOrder");
-    assertEquals("Expected to have same number of proposals in the voteOrder", 2, voteOrderJsonArray.size());
+    String delegees = ctx.read("$.delegees");
+    try {
+      Long.valueOf(delegees);
+    } catch (NumberFormatException nfe) {
+      fail("Expteded parameter delegees to be numeric.");
+    }
+
     log.trace("TEST SUCCESSFUL: new ballot successfully posted.");
   }
 
@@ -428,8 +433,8 @@ public class RestEndpointTests {
     //===== add Supporters via JSON, so that idea reaches its quorum
     //String supportersURL = JsonPath.read(responseEntity.getBody(), "$._links.supporters.href");
 
-    int likesForQuorum = props.getInt(LiquidoProperties.KEY.LIKES_FOR_QUORUM);
-    Assert.assertTrue("Need at least "+likesForQuorum+" users to run this test", this.users.size() >= likesForQuorum);
+    int supportersForProposal = props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL);
+    Assert.assertTrue("Need at least "+supportersForProposal+" users to run this test", this.users.size() >= supportersForProposal);
 
     String supportersURL = "/laws/"+idea.getId()+"/supporters";
     for (int j = 0; j < this.users.size(); j++) {
