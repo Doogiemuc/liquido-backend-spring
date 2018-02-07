@@ -17,6 +17,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.persistence.Table;
+import java.time.Instant;
+import java.time.temporal.TemporalAmount;
 import java.util.*;
 
 import static org.doogie.liquido.model.LawModel.LawStatus;
@@ -106,7 +108,7 @@ public class TestDataCreator implements CommandLineRunner {
       if ("--seedDB".equals(arg)) { seedDB = true; }
     }
     if (seedDB) {
-      log.trace("=== running TestDataCreator");
+      log.trace("=== running TestDataCreator with --seedDB");
       log.info("Populate test DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
       seedUsers();
@@ -151,7 +153,7 @@ public class TestDataCreator implements CommandLineRunner {
 
       UserProfileModel profile = new UserProfileModel();
       profile.setName("Test User" + i);
-      profile.setPicture("/static/img/Avatar_32x32.jpeg");
+      profile.setPicture("/assets/imgs/photos/"+((i%3)+1)+".png");
       profile.setWebsite("http://www.liquido.de");
       newUser.setProfile(profile);
 
@@ -372,8 +374,9 @@ public class TestDataCreator implements CommandLineRunner {
       //===== save poll. This will automatically also save all proposals
       log.trace("saving poll that is in voting phase");
       poll.setStatus(PollModel.PollStatus.VOTING);
+      poll.setVotingStartedAt(addDays(new Date(), -1));      // voting started yesterday
       PollModel savedPoll = pollRepo.save(poll);
-      fakeCreateAt(savedPoll, 10);
+      fakeCreateAt(savedPoll, 2);                     // poll is 2 days old
       log.debug("Created poll in voting phase: "+savedPoll);
     } catch (Exception e) {
       log.error("Cannot seed Poll in voting phase: " + e);
@@ -469,6 +472,19 @@ public class TestDataCreator implements CommandLineRunner {
     int endIndex = minLength + rand.nextInt(maxLength - minLength);
     if (endIndex >= loremIpsum.length()) endIndex = loremIpsum.length()-1;
     return loremIpsum.substring(0, endIndex);
+  }
+
+  /**
+   * Add (or subtract) n days from java.util.Date d using {@link Calendar}
+   * @param d any date
+   * @param n numer of fays to add (or subtract if negative)
+   * @return the modified date
+   */
+  private Date addDays(Date d, int n) {
+    final Calendar cal = Calendar.getInstance();
+    cal.setTime(d);
+    cal.add(Calendar.DATE, n);
+    return cal.getTime();
   }
 
 

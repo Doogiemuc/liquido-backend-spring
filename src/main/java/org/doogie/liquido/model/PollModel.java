@@ -30,12 +30,19 @@ public class PollModel extends BaseModel {
   @GeneratedValue(strategy=GenerationType.AUTO)
   public Long id;
 
+  /**
+   * The proposals for a law of this Poll. All of these proposal must already have reached their quorum.
+   * When the poll is in PollStatus == ELABORATION, then these proposals may still be changed and further
+   * proposals may be added. When The PollStauts == VOTING, then proposals must not be changed anymore.
+   */
   //Beginners guide to Hibernate Cascade types:  https://vladmihalcea.com/2015/03/05/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
   // https://vladmihalcea.com/2017/03/29/the-best-way-to-map-a-onetomany-association-with-jpa-and-hibernate/
   @OneToMany(cascade = CascadeType.ALL, mappedBy="poll", fetch = FetchType.EAGER) //, orphanRemoval = true/false ??  Should a proposals be removed when the poll is deleted?
   @NotNull
   @NonNull
   Set<LawModel> proposals = new HashSet<>();         //  ordered by date createdAt, so first in list is the initial proposal
+
+
 
   public enum PollStatus {
     ELABORATION(0),     // When the initial proposal reaches its quorum, the poll is created. Alternative proposals can be added in this phase.

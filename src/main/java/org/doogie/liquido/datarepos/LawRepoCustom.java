@@ -11,11 +11,6 @@ import java.util.List;
  */
 public interface LawRepoCustom {
 
-  /**
-   * Fetch proposals that were recently supported by user
-   * @param user any UserModel
-   * @return list of LawModels that this user liked.
-   */
-  List<LawModel> findSupportedProposals(UserModel user);
+
 
 }
