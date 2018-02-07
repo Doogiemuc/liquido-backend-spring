@@ -36,7 +36,7 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
 
   @Override
   public void configureRepositoryRestConfiguration(RepositoryRestConfiguration config) {
-    log.debug("===== Configuring RepositoryRestconfiguration under basePath='"+config.getBasePath().toString()+"',  baseURI='"+config.getBaseUri().toString()+"'");
+    log.debug("Configuring RepositoryRestconfiguration under basePath='"+config.getBasePath().toString()+"',  baseURI='"+config.getBaseUri().toString()+"'");
 
     // The base path for RepositoryRestResource is configured in application.properties. It's more prominent there
     // Keep in mind that this is only the base path for our HATEOAS endpoints. The base path for normal @RestControllers has to configured individually there.
