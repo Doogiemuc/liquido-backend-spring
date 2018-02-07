@@ -15,7 +15,6 @@ import java.util.List;
  */
 @Data
 @EqualsAndHashCode(of = {"id", "email"}, callSuper = false)
-@ToString(of="id, email, profile")   // This is extremely important! Do not exposed password in toString() !!!
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor
@@ -50,4 +49,13 @@ public class UserModel extends BaseModel {
   @RestResource(exported = false)
   public List<String> voterTokens;
 
+  // This is extremely important! Do not exposed password in toString() !!!
+  @Override
+  public String toString() {
+    return "UserModel{" +
+            "id=" + id +
+            ", email='" + email + '\'' +
+            ", profile=" + profile +
+            '}';
+  }
 }

@@ -14,17 +14,19 @@ import java.util.Map;
 /**
  * Global properties that are read from the DB.
  * These properties can be changed at runtime
- * and the new value <strong>can</strong> be persisted in the DB.
+ * and new values <strong>can</strong> be persisted in the DB.
  */
 @Slf4j
 @Component
 public class LiquidoProperties /*implements CommandLineRunner*/ {
   //Implementation note: Making this a CommandLine runner was the only way I found to make this run AFTER TestDataCreator.
+  // But properties must be initialized BEFORE TestDataCreator. This was possible with the @PostConstruct annotation.
 
   /**
-   * List of all KEYs
+   * List of KEYs. All values are mandatory! Each key must have a default value in application.properties!
    * I am using an enum for several reasons
    *  - KEYs as enum values can be autocompleted in an IDE
+   *  - You can easily see where a key is used.
    *  - I can iterate over all KEYs.
    */
   public enum KEY {

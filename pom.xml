@@ -53,11 +53,19 @@
 			<version>2.7.0</version>
 		</dependency>
 
-    <dependency>
-      <groupId>io.springfox</groupId>
-      <artifactId>springfox-data-rest</artifactId>
-      <version>2.7.0</version>
-    </dependency>
+		<!-- Springfox support for autogenerating /v2/api-docs from spring-sata-rest java sources (still in incubation -->
+		<dependency>
+		  <groupId>io.springfox</groupId>
+		  <artifactId>springfox-data-rest</artifactId>
+		  <version>2.7.0</version>
+		</dependency>
+
+		<!-- Springfox Swagger UI - See http://www.baeldung.com/swagger-2-documentation-for-spring-rest-api -->
+		<dependency>
+			<groupId>io.springfox</groupId>
+			<artifactId>springfox-swagger-ui</artifactId>
+			<version>2.7.0</version>
+		</dependency>
 
 		<!-- Apache Http Client for PATCH requests  https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
 		<dependency>

@@ -7,15 +7,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 
 /**
- * Implementation for custom law query and searach methods
+ * Implementation for custom law query and search methods
+ * Currently not yet used
  */
 public class LawRepoImpl implements LawRepoCustom {
 
   @Autowired
   LawRepo lawRepo;
-
-  public List<LawModel> findSupportedProposals(UserModel user) {
-    return lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.PROPOSAL, user);
-  }
 
 }
