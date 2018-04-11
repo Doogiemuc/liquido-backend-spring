@@ -18,7 +18,10 @@ import org.doogie.liquido.util.LiquidoProperties;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -211,7 +214,29 @@ public class RestEndpointTests {
   }
    */
 
+  /**
+   * Entry and exit logging for <b>all</b> test cases. Jiipppiiee. Did I already mention that I am a logging fanatic *G*
+   */
+  @Rule
+  public TestWatcher slf4jTestWatcher = new TestWatcher() {
+    @Override
+    protected void starting(Description descr) {
+      log.trace("=========== TEST STARTING "+descr.getClassName()+"."+descr.getMethodName()+": "+descr.getDisplayName());
+    }
 
+    @Override
+    protected void failed(Throwable e, Description descr) {
+      log.error("=========== TEST FAILED "+descr.getClassName()+"."+descr.getMethodName()+": "+descr.getDisplayName());
+      log.error(e.getMessage());
+    }
+
+    @Override
+    protected void succeeded(Description descr) {
+      log.trace("=========== TEST SUCCEDED "+descr.getClassName()+"."+descr.getMethodName()+": "+descr.getDisplayName());
+    }
+
+
+  };
 
 
   @Test

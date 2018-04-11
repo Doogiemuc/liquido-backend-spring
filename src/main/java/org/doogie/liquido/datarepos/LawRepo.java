@@ -30,6 +30,8 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>  // 
   // https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#core.extensions
   // http://www.querydsl.com/
 
+  // sorting:  http://localhost:8080/liquido/v2/laws?sort=id,desc
+
 {
 
   LawModel findByTitle(@Param("title") String title);   // title is unique!
@@ -39,7 +41,7 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>  // 
 
   /**
    * find recently created ideas
-   * http://localhost:8080/liquido/v2/laws/search/recentIdeas
+   * http://localhost:8080/liquido/v2/laws/search/recentIdeas?page=1&size=100
    * @return list of ideas ordered by date created descending, newest first
    */
   @Query("select l from LawModel l where l.status = 0 order by l.createdAt desc")
