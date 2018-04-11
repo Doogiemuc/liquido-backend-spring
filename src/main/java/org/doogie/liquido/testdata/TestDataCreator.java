@@ -249,8 +249,9 @@ public class TestDataCreator implements CommandLineRunner {
       ideaDescr.append(getLoremIpsum(0,400));
 
       UserModel createdBy = this.users.get(i % NUM_USERS);
-      LawModel newIdea = new LawModel(ideaTitle, ideaDescr.toString(), this.areas.get(0), createdBy);
-      addSupportersToIdea(newIdea, rand.nextInt(4));   // add 0-4 supporters
+      AreaModel area = this.areas.get(i % this.areas.size());
+      LawModel newIdea = new LawModel(ideaTitle, ideaDescr.toString(), area, createdBy);
+      addSupportersToIdea(newIdea, rand.nextInt(NUM_USERS/2));   // add some supporters
 
       LawModel existingIdea = lawRepo.findByTitle(ideaTitle);
       if (existingIdea != null) {
@@ -261,6 +262,8 @@ public class TestDataCreator implements CommandLineRunner {
       }
       auditorAware.setMockAuditor(createdBy);
       LawModel savedIdea = lawRepo.save(newIdea);
+      fakeCreateAt(savedIdea, i+1);
+      fakeUpdatedAt(savedIdea, i);
       this.lawModels.add(savedIdea);
     }
   }
@@ -282,6 +285,8 @@ public class TestDataCreator implements CommandLineRunner {
       proposal.setStatus(LawStatus.PROPOSAL);
       auditorAware.setMockAuditor(createdBy);
       LawModel savedProposal = lawRepo.save(proposal);
+      fakeCreateAt(savedProposal, i+1);
+      fakeUpdatedAt(savedProposal, i);
       this.lawModels.add(savedProposal);
     }
   }
@@ -425,7 +430,7 @@ public class TestDataCreator implements CommandLineRunner {
 
 
   /**
-   * Fake the created at data to be n days in the past
+   * Fake the created at date to be n days in the past
    * @param model any domain model class derived from BaseModel
    * @param ageInDays the number of days to set the createAt field into the past.
    */
@@ -438,7 +443,22 @@ public class TestDataCreator implements CommandLineRunner {
     jdbcTemplate.execute(sql);
     Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
     model.setCreatedAt(daysAgo);
-    //MAYBE: setUpdatedAt(...)
+  }
+
+  /**
+   * Fake the updated at date to be n days in the past. Keep in mind, that updated at should not be before created at.
+   * @param model any domain model class derived from BaseModel
+   * @param ageInDays the number of days to set the createAt field into the past.
+   */
+  private void fakeUpdatedAt(BaseModel model, int ageInDays) {
+    if (ageInDays < 0) throw new IllegalArgumentException("ageInDays must be positive");
+    Table tableAnnotation = model.getClass().getAnnotation(javax.persistence.Table.class);
+    String tableName = tableAnnotation.name();
+    String sql = "UPDATE " + tableName + " SET updated_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
+    log.trace(sql);
+    jdbcTemplate.execute(sql);
+    Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
+    model.setUpdatedAt(daysAgo);
   }
 
   public void seedBallots() {
