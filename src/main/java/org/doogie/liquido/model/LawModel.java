@@ -46,7 +46,7 @@ public class LawModel extends BaseModel {
 
   //TODO: lawModel.tagline
   //TODO: lawModel.tags
-  //TODO: related ideas? => realations built automatically, when a proposal is added to a running poll.
+  //TODO: related ideas? => relations built automatically, when a proposal is added to a running poll.
 
   @NotNull
   @NonNull
@@ -118,14 +118,6 @@ public class LawModel extends BaseModel {
   @NotNull
   @ManyToOne
   public UserModel createdBy;
-
-  /**
-   * @return true when this is the initial proposal of the poll
-
-  public boolean isInitialProposal() {
-    return (getPoll() != null) && this.equals(getPoll().getInitialProposal());
-  }
-  */
 
   /**
    * Call this when a user 'likes' a proposal
