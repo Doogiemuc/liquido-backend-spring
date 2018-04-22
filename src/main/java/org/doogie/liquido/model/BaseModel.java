@@ -1,15 +1,12 @@
 package org.doogie.liquido.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.hateoas.Identifiable;
 
-import javax.persistence.EntityListeners;
-import javax.persistence.MappedSuperclass;
+import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.util.Date;
 
@@ -23,8 +20,13 @@ import java.util.Date;
 @EntityListeners(AuditingEntityListener.class)
 //@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public abstract class BaseModel implements Identifiable<Long> {
-
-  // ID field is not in BaseModel, because LawModel needs a different generation strategy.
+  /**
+   * Internal ID of this domain object
+   * Sprint Data REST will use this in its generated URLs, e.g. GET /laws/ID
+   */
+  @Id
+  @GeneratedValue(strategy= GenerationType.AUTO)
+  public Long id;
 
   @CreatedDate
   @NotNull

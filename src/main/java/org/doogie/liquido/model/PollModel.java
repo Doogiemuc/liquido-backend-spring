@@ -1,7 +1,6 @@
 package org.doogie.liquido.model;
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.doogie.liquido.services.LiquidoException;
@@ -9,7 +8,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -17,18 +16,16 @@ import java.util.Set;
  * Data model for a poll. A poll has a list of competing proposals
  * A poll CAN be started by the creator of an idea, when this idea reaches its quorum and becomes a proposal.
  * A poll then runs for a configurable number of days.
+ *
+ * This is just a domain model class. All the business logic is in {@link org.doogie.liquido.services.PollService}!
  */
 @Data
-@EqualsAndHashCode(of = {"id"}, callSuper = false)
 @Entity
 @NoArgsConstructor
 //@RequiredArgsConstructor(suppressConstructorProperties = true)
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "polls")
 public class PollModel extends BaseModel {
-  @Id
-  @GeneratedValue(strategy=GenerationType.AUTO)
-  public Long id;
 
   /**
    * The proposals for a law of this Poll. All of these proposal must already have reached their quorum.
@@ -55,8 +52,11 @@ public class PollModel extends BaseModel {
   /** initially a poll is in its elaboration phase, where further proposals can be added */
   PollStatus status = PollStatus.ELABORATION;
 
-  Date votingStartedAt;
-  Date votingEndedAt;
+  /** Date when the voting phase started. Will be set in PollService */
+  LocalDate votingStartAt;
+
+  /** Date when the voting phase will end. Also set in PollService */
+  LocalDate votingEndAt;
 
   public Long getId() {
     return this.id;
@@ -86,7 +86,6 @@ public class PollModel extends BaseModel {
     this.proposals.add(proposal);
     proposal.setPoll(this);
   }
-
 
   @Override
   public String toString() {
