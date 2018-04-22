@@ -1,12 +1,11 @@
 package org.doogie.liquido.model;
 
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
 import javax.persistence.Embeddable;
 
 /**
- * Some more data about a user
+ * Some more data about a user. Subobject of {@link UserModel}
  */
 @Data
 @Embeddable

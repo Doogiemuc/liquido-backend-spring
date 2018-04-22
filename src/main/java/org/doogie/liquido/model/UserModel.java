@@ -14,7 +14,7 @@ import java.util.List;
  * One user / voter / citizen
  */
 @Data
-@EqualsAndHashCode(of = {"id", "email"}, callSuper = false)
+@EqualsAndHashCode(of = {"id"}, callSuper = true)
 @ToString(of="id, email, profile")   // This is extremely important! Do not exposed password in toString() !!!
 @Entity
 @NoArgsConstructor
@@ -22,10 +22,6 @@ import java.util.List;
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "users")
 public class UserModel extends BaseModel {
-  @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
-  public Long id;
-
   @NotNull
   @NonNull
   @NotEmpty
