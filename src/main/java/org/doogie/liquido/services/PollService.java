@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.validation.constraints.NotNull;
-import java.util.Date;
+import java.time.LocalDate;
 
 /**
  * This spring component implements the business logic for {@link org.doogie.liquido.model.PollModel}
@@ -52,7 +52,7 @@ public class PollService {
       throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Proposal (id="+proposal.getId()+") is already part of another poll!");
 
     //===== create new Poll with one initial proposal
-    log.debug("Will create new poll. InitialProposal (id={}): {}", proposal.getId(), proposal.getTitle());
+    log.info("Create new poll. InitialProposal (id={}): {}", proposal.getId(), proposal.getTitle());
     PollModel poll = new PollModel();
     LawModel proposalInDB = lawRepo.findByTitle(proposal.getTitle());  // I have to load the proposal from DB, otherwise: exception "Detached entity passed to persist"
     poll.addProposal(proposalInDB);
@@ -68,6 +68,7 @@ public class PollService {
    * @throws LiquidoException if any status is wrong
    */
   public PollModel addProposalToPoll(@NotNull LawModel proposal, @NotNull PollModel poll) throws LiquidoException {
+
     poll.addProposal(proposal);  // may throw LiquidoException
     return pollRepo.save(poll);
   }
@@ -78,6 +79,7 @@ public class PollService {
    * @param poll a poll in elaboration phase with at least two proposals
    */
   public void startVotingPhase(@NotNull PollModel poll) throws LiquidoException {
+    log.info("startVotingPhase of poll "+poll.id);
     if (poll.getStatus() != PollModel.PollStatus.ELABORATION)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Poll must be in status ELABORATION");
     if (poll.getProposals().size() < 2)
@@ -86,11 +88,12 @@ public class PollService {
       proposal.setStatus(LawModel.LawStatus.VOTING);
     }
     poll.setStatus(PollModel.PollStatus.VOTING);
-    poll.setVotingStartedAt(new Date());
+    poll.setVotingStartAt(LocalDate.now());
+    poll.setVotingEndAt(LocalDate.now().plusDays(props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE)));
     pollRepo.save(poll);
   }
 
   //TODO: getCurrentResult()   sum up current votes
 
-  //TODO: endVotingPhase(): winning proposal becomes a law, and all others fall back to status=proposal  (then can join further polls later on)
+  //TODO: endVotingPhase(): winning proposal becomes a law.
 }

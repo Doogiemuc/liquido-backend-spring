@@ -17,10 +17,6 @@ import javax.validation.constraints.NotNull;
 @Entity
 @Table(name = "areas")
 public class AreaModel extends BaseModel {
-  @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
-  public Long id;
-
   // public fields are automatically exposed in REST endpoint
   @NotNull
   @NonNull

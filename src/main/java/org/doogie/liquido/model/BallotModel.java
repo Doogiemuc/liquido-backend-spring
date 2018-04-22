@@ -12,7 +12,7 @@ import java.util.List;
  * POJO Entity that represents a vote that a user has casted
  */
 @Data
-@EqualsAndHashCode(of = "id", callSuper = false)
+@EqualsAndHashCode(of = "id", callSuper = true)
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor  //BUGFIX: https://jira.spring.io/browse/DATAREST-884
@@ -21,10 +21,6 @@ import java.util.List;
   @UniqueConstraint(columnNames = {"POLL_ID", "voterToken"})   // a voter is only allowed to vote once per poll!
 })
 public class BallotModel extends BaseModel {
-  @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
-  public Long id;
-
   /** reference to poll */
   @NotNull
   @NonNull
