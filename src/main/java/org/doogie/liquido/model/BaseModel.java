@@ -37,6 +37,8 @@ public abstract class BaseModel implements Identifiable<Long> {
   @NotNull
   public Date updatedAt = new Date();
 
+  //No createdBy in BaseModel, because some Models (BallotModel!!!) do not want it.
+
   //I do not need   @LastModifiedBy
   // @CreatedBy is added in parent classes where needed.
 

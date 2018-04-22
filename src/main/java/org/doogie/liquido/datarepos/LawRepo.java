@@ -99,5 +99,5 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>  // 
   @RestResource(path = "findSupportedBy")
   List<LawModel> findDistinctByStatusAndSupportersContains(@Param("status") LawModel.LawStatus status, @Param("user") UserModel user);
 
-
+  
 }

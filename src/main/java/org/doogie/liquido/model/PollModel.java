@@ -3,12 +3,11 @@ package org.doogie.liquido.model;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.doogie.liquido.services.LiquidoException;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -37,9 +36,12 @@ public class PollModel extends BaseModel {
   @OneToMany(cascade = CascadeType.ALL, mappedBy="poll", fetch = FetchType.EAGER) //, orphanRemoval = true/false ??  Should a proposals be removed when the poll is deleted?
   @NotNull
   @NonNull
-  Set<LawModel> proposals = new HashSet<>();         //  ordered by date createdAt, so first in list is the initial proposal
+  Set<LawModel> proposals = new HashSet<>();
 
-
+  // Keep in mind that you SHOULD NOT just simply call
+  //   anyPoll.getProposals.add(someProposal)
+  // Because this circumvents all the restrictions that there are for adding a porposal to a poll!
+  // Instead use PollService.addProposalToPoll(prooposal, poll) !
 
   public enum PollStatus {
     ELABORATION(0),     // When the initial proposal reaches its quorum, the poll is created. Alternative proposals can be added in this phase.
@@ -53,38 +55,23 @@ public class PollModel extends BaseModel {
   PollStatus status = PollStatus.ELABORATION;
 
   /** Date when the voting phase started. Will be set in PollService */
-  LocalDate votingStartAt;
+  LocalDateTime votingStartAt;
 
-  /** Date when the voting phase will end. Also set in PollService */
-  LocalDate votingEndAt;
+  /** Date when the voting phase will end. Will be set in PollService */
+	LocalDateTime votingEndAt;
 
-  public Long getId() {
-    return this.id;
-  }
+	/*
+	public String getVotingStartAt() {
+		return votingStartAt_DT.toInstant(ZoneOffset.UTC).toString();
+	}
+	public String getVotingEndAt() {
+		return votingEndAt_DT.toInstant(ZoneOffset.UTC).toString();
+	}
+	*/
 
   public int getNumCompetingProposals() {
     if (proposals == null) return 0;
     return proposals.size();
-  }
-
-  /**
-   * Adds an alternative proposal to this poll and sets up the two way relationship between them.
-   * Alternative proposals can only be added while a poll is in its ELABORATION phase and voting has not yet started.
-   *
-   * @param proposal the proposal to add. This poll will also be linked from proposal. MUST NOT BE NULL.
-   * @throws LiquidoException When passed object is not in state PROPOSAL or when poll is not in its ELABORATION phase or not in correct area.
-   */
-  public void addProposal(@NotNull LawModel proposal) throws LiquidoException {
-    //implementation note: I check all business rules down here. As a consequence every caller has to handle the LiquidoException.
-    //  Alternative would be to check all this in PollService.java ?
-    if (proposal.getStatus() != LawModel.LawStatus.PROPOSAL)
-      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot add proposal(id="+proposal.getId()+") to poll(id="+id+", because proposal is not in state PROPOSAL.");
-    if (this.getStatus() != PollStatus.ELABORATION)
-      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot add proposal, because poll id="+id+" is not in ELABORATION phase");
-    if (this.proposals.size() > 0 && !proposal.getArea().equals(this.proposals.iterator().next().getArea()))
-      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Added proposal must be in the same area as the other proposals in this poll.");
-    this.proposals.add(proposal);
-    proposal.setPoll(this);
   }
 
   @Override

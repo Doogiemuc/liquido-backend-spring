@@ -14,8 +14,8 @@ import java.util.List;
  * One user / voter / citizen
  */
 @Data
-@EqualsAndHashCode(of = {"id"}, callSuper = true)
-@ToString(of="id, email, profile")   // This is extremely important! Do not exposed password in toString() !!!
+@EqualsAndHashCode(callSuper = true)
+//@ToString(of="id, email, profile")   // This is extremely important! Do not exposed password in toString() !!!
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor
