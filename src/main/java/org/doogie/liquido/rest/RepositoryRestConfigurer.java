@@ -1,5 +1,6 @@
 package org.doogie.liquido.rest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.doogie.liquido.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

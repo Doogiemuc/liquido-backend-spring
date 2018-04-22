@@ -49,6 +49,19 @@ Here I write down everything I need during development of my little backend.
  - Sort competing proposals into vote order (XXL)
 
 
+# Build pipeline
+
+### Run backend as Spring app
+
+ * `java org.doogie.liquido.LiquidoBackendSpringApplication --seedDB`
+
+### Create a docker image of the backend server
+
+ * If you are on Windows: Start "Docker for Windows" 
+ * `mvn dockerfile:build`
+ * `docker run org.doogie/liquido-backend-spring`
+
+
 
 # Architecture
 

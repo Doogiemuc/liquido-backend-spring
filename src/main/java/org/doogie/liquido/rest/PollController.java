@@ -56,7 +56,7 @@ public class PollController {
     PollModel createdPoll;
     try {
       //jpaContext.getEntityManagerByManagedType(PollModel.class).merge(proposal);      // DOES NOT WORK IN SPRING.  Must handle transaction via a seperate PollService class and @Transactional annotation there.
-      createdPoll = pollService.createPoll(proposalFromRequest, resourceAssembler);
+      createdPoll = pollService.createPoll(proposalFromRequest);
     } catch (LiquidoException e) {
       log.warn("Cannot /createNewPoll: "+e.getMessage());
       throw new LiquidoRestException(e.getMessage(), e);
