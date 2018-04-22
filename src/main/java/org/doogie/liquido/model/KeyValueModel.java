@@ -6,7 +6,9 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.validator.constraints.NotEmpty;
 
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
 /**
@@ -18,11 +20,7 @@ import javax.validation.constraints.NotNull;
 @RequiredArgsConstructor
 @Entity
 @Table(name = "keyValue")
-public class KeyValueModel {
-  @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
-  public Long id;
-
+public class KeyValueModel extends BaseModel {
   @NonNull
   @NotNull
   @NotEmpty

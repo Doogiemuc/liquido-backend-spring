@@ -2,7 +2,10 @@ package org.doogie.liquido.model;
 
 import lombok.*;
 
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
 
 /**
@@ -14,7 +17,7 @@ import javax.validation.constraints.NotNull;
  */
 @Entity
 @Data
-@EqualsAndHashCode(of = "id", callSuper = false)
+@EqualsAndHashCode(of = "id", callSuper = true)
 @NoArgsConstructor
 @RequiredArgsConstructor  //BUGFIX:  https://jira.spring.io/browse/DATAREST-884
 //@EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
@@ -23,9 +26,6 @@ import javax.validation.constraints.NotNull;
 })
 //@IdClass(DelegationID.class)    // This way I could also implement the composite primary key
 public class DelegationModel extends BaseModel {
-  @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
-  public Long id;
 
   /** Area that this delegation is in */
   @NonNull
