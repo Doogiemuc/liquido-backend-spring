@@ -4,6 +4,7 @@ import net.bytebuddy.utility.RandomString;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoProperties;
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.persistence.Table;
+import java.time.LocalDate;
 import java.util.*;
 
 import static org.doogie.liquido.model.LawModel.LawStatus;
@@ -44,9 +46,9 @@ public class TestDataCreator implements CommandLineRunner {
   public int NUM_USERS = 20;
   public int NUM_AREAS = 10;
   public int NUM_IDEAS = 111;
-  public int NUM_PROPOSALS = 10;
+  public int NUM_PROPOSALS = 30;
 
-  public int NUM_ALTERNATIVE_PROPOSALS = 2;   // proposals in poll
+  public int NUM_ALTERNATIVE_PROPOSALS = 5;   // proposals in poll
   public int NUM_PROPOSALS_IN_VOTING = 4;     // proposals currently in voting phase
 
   public int NUM_LAWS = 2;
@@ -71,6 +73,9 @@ public class TestDataCreator implements CommandLineRunner {
 
   @Autowired
   PollRepo pollRepo;
+
+  @Autowired
+  PollService pollService;
 
   @Autowired
   KeyValueRepo keyValueRepo;
@@ -128,6 +133,8 @@ public class TestDataCreator implements CommandLineRunner {
     log.trace("Seeding global properties ...");
     List<KeyValueModel> propKV = new ArrayList<>();
     propKV.add(new KeyValueModel(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL.toString(), "5"));
+    propKV.add(new KeyValueModel(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS.toString(), "14"));
+    propKV.add(new KeyValueModel(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE.toString(), "14"));
     keyValueRepo.save(propKV);
   }
 
@@ -268,30 +275,40 @@ public class TestDataCreator implements CommandLineRunner {
     }
   }
 
+
+
+  private LawModel createProposal(String title, String description, AreaModel area, UserModel createdBy, int ageInDays) {
+    LawModel proposal = new LawModel(title, description, area, createdBy);
+    addSupportersToIdea(proposal, getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
+    proposal.setStatus(LawStatus.PROPOSAL);
+    auditorAware.setMockAuditor(createdBy);
+    LawModel savedProposal = lawRepo.save(proposal);
+    fakeCreateAt(savedProposal,  ageInDays);
+    fakeUpdatedAt(savedProposal, ageInDays > 1 ? ageInDays - 1 : 0);
+    this.lawModels.add(savedProposal);
+    return savedProposal;
+  }
+
+  private LawModel createRandomProposal(String title) {
+    StringBuffer description = new StringBuffer();
+    description.append(RandomString.make(8));    // prepend with some random chars to test sorting
+    description.append(" ");
+    description.append(getLoremIpsum(0,400));
+    UserModel createdBy = this.users.get(rand.nextInt(NUM_USERS));
+    AreaModel area = this.areas.get(rand.nextInt(NUM_AREAS));
+    LawModel proposal = createProposal(title, description.toString(), area, createdBy, rand.nextInt(10));
+    return proposal;
+
+  }
+
   /** seed polls, ie. ideas that have already reached their quorum */
   private void seedProposals() {
     log.debug("Seeding Proposals ...");
-
     for (int i = 0; i < NUM_PROPOSALS; i++) {
-      String ideaTitle = "Proposal " + i + " that reached its quorum";
-      StringBuffer proposalDescr = new StringBuffer();
-      proposalDescr.append(RandomString.make(8));    // prepend with some random chars to test sorting
-      proposalDescr.append(" ");
-      proposalDescr.append(getLoremIpsum(0,400));
-
-      UserModel createdBy = this.users.get(i % NUM_USERS);
-      LawModel proposal = new LawModel(ideaTitle, proposalDescr.toString(), this.areas.get(0), createdBy);
-      addSupportersToIdea(proposal, getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
-      proposal.setStatus(LawStatus.PROPOSAL);
-      auditorAware.setMockAuditor(createdBy);
-      LawModel savedProposal = lawRepo.save(proposal);
-      fakeCreateAt(savedProposal, i+1);
-      fakeUpdatedAt(savedProposal, i);
-      this.lawModels.add(savedProposal);
+      String title = "Proposal " + i + " that reached its quorum";
+      createRandomProposal(title);
     }
   }
-
-
 
 
   /**
@@ -316,35 +333,33 @@ public class TestDataCreator implements CommandLineRunner {
 
   private void seedPollInElaborationPhase() {
     log.debug("Seeding one poll in elaboration phase ...");
-
-    AreaModel area = this.areas.get(0);
-    UserModel createdBy = this.users.get(0);
-    auditorAware.setMockAuditor(createdBy);
-
     //==== A poll in status ELABORATION with some first alternatives proposals. Some with and some without quorum yet.
-    PollModel poll = new PollModel();
-    pollRepo.save(poll);                     // need to save poll here for being able to call upsertLawModel
-    try {
-      poll.setStatus(PollModel.PollStatus.ELABORATION);
+     try {
+       PollModel poll = new PollModel();
+       pollRepo.save(poll);                     // need to save poll here for being able to call upsertLawModel  BUGFIX for "detached entity passed to persist"
+       AreaModel area = this.areas.get(0);
 
       //===== add proposals
       for (int i = 0; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
-        String lawTitle = "Proposal" + i;
-        String lawDesc = "proposal #" + i + " in poll." + getLoremIpsum(100, 400);
-        LawModel proposal = new LawModel(lawTitle, lawDesc, area, this.users.get(1));   // createdBy another user (so that user 0 also supports something
-        proposal.setReachedQuorumAt(DoogiesUtil.daysAgo(i));
-        proposal.setStatus(LawStatus.PROPOSAL);
-        addSupportersToIdea(proposal, getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
+        String title = "Proposal" + i + " in a poll that is in elaboration";
+        String descr = "proposal #" + i + " in poll." + getLoremIpsum(100, 400);
+        UserModel createdBy = this.users.get(rand.nextInt(NUM_USERS));
+        LawModel proposal = createProposal(title, descr, area, createdBy, i+6);
         poll.addProposal(proposal);
-        upsertLawModel(proposal, 30-i);
       }
 
       //===== save poll. This will automatically also save all proposals
+
+      //TODO: pollService.createPoll
+      LocalDate start = LocalDate.now().plusDays(getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS));
+      poll.setVotingStartAt(start);
+      poll.setVotingEndAt(start.plusDays(getGlobalPropertyAsInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE)));
       PollModel savedPoll = pollRepo.save(poll);
-      fakeCreateAt(savedPoll, 10);
+      fakeCreateAt(savedPoll, 5);
+      fakeUpdatedAt(savedPoll, 5);
       log.trace("Created poll in elaboration phase: "+savedPoll);
     } catch (Exception e) {
-      log.error("Cannot seed Poll: " + e);
+      log.error("Cannot seed Poll in elaboration: " + e);
       throw new RuntimeException("Cannot seed Pool", e);
     }
 
@@ -360,26 +375,21 @@ public class TestDataCreator implements CommandLineRunner {
     // Create a poll with some alternative proposals. All of them reached their quorum in time.
     try {
       PollModel poll = new PollModel();
+      pollRepo.save(poll);
 
       //===== add proposals to this poll that are in VOTING phase
       for (int i = 0; i < NUM_PROPOSALS_IN_VOTING; i++) {
-        String lawTitle = "Proposal in voting " + i;
-        String lawDesc = "Proposal #" + i + " in voting phase\n" + getLoremIpsum(100, 400);
-        LawModel proposalInVoting = new LawModel(lawTitle, lawDesc, area, createdBy);
-        proposalInVoting.addSupporters(this.users);
-        proposalInVoting.setReachedQuorumAt(DoogiesUtil.daysAgo(i));  // fake date in the past
-        //lawRepo.save(proposalInVoting);
-        proposalInVoting.setStatus(LawStatus.PROPOSAL); // must be set before adding proposal to poll
-        poll.addProposal(proposalInVoting);
-        proposalInVoting.setStatus(LawStatus.VOTING);   // must be set after adding proposal to poll!
+        String title = "Proposal in voting " + i;
+        String descr = "Proposal #" + i + " in voting phase\n" + getLoremIpsum(100, 400);
+        LawModel proposal = createProposal(title, descr, area, createdBy, i+6);
+        poll.addProposal(proposal);
       }
 
       //===== save poll. This will automatically also save all proposals
-      log.trace("saving poll that is in voting phase");
-      poll.setStatus(PollModel.PollStatus.VOTING);
+      pollService.startVotingPhase(poll);
       PollModel savedPoll = pollRepo.save(poll);
-      fakeCreateAt(savedPoll, 10);
-      log.debug("Created poll in voting phase: "+savedPoll);
+      fakeCreateAt(savedPoll, 5);
+      fakeUpdatedAt(savedPoll, 5);
     } catch (Exception e) {
       log.error("Cannot seed Poll in voting phase: " + e);
       throw new RuntimeException("Cannot seed Pool in vorting phase", e);

@@ -28,9 +28,9 @@ public class LiquidoProperties /*implements CommandLineRunner*/ {
    *  - I can iterate over all KEYs.
    */
   public enum KEY {
-    SUPPORTERS_FOR_PROPOSAL("liquido.supporters.for.proposal");
-    //DAYS_UNTIL_VOTING_STARTS("liquido.days.until.voting.starts"),
-    //DURATION_OF_VOTING_PHASE("liquido.duration.of.voting.phase"),
+    SUPPORTERS_FOR_PROPOSAL("liquido.supporters.for.proposal"),
+    DAYS_UNTIL_VOTING_STARTS("liquido.days.until.voting.starts"),
+    DURATION_OF_VOTING_PHASE("liquido.duration.of.voting.phase");
     //TODO: BCRYPT_SALT("liquido.bcrypt.salt");
 
     String keyName;
@@ -41,6 +41,7 @@ public class LiquidoProperties /*implements CommandLineRunner*/ {
     public String toString() {
       return this.keyName;
     }
+
   }
 
   //TODO: Cache liquido properties  (same as in LiquidoUserDetailsService)

@@ -13,12 +13,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Data model: proposal for a law.
+ * Data model: proposal for ideas, proposals and law.
  */
 //Lombok @Data does not work very well with spring. Need to use the individual annotations
 @Getter
 @Setter
-@EqualsAndHashCode(of = {"id", "title"}, callSuper = false)
+@EqualsAndHashCode(of = {"id", "title"}, callSuper = true)
 @NoArgsConstructor
 @RequiredArgsConstructor
 @Entity
@@ -31,12 +31,12 @@ public class LawModel extends BaseModel {
    * because of the self reference via field "initialLawId".
    * https://vladmihalcea.com/2014/07/15/from-jpa-to-hibernates-legacy-and-enhanced-identifier-generators/
    * https://docs.jboss.org/hibernate/orm/5.0/mappingGuide/en-US/html_single/#identifiers-generators-sequence
-   */
+
   @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
-  //@GeneratedValue(strategy=GenerationType.SEQUENCE)
-  //@SequenceGenerator(name = "sequence", allocationSize = 10)
+  @GeneratedValue(strategy=GenerationType.SEQUENCE)
+  @SequenceGenerator(name = "sequence", allocationSize = 10)
   public Long id;
+  */
 
   @NotNull
   @NonNull
