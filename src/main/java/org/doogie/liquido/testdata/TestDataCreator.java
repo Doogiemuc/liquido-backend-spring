@@ -4,6 +4,7 @@ import net.bytebuddy.utility.RandomString;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.services.LawService;
 import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoProperties;
@@ -65,6 +66,9 @@ public class TestDataCreator implements CommandLineRunner {
   List<LawModel> lawModels = new ArrayList();    // ideas, proposals and laws
 
   @Autowired
+  LawService lawService;
+
+  @Autowired
   DelegationRepo delegationRepo;
 
   @Autowired
@@ -77,7 +81,12 @@ public class TestDataCreator implements CommandLineRunner {
   PollService pollService;
 
   @Autowired
+  LiquidoProperties props;
+
+  /*
+  @Autowired
   KeyValueRepo keyValueRepo;
+  */
 
   @Autowired
   JdbcTemplate jdbcTemplate;
@@ -115,7 +124,7 @@ public class TestDataCreator implements CommandLineRunner {
       // The order of these methods is very important here!
       seedUsers();
       auditorAware.setMockAuditor(this.users.get(0));   // Simulate that user is logged in.  This user will be set as @createdAt
-      seedGlobalProperties();
+      //seedGlobalProperties();
       seedAreas();
       seedDelegations();
       seedIdeas();
@@ -128,6 +137,7 @@ public class TestDataCreator implements CommandLineRunner {
     }
   }
 
+  /*
   private void seedGlobalProperties() {
     log.trace("Seeding global properties ...");
     List<KeyValueModel> propKV = new ArrayList<>();
@@ -136,19 +146,26 @@ public class TestDataCreator implements CommandLineRunner {
     propKV.add(new KeyValueModel(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE.toString(), "14"));
     keyValueRepo.save(propKV);
   }
+  */
 
 
   private String getGlobalProperty(LiquidoProperties.KEY key) {
+    return props.get(key);
+
+    /*
     KeyValueModel kv = keyValueRepo.findByKey(key.toString());
     return kv.getValue();
+    */
   }
 
   private Integer getGlobalPropertyAsInt(LiquidoProperties.KEY key) {
-    return Integer.valueOf(getGlobalProperty(key));
+    return props.getInt(key);
+
+    //return Integer.valueOf(getGlobalProperty(key));
   }
 
   private void seedUsers() {
-    log.trace("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
+    log.info("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
     this.users = new ArrayList<>();
 
     for (int i = 0; i < NUM_USERS; i++) {
@@ -163,10 +180,10 @@ public class TestDataCreator implements CommandLineRunner {
 
       UserModel existingUser = userRepo.findByEmail(email);
       if (existingUser != null) {
-        log.trace("Updating existing user with id=" + existingUser.getId());
+        log.debug("Updating existing user with id=" + existingUser.getId());
         newUser.setId(existingUser.getId());
       } else {
-        log.trace("Creating new user " + newUser);
+        log.debug("Creating new user " + newUser);
       }
 
       UserModel savedUser = userRepo.save(newUser);
@@ -179,7 +196,7 @@ public class TestDataCreator implements CommandLineRunner {
    * Create some areas with unique titles. All created by user0
    */
   private void seedAreas() {
-    log.trace("Seeding Areas ...");
+    log.info("Seeding Areas ...");
     this.areas = new ArrayList<>();
 
     UserModel createdBy = this.users.get(0);
@@ -190,10 +207,10 @@ public class TestDataCreator implements CommandLineRunner {
 
       AreaModel existingArea = areaRepo.findByTitle(areaTitle);
       if (existingArea != null) {
-        log.trace("Updating existing area with id=" + existingArea.getId());
+        log.debug("Updating existing area with id=" + existingArea.getId());
         newArea.setId(existingArea.getId());
       } else {
-        log.trace("Creating new area " + newArea);
+        log.debug("Creating new area " + newArea);
       }
 
       AreaModel savedArea = areaRepo.save(newArea);
@@ -202,7 +219,7 @@ public class TestDataCreator implements CommandLineRunner {
   }
 
   private void seedDelegations() {
-    log.debug("Seeding delegations ...");
+    log.info("Seeding delegations ...");
 
     /*   THIS WAS FOR TESTING.  LEARNED A LOT
     DelegationModel delegation1 = new DelegationModel(areas.get(0), users.get(0), users.get(1));
@@ -246,7 +263,7 @@ public class TestDataCreator implements CommandLineRunner {
   }
 
   private void seedIdeas() {
-    log.debug("Seeding Ideas ...");
+    log.info("Seeding Ideas ...");
     for (int i = 0; i < NUM_IDEAS; i++) {
       String ideaTitle = "Idea " + i + " that suggest that we definitely need a longer title for ideas";
       StringBuffer ideaDescr = new StringBuffer();
@@ -255,10 +272,16 @@ public class TestDataCreator implements CommandLineRunner {
       ideaDescr.append(getLoremIpsum(0,400));
 
       UserModel createdBy = this.users.get(i % NUM_USERS);
+      auditorAware.setMockAuditor(createdBy);
       AreaModel area = this.areas.get(i % this.areas.size());
       LawModel newIdea = new LawModel(ideaTitle, ideaDescr.toString(), area, createdBy);
-      addSupportersToIdea(newIdea, rand.nextInt(NUM_USERS/2));   // add some supporters
+      lawRepo.save(newIdea);
 
+      int numSupporters = rand.nextInt(getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)-1);
+      //log.debug("adding "+numSupporters+" supporters to idea "+newIdea);
+      addSupportersToIdea(newIdea, numSupporters);   // add some supporters, but not enough to become a proposal
+
+      /*
       LawModel existingIdea = lawRepo.findByTitle(ideaTitle);
       if (existingIdea != null) {
         log.trace("Updating existing idea with id=" + existingIdea.getId());
@@ -266,26 +289,28 @@ public class TestDataCreator implements CommandLineRunner {
       } else {
         log.trace("Creating new idea " + newIdea);
       }
-      auditorAware.setMockAuditor(createdBy);
-      LawModel savedIdea = lawRepo.save(newIdea);
-      fakeCreateAt(savedIdea, i+1);
-      fakeUpdatedAt(savedIdea, i);
-      this.lawModels.add(savedIdea);
+      */
+
+      //LawModel savedIdea = lawRepo.save(newIdea);
+      fakeCreateAt(newIdea, i+1);
+      fakeUpdatedAt(newIdea, i);
+      this.lawModels.add(newIdea);
     }
   }
 
 
 
   private LawModel createProposal(String title, String description, AreaModel area, UserModel createdBy, int ageInDays) {
-    LawModel proposal = new LawModel(title, description, area, createdBy);
-    addSupportersToIdea(proposal, getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
-    proposal.setStatus(LawStatus.PROPOSAL);
     auditorAware.setMockAuditor(createdBy);
-    LawModel savedProposal = lawRepo.save(proposal);
-    fakeCreateAt(savedProposal,  ageInDays);
-    fakeUpdatedAt(savedProposal, ageInDays > 1 ? ageInDays - 1 : 0);
-    this.lawModels.add(savedProposal);
-    return savedProposal;
+    LawModel proposal = new LawModel(title, description, area, createdBy);
+    lawRepo.save(proposal);
+    proposal = addSupportersToIdea(proposal, getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
+    //proposal.setStatus(LawStatus.PROPOSAL);
+    //LawModel savedProposal = lawRepo.save(proposal);
+    fakeCreateAt(proposal,  ageInDays);
+    fakeUpdatedAt(proposal, ageInDays > 1 ? ageInDays - 1 : 0);
+    this.lawModels.add(proposal);
+    return proposal;
   }
 
   private LawModel createRandomProposal(String title) {
@@ -302,10 +327,11 @@ public class TestDataCreator implements CommandLineRunner {
 
   /** seed polls, ie. ideas that have already reached their quorum */
   private void seedProposals() {
-    log.debug("Seeding Proposals ...");
+    log.info("Seeding Proposals ...");
     for (int i = 0; i < NUM_PROPOSALS; i++) {
       String title = "Proposal " + i + " that reached its quorum";
-      createRandomProposal(title);
+      LawModel proposal = createRandomProposal(title);
+      log.debug("Created proposal "+proposal);
     }
   }
 
@@ -316,8 +342,9 @@ public class TestDataCreator implements CommandLineRunner {
    * and supporters must not be added twice.
    * @param idea the idea to add to
    * @param num number of new supporters to add.
+   * @return the idea with the added supporters. The idea might have reached its quorum and now be a proposal
    */
-  private void addSupportersToIdea(LawModel idea, int num) {
+  private LawModel addSupportersToIdea(LawModel idea, int num) {
     if (num >= users.size()-1) throw new RuntimeException("Cannot at "+num+" supporters to idea. There are not enough users.");
     // https://stackoverflow.com/questions/8378752/pick-multiple-random-elements-from-a-list-in-java
     LinkedList<UserModel> otherUsers = new LinkedList<>();
@@ -325,9 +352,12 @@ public class TestDataCreator implements CommandLineRunner {
       if (!user.equals(idea.getCreatedBy()))   otherUsers.add(user);
     }
     Collections.shuffle(otherUsers);
-    for (UserModel supporter: otherUsers.subList(0, num)) {
-      idea.addSupporter(supporter);
+    LawModel ideaFromDB = lawRepo.findOne(idea.getId());  // Get JPA "attached" entity
+    List<UserModel> newSupporters = otherUsers.subList(0, num);
+    for (UserModel supporter: newSupporters) {
+      ideaFromDB = lawService.addSupporter(supporter, ideaFromDB);   //Remember: Don't just do idea.getSupporters().add(supporter);
     }
+    return ideaFromDB;
   }
 
   /**
@@ -336,7 +366,7 @@ public class TestDataCreator implements CommandLineRunner {
    * @return the poll in elaboration as it has been stored into the DB.
    */
   private PollModel seedPollInElaborationPhase() {
-    log.debug("Seeding one poll in elaboration phase ...");
+    log.info("Seeding one poll in elaboration phase ...");
     try {
       AreaModel area = this.areas.get(0);
       String title, descr;
@@ -374,7 +404,7 @@ public class TestDataCreator implements CommandLineRunner {
    *   Will build upon a seedPollInElaborationPhase and then start the voting phase via pollService.
    */
   public void seedPollInVotingPhase() {
-    log.debug("Seeding one poll in voting phase ...");
+    log.info("Seeding one poll in voting phase ...");
     try {
       PollModel poll = seedPollInElaborationPhase();
       int i = 1;
@@ -395,7 +425,7 @@ public class TestDataCreator implements CommandLineRunner {
 
 
   public void seedLaws() {
-    log.trace("Seeding laws");
+    log.info("Seeding laws");
     AreaModel area = this.areas.get(0);
     UserModel createdBy = this.users.get(0);
     auditorAware.setMockAuditor(createdBy);
@@ -406,8 +436,9 @@ public class TestDataCreator implements CommandLineRunner {
 
     for (int i = 0; i < NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
-      LawModel realLaw = new LawModel(lawTitle, "Complete description of real law #"+i, area, createdBy);
-      realLaw.addSupporters(this.users);
+      LawModel realLaw = createProposal(lawTitle, getLoremIpsum(100,400), area, createdBy, 12);
+      addSupportersToIdea(realLaw, getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)+5);
+      //TODO: reaLaw actually needs to have been part of a (finished) poll
       realLaw.setReachedQuorumAt(DoogiesUtil.daysAgo(24));
       realLaw.setStatus(LawStatus.LAW);
       upsertLawModel(realLaw, 20+i);
@@ -469,7 +500,7 @@ public class TestDataCreator implements CommandLineRunner {
   }
 
   public void seedBallots() {
-    log.debug("Seeding ballots ...");
+    log.info("Seeding ballots ...");
 
     List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
     if (polls.size() == 0) throw new RuntimeException("cannot seed Ballots. There is no poll in voting phase.");  //MAYBE: create one

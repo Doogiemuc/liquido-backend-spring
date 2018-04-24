@@ -19,8 +19,8 @@ import java.util.Map;
 @Slf4j
 @Component
 public class LiquidoProperties /*implements CommandLineRunner*/ {
-  //Implementation note: Making this a CommandLine runner was the only way I found to make this run AFTER TestDataCreator.
-  // But properties must be initialized BEFORE TestDataCreator. This was possible with the @PostConstruct annotation.
+  //Implementation note: A CommandLine runner makes this run AFTER TestDataCreator.
+  // But LiquidoProperties must be initialized BEFORE TestDataCreator. This is now possible with the @PostConstruct annotation below.
 
   /**
    * List of KEYs. All values are mandatory! Each key must have a default value in application.properties!

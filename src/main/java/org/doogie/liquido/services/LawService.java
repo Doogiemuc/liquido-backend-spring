@@ -10,7 +10,10 @@ import org.doogie.liquido.util.LiquidoProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import javax.validation.constraints.NotNull;
+import java.util.Collections;
 import java.util.Date;
+import java.util.LinkedList;
 
 /**
  * Utility methods for a Law. These are for example used by {@link org.doogie.liquido.model.LawProjection}
@@ -42,20 +45,39 @@ public class LawService {
     return law.getSupporters().contains(currentlyLoggedInUser);
   }
 
+/**
+ * Add a supporter to an idea or proposal.
+ * This is actually a quite interesting algorithm, because the initial creator of the idea must not be added as supporter
+ * and supporters must not be added twice.
+ * @param supporter the user that 'likes' this idea and wants to support and discuss it.
+ * @param idea the idea to add to
+ * @return the saved idea
+ */
+  public LawModel addSupporter(@NotNull UserModel supporter, @NotNull LawModel idea) {
+    if (idea.getSupporters().contains(supporter)) return idea;   // Do not add supporter twice
+    if (idea.getCreatedBy().equals(supporter)) return idea;      // Must not support your own idea
+    log.info(supporter.getProfile().getName()+"(id="+supporter.getId()+") now supports "+idea);
+    idea.getSupporters().add(supporter);
+    idea = lawRepo.save(idea);
+    idea = checkQuorum(idea);
+    return idea;
+  }
+
   /**
    * When an idea reaches its quorum, then it becomes a proposal.
-   * Called from {@link LawEventHandler}
+   * This is automatically called from {@link LawEventHandler} when supporter has been added via REST: POST /laws/4711/supporters
    * @param idea an idea where a supporter has been added.
    */
-  public void checkQuorum(LawModel idea) {
+  public LawModel checkQuorum(LawModel idea) {
     if (idea != null &&
         idea.getStatus().equals(LawModel.LawStatus.IDEA) &&
         idea.getNumSupporters() >= props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL) ) {
       log.info("Idea (id="+idea.getId()+") '"+idea.getTitle()+"' reached its quorum with "+idea.getNumSupporters()+" supporters.");
       idea.setStatus(LawModel.LawStatus.PROPOSAL);
       idea.setReachedQuorumAt(new Date());
-      lawRepo.save(idea);
+      return lawRepo.save(idea);
     }
+    return idea;
     //TODO: What happens with a law when a supporter gets removed?
   }
 }
