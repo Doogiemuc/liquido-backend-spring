@@ -119,22 +119,8 @@ public class LawModel extends BaseModel {
   @ManyToOne
   public UserModel createdBy;
 
-  /**
-   * Call this when a user 'likes' a proposal
-   * No user will be added twice and the creator of this proposal cannot be added as supporter.
-   * @param supporter The user that wants to discuss this idea. Must not be the creator!
-   */
-  public void addSupporter(UserModel supporter) {
-    if (supporter == null) return;
-    if (supporter.equals(this.getCreatedBy())) return;
-    this.supporters.add(supporter);
-  }
-
-  public void addSupporters(Collection<UserModel> supporters) {
-    for(UserModel supporter : supporters) {
-      this.addSupporter(supporter);
-    }
-  }
+  //Remember: You MUST NOT call idea.getSupporters.add(someUser) directly! Because this circumvents the restrictions
+  // that there are for supporting an idea. E.g. a user must not support his own idea. Call LawService.addSupporter() instead!
 
   public int getNumSupporters() {
     if (this.supporters == null) return 0;

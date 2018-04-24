@@ -40,8 +40,8 @@ public class PollModel extends BaseModel {
 
   // Keep in mind that you SHOULD NOT just simply call
   //   anyPoll.getProposals.add(someProposal)
-  // Because this circumvents all the restrictions that there are for adding a porposal to a poll!
-  // Instead use PollService.addProposalToPoll(prooposal, poll) !
+  // Because this circumvents all the restrictions that there are for adding a proposals to a poll!
+  // Instead use PollService.addProposalToPoll(proposals, poll) !
 
   public enum PollStatus {
     ELABORATION(0),     // When the initial proposal reaches its quorum, the poll is created. Alternative proposals can be added in this phase.
