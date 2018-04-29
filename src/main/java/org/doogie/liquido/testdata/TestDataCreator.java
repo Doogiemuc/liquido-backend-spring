@@ -15,9 +15,12 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityManager;
 import javax.persistence.Table;
 import java.util.*;
 
@@ -53,6 +56,10 @@ public class TestDataCreator implements CommandLineRunner {
 
   public int NUM_LAWS = 2;
 
+
+  //@Autowired
+	//EntityManager em;
+
   @Autowired
   UserRepo userRepo;
   List<UserModel> users = new ArrayList();    // will contain the list of created users that can be used in further repos, eg. as "createdBy" value
@@ -67,6 +74,9 @@ public class TestDataCreator implements CommandLineRunner {
 
   @Autowired
   LawService lawService;
+
+  @Autowired
+	CommentRepo commentRepo;
 
   @Autowired
   DelegationRepo delegationRepo;
@@ -137,7 +147,7 @@ public class TestDataCreator implements CommandLineRunner {
     }
   }
 
-  /*
+  /*   Global properties are automatically initialized from application.properties file
   private void seedGlobalProperties() {
     log.trace("Seeding global properties ...");
     List<KeyValueModel> propKV = new ArrayList<>();
@@ -360,31 +370,53 @@ public class TestDataCreator implements CommandLineRunner {
     return ideaFromDB;
   }
 
+  @Transactional
+  private LawModel addCommentsToProposal(LawModel proposal) {
+  	UserModel randUser = users.get(rand.nextInt(NUM_USERS));
+		auditorAware.setMockAuditor(randUser);
+		CommentModel rootComment = new CommentModel("Comment on root level. I really like this idea, but needs to be improved.", null);
+		// Must save CommentModel immediately, to prevent "TransientPropertyValueException: object references an unsaved transient instance"
+    // Could also add @Cascade(org.hibernate.annotations.CascadeType.ALL) on LawModel.comments but this would always overwrite and save the full list of all comments on every save of a LawModel.
+    commentRepo.save(rootComment);
+		for (int i = 0; i < 5; i++) {
+			randUser = users.get(rand.nextInt(NUM_USERS));
+			auditorAware.setMockAuditor(randUser);
+			CommentModel reply = new CommentModel("Reply "+i+" "+getLoremIpsum(10, 100), rootComment);
+			commentRepo.save(reply);
+      rootComment.getReplies().add(reply);
+		}
+		proposal.getComments().add(rootComment);
+  	return lawRepo.save(proposal);
+	}
+
   /**
    * Seed a poll that has some alternative proposals and is still in its elaboration phase,
    * ie. voting has not yet started
    * @return the poll in elaboration as it has been stored into the DB.
    */
+  @Transactional
   private PollModel seedPollInElaborationPhase() {
     log.info("Seeding one poll in elaboration phase ...");
     try {
       AreaModel area = this.areas.get(0);
-      String title, descr;
+      String title, desc;
       UserModel createdBy;
 
       //===== create Poll from initial Proposal
       title = "Initial Proposal in a poll that is in elaboration "+System.currentTimeMillis();
-      descr = getLoremIpsum(100, 400);
+      desc = getLoremIpsum(100, 400);
       createdBy = this.users.get(rand.nextInt(NUM_USERS));
-      LawModel initialProposal = createProposal(title, descr, area, createdBy, 10);
+      LawModel initialProposal = createProposal(title, desc, area, createdBy, 10);
+			addCommentsToProposal(initialProposal);
       PollModel newPoll = pollService.createPoll(initialProposal);
 
       //===== add alternative proposals
       for (int i = 0; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
         title = "Alternative Proposal" + i + " in a poll that is in elaboration"+System.currentTimeMillis();
-        descr = getLoremIpsum(100, 400);
+        desc = getLoremIpsum(100, 400);
         createdBy = this.users.get(rand.nextInt(NUM_USERS));
-        LawModel altProp = createProposal(title, descr, area, createdBy, 20);
+        LawModel altProp = createProposal(title, desc, area, createdBy, 20);
+				altProp = addCommentsToProposal(altProp);
         pollService.addProposalToPoll(altProp, newPoll);
       }
 
@@ -394,7 +426,7 @@ public class TestDataCreator implements CommandLineRunner {
       return newPoll;
     } catch (Exception e) {
       log.error("Cannot seed Poll in elaboration: " + e);
-      throw new RuntimeException("Cannot seed Pool", e);
+      throw new RuntimeException("Cannot seed Poll in elaboration", e);
     }
 
   }
@@ -419,7 +451,7 @@ public class TestDataCreator implements CommandLineRunner {
       pollService.startVotingPhase(savedPoll);
     } catch (Exception e) {
       log.error("Cannot seed Poll in voting phase: " + e);
-      throw new RuntimeException("Cannot seed Pool in voting phase", e);
+      throw new RuntimeException("Cannot seed Poll in voting phase", e);
     }
   }
 

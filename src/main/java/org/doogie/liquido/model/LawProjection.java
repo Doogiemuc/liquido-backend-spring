@@ -28,6 +28,8 @@ public interface LawProjection {
 
   AreaModel getArea();  // inline information about the area
 
+  PollModel getPoll();
+
   Date getReachedQuorumAt();
 
   Date getCreatedAt();
@@ -45,11 +47,5 @@ public interface LawProjection {
   boolean isSupportedByCurrentUser();
 
   int getNumSupporters();
-  /*
-  {
-    if (this.supporters == null) return 0;
-    return this.supporters.size();
-  }
-  */
 
 }
