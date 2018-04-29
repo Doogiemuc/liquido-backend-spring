@@ -1,13 +1,13 @@
 package org.doogie.liquido.model;
 
 import lombok.*;
+import org.hibernate.annotations.Cascade;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -18,7 +18,7 @@ import java.util.Set;
 //Lombok @Data does not work very well with spring. Need to use the individual annotations
 @Getter
 @Setter
-@EqualsAndHashCode(of = {"id", "title"}, callSuper = true)
+@EqualsAndHashCode(of = {"title"}, callSuper = true)
 @NoArgsConstructor
 @RequiredArgsConstructor
 @Entity
@@ -72,6 +72,11 @@ public class LawModel extends BaseModel {
    */
   @ManyToOne(optional = true)
   public PollModel poll = null;
+
+  /** suggestions for improvement */
+	@OneToMany(fetch = FetchType.EAGER)  // fetch all comments when loading a an idea or proposal.  Prevents "LazyInitializationException, could not initialize proxy - no Session" but at the cost of performance.
+	//@Cascade(org.hibernate.annotations.CascadeType.ALL)
+  public Set<CommentModel> comments;
 
   /*   DEPRECATED
    * Reference to initial proposal. The initial proposal references itself.

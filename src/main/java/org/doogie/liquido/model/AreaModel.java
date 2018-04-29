@@ -10,7 +10,7 @@ import javax.validation.constraints.NotNull;
 // Using all three lombok annotations Getter,Setter and EqualsAndHashCode does not exactly(!) seem to be the same as the all-in-one @Data annotation
 @Getter
 @Setter
-@EqualsAndHashCode(of = {"id", "title"}, callSuper = false)
+@EqualsAndHashCode(of = {"title"}, callSuper = true)
 @ToString
 @NoArgsConstructor
 @RequiredArgsConstructor
