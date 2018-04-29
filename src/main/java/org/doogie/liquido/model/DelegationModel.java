@@ -17,7 +17,7 @@ import javax.validation.constraints.NotNull;
  */
 @Entity
 @Data
-@EqualsAndHashCode(of = "id", callSuper = true)
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @RequiredArgsConstructor  //BUGFIX:  https://jira.spring.io/browse/DATAREST-884
 //@EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.

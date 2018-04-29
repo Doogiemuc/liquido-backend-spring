@@ -12,7 +12,7 @@ import java.util.List;
  * POJO Entity that represents a vote that a user has casted
  */
 @Data
-@EqualsAndHashCode(of = "id", callSuper = true)
+@EqualsAndHashCode(callSuper = true)
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor  //BUGFIX: https://jira.spring.io/browse/DATAREST-884

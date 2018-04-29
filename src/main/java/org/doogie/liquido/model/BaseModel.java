@@ -37,18 +37,13 @@ public abstract class BaseModel implements Identifiable<Long> {
   @NotNull
   public Date updatedAt = new Date();
 
-  //No createdBy in BaseModel, because some Models (BallotModel!!!) do not want it.
-
   //I do not need   @LastModifiedBy
-  // @CreatedBy is added in parent classes where needed.
 
-  /* THIS WAY the ID field could also be exposed. I am doing it in the Projections and in the RepositoryRestConfigurer
-   *
-   * expose the internal DB ID of our objects. Actually the client gets URIs for identifying entitires.
-   * But when inlining a child entity via a projection, this UID makes things much easier for the web client.
-   * @return the internal ID as a String value
+  //No default createdBy here in the BaseModel, because some Models (e.g. BallotModel!!!) do not want it.
 
-  public String getURI() {
+  /*
+   THIS WAY the ID field could also be exposed for every Model. But I am doing it in the Projections and in the RepositoryRestConfigurer
+  public String getID() {
     return getId().toString();
   }
   */
