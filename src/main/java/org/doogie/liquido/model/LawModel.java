@@ -75,7 +75,7 @@ public class LawModel extends BaseModel {
 
   /** suggestions for improvement */
 	@OneToMany(fetch = FetchType.EAGER)  // fetch all comments when loading a an idea or proposal.  Prevents "LazyInitializationException, could not initialize proxy - no Session" but at the cost of performance.
-	//@Cascade(org.hibernate.annotations.CascadeType.ALL)
+	//@Cascade(org.hibernate.annotations.CascadeType.ALL)   // https://vladmihalcea.com/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
   public Set<CommentModel> comments;
 
   /*   DEPRECATED
@@ -104,11 +104,12 @@ public class LawModel extends BaseModel {
   /** enumeration of law status */
   public enum LawStatus {
     IDEA(0),            // An idea is a newly created proposal for a law that did not reach its quorum yet.
-    PROPOSAL(1),        // When an idea reaches its quorum, then it becomes a proposal.
-    VOTING(2),          // When the voting phase starts, the description of a proposals cannot be changed anymore.
-    LAW(3),             // The winning proposal becomes a law.
-    RETENTION(4),       // When a law looses support, it is in the retention phase
-    RETRACTED(5);       // When a law looses support for too long, it will be retracted.
+    PROPOSAL(1),        // When an idea reaches its quorum, then it becomes a proposal and can join a poll.
+    ELABORATION(2),     // Law is part of a poll and can be discussed. Voting has not yet started.
+    VOTING(3),          // When the voting phase starts, the description of a proposals cannot be changed anymore.
+    LAW(4),             // The winning proposal becomes a law.
+    RETENTION(5),       // When a law looses support, it is in the retention phase
+    RETRACTED(6);       // When a law looses support for too long, it will be retracted.
     int statusId;
     LawStatus(int id) { this.statusId = id; }
   }

@@ -11,9 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.validation.constraints.NotNull;
-import java.util.Collections;
 import java.util.Date;
-import java.util.LinkedList;
 
 /**
  * Utility methods for a Law. These are for example used by {@link org.doogie.liquido.model.LawProjection}
@@ -80,5 +78,6 @@ public class LawService {
     return idea;
     //TODO: What happens with a law when a supporter gets removed?
   }
+
 }
 

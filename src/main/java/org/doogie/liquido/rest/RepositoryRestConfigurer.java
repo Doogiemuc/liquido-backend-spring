@@ -113,4 +113,24 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
   }
   */
 
+  /*
+
+  /*
+    https://stackoverflow.com/questions/22029727/using-validators-in-spring-data-rest-returns-http-500-instead-of-400
+    Spring-data-rest returns HTTP 500 instead of 400 when validation fails, e.g. when required fields are missing in POST requests.
+    This does help. But then this gets into conflictd with missing createdBy, which seems to be added later. *sic*
+	@Bean
+	public Validator validator() {
+		return new LocalValidatorFactoryBean();
+	}
+
+	@Override
+	public void configureValidatingRepositoryEventListener(ValidatingRepositoryEventListener validatingListener) {
+		validatingListener.addValidator("afterCreate", validator());
+		//validatingListener.addValidator("beforeCreate", validator());
+		validatingListener.addValidator("afterSave", validator());
+		validatingListener.addValidator("beforeSave", validator());
+	}
+	*/
+
 }
