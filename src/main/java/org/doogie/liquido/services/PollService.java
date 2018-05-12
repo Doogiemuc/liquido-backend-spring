@@ -77,9 +77,9 @@ public class PollService {
       throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot add proposal, because poll id="+poll.getId()+" is not in ELABORATION phase");
     if (poll.getProposals().size() > 0 && !proposal.getArea().equals(poll.getProposals().iterator().next().getArea()))
       throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Added proposal must be in the same area as the other proposals in this poll.");
+    proposal.setStatus(LawModel.LawStatus.ELABORATION);
     poll.getProposals().add(proposal);
     proposal.setPoll(poll);
-    //MAYBE: proposal.setStatus(LawStatus.ELABORATION)    should I introduce an 'elaboration' state? Can also be seen when proposal.poll != null
     return pollRepo.save(poll);
   }
 

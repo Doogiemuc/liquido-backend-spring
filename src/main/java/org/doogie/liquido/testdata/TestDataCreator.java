@@ -375,13 +375,24 @@ public class TestDataCreator implements CommandLineRunner {
   	UserModel randUser = users.get(rand.nextInt(NUM_USERS));
 		auditorAware.setMockAuditor(randUser);
 		CommentModel rootComment = new CommentModel("Comment on root level. I really like this idea, but needs to be improved.", null);
+		for (int i = 0; i < rand.nextInt(10); i++) {
+			rootComment.getUpVoters().add(randUser());
+		}
+		for (int j = 0; j < rand.nextInt(10); j++) {
+			rootComment.getDownVoters().add(randUser());
+		}
 		// Must save CommentModel immediately, to prevent "TransientPropertyValueException: object references an unsaved transient instance"
     // Could also add @Cascade(org.hibernate.annotations.CascadeType.ALL) on LawModel.comments but this would always overwrite and save the full list of all comments on every save of a LawModel.
     commentRepo.save(rootComment);
 		for (int i = 0; i < 5; i++) {
-			randUser = users.get(rand.nextInt(NUM_USERS));
-			auditorAware.setMockAuditor(randUser);
+			auditorAware.setMockAuditor(randUser());
 			CommentModel reply = new CommentModel("Reply "+i+" "+getLoremIpsum(10, 100), rootComment);
+			for (int k = 0; k < rand.nextInt(10); k++) {
+				reply.getUpVoters().add(randUser());
+			}
+			for (int l = 0; l < rand.nextInt(10); l++) {
+				reply.getDownVoters().add(randUser());
+			}
 			commentRepo.save(reply);
       rootComment.getReplies().add(reply);
 		}
@@ -549,6 +560,9 @@ public class TestDataCreator implements CommandLineRunner {
     ballotRepo.save(newBallot);
   }
 
+	private UserModel randUser() {
+		return users.get(rand.nextInt(NUM_USERS));
+	}
 
   private static final String loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, nam urna. Vitae aenean velit, voluptate velit rutrum. Elementum integer rhoncus rutrum morbi aliquam metus, morbi nulla, nec est phasellus dolor eros in libero. Volutpat dui feugiat, non magna, parturient dignissim lacus ipsum in adipiscing ut. Et quis adipiscing perferendis et, id consequat ac, dictum dui fermentum ornare rhoncus lobortis amet. Eveniet nulla sollicitudin, dolore nullam massa tortor ullamcorper mauris. Lectus ipsum lacus.\n" +
       "Vivamus placerat a sodales est, vestibulum nec cursus eros fermentum. Felis orci nunc quis suspendisse dignissim justo, sed proin metus, nunc elit ac aliquam. Sed tellus ante ipsum erat platea nulla, enim bibendum gravida condimentum, imperdiet in vitae faucibus ultrices, aenean fringilla at. Rhoncus et sint volutpat, bibendum neque arcu, posuere viverra in, imperdiet duis. Eget erat condimentum congue ipsam. Tortor nostra, adipiscing facilisis donec elit pellentesque natoque integer. Ipsum id. Aenean suspendisse et eros hymenaeos in auctor, porttitor amet id pellentesque tempor, praesent aliquam rhoncus convallis vel, tempor fusce wisi enim aliquam ut nisl, nullam dictum etiam. Nisi accumsan augue sapiente dui, pulvinar cras sapien mus quam nonummy vivamus, in vitae, sociis pede, convallis mollis id mauris. Vestibulum ac quis scelerisque magnis pede in, duis ullamcorper a ipsum ante ornare.\n" +
