@@ -57,12 +57,12 @@ public class CommentModel extends BaseModel {
 	Set<UserModel> downVoters = new HashSet<>();
 
   /** get the number of upvotes */
-  int getUpVotes() {
+  public int getUpVotes() {
     return upVoters.size();
   }
 
   /** get the number of downVotes */
-  int getDownVotes() {
+  public int getDownVotes() {
     return downVoters.size();
   }
 
