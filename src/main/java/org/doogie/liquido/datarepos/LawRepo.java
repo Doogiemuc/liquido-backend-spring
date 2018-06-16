@@ -86,7 +86,7 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>  // 
    * @param user a user that created them
    * @return list of LawModels that were created by this user
    */
-  @RestResource(path = "findCreatedBy")
+  @RestResource(path = "findByStatusAndCreator")
   List<LawModel> findDistinctByStatusAndCreatedBy(@Param("status") LawModel.LawStatus status, @Param("user") UserModel user);
 
   /**

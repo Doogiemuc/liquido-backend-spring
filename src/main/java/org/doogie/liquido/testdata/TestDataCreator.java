@@ -49,7 +49,7 @@ public class TestDataCreator implements CommandLineRunner {
   public int NUM_USERS = 20;
   public int NUM_AREAS = 10;
   public int NUM_IDEAS = 111;
-  public int NUM_PROPOSALS = 30;
+  public int NUM_PROPOSALS = 50;
 
   public int NUM_ALTERNATIVE_PROPOSALS = 5;   // proposals in poll
   public int NUM_PROPOSALS_IN_VOTING = 4;     // proposals currently in voting phase
@@ -335,13 +335,23 @@ public class TestDataCreator implements CommandLineRunner {
 
   }
 
-  /** seed polls, ie. ideas that have already reached their quorum */
+  /** seed proposals, ie. ideas that have already reached their quorum */
   private void seedProposals() {
     log.info("Seeding Proposals ...");
     for (int i = 0; i < NUM_PROPOSALS; i++) {
       String title = "Proposal " + i + " that reached its quorum";
       LawModel proposal = createRandomProposal(title);
       log.debug("Created proposal "+proposal);
+    }
+    // make sure, that testuser0 has at least 5 proposals
+    for (int i = 0; i < 5; i++) {
+			UserModel createdBy = this.users.get(0);
+    	String title = "Proposal " + i + " for user "+createdBy.getEmail();
+      String description = getLoremIpsum(100,400);
+      AreaModel area = this.areas.get(rand.nextInt(NUM_AREAS));
+      int ageInDays = rand.nextInt(10);
+      LawModel proposal = createProposal(title, description, area, createdBy, ageInDays);
+      log.debug("Created proposal for user "+createdBy.getEmail());
     }
   }
 

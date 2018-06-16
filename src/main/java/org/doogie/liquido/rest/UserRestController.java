@@ -7,6 +7,7 @@ import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.services.LiquidoException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,12 +89,12 @@ public class UserRestController {
    * get all proxies that this user currently has assigned (per area)
    * @param userId ID of an existing user
    * @return a map  area.title => proxyUser   with one entry for each proxy of that user in that area
-   * @throws LiquidoRestException when user does not exist
+   * @throws LiquidoException when user does not exist
    */
   @RequestMapping(value = "/users/{userId}/getProxyMap", method = GET, produces = MediaType.APPLICATION_JSON_VALUE)
-  public @ResponseBody Map getProxyMap(@PathVariable Long userId) throws LiquidoRestException {
+  public @ResponseBody Map getProxyMap(@PathVariable Long userId) throws LiquidoException {
     UserModel user = userRepo.findOne(userId);
-    if (user == null) throw new LiquidoRestException("User with id="+userId+" does not exist.");
+    if (user == null) throw new LiquidoException(LiquidoException.Errors.USER_DOES_NOT_EXIST, "User with id="+userId+" does not exist.");
     List<DelegationModel> proxies = delegationRepo.findByFromUser(user);
     Map<String, UserModel> proxyMap = new HashMap<>();
     for (DelegationModel delegation : proxies) {
@@ -118,22 +119,21 @@ public class UserRestController {
       @RequestBody Resource<DelegationModel> delegationResource,
       PersistentEntityResourceAssembler resourceAssembler
       // Authentication auth  // not needed anymore - spring-security authentication object could be injected like this
-    )
-  {
+    ) throws LiquidoException {
     log.trace("saveProxy delegation="+delegationResource);
     DelegationModel newDelegation = delegationResource.getContent();
 
     UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
-    if (currentUser == null) throw new LiquidoRestException("Cannot save Proxy. Need an authenticated user as fromUser");
+    if (currentUser == null) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Cannot save Proxy. Need an authenticated user as fromUser");
 
     newDelegation.setFromUser(currentUser);     // any user can only add proxies for himself
     UserModel toProxy = newDelegation.getToProxy();
     AreaModel area = newDelegation.getArea();
 
     // Delegations are important. So we do a lot of sanity checks here.
-    if (area == null) throw new LiquidoRestException("Cannot save Proxy. Need an area");
-    if (toProxy == null) throw new LiquidoRestException("Cannot save Proxy: Need a toProxy");
-    if (currentUser.getEmail().equals(toProxy.getEmail())) throw new LiquidoRestException("Cannot save Proxy. You cannot set yourself as proxy.");
+    if (area == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_SAVE_PROXY, "Cannot save Proxy. Need an area");
+    if (toProxy == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_SAVE_PROXY, "Cannot save Proxy: Need a toProxy");
+    if (currentUser.getEmail().equals(toProxy.getEmail())) throw new LiquidoException(LiquidoException.Errors.CANNOT_SAVE_PROXY, "Cannot save Proxy. You cannot set yourself as proxy.");
 
     //TODO: check for circular delegation!
 
@@ -163,11 +163,11 @@ public class UserRestController {
    * @return HTTP status 204 (NoContent) on success
    */
   @RequestMapping(value = "/deleteProxy/{areaId}", method = DELETE, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-  public @ResponseBody Map deleteProxy(@PathVariable(name="areaId") AreaModel area) {
+  public @ResponseBody Map deleteProxy(@PathVariable(name="areaId") AreaModel area) throws LiquidoException {
     log.trace("deleteProxy in area="+area);
 
     UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
-    if (currentUser == null) throw new LiquidoRestException("Cannot delete Proxy. Need an authenticated user as fromUser");
+    if (currentUser == null) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Cannot delete Proxy. Need an authenticated user as fromUser");
 
     DelegationModel existingDelegation = delegationRepo.findByAreaAndFromUser(area, currentUser);
     if (existingDelegation != null) {

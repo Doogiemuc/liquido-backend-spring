@@ -63,9 +63,9 @@ public class LawModel extends BaseModel {
   Set<UserModel> supporters = new HashSet<>();
 
   /**
-   * When in status PROPOSAL this is the link to the poll.
+   * When in status ELABORATION this is the link to the poll.
    * All alternative proposals point to the same poll.
-   * Can be NULL, when this is still an idea!
+   * Can be NULL, when this is still an idea or proposal!
    * This is the many side of a bidirectional ManyToOne aggregation relationship.
    * https://vladmihalcea.com/2017/03/29/the-best-way-to-map-a-onetomany-association-with-jpa-and-hibernate/
    *
@@ -74,7 +74,7 @@ public class LawModel extends BaseModel {
   public PollModel poll = null;
 
   /** suggestions for improvement */
-	@OneToMany(fetch = FetchType.EAGER)  // fetch all comments when loading a an idea or proposal.  Prevents "LazyInitializationException, could not initialize proxy - no Session" but at the cost of performance.
+	@OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)  // fetch all comments when loading a an idea or proposal.  Prevents "LazyInitializationException, could not initialize proxy - no Session" but at the cost of performance.
 	//@Cascade(org.hibernate.annotations.CascadeType.ALL)   // https://vladmihalcea.com/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
   public Set<CommentModel> comments;
 

@@ -10,12 +10,15 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.rest.core.config.RepositoryRestConfiguration;
 import org.springframework.data.rest.core.mapping.RepositoryDetectionStrategy;
 import org.springframework.data.rest.webmvc.config.RepositoryRestConfigurerAdapter;
+import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import springfox.documentation.builders.PathSelectors;
 import springfox.documentation.builders.RequestHandlerSelectors;
 import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
+
+import java.util.List;
 
 /**
  * Configure the exposed REST HATEOAS services.
@@ -60,13 +63,17 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
 
   // see also LiquidoAuditorAware for handling @CreatedBy   https://jaxenter.com/rest-api-spring-java-8-112289.html
 
+
+
   /*
   @Override
-  public void configureConversionService(ConfigurableConversionService conversionService) {
-    super.configureConversionService(conversionService);
-    conversionService.addConverter();
+  public void configureHttpMessageConverters(List<HttpMessageConverter<?>> messageConverters) {
+    log.debug("====== adding HttpMessageConverter in RepositoryRestConfigurer");
+    messageConverters.add(new JoinPollRequestConverter());     something that extends AbstractHttpMessageConverter<JoinPollRequest>
+    super.configureHttpMessageConverters(messageConverters);
   }
   */
+
 
   /**
    * Automatically generated Swagger REST API documentation

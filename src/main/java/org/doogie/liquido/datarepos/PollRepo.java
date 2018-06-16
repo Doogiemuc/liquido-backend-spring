@@ -9,8 +9,8 @@ import org.springframework.data.rest.core.annotation.RestResource;
 import java.util.List;
 
 /**
- * Read-only database abstraction layer for "polls".
- * Polls must not be created through this @RepositoryRestResource. Instead use our custom {@link org.doogie.liquido.rest.PollController}
+ * <b></b>Read-only</b> database abstraction layer for "polls".
+ * Polls must not be created or edited through this @RepositoryRestResource. Instead use our custom {@link org.doogie.liquido.rest.PollController}
  */
 @RepositoryRestResource(collectionResourceRel = "polls", path = "polls", itemResourceRel = "poll")
 public interface PollRepo extends CrudRepository<PollModel, Long> {
@@ -33,13 +33,3 @@ public interface PollRepo extends CrudRepository<PollModel, Long> {
   void deleteAll();
 
 }
-
-/*
- A new poll can be created like this:
-
- POST  /polls
-   { "proposals": [ "/laws/123" ] }
-
- LawModel id=123 must be in status proposal!
-
- */
