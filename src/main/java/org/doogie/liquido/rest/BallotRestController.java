@@ -5,6 +5,7 @@ import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.security.LiquidoAnonymizer;
 import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.services.LiquidoException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,7 +67,7 @@ public class BallotRestController {
    *
    * Related resources for @RepositoryRestController
    * Example by Oliver Ghierke:  https://github.com/olivergierke/spring-restbucks
-   * https://jira.spring.io/browse/DATAREST-972   - creatd by ME
+   * https://jira.spring.io/browse/DATAREST-972   - creatd by ME   WOW discussion ongoing :-)
    * https://jira.spring.io/browse/DATAREST-633
    * https://jira.spring.io/browse/DATAREST-687
    * http://stackoverflow.com/questions/40986738/spring-data-rest-no-string-argument-constructor-factory-method-to-deserialize/40986739   fixes "no String-argument constructor/factory method to deserialize from String value"
@@ -91,14 +92,13 @@ public class BallotRestController {
   @ResponseStatus(HttpStatus.CREATED)
   public @ResponseBody /*PersistentEntityResource*/ Map postBallot(
       @RequestBody Resource<BallotModel> ballotResource,
-      PersistentEntityResourceAssembler resourceAssembler)
-  {
+      PersistentEntityResourceAssembler resourceAssembler) throws LiquidoException {
     // Implementation note: Must use a Resource<BallotModel> as RequestBody instead of just a BallotModel, because only this way the deserialization
     // from URI to models is automatically handled by spring-data.
 
     log.trace("=> POST /postBallot");
     UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
-    if (currentUser == null) throw new LiquidoRestException("Cannot postBallot. Need an authenticated user as fromUser");
+    if (currentUser == null) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Cannot postBallot. Need an authenticated user as fromUser");
 
     // Check validity of posted ballot JSON
     BallotModel postedBallot = ballotResource.getContent();
@@ -111,7 +111,7 @@ public class BallotRestController {
     AreaModel area = postedBallot.getPoll().getProposals().iterator().next().getArea();
     long numVotes = delegationRepo.getNumVotes(area, currentUser);
     if (numVotes != currentUser.getVoterTokens().size()+1)
-      throw new LiquidoRestException("ERROR: Inconsistency detected: number of voter tokens does not match number of delegations. User '"+currentUser.getEmail()+"' (id="+currentUser.getId()+")");
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_POST_BALLOT, "Inconsistency detected: number of voter tokens does not match number of delegations. User '"+currentUser.getEmail()+"' (id="+currentUser.getId()+")");
 
     // Check if user has already voted. If so, then update the voteOrder in his existing ballot
     BallotModel savedBallot = null;
@@ -149,27 +149,27 @@ public class BallotRestController {
   /**
    * Check if the passed ballot is valid.
    * @param newBallot a casted vote
-   * @throws LiquidoRestException when something inside newBallot is invalid
+   * @throws LiquidoException when something inside newBallot is invalid
    */
-  private void checkBallot(BallotModel newBallot) throws LiquidoRestException {
+  private void checkBallot(BallotModel newBallot) throws LiquidoException {
     // check that poll is actually in voting phase and has at least two alternative proposals
     PollModel poll = newBallot.getPoll();
     if (poll == null || !PollModel.PollStatus.VOTING.equals(poll.getStatus())) {
-      throw new LiquidoRestException("ERROR: Cannot post ballot: Poll must be in voting phase.");
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_POST_BALLOT, "Cannot post ballot: Poll must be in voting phase.");
     }
     if (poll.getProposals().size() < 2)
-      throw new LiquidoRestException("ERROR: Cannot post ballot: Poll must have at least two alternative proposals.");
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_POST_BALLOT, "Cannot post ballot: Poll must have at least two alternative proposals.");
 
     // check that voter Order is not empty
     if (newBallot.getVoteOrder() == null || newBallot.getVoteOrder().size() == 0) {
-      throw new LiquidoRestException("ERROR: Cannot post ballot: VoteOrder is empty!");
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_POST_BALLOT ,"Cannot post ballot: VoteOrder is empty!");
     }
 
     // check that there is no duplicate vote for any one proposal
     HashSet<Long> proposalIds = new HashSet<>();
     for(LawModel proposal : newBallot.getVoteOrder()) {
       if (proposalIds.contains(proposal.getId())) {
-        throw new LiquidoRestException("ERROR: Cannot post ballot: Duplicate vote for proposal_id="+proposal.getId());
+        throw new LiquidoException(LiquidoException.Errors.CANNOT_POST_BALLOT, "Cannot post ballot: Duplicate vote for proposal_id="+proposal.getId());
       } else {
         proposalIds.add(proposal.getId());
       }
@@ -178,13 +178,13 @@ public class BallotRestController {
     // check that all proposals you wanna vote for are also in voting phase
     for(LawModel proposal : newBallot.getVoteOrder()) {
       if (!LawModel.LawStatus.VOTING.equals(proposal.getStatus())) {
-        throw new LiquidoRestException(("ERROR: Cannot post ballot: proposals must be in voting phase."));
+        throw new LiquidoException(LiquidoException.Errors.CANNOT_POST_BALLOT, "Cannot post ballot: proposals must be in voting phase.");
       }
     }
 
     // check validity of voterToken
     if (newBallot.getVoterToken() == null || newBallot.getVoterToken().length() < 5) {
-      throw new LiquidoRestException("ERROR: Cannot post ballot: Invalid voterToken: '"+newBallot.getVoterToken()+"'. Must be at least 5 chars!");
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_POST_BALLOT, "Cannot post ballot: Invalid voterToken: '"+newBallot.getVoterToken()+"'. Must be at least 5 chars!");
     }
   }
 
