@@ -10,6 +10,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.Enumeration;
 
 /**
  * Doogies very cool HTTP request logging.
@@ -24,6 +25,7 @@ import java.io.UnsupportedEncodingException;
 public class DoogiesRequestLogger extends OncePerRequestFilter {
 
   private boolean includeResponsePayload = true;
+  private boolean logRequestHeaders = true;
   private int maxPayloadLength = 1000;
 
   private String getContentAsString(byte[] buf, int maxLength, String charsetName) {
@@ -71,8 +73,24 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
       reqInfo.append(", principalName=")
         .append(request.getUserPrincipal().getName());
     }
+    if (request.getRemoteUser() != null) {
+      reqInfo.append(", remoteUser=").append(request.getRemoteUser());
+    }
+    if (request.getSession() !=  null) {
+      reqInfo.append(", sessionId=").append(request.getSession().getId());
+    }
 
     this.logger.debug("=> " + reqInfo);
+
+    if (logRequestHeaders) {
+    	this.logger.debug("   Request Headers:");
+	    Enumeration<String> hnames = request.getHeaderNames();
+      while (hnames.hasMoreElements()) {
+      	String name  = hnames.nextElement();
+				String value = request.getHeader(name);
+				this.logger.debug("     "+name+"="+value);
+      }
+    }
 
     // ========= Log request and response payload ("body") ========
     // We CANNOT simply read the request payload here, because then the InputStream would be consumed and cannot be read again by the actual processing/server.
@@ -85,6 +103,8 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request);
     ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
 
+    //TODO: can I first log the request body and then reset the reader like this?   wrappedRequest.getReader().reset();
+
     filterChain.doFilter(wrappedRequest, wrappedResponse);     // ======== This performs the actual request!
     long duration = System.currentTimeMillis() - startTime;
 
@@ -95,7 +115,9 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
       if (requestBody.length() > maxPayloadLength)
         this.logger.debug("[...]");
     } else {
-      this.logger.debug("   "+reqInfo+" EMPTY request body");
+    	if ("POST".equals(request.getMethod())) {
+    		this.logger.debug("   "+reqInfo+" EMPTY request body posted");
+	    }
     }
 
     this.logger.debug("<= " + reqInfo + ": returned status=" + response.getStatus() + " in "+duration + "ms");

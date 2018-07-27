@@ -15,12 +15,10 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
-import org.springframework.data.domain.AuditorAware;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.EntityManager;
 import javax.persistence.Table;
 import java.util.*;
 
@@ -566,7 +564,7 @@ public class TestDataCreator implements CommandLineRunner {
     voteOrder.add(proposals.next());
     //TODO: create real BCRYPT token in TestDataCreator   => Can TestDataCreator depend on LiquidoAnonymizer?  => Yes, but need to seed   salt value first!
     //String voterTokenBCrypt = anonymizer.getBCryptVoterToken(currentUser, currentUser.getPasswordHash(), poll);
-    BallotModel newBallot = new BallotModel(pollInVoting, voteOrder, "dummyVoterToken");
+    BallotModel newBallot = new BallotModel(pollInVoting, false, voteOrder, "dummyVoterToken");
     ballotRepo.save(newBallot);
   }
 

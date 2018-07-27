@@ -388,7 +388,7 @@ public class RestEndpointTests {
 
     assertEquals(HttpStatus.CREATED, response.getStatusCode());
     ReadContext ctx = JsonPath.parse(response.getBody());
-    String returnedVoterToken = ctx.read("$.voterToken");
+    String returnedVoterToken = ctx.read("$.ballotToken");
     assertTrue("Expected a voter token", returnedVoterToken != null && returnedVoterToken.length() > 10);
     String delegees = ctx.read("$.delegees");
     try {

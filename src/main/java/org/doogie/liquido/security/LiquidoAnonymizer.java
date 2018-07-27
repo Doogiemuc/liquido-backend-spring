@@ -56,4 +56,17 @@ public class LiquidoAnonymizer implements CommandLineRunner {
     return voterToken;
   }
 
+	/**
+	 * Concatenate the passed strings and return the hashvalue
+	 * @param str one or more strings
+	 * @return hash(str1+str2+str3+...+strN)
+	 */
+  public String getBCrypetHash(String... str) {
+    StringBuffer inputStr = new StringBuffer();
+    for(String s: str) {
+      inputStr.append(s);
+    }
+    return BCrypt.hashpw(inputStr.toString(), this.salt);
+  }
+
 }

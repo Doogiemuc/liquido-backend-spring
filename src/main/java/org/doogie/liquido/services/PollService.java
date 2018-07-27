@@ -39,7 +39,7 @@ public class PollService {
    * @return the newly created poll
    * @throws LiquidoException if passed LawModel is not in state PROPOSAL.
    */
-  @Transactional    // This should run inside a transaction (all or nothing)
+  @Transactional    // run inside a transaction (all or nothing)
   public PollModel createPoll(@NotNull LawModel proposal) throws LiquidoException {
     //===== sanity checks: There must be at least one proposal (in status PROPOSAL)
     if (proposal == null)
