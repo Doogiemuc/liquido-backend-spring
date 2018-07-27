@@ -110,7 +110,7 @@ class AreaRepo <<CrudRepository>> {
 class BallotRepo <<CrudRepository>> {
   --
   // all writing methods are not exposed via REST!
-  BallotModel findByInitialProposalAndVoterToken(LawModel initialProposal, String voterToken)
+  BallotModel findByInitialProposalAndVoterToken(LawModel initialProposal, String ballotToken)
 }
 
 

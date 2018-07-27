@@ -9,9 +9,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -64,24 +62,15 @@ public class PollModel extends BaseModel {
   /** Date when the voting phase will end. Will be set in PollService */
 	LocalDateTime votingEndAt;
 
-	public enum TokenStatus {
-		TOKEN_HANDED_OUT(1),			// a token has already been handed out to the user  (user must not request a second token!)
-		USER_CASTED_VOTE(2);      // user has casted his vote
-		int tokenStatus;
-		TokenStatus(int status) { this.tokenStatus = status; }
-	}
-
-	/**
-	 * List of voters in this poll. Every member in this list has a status
-	 *  - User already requested a token and a token was handed out to him and the hash was saved
-	 *  - User already casted his vote in this poll
-	 */
-	//Map<UserModel, TokenStatus> voterStatus = new HashMap<>();
-
   /** return the number of competing proposals */
   public int getNumCompetingProposals() {
     if (proposals == null) return 0;
     return proposals.size();
+  }
+
+  public AreaModel getArea() {
+  	if (getNumCompetingProposals() == 0) throw new RuntimeException("poll has no area, because there are no proposals in it yet.");   // This should never happen
+	  return this.proposals.iterator().next().getArea();
   }
 
   @Override

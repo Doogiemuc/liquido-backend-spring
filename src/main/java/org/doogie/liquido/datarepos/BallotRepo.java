@@ -11,9 +11,9 @@ import org.springframework.data.rest.core.annotation.RestResource;
  * Ballots are not exposed as RepositoryRestResource at all.
  * Posting a ballot (ie. cast a vote) is handled in our custom {@link org.doogie.liquido.rest.BallotRestController}
  */
+//Do not expose Ballots as rest resource at all. Clients must use /postBallot in BallotRestController instead
 //@RepositoryRestResource(collectionResourceRel = "ballots", path = "ballots", itemResourceRel = "ballot")
 public interface BallotRepo extends CrudRepository<BallotModel, Long> {
-  //We do not expose Ballots as rest resource at all. Clients must use /postBallot in BallotRestController instead
 
   @Override
   @RestResource(exported = false)
@@ -35,10 +35,10 @@ public interface BallotRepo extends CrudRepository<BallotModel, Long> {
   void deleteAll();
 
   /**
-   * Find the ballot with that voterToken in that poll
+   * Find the ballot with that ballotToken in that poll
    * @param poll a PollModel
-   * @param voterToken bcrypt voter token hash value
+   * @param areaToken bcrypt voter token hash value
    * @return the ballot for this (still anonymous) user's vote
    */
-  BallotModel findByPollAndVoterToken(PollModel poll, String voterToken);
+  BallotModel findByPollAndAreaToken(PollModel poll, String areaToken);
 }
