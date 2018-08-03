@@ -1,17 +1,18 @@
 package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.datarepos.BallotRepo;
-import org.doogie.liquido.datarepos.DelegationRepo;
-import org.doogie.liquido.datarepos.TokenRepo;
+import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
-import org.doogie.liquido.rest.dto.CastVoteDTO;
+import org.doogie.liquido.rest.LiquidoRestUtils;
+import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.security.LiquidoAnonymizer;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 
 /**
  * This spring component implements the business logic for {@link org.doogie.liquido.model.BallotModel}
@@ -23,6 +24,12 @@ import java.util.HashSet;
 public class BallotService {
 
 	@Autowired
+	PollRepo pollRepo;
+
+	@Autowired
+	LawRepo lawRepo;
+
+	@Autowired
 	BallotRepo ballotRepo;
 
 	@Autowired
@@ -30,6 +37,9 @@ public class BallotService {
 
 	@Autowired
 	TokenRepo tokenRepo;
+
+	@Autowired
+	LiquidoRestUtils restUtils;
 
 	@Autowired
 	LiquidoAnonymizer anonymizer;
@@ -43,44 +53,64 @@ public class BallotService {
 
 	/**
 	 * A user wants to vote and therefore requests a voter token for this area. Each user has one token per area.
+	 * The hash value of the voterToken (and a secret salt) is the areaToken. The areaToken is stored in the DB.
 	 * These tokens can be passed to proxies. A proxy can then cast votes with all his tokens.
 	 * @param user the currently logged in user
 	 * @param area the area of the poll
-	 * @return ballotToken (a hash value)
+	 * @return user's voterToken, that only the user must know, and that will hash to the stored areaToken.
 	 */
-	public String getAreaToken(UserModel user, AreaModel area) throws LiquidoException {
-		if (user == null || area == null || DoogiesUtil.isEmpty(user.getEmail()) || DoogiesUtil.isEmpty(user.getPasswordHash()))
-			throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "User with empty area, email or empty password must not request a token");
+	public String getVoterToken(UserModel user, AreaModel area) throws LiquidoException {
+		if (user == null || DoogiesUtil.isEmpty(user.getEmail())) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "User must be authenticated to getToken");
+		if (area == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need area when requesting a token.");
 		log.debug("getBallotToken: user="+user.getEmail()+"(id="+user.getId()+") requested areaToken for area="+area.getTitle()+"(id="+area.getId()+")");
-		String voterToken = anonymizer.getBCrypetHash(user.getEmail(), user.getPasswordHash(), String.valueOf(area.getId()));
-		TokenModel areaToken  = new TokenModel(anonymizer.getBCrypetHash(voterToken, serversSecretSalt));
-		tokenRepo.save(areaToken);
-		return voterToken;  // important do not return the areaToken!            //TODO: actually the user wouldn't even need the voterToken. He could later create it on his own. Using BCRYPT on the client!
+		String voterToken = anonymizer.getBCrypetHash(user.getEmail(), user.getPasswordHash(), String.valueOf(area.getId()));   // token that only this user must know
+		String areaToken  = anonymizer.getBCrypetHash(voterToken, serversSecretSalt);                                           // token that can only be generated from the users voterToken and only by the server.
+ 		TokenModel existingTokenModel = tokenRepo.findByAreaToken(areaToken);
+		if (existingTokenModel == null) {   // only save new token if it does not exist yet.
+			TokenModel newToken = new TokenModel(areaToken);
+			tokenRepo.save(newToken);
+		}
+		return voterToken;  // important do not return the areaToken!            //MAYBE: actually the user wouldn't even need the voterToken. He could later create it on his own. Using BCRYPT on the client!
 	}
 
 	//TODO: When user changes his passwords, then invalidate all his tokens!!!
 
-	public BallotModel castVote(UserModel user, CastVoteDTO castVoteDTO) throws LiquidoException {
-		log.trace("User "+user.getEmail()+"(id="+user.getId()+") casts Vote "+castVoteDTO);
-		String unvalidatedAreaToken = anonymizer.getBCrypetHash(castVoteDTO.getVoterToken(), serversSecretSalt);
-		BallotModel ballot = new BallotModel(castVoteDTO.getPoll(), true, castVoteDTO.getVoteOrder(), unvalidatedAreaToken);  //MAYBE: BallotModelBuilder.createFromVoterToken(...)   but would be a bit of overengeneering here
+	public BallotModel castVote(UserModel user, CastVoteRequest castVoteRequest) throws LiquidoException {
+		log.trace("User "+user.getEmail()+"(id="+user.getId()+") casts Vote "+ castVoteRequest);
+
+		// load models for URIs in castVoteRequst
+		Long pollId = restUtils.getIdFromURI("polls", castVoteRequest.getPoll());
+		PollModel poll = pollRepo.findOne(pollId);
+
+		List<LawModel> voteOrder = new ArrayList<>();
+		for (String proposalId : castVoteRequest.getVoteOrder()) {
+			Long lawId = restUtils.getIdFromURI("laws", proposalId);
+			LawModel law = lawRepo.findOne(lawId);
+			voteOrder.add(law);
+		}
+
+		// Create yet unvalidatedAreaToken.
+		String unvalidatedAreaToken = anonymizer.getBCrypetHash(castVoteRequest.getVoterToken(), serversSecretSalt);
+
+		// Create new Ballot and check if its valid (including the areaToken and many other checks)
+		BallotModel ballot = new BallotModel(poll, true, voteOrder, unvalidatedAreaToken);  //MAYBE: BallotModelBuilder.createFromVoterToken(...)   but would be a bit of overengeneering here
 		checkBallot(ballot);
 
 		// Check that  voter (if he is a proxy) has as many voter tokens as he has delegations
 		AreaModel area = ballot.getPoll().getProposals().iterator().next().getArea();
 		long numVotes = delegationRepo.getNumVotes(area, user);
 		if (numVotes != user.getVoterTokens().size()+1)
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_POST_BALLOT, "Inconsistency detected: number of voter tokens does not match number of delegations. User '"+user.getEmail()+"' (id="+user.getId()+")");
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Inconsistency detected: number of voter tokens does not match number of delegations. User '"+user.getEmail()+"' (id="+user.getId()+")");
 
 		// Check if user has already voted. If so, then update the voteOrder in his existing ballot
 		BallotModel savedBallot = null;
 		BallotModel existingBallot = ballotRepo.findByPollAndAreaToken(ballot.getPoll(), ballot.getAreaToken());
 		if (existingBallot != null) {
 			existingBallot.setVoteOrder(ballot.getVoteOrder());
-			log.trace("Updating existing ballot(id="+existingBallot.getId()+")");
+			log.trace("Updating existing "+ballot);
 			savedBallot = ballotRepo.save(existingBallot);  // update the existing ballot
 		} else {
-			log.trace("Inserting new ballot");
+			log.trace("Inserting new "+ballot);
 			savedBallot = ballotRepo.save(ballot);          // insert a new BallotModel
 		}
 
@@ -89,7 +119,7 @@ public class BallotService {
 			String delegatedAreaToken = anonymizer.getBCrypetHash(delegatedVoterToken, serversSecretSalt);
 			BallotModel delegeeExistingBallot = ballotRepo.findByPollAndAreaToken(ballot.getPoll(), delegatedAreaToken);
 			if (delegeeExistingBallot != null && delegeeExistingBallot.isOwnVote()) { continue; }  // Check if delegee already voted for himself.  Never overwrite ballots with ownVote == true
-			BallotModel ballotForDelegee = new BallotModel(castVoteDTO.getPoll(), false, castVoteDTO.getVoteOrder(), delegatedAreaToken);
+			BallotModel ballotForDelegee = new BallotModel(ballot.getPoll(), false, ballot.getVoteOrder(), delegatedAreaToken);
 			checkBallot(ballotForDelegee);
 			log.trace("Saving ballot for delegee: "+ballotForDelegee);
 			ballotRepo.save(ballotForDelegee);
@@ -106,21 +136,21 @@ public class BallotService {
 		// check that poll is actually in voting phase and has at least two alternative proposals
 		PollModel poll = ballot.getPoll();
 		if (poll == null || !PollModel.PollStatus.VOTING.equals(poll.getStatus())) {
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_POST_BALLOT, "Cannot post ballot: Poll must be in voting phase.");
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot post ballot: Poll must be in voting phase.");
 		}
 		if (poll.getProposals().size() < 2)
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_POST_BALLOT, "Cannot post ballot: Poll must have at least two alternative proposals.");
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot post ballot: Poll must have at least two alternative proposals.");
 
 		// check that voter Order is not empty
 		if (ballot.getVoteOrder() == null || ballot.getVoteOrder().size() == 0) {
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_POST_BALLOT ,"Cannot post ballot: VoteOrder is empty!");
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE,"Cannot post ballot: VoteOrder is empty!");
 		}
 
 		// check that there is no duplicate vote for any one proposal
 		HashSet<Long> proposalIds = new HashSet<>();
 		for(LawModel proposal : ballot.getVoteOrder()) {
 			if (proposalIds.contains(proposal.getId())) {
-				throw new LiquidoException(LiquidoException.Errors.CANNOT_POST_BALLOT, "Cannot post ballot: Duplicate vote for proposal_id="+proposal.getId());
+				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot post ballot: Duplicate vote for proposal_id="+proposal.getId());
 			} else {
 				proposalIds.add(proposal.getId());
 			}
@@ -129,19 +159,19 @@ public class BallotService {
 		// check that all proposals you wanna vote for are also in voting phase
 		for(LawModel proposal : ballot.getVoteOrder()) {
 			if (!LawModel.LawStatus.VOTING.equals(proposal.getStatus())) {
-				throw new LiquidoException(LiquidoException.Errors.CANNOT_POST_BALLOT, "Cannot post ballot: proposals must be in voting phase.");
+				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot post ballot: proposals must be in voting phase.");
 			}
 		}
 
 		// check that there is an areaToken
 		if (ballot.getAreaToken() == null || ballot.getAreaToken().length() < 5) {
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_POST_BALLOT, "Cannot post ballot: Invalid areaToken. Must be at least 5 chars!");
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot post ballot: Invalid areaToken. Must be at least 5 chars!");
 		}
 
 		// check that areaToken is valid, ie. that it already exists in TokenRepo
 		TokenModel existingToken = tokenRepo.findByAreaToken(ballot.getAreaToken());
 		if (existingToken == null)
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_POST_BALLOT, "User's voterToken is invalid!");
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "User's voterToken is invalid!");
 
 	}
 

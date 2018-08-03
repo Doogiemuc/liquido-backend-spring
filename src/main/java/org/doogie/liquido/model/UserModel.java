@@ -48,10 +48,9 @@ public class UserModel extends BaseModel {
   // This is extremely important! Do not expose password in toString() !!!
   @Override
   public String toString() {
-    return "UserModel{" +
-            "id=" + id +
-            ", email='" + email + '\'' +
-            ", profile=" + profile +
-            '}';
+    return "UserModel[" +
+            "email='" + email + '\'' +
+            ", id=" + id +
+            ']';
   }
 }
