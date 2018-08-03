@@ -17,10 +17,10 @@ public class LiquidoException extends Exception {
     CANNOT_ADD_PROPOSAL(1),
     CANNOT_START_VOTING_PHASE(2),
     USER_DOES_NOT_EXIST(3),
-    NO_LOGIN(4),     // when someone tries to call something without being authenticated!
+    NO_LOGIN(4),                // when someone tries to call something without being authenticated!
 		CANNOT_SAVE_PROXY(5),
-		CANNOT_POST_BALLOT(6);
-
+		CANNOT_CAST_VOTE(6),
+    CANNOT_GET_TOKEN(7);
     int errorCode;
     Errors(int code) { this.errorCode = code; }
   }

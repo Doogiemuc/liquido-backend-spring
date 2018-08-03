@@ -41,7 +41,7 @@ public class BallotModel extends BaseModel {
   public PollModel poll;
 
   /** did the user vote for his own? Then never overwrite this ballot from a proxy */
-  @NonNull
+  @NonNull   // needed, even though Lombok shows a warning
   public boolean ownVote;
 
   /**
@@ -53,9 +53,13 @@ public class BallotModel extends BaseModel {
   @NotNull
   @ManyToMany   //(cascade = CascadeType.MERGE, orphanRemoval = false)
   @OrderColumn  // keep order in DB
-  public List<LawModel> voteOrder;   //laws in voteOrder must not be duplicate! This is checked in BallotRestController.
+  public List<LawModel> voteOrder;   //laws in voteOrder must not be duplicate! This is checked in VoteRestController.
 
-  /** encrypted and anonymized information about the voter that casted this vote into the ballot. */
+  /**
+   * encrypted and anonymized information about the voter that casted this vote into the ballot.
+   * This areaToken ins confidential. It MUST only be stored on the server. Only the user knows
+   * the voterToken that hashes to this areaToken.
+   */
   @NotNull
   @NonNull
   @NotEmpty
@@ -63,4 +67,17 @@ public class BallotModel extends BaseModel {
 
   //There is deliberately no @CreatedBy field here! When voting it is a secret who casted this ballot!!!
 
+
+	// DO NOT expose areaToken in toString !!!
+	@Override
+	public String toString() {
+		StringBuffer buf = new StringBuffer();
+		voteOrder.stream().map(law -> buf.append(law.getId()) );
+		return "BallotModel{" +
+				"id=" + id +
+				", poll.id=" + poll.getId() +
+				", ownVote=" + ownVote +
+				", voteOrder(proposalIds)=[" + buf.toString() +
+				"]}";
+	}
 }

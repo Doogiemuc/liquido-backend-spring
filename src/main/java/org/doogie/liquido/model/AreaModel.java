@@ -11,7 +11,6 @@ import javax.validation.constraints.NotNull;
 @Getter
 @Setter
 @EqualsAndHashCode(of = {"title"}, callSuper = true)
-@ToString
 @NoArgsConstructor
 @RequiredArgsConstructor
 @Entity
@@ -42,4 +41,12 @@ public class AreaModel extends BaseModel {
   }
    */
 
+  /** a short info */
+	@Override
+	public String toString() {
+		return "AreaModel[" +
+				"title='" + title + '\'' +
+				", id=" + id +
+				']';
+	}
 }

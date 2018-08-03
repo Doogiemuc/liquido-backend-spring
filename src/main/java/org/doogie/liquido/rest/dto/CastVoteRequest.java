@@ -1,10 +1,7 @@
 package org.doogie.liquido.rest.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NonNull;
-import org.doogie.liquido.model.LawModel;
-import org.doogie.liquido.model.PollModel;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -14,13 +11,12 @@ import java.util.stream.Collectors;
  * POST /castVote
  */
 @Data
-@AllArgsConstructor
-public class CastVoteDTO {
+public class CastVoteRequest {
 	@NonNull
-	PollModel poll;
+	String poll;
 
 	@NonNull
-	List<LawModel> voteOrder;
+	List<String> voteOrder;
 
 	@NonNull
 	String voterToken;
@@ -28,10 +24,10 @@ public class CastVoteDTO {
 	@Override
 	public String toString() {
 		StringBuilder buf = new StringBuilder();
-		buf.append("CastVoteDTO[");
-		buf.append("poll.id="+poll.id);
+		buf.append("CastVoteRequest[");
+		buf.append("poll="+poll);
 		buf.append(", voteOrder=[");
-		buf.append(voteOrder.stream().map(Object::toString).collect(Collectors.joining(",")));    // I love java :-) <sarcasm>   In PERL this would just simply be     $buf = join(",", @arr);
+		buf.append(voteOrder.stream().collect(Collectors.joining(",")));    // I love java :-) <sarcasm>   In PERL this would just simply be     $buf = join(",", @arr);
 		buf.append("]");
 		return buf.toString();
 	}

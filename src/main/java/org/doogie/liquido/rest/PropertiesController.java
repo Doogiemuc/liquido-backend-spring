@@ -12,7 +12,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 /**
- * REST service for global configuration values.
+ * REST service for global configuration values that are loaded from the DB
+ * (and not from environment)
  */
 @Slf4j
 @BasePathAwareController  // only works when methods have the @ResponseBody annotation
