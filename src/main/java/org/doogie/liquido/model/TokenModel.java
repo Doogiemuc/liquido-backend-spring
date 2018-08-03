@@ -1,7 +1,9 @@
 package org.doogie.liquido.model;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -9,8 +11,7 @@ import javax.validation.constraints.NotNull;
 /**
  * A token is the digital anonymous right to vote. The areaToken represents the right to vote in this area.
  *
- * When a voter requests a token,
- * then the server calculates two values:
+ * When a voter requests a token, then the server calculates two values:
  * 1. voterToken = hash(user.email, user.passwordHash, area.id)
  * 2. areaToken  = hash(voterToken, secretSeed)
  *
@@ -22,6 +23,8 @@ import javax.validation.constraints.NotNull;
  * If yes, then the casted vote is valid and will be counted.
  */
 @Data
+@NoArgsConstructor
+@RequiredArgsConstructor
 @Entity
 public class TokenModel {
 	@Id

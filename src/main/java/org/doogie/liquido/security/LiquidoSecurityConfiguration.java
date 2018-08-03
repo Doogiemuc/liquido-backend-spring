@@ -20,8 +20,8 @@ import org.springframework.web.filter.CorsFilter;
  */
 @Slf4j
 @Configuration
-@EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
+@EnableWebSecurity
 //@Order(SecurityProperties.ACCESS_OVERRIDE_ORDER)
 public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
@@ -69,6 +69,7 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
         .antMatchers("/h2-console/**").permitAll()            // Allow access to H2 DB web console
         .antMatchers(restBasePath+"/_ping").permitAll()       // is alive
         .antMatchers(restBasePath+"/globalProperties").permitAll()
+        .antMatchers(restBasePath+"/castVote").permitAll()    // allow anonymous voting
         .anyRequest().authenticated()
       .and()
         .httpBasic()

@@ -1,9 +1,7 @@
-package org.doogie.liquido.rest;
+package org.doogie.liquido.rest.dto;
 
 import lombok.Data;
 import lombok.NonNull;
-import org.doogie.liquido.model.LawModel;
-import org.doogie.liquido.model.PollModel;
 
 /**
  * HTTP request payload data for joining a proposal into a poll
@@ -12,5 +10,7 @@ import org.doogie.liquido.model.PollModel;
 public class JoinPollRequest {
 	@NonNull
 	public String poll;
+
+	@NonNull
 	public String proposal;
 }
