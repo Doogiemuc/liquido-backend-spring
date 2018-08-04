@@ -82,11 +82,11 @@ public class CastVoteService {
 			voteOrder.add(law);
 		}
 
-		// Create yet unvalidatedAreaToken.
-		String unvalidatedAreaToken = anonymizer.getBCrypetHash(castVoteRequest.getVoterToken());
+		// Create yet unvalidatedChecksum.
+		String unvalidatedChecksum = anonymizer.getBCrypetHash(castVoteRequest.getVoterToken());
 
 		// Create new Ballot and check if its valid (including the checksum and many other checks)
-		BallotModel ballot = new BallotModel(poll, true, voteOrder, unvalidatedAreaToken);  //MAYBE: BallotModelBuilder.createFromVoterToken(...)   but would be a bit of overengeneering here
+		BallotModel ballot = new BallotModel(poll, true, voteOrder, unvalidatedChecksum);  //MAYBE: BallotModelBuilder.createFromVoterToken(...)   but would be a bit of overengeneering here
 		checkBallot(ballot);
 
 		// Check that  voter (if he is a proxy) has as many voter tokens as he has delegations
@@ -107,12 +107,12 @@ public class CastVoteService {
 			savedBallot = ballotRepo.save(ballot);          // insert a new BallotModel
 		}
 
-		//If this user is a proxy, then also post a ballot for each of his delegations
+		//=========== If this user is a proxy, then also post a ballot for each of his delegations, except for ownVotes
 		for (String delegatedVoterToken : user.getVoterTokens()) {
-			String delegatedAreaToken = anonymizer.getBCrypetHash(delegatedVoterToken);
-			BallotModel delegeeExistingBallot = ballotRepo.findByPollAndChecksum(ballot.getPoll(), delegatedAreaToken);
+			String checksumOfDelegee = anonymizer.getBCrypetHash(delegatedVoterToken);
+			BallotModel delegeeExistingBallot = ballotRepo.findByPollAndChecksum(ballot.getPoll(), checksumOfDelegee);
 			if (delegeeExistingBallot != null && delegeeExistingBallot.isOwnVote()) { continue; }  // Check if delegee already voted for himself.  Never overwrite ballots with ownVote == true
-			BallotModel ballotForDelegee = new BallotModel(ballot.getPoll(), false, ballot.getVoteOrder(), delegatedAreaToken);
+			BallotModel ballotForDelegee = new BallotModel(ballot.getPoll(), false, ballot.getVoteOrder(), checksumOfDelegee);
 			checkBallot(ballotForDelegee);
 			log.trace("Saving ballot for delegee: "+ballotForDelegee);
 			ballotRepo.save(ballotForDelegee);
@@ -160,13 +160,13 @@ public class CastVoteService {
 
 		// check that there is an checksum
 		if (ballot.getChecksum() == null || ballot.getChecksum().length() < 5) {
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Invalid checksum. Must be at least 5 chars!");
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Invalid voterToken. It's checksum must be at least 5 chars!");
 		}
 
-		// check that checksum is valid, ie. that it already exists in TokenRepo
-		TokenChecksumModel existingToken = checksumRepo.findByChecksum(ballot.getChecksum());
-		if (existingToken == null)
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "User's voterToken is invalid!");
+		// Passed checksum in ballot must already exists in TokenChecksumRepo to be valid
+		TokenChecksumModel existingChecksum = checksumRepo.findByChecksum(ballot.getChecksum());
+		if (existingChecksum == null)
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "User's voterToken is invalid! Cannot find checksum to validate.");
 
 	}
 
