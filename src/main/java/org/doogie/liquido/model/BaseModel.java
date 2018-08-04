@@ -41,7 +41,7 @@ public abstract class BaseModel implements Identifiable<Long> {
 
   //I do not need   @LastModifiedBy
 
-  //No default createdBy here in the BaseModel, because some Models (e.g. BallotModel!!!) do not want it.
+  //No default createdBy here in the BaseModel, because some Models (e.g. BallotModel!!!) do not need it.
 
   /*
    THIS WAY the ID field could also be exposed for every Model. But I am doing it in the Projections and in the RepositoryRestConfigurer
