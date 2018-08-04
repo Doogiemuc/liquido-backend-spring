@@ -21,7 +21,7 @@ import java.util.List;
  */
 @Service
 @Slf4j
-public class BallotService {
+public class CastVoteService {
 
 	@Autowired
 	PollRepo pollRepo;
@@ -36,7 +36,7 @@ public class BallotService {
 	DelegationRepo delegationRepo;
 
 	@Autowired
-	TokenRepo tokenRepo;
+	TokenChecksumRepo checksumRepo;
 
 	@Autowired
 	LiquidoRestUtils restUtils;
@@ -44,33 +44,26 @@ public class BallotService {
 	@Autowired
 	LiquidoAnonymizer anonymizer;
 
-
-	/**
-	 * This salt is only known to the server
-	 * It prevents attackers from creating a valid areaToken.
-	 */
-	String serversSecretSalt = "noOneKnow";
-
 	/**
 	 * A user wants to vote and therefore requests a voter token for this area. Each user has one token per area.
-	 * The hash value of the voterToken (and a secret salt) is the areaToken. The areaToken is stored in the DB.
+	 * The hash value of the voterToken (and a secret salt) is the checksum. The checksum is stored in the DB.
 	 * These tokens can be passed to proxies. A proxy can then cast votes with all his tokens.
 	 * @param user the currently logged in user
 	 * @param area the area of the poll
-	 * @return user's voterToken, that only the user must know, and that will hash to the stored areaToken.
+	 * @return user's voterToken, that only the user must know, and that will hash to the stored checksum.
 	 */
 	public String getVoterToken(UserModel user, AreaModel area) throws LiquidoException {
+		log.debug("getVoterToken: "+user+" requested voterToken for "+area);
 		if (user == null || DoogiesUtil.isEmpty(user.getEmail())) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "User must be authenticated to getToken");
 		if (area == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need area when requesting a token.");
-		log.debug("getBallotToken: user="+user.getEmail()+"(id="+user.getId()+") requested areaToken for area="+area.getTitle()+"(id="+area.getId()+")");
 		String voterToken = anonymizer.getBCrypetHash(user.getEmail(), user.getPasswordHash(), String.valueOf(area.getId()));   // token that only this user must know
-		String areaToken  = anonymizer.getBCrypetHash(voterToken, serversSecretSalt);                                           // token that can only be generated from the users voterToken and only by the server.
- 		TokenModel existingTokenModel = tokenRepo.findByAreaToken(areaToken);
+		String tokenChecksum  = anonymizer.getBCrypetHash(voterToken);                                           								// token that can only be generated from the users voterToken and only by the server.
+ 		TokenChecksumModel existingTokenModel = checksumRepo.findByChecksum(tokenChecksum);
 		if (existingTokenModel == null) {   // only save new token if it does not exist yet.
-			TokenModel newToken = new TokenModel(areaToken);
-			tokenRepo.save(newToken);
+			TokenChecksumModel newToken = new TokenChecksumModel(tokenChecksum);
+			checksumRepo.save(newToken);
 		}
-		return voterToken;  // important do not return the areaToken!            //MAYBE: actually the user wouldn't even need the voterToken. He could later create it on his own. Using BCRYPT on the client!
+		return voterToken;  // important do not return the tokenChecksum!
 	}
 
 	//TODO: When user changes his passwords, then invalidate all his tokens!!!
@@ -90,9 +83,9 @@ public class BallotService {
 		}
 
 		// Create yet unvalidatedAreaToken.
-		String unvalidatedAreaToken = anonymizer.getBCrypetHash(castVoteRequest.getVoterToken(), serversSecretSalt);
+		String unvalidatedAreaToken = anonymizer.getBCrypetHash(castVoteRequest.getVoterToken());
 
-		// Create new Ballot and check if its valid (including the areaToken and many other checks)
+		// Create new Ballot and check if its valid (including the checksum and many other checks)
 		BallotModel ballot = new BallotModel(poll, true, voteOrder, unvalidatedAreaToken);  //MAYBE: BallotModelBuilder.createFromVoterToken(...)   but would be a bit of overengeneering here
 		checkBallot(ballot);
 
@@ -104,7 +97,7 @@ public class BallotService {
 
 		// Check if user has already voted. If so, then update the voteOrder in his existing ballot
 		BallotModel savedBallot = null;
-		BallotModel existingBallot = ballotRepo.findByPollAndAreaToken(ballot.getPoll(), ballot.getAreaToken());
+		BallotModel existingBallot = ballotRepo.findByPollAndChecksum(ballot.getPoll(), ballot.getChecksum());
 		if (existingBallot != null) {
 			existingBallot.setVoteOrder(ballot.getVoteOrder());
 			log.trace("Updating existing "+ballot);
@@ -116,8 +109,8 @@ public class BallotService {
 
 		//If this user is a proxy, then also post a ballot for each of his delegations
 		for (String delegatedVoterToken : user.getVoterTokens()) {
-			String delegatedAreaToken = anonymizer.getBCrypetHash(delegatedVoterToken, serversSecretSalt);
-			BallotModel delegeeExistingBallot = ballotRepo.findByPollAndAreaToken(ballot.getPoll(), delegatedAreaToken);
+			String delegatedAreaToken = anonymizer.getBCrypetHash(delegatedVoterToken);
+			BallotModel delegeeExistingBallot = ballotRepo.findByPollAndChecksum(ballot.getPoll(), delegatedAreaToken);
 			if (delegeeExistingBallot != null && delegeeExistingBallot.isOwnVote()) { continue; }  // Check if delegee already voted for himself.  Never overwrite ballots with ownVote == true
 			BallotModel ballotForDelegee = new BallotModel(ballot.getPoll(), false, ballot.getVoteOrder(), delegatedAreaToken);
 			checkBallot(ballotForDelegee);
@@ -136,40 +129,42 @@ public class BallotService {
 		// check that poll is actually in voting phase and has at least two alternative proposals
 		PollModel poll = ballot.getPoll();
 		if (poll == null || !PollModel.PollStatus.VOTING.equals(poll.getStatus())) {
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot post ballot: Poll must be in voting phase.");
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Poll must be in voting phase.");
 		}
 		if (poll.getProposals().size() < 2)
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot post ballot: Poll must have at least two alternative proposals.");
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Poll must have at least two alternative proposals.");
 
 		// check that voter Order is not empty
 		if (ballot.getVoteOrder() == null || ballot.getVoteOrder().size() == 0) {
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE,"Cannot post ballot: VoteOrder is empty!");
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE,"Cannot cast vote: VoteOrder is empty!");
 		}
 
 		// check that there is no duplicate vote for any one proposal
 		HashSet<Long> proposalIds = new HashSet<>();
 		for(LawModel proposal : ballot.getVoteOrder()) {
 			if (proposalIds.contains(proposal.getId())) {
-				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot post ballot: Duplicate vote for proposal_id="+proposal.getId());
+				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Duplicate vote for proposal_id="+proposal.getId());
 			} else {
 				proposalIds.add(proposal.getId());
 			}
 		}
 
-		// check that all proposals you wanna vote for are also in voting phase
+		// check that all proposals you wanna vote for are in this poll and that they are also in voting phase
 		for(LawModel proposal : ballot.getVoteOrder()) {
+			if (!proposal.getPoll().equals(ballot.getPoll()))
+				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: A proposal(id="+proposal.getId()+") is not part of poll(id="+ballot.getPoll().getId()+")!");
 			if (!LawModel.LawStatus.VOTING.equals(proposal.getStatus())) {
-				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot post ballot: proposals must be in voting phase.");
+				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: proposals must be in voting phase.");
 			}
 		}
 
-		// check that there is an areaToken
-		if (ballot.getAreaToken() == null || ballot.getAreaToken().length() < 5) {
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot post ballot: Invalid areaToken. Must be at least 5 chars!");
+		// check that there is an checksum
+		if (ballot.getChecksum() == null || ballot.getChecksum().length() < 5) {
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Invalid checksum. Must be at least 5 chars!");
 		}
 
-		// check that areaToken is valid, ie. that it already exists in TokenRepo
-		TokenModel existingToken = tokenRepo.findByAreaToken(ballot.getAreaToken());
+		// check that checksum is valid, ie. that it already exists in TokenRepo
+		TokenChecksumModel existingToken = checksumRepo.findByChecksum(ballot.getChecksum());
 		if (existingToken == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "User's voterToken is invalid!");
 
@@ -181,18 +176,4 @@ public class BallotService {
 	// http://stackoverflow.com/questions/34843297/modify-onetomany-entity-in-spring-data-rest-without-its-repository/34864254#34864254
 
 
-  /* This is how to manually create a HASH with Java's built-in SHA-256
-
-  try {
-    MessageDigest md = MessageDigest.getInstance("SHA-256");
-    md.update(DoogiesUtil.longToBytes(userId));
-    md.update(DoogiesUtil.longToBytes(initialPropId));
-    md.update(userPassword.getBytes());
-    byte[] digest = md.digest();
-    String voterTokenSHA256 = DoogiesUtil.bytesToString(digest);
-  } catch (NoSuchAlgorithmException e) {
-    log.error("FATAL: cannot create SHA-256 MessageDigest: "+e);
-    throw new LiquidoRestException("Internal error in backend");
-  }
-  */
 }
