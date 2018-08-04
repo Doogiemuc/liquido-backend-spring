@@ -16,6 +16,8 @@ import org.springframework.data.rest.core.annotation.RestResource;
 //@RepositoryRestResource(collectionResourceRel = "ballots", path = "ballots", itemResourceRel = "ballot")
 public interface BallotRepo extends CrudRepository<BallotModel, Long> {
 
+  /*  not necessary anymore since we are not exporting this as a rest resource at all
+      This would be how to hide specific methods in external REST API
   @Override
   @RestResource(exported = false)
   BallotModel save(BallotModel ballot);
@@ -35,11 +37,14 @@ public interface BallotRepo extends CrudRepository<BallotModel, Long> {
   @RestResource(exported = false)
   void deleteAll();
 
+  */
+
   /**
-   * Find the ballot with that ballotToken in that poll
+   * Find a ballot for a poll with a given checksum, ie. that was casted from a voter
+	 * who's secret voterToken hashes to this checksum.
    * @param poll a PollModel
-   * @param areaToken bcrypt voter token hash value
+   * @param checksum hash(voterToken)
    * @return the ballot for this (still anonymous) user's vote
    */
-  BallotModel findByPollAndAreaToken(PollModel poll, String areaToken);
+  BallotModel findByPollAndChecksum(PollModel poll, String checksum);
 }

@@ -29,4 +29,4 @@ http://localhost:8080/swagger-ui.html
 ### References
 
  * https://github.com/spring-projects/spring-data-examples
- 
+ * /doc directory

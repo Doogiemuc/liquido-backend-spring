@@ -91,7 +91,38 @@ Adapted from process used in the software aula.de by Marina Weisband
  - Liquido can be configured, so that transitive forwarding of a vote can be forbidden by the delegating user. That means that a user may delegate his voice to his proxy. But the proxy cannot re-delegate this voice again.
 
 
-#### Technial Features
+# Technical Architecture
+
+## Secure electronic voting
+
+ - Each voter can request a voterToken for an area from the Server. The voterToken is the digital right to vote in that area.
+   The voterToken is strictly confidential. Only the user must know his own voterToken.
+   When a user receives a voterToken, then checksum of that voterToken is also stored on the server.
+   voterToken = hash(user.email, user.password, area.id secretSalt)
+   voterTokenChecksum = hash(voterToken)
+
+ - With this voterToken a use can request a pollToken. The pollToken is a one time password that can be used to 
+   cast a vote in one poll. 
+
+ - When the user assigns a proxy in one area, then this proxy has the right to vote in place of that user.
+   (But remember that a user can always vote for himself. Even when the proxy has already voted. As long as the poll is in its voting phase.)
+   The proxy receives a proxyToken for that area. proxyToken = hash(voterToken, proxy.id, area.id)
+   The proxyToken checksum is also added to the list of valid voterTokenChecksums.
+ 
+
+    voterToken           = hash(user.email, user.password, area.id, secretSalt)       // only known to the voter himself
+    voterTokenChecksum   = hash(voterToken, secretSalt)                               // stored on the server
+   
+    proxyToken           = hash(voterToken, user.id, proxy.id, area.id)               // right to cast a vote for delegee in that area
+    proxyTokenChecksum   = hash(proxyToken, secretSalt)                               // stored on the server
+
+    pollToken            = hash(voterToken or proxytoken, poll.id, secretSalt)        // right to vote anonymously in this poll
+
+    addProxy    := create proxyToken from usersVoter Token on the server and store it. (proxy must not know voterToken!)
+    removeProxy := delete proxyTokenChechsum from list of valid tokenChecksums
+
+
+#### Technial Implementation Features
 
  - Clean model-view-controller implementation in JavaScript
  - Modern HTML5 bootstrap frontend with great emphaasis on usability 
@@ -110,7 +141,7 @@ Adapted from process used in the software aula.de by Marina Weisband
 
 
 ## Functional data model
-*(Classes and attributes)* Every class has the fields _ID, createdAt, modifiedAt
+*(Classes and attributes)* Every class has the fields ID, createdAt, modifiedAt
 
 #### Area (Department)
  - Title

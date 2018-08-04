@@ -47,6 +47,6 @@ public class DelegationModel extends BaseModel {
 
   // Implementation notes:
   // - A delegation is always implicitly created by "fromUser"
-  // - In case you wonder why we do not store the ballotToken together with the this delegation: There must not be a connection between fromUser and ballotToken for keeping ballots anonymous.
+  // - In case you wonder why we do not store any token together with the this delegation: There must not be a connection between fromUser and his token for keeping ballots anonymous.
 
 }

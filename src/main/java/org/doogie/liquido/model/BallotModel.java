@@ -25,22 +25,29 @@ import java.util.List;
  * This way a voter can even update his ballot as long as the voting phase is still open.
  */
 @Data
-@EqualsAndHashCode(callSuper = true)
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor  //BUGFIX: https://jira.spring.io/browse/DATAREST-884
-@EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
+//@EntityListeners(AuditingEntityListener.class)  //
 @Table(name = "ballots", uniqueConstraints= {
-  @UniqueConstraint(columnNames = {"POLL_ID", "areaToken"})   // a voter is only allowed to vote once per poll!
+  @UniqueConstraint(columnNames = {"POLL_ID", "checksum"})   // a voter is only allowed to vote once per poll!
 })
-public class BallotModel extends BaseModel {
+public class BallotModel {
+	//BallotModel deliberately does not extend BaseModel!
+	//No @CreatedDate, @LastModifiedDate or @CreatedBy here.
+	//When voting it is a secret who casted this ballot and when.
+
+	@Id
+	@GeneratedValue(strategy= GenerationType.AUTO)
+	public Long id;
+
   /** reference to poll */
   @NotNull
   @NonNull
   @ManyToOne
   public PollModel poll;
 
-  /** did the user vote for his own? Then never overwrite this ballot from a proxy */
+  /** Did the user vote for his own? Then never overwrite this ballot from a proxy */
   @NonNull   // needed, even though Lombok shows a warning
   public boolean ownVote;
 
@@ -56,19 +63,16 @@ public class BallotModel extends BaseModel {
   public List<LawModel> voteOrder;   //laws in voteOrder must not be duplicate! This is checked in VoteRestController.
 
   /**
-   * encrypted and anonymized information about the voter that casted this vote into the ballot.
-   * This areaToken ins confidential. It MUST only be stored on the server. Only the user knows
-   * the voterToken that hashes to this areaToken.
+   * Encrypted and anonymized information about the voter that casted this vote into the ballot.
+	 * Only the voter knows the voterToken that this checksum was created from as
+	 *   checksum = hash(voterToken)
    */
   @NotNull
   @NonNull
   @NotEmpty
-  public String areaToken;    // ballotToken = hash(voterToken)
+  public String checksum;
 
-  //There is deliberately no @CreatedBy field here! When voting it is a secret who casted this ballot!!!
-
-
-	// DO NOT expose areaToken in toString !!!
+	// DO NOT expose checksum in toString !!!
 	@Override
 	public String toString() {
 		StringBuffer buf = new StringBuffer();

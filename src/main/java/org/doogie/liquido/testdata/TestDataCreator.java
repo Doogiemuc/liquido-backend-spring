@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.Table;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.doogie.liquido.model.LawModel.LawStatus;
@@ -140,7 +141,8 @@ public class TestDataCreator implements CommandLineRunner {
       seedPollInElaborationPhase();
       seedPollInVotingPhase();
       seedLaws();
-      seedBallots();
+      //seedBallots();
+			//TODO: cast some votes
       auditorAware.setMockAuditor(null);
     }
   }
@@ -453,7 +455,7 @@ public class TestDataCreator implements CommandLineRunner {
   /**
    * Seed a poll that already is in its voting phase.
    *   Will build upon a seedPollInElaborationPhase and then start the voting phase via pollService.
-   */
+   */ 
   public void seedPollInVotingPhase() {
     log.info("Seeding one poll in voting phase ...");
     try {
@@ -465,9 +467,12 @@ public class TestDataCreator implements CommandLineRunner {
       }
       PollModel savedPoll = pollRepo.save(poll);
       fakeCreateAt(savedPoll, getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS));
+      fakeUpdatedAt(savedPoll, getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
 
       //===== Start the voting phase of this poll
       pollService.startVotingPhase(savedPoll);
+      savedPoll.setVotingStartAt(LocalDateTime.now().minusDays(1));
+      pollRepo.save(savedPoll);
     } catch (Exception e) {
       log.error("Cannot seed Poll in voting phase: " + e);
       throw new RuntimeException("Cannot seed Poll in voting phase", e);
@@ -550,6 +555,7 @@ public class TestDataCreator implements CommandLineRunner {
     model.setUpdatedAt(daysAgo);
   }
 
+  @Deprecated
   public void seedBallots() {
     log.info("Seeding ballots ...");
 

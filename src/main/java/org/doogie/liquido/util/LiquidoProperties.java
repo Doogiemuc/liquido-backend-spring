@@ -5,11 +5,14 @@ import org.doogie.liquido.datarepos.KeyValueRepo;
 import org.doogie.liquido.model.KeyValueModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.doogie.liquido.util.LiquidoProperties.KEY.BCRYPT_SALT;
 
 /**
  * Global properties that are read from the DB.
@@ -32,8 +35,8 @@ public class LiquidoProperties /*implements CommandLineRunner*/ {
   public enum KEY {
     SUPPORTERS_FOR_PROPOSAL("liquido.supporters.for.proposal"),
     DAYS_UNTIL_VOTING_STARTS("liquido.days.until.voting.starts"),
-    DURATION_OF_VOTING_PHASE("liquido.duration.of.voting.phase");
-    //TODO: BCRYPT_SALT("liquido.bcrypt.salt");
+    DURATION_OF_VOTING_PHASE("liquido.duration.of.voting.phase"),
+    BCRYPT_SALT("liquido.bcrypt.salt");
 
     String keyName;
     KEY(String name) {
@@ -79,7 +82,7 @@ public class LiquidoProperties /*implements CommandLineRunner*/ {
   */
 
   /**
-   * Initialize all mandatory properties.
+   * Initialize properties. Currently all properties are mandatory.
    * This runs, after the bean has been constructed completely, ie. all Autowired attributes are injected and ready.
    * Keep in mind that this runs BEFORE the TestDataCreator!
    */
@@ -89,12 +92,19 @@ public class LiquidoProperties /*implements CommandLineRunner*/ {
     this.props = new HashMap<>();
     for(KEY key : KEY.values()) {
       KeyValueModel kv = keyValueRepo.findByKey(key.toString());
-      //BUG: Must initialize default values somewhere BEFORE we try to load them from the DB.  FIX:  Fallback to property file.
+
+      //If there is no value in the DB, then we load initial values from property file.
       if (kv == null)  {
         String property = springEnv.getProperty(key.toString());
-        if (property == null) throw new RuntimeException("Need default value for "+key+" in application.properties");
+				if (BCRYPT_SALT.equals(key) && property == null) {
+					String salt = BCrypt.gensalt();
+					throw new RuntimeException("Need BCRYPT_SALT in application.properties. You may for example use\nliquido.bcrypt.salt="+salt);
+				}
+				if (property == null) throw new RuntimeException("Need default value for "+key+" in application.properties");
         kv = new KeyValueModel(key.toString(), property);
       }
+
+
       props.put(key, kv.getValue());
       log.debug("   "+key+" = "+kv.getValue());
     }
@@ -121,9 +131,9 @@ public class LiquidoProperties /*implements CommandLineRunner*/ {
   /**
    * set the value for this key and also persist the new value to the DB.
    */
-  public void setAndStore(KEY key, String value) {
+  public KeyValueModel setAndStore(KEY key, String value) {
     this.set(key, value);
     KeyValueModel kv = new KeyValueModel(key.toString(), value);
-    keyValueRepo.save(kv);
+    return keyValueRepo.save(kv);
   }
 }

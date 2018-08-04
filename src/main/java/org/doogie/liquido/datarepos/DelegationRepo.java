@@ -14,7 +14,7 @@ import java.util.List;
  *
  * http://stackoverflow.com/questions/14014086/what-is-difference-between-crudrepository-and-jparepository-interfaces-in-spring
  */
-@RepositoryRestResource(collectionResourceRel = "delegations", path = "delegations", itemResourceRel = "delegation")
+//@RepositoryRestResource(collectionResourceRel = "delegations", path = "delegations", itemResourceRel = "delegation")
 public interface DelegationRepo extends CrudRepository<DelegationModel, Long>, DelegationRepoCustom {
 
   //Delegations have a combined unique index on area,fromUSer
