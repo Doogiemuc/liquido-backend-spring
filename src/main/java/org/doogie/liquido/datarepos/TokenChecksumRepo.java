@@ -5,7 +5,8 @@ import org.doogie.liquido.services.CastVoteService;
 import org.springframework.data.repository.CrudRepository;
 
 /**
- * Repository for areaTokens.
+ * Repository for valid voterTokens. Here the checksum = hash(voterToken) for all valid voter Tokens is stored.
+ * Keep in mind that its mathematically not possible to calculate the voterToken from a checksum.
  * Used in {@link CastVoteService}
  */
 public interface TokenChecksumRepo extends CrudRepository<TokenChecksumModel, Long> {
