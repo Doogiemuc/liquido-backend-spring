@@ -89,7 +89,7 @@ public class PollService {
    * @param poll a poll in elaboration phase with at least two proposals
    */
   public void startVotingPhase(@NotNull PollModel poll) throws LiquidoException {
-    log.info("startVotingPhase of poll "+poll.id);
+    log.info("startVotingPhase of "+poll.toString());
     if (poll.getStatus() != PollModel.PollStatus.ELABORATION)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Poll must be in status ELABORATION");
     if (poll.getProposals().size() < 2)
@@ -99,10 +99,8 @@ public class PollService {
     }
     poll.setStatus(PollModel.PollStatus.VOTING);
     LocalDateTime votingStart = LocalDateTime.now();
-    //record the exact datetime when the voting phase started.
-    poll.setVotingStartAt(votingStart);
-    //voting ends in n days at midnight
-    poll.setVotingEndAt(votingStart.truncatedTo(ChronoUnit.DAYS).plusDays(props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE)));
+    poll.setVotingStartAt(votingStart);   //record the exact datetime when the voting phase started.
+    poll.setVotingEndAt(votingStart.truncatedTo(ChronoUnit.DAYS).plusDays(props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE)));     //voting ends in n days at midnight
     pollRepo.save(poll);
   }
 

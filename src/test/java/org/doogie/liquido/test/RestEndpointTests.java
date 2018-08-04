@@ -384,18 +384,14 @@ public class RestEndpointTests {
     // Do not use client.postForObject here. It does not return any error. It simply returns null instead!
     // Endpoint is /postBallot    /ballots are not exposed as @RepositoryRestResource for writing!
     ResponseEntity<String> response = client.exchange("/postBallot", HttpMethod.POST, entity, String.class);
-    //log.debug("Response body:\n"+response.getBody());
+    log.debug("Response body:\n"+response.getBody());
 
     assertEquals(HttpStatus.CREATED, response.getStatusCode());
     ReadContext ctx = JsonPath.parse(response.getBody());
     String returnedVoterToken = ctx.read("$.ballotToken");
     assertTrue("Expected a voter token", returnedVoterToken != null && returnedVoterToken.length() > 10);
-    String delegees = ctx.read("$.delegees");
-    try {
-      Long.valueOf(delegees);
-    } catch (NumberFormatException nfe) {
-      fail("Expteded parameter delegees to be numeric.");
-    }
+    Long delegees = ctx.read("$.delegees", Long.class);
+    assertTrue("Expteded delegees to be a positive number.", delegees > 0);
 
     log.trace("TEST SUCCESSFUL: new ballot successfully posted.");
   }
@@ -676,12 +672,12 @@ public class RestEndpointTests {
 
   /**
    * GIVEN an idea that reached its quorum and became a proposal
-   * WHEN  author of this idea creates a poll
+   * WHEN  author of this idea creates a new poll
    * THEN  the poll is in state ELABORATION
    * AND   the idea is the initial proposal in this poll.
    */
   @Test
-  public void testCreatePoll() {
+  public void testCreateNewPoll() {
 
   }
 
