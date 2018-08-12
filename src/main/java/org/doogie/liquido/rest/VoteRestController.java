@@ -10,11 +10,14 @@ import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
+import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Controller for posting a ballot
@@ -43,14 +46,16 @@ public class VoteRestController {
 	 * @return JSON with voterToken
 	 * @throws LiquidoException when request parameter is missing
 	 */
-	@RequestMapping(value = "/voterToken", method = RequestMethod.GET)
+	@RequestMapping(value = "/voterTokens", method = RequestMethod.GET)
 	public @ResponseBody Map getVoterToken(@RequestParam("area")AreaModel area /*@AuthenticationPrincipal User authUser, Principal principal*/) throws LiquidoException {
 		// injecting the AuthenticationPrincipal did not work for me. I do not know why.   But liquidoAuditorAware works, and is also great for testing:
 		UserModel user = liquidoAuditorAware.getCurrentAuditor();
-		log.info(user+" requests a voter token for area "+area);
-		String voterToken = ballotService.getVoterToken(user, area);   // preconditions are checked inside ballotService
-		Map<String, String> result = new HashMap<>();
-		result.put("voterToken", voterToken);
+		log.info(user+" requests his voter tokens for area "+area);
+
+		List<String> voterTokens = ballotService.getVoterTokens(user, area);   // preconditions are checked inside ballotService
+
+		Map<String, List<String>> result = new HashMap<>();
+		result.put("voterTokens", voterTokens);
 		return result;
 	}
 
@@ -68,7 +73,11 @@ public class VoteRestController {
 		 * <pre>
 		 *  {
 		 *    "poll": "/liquido/v2/polls/4711",
-		 *    "voterToken": "asdfv532sasdfsf...",
+		 *    "voterTokens": [
+		 *      "asdfv532sasdfsf...",    // users own voterToken
+		 *      "aasf341sdvvdaaa...",    // one token per delegee if user is a proxy
+		 *      [...]
+		 *    ],
 		 *    "voteOrder": [
 		 *      "/liquido/v2/laws/42",
 		 *      "/liquido/v2/laws/43"
@@ -76,7 +85,48 @@ public class VoteRestController {
 		 *  }
 		 * </pre>
 		 *
-		 * Remark: POST for create, PUT would be for update! See http://stackoverflow.com/questions/630453/put-vs-post-in-rest?rq=1
+		 * @param castVoteRequest the posted ballot as a REST resource
+		 * @return on success JSON:
+		 *   {
+		 *     "msg": "OK, your ballot was counted.",
+		 *     "delegees": "0",
+		 *     "checksum": "$2a$10$1IdrGrRAN2Wp3U7QI.JIzueBtPrEreWk1ktFJ3l61Tyv4TC6ICLp2",
+		 *     "poll": "/polls/253"
+		 *   }
+		 */
+		//TODO:  map this under /polls/<id>/castVote
+  @RequestMapping(value = "/castVote", method = RequestMethod.POST)   // @RequestMapping(value = "somePath") here on type/method level does not work with @RepositoryRestController. But it seems to work with BasePathAwareController
+  @ResponseStatus(HttpStatus.CREATED)
+  public @ResponseBody Map castVote(@RequestBody CastVoteRequest castVoteRequest) throws LiquidoException {
+    log.trace("=> POST /castVote");
+    UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
+    if (currentUser != null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast Vote. You should cast your vote anonymously. Do not send a SESSIONID.");
+
+    List<String> checksums = ballotService.castVote(castVoteRequest);   					// all validity checks are done inside ballotService.
+
+    Map<String, Object> result = new HashMap<>();
+    result.put("msg", "OK, your vote was counted in "+checksums.size()+" ballots");
+    result.put("poll", castVoteRequest.getPoll());
+    result.put("checksums", checksums);        // with these checksums, the voter can later confirm that his vote in this poll was counted for.
+		log.trace("<= POST /castVote for "+checksums.size()+ "voters");
+		// We do not send any voteOrder back in the response, because the voterOrder must not be related to this user's IP.
+    return result;
+  }
+
+
+  /*
+  This is how you can return spring HATEOAS JSON as response
+
+  public @ResponseBody PersistentEntityResource someMethod(
+			@RequestBody PayloadModel payload
+			PersistentEntityResourceAssembler resourceAssembler
+	) {
+
+		// cannot return simple string in Spring :-( http://stackoverflow.com/questions/30895286/spring-mvc-how-to-return-simple-string-as-json-in-rest-controller/30895501
+		return resourceAssembler.toResource(responseJpaEntity)
+	}
+
+	 * Remark: POST for create, PUT would be for update! See http://stackoverflow.com/questions/630453/put-vs-post-in-rest?rq=1
 		 *
 		 * Related resources for @RepositoryRestController
 		 * Example by Oliver Ghierke:  https://github.com/olivergierke/spring-restbucks
@@ -97,42 +147,8 @@ public class VoteRestController {
 		 * Solution: http://stackoverflow.com/questions/40986738/spring-data-rest-no-string-argument-constructor-factory-method-to-deserialize/40986739
 		 *           https://jira.spring.io/browse/DATAREST-884   =>
 		 *
-		 * @param castVoteRequest the posted ballot as a REST resource
-		 * @return on success JSON:
-		 *   {
-		 *     "msg": "OK, your ballot was counted.",
-		 *     "delegees": "0",
-		 *     "checksum": "$2a$10$1IdrGrRAN2Wp3U7QI.JIzueBtPrEreWk1ktFJ3l61Tyv4TC6ICLp2",
-		 *     "poll": "/polls/253"
-		 *   }
-		 */
-		//TODO:  map this under /polls/<id>/castVote
-  @RequestMapping(value = "/castVote", method = RequestMethod.POST)   // @RequestMapping(value = "somePath") here on type/method level does not work with @RepositoryRestController. But it seems to work with BasePathAwareController
-  @ResponseStatus(HttpStatus.CREATED)
-  public @ResponseBody /*PersistentEntityResource*/ Map castVote(
-      @RequestBody CastVoteRequest castVoteRequest
-      //@AuthenticationPrincipal UserModel principalUserModel,
-      //PersistentEntityResourceAssembler resourceAssembler
-  ) throws LiquidoException {
-    log.trace("=> POST /castVote");
-    UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
-    if (currentUser == null) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Cannot postBallot. Need an authenticated user as fromUser");
 
-    BallotModel savedBallot = ballotService.castVote(currentUser, castVoteRequest);   // all validity checsk are done inside ballotService.
-
-	  // Keep in mind that the savedBallot object is not completely filled, e.g. you cannot call toString on it.    => REALLY? :-)
-    log.trace("<= POST /castVote: pollId="+savedBallot.getPoll().getId());
-    //return resourceAssembler.toResource(savedBallot);
-
-    // cannot return simple string in Spring :-( http://stackoverflow.com/questions/30895286/spring-mvc-how-to-return-simple-string-as-json-in-rest-controller/30895501
-    Map<String, String> result = new HashMap<>();
-    result.put("msg", "OK, your ballot was counted.");
-    result.put("poll", "/polls/"+savedBallot.getPoll().getId());
-    result.put("checksum", savedBallot.getChecksum());        // with this checksum, the voter can later confirm that his vote in this poll was counted for.
-    result.put("delegees", currentUser.getVoterTokens().size()+"");
-    // We do not send the voteOrder back in the response, because the voterOrder must not be related to this user's IP.
-    return result;
-  }
+   */
 
 }
 
