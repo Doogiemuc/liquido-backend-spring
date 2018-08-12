@@ -9,7 +9,7 @@ import javax.validation.constraints.NotNull;
 import java.util.List;
 
 /**
- * POJO Entity that represents a vote that a user has casted for one given poll.
+ * POJO Entity that represents an anonymous vote that a user has casted for one given poll.
  *
  * Each ballot contains the ordered list of proposals that this user voted for.
  * But the ballot does *NOT* contain any reference to the voter.

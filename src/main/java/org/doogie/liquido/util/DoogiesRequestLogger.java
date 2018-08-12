@@ -123,7 +123,7 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     this.logger.debug("<= " + reqInfo + ": returned status=" + response.getStatus() + " in "+duration + "ms");
     if (includeResponsePayload) {
       byte[] buf = wrappedResponse.getContentAsByteArray();
-      this.logger.debug("   Response body:\n"+getContentAsString(buf, this.maxPayloadLength, response.getCharacterEncoding()));
+      this.logger.debug("   returned response body:\n"+getContentAsString(buf, this.maxPayloadLength, response.getCharacterEncoding()));
     }
 
     wrappedResponse.copyBodyToResponse();  // IMPORTANT: copy content of response back into original response
