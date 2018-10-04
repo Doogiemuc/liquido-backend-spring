@@ -1,43 +1,49 @@
 package org.doogie.liquido.model;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import jdk.nashorn.internal.parser.Token;
+import lombok.*;
 
 import javax.persistence.*;
-import javax.validation.constraints.NotNull;
+import java.util.List;
 
 /**
- * A token is the digital anonymous right to vote. The checksum represents the right to vote in this area.
- *
  * When a voter requests a token, then the server calculates two values:
  * 1. voterToken = hash(user.email, user.passwordHash, area.id)
- * 2. checksum   = hash(voterToken, secretSeed)
+ * 2. checksumModel   = hash(voterToken, secretSeed)
  *
- * Only the checksum is (anonomously) stored on the server. And
- * only the user knows the voterToken that the checksum is created from.
+ * Only the checksumModel is (anonomously) stored on the server. And
+ * only the user knows the voterToken that the checksumModel is created from.
  *
  * When a user wants to cast a vote, then he sends his voterToken for this area.
- * Then the server checks if he already knows the corresponding checksum.
+ * Then the server checks if he already knows the corresponding checksumModel.
  * If yes, then the casted vote is valid and will be counted.
  */
 @Data
 @NoArgsConstructor
 @RequiredArgsConstructor
+@EqualsAndHashCode(of = "checksum")
+@ToString(of = "checksum")
 @Entity
 public class TokenChecksumModel {
-	@Id
-	@GeneratedValue(strategy= GenerationType.AUTO)
-	public Long id;
 
-	@NotNull
+	/** checksumModel = hash(voterToken) */
+	@Id
 	@NonNull
-	@Column(unique = true)
 	String checksum;
+
+	/** A voter can delegate his right to vote to a proxy */
+	@ManyToOne
+	@JoinColumn(name = "delegatedToProxy")
+	TokenChecksumModel delegatedToProxy;
+
+	/** List of checksums that are delegated to this as a proxy. Inverse of bidirectional delegatedToProxy association */
+	@OneToMany(mappedBy = "proxyFor", fetch = FetchType.EAGER)
+	List<TokenChecksumModel> proxyFor;
 
 	//There is deliberately no createdBy here! Tokens must not be related to any user. Tokens must be anonymous!
 	//For the same reason there is also no createdBy or updatedBy. They might lead to timing attacks.
 
-	// I thought about storing the area next to the checksum. But the area is already encoded inside this hash value.
+	// I thought about storing the area next to the checksumModel. But the area is already encoded inside this hash value.
+
+
 }

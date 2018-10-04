@@ -45,7 +45,7 @@ public class CommentModel extends BaseModel {
 	public CommentModel parent;
 
 	/** list of replies to this comment */
-  @OneToMany(mappedBy = "parent", fetch = FetchType.EAGER)    // default CascadeType https://vladmihalcea.com/a-beginners-guide-to-jpa-and-hibernate-cascade-types/https://vladmihalcea.com/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
+  @OneToMany(mappedBy = "parent", fetch = FetchType.EAGER)    // default CascadeType https://vladmihalcea.com/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
   public List<CommentModel> replies = new ArrayList<>();
 
   /** Users that like this comment. I need the full list of users, nut just the number of upVotes, because we need to prevent duplicate voting. */

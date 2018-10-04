@@ -1,26 +1,24 @@
 package org.doogie.liquido.model;
 
-import lombok.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.hibernate.validator.constraints.NotEmpty;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * POJO Entity that represents an anonymous vote that a user has casted for one given poll.
  *
  * Each ballot contains the ordered list of proposals that this user voted for.
  * But the ballot does *NOT* contain any reference to the voter.
- * A vote must be anonymous.
+ * Insted each ballot contains a checksum which is the hashed value of the user's voterToken.
  *
- * But in Liquido, the ballot has a ballotToken which is created from the users voterToken.
- *
- *   ballotToken = hash(voterToken)
- *
- * Only the voter knows his own voterToken. So only he can proof that this actually is his ballot
- * by providing the correct input to the hash function.
+ * Only the voter knows his own voterToken. So only he can check that this actually is his ballot.
  *
  * This way a voter can even update his ballot as long as the voting phase is still open.
  */
@@ -28,9 +26,8 @@ import java.util.List;
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor  //BUGFIX: https://jira.spring.io/browse/DATAREST-884
-//@EntityListeners(AuditingEntityListener.class)  //
 @Table(name = "ballots", uniqueConstraints= {
-  @UniqueConstraint(columnNames = {"POLL_ID", "checksum"})   // a voter is only allowed to vote once per poll!
+  @UniqueConstraint(columnNames = {"POLL_ID", "CHECKSUM_MODEL_CHECKSUM"} )   // a voter is only allowed to vote once per poll with his checksum!
 })
 public class BallotModel {
 	//BallotModel deliberately does not extend BaseModel!
@@ -47,9 +44,13 @@ public class BallotModel {
   @ManyToOne
   public PollModel poll;
 
-  /** Did the user vote for his own? Then never overwrite this ballot from a proxy */
-  @NonNull   // needed, even though Lombok shows a warning
-  public boolean ownVote;
+  /**
+	 * level = 0: user voted for himself
+	 * level = 1: direct proxy
+	 * level = 2: transitive proxy voted
+	 * etc. */
+  @NonNull   // needed so that level gets included as a required arg for the lombok constructor, even though Lombok shows a warning
+  public int level;
 
   /**
    * One vote puts some proposals of this poll into his personally preferred order.
@@ -63,25 +64,24 @@ public class BallotModel {
   public List<LawModel> voteOrder;   //laws in voteOrder must not be duplicate! This is checked in VoteRestController.
 
   /**
-   * Encrypted and anonymized information about the voter that casted this vote into the ballot.
-	 * Only the voter knows the voterToken that this checksum was created from as
-	 *   checksum = hash(voterToken)
+   * Encrypted and anonymous information about the voter that casted this vote into the ballot.
+	 * Only the voter knows the voterToken that this checksumModel was created from as
+	 *   checksumModel = hash(voterToken)
    */
   @NotNull
   @NonNull
-  @NotEmpty
-  public String checksum;
+	@OneToOne
+  public TokenChecksumModel checksumModel;
 
-	// DO NOT expose checksum in toString !!!
+	// DO NOT expose checksumModel in toString !!!
 	@Override
 	public String toString() {
-		StringBuffer buf = new StringBuffer();
-		voteOrder.stream().map(law -> buf.append(law.getId()) );
+		String proposalIds = voteOrder.stream().map(law->law.getId().toString()).collect(Collectors.joining(","));
 		return "BallotModel{" +
 				"id=" + id +
 				", poll.id=" + poll.getId() +
-				", ownVote=" + ownVote +
-				", voteOrder(proposalIds)=[" + buf.toString() +
-				"]}";
+				", level=" + level +
+				", voteOrder(proposalIds)=[" + proposalIds +"]"+
+				"}";
 	}
 }

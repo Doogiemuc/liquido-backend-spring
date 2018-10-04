@@ -40,8 +40,19 @@ public class LiquidoAnonymizer {
       inputStr.append(s);
     }
     String salt = props.get(LiquidoProperties.KEY.BCRYPT_SALT);
+
     return BCrypt.hashpw(inputStr.toString(), salt);
   }
+
+	/**
+	 * Check if plaintext hashes to the given hashed password
+	 * @param plainText
+	 * @param hashed
+	 * @return
+	 */
+  public boolean checkpw(String plainText, String hashed) {
+  	return BCrypt.checkpw(plainText, hashed);
+	}
 
 }
 

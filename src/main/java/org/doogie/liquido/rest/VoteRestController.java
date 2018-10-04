@@ -46,16 +46,16 @@ public class VoteRestController {
 	 * @return JSON with voterToken
 	 * @throws LiquidoException when request parameter is missing
 	 */
-	@RequestMapping(value = "/voterTokens", method = RequestMethod.GET)
+	@RequestMapping(value = "/voterToken", method = RequestMethod.GET)
 	public @ResponseBody Map getVoterToken(@RequestParam("area")AreaModel area /*@AuthenticationPrincipal User authUser, Principal principal*/) throws LiquidoException {
 		// injecting the AuthenticationPrincipal did not work for me. I do not know why.   But liquidoAuditorAware works, and is also great for testing:
 		UserModel user = liquidoAuditorAware.getCurrentAuditor();
-		log.info(user+" requests his voter tokens for area "+area);
+		log.info(user+" requests his voterToken for area "+area);
 
-		List<String> voterTokens = ballotService.getVoterTokens(user, area);   // preconditions are checked inside ballotService
+		String voterToken = ballotService.getVoterToken(user, area);   // preconditions are checked inside ballotService
 
-		Map<String, List<String>> result = new HashMap<>();
-		result.put("voterTokens", voterTokens);
+		Map<String, String> result = new HashMap<>();
+		result.put("voterToken", voterToken);
 		return result;
 	}
 
@@ -90,11 +90,10 @@ public class VoteRestController {
 		 *   {
 		 *     "msg": "OK, your ballot was counted.",
 		 *     "delegees": "0",
-		 *     "checksum": "$2a$10$1IdrGrRAN2Wp3U7QI.JIzueBtPrEreWk1ktFJ3l61Tyv4TC6ICLp2",
+		 *     "checksumModel": "$2a$10$1IdrGrRAN2Wp3U7QI.JIzueBtPrEreWk1ktFJ3l61Tyv4TC6ICLp2",
 		 *     "poll": "/polls/253"
 		 *   }
 		 */
-		//TODO:  map this under /polls/<id>/castVote
   @RequestMapping(value = "/castVote", method = RequestMethod.POST)   // @RequestMapping(value = "somePath") here on type/method level does not work with @RepositoryRestController. But it seems to work with BasePathAwareController
   @ResponseStatus(HttpStatus.CREATED)
   public @ResponseBody Map castVote(@RequestBody CastVoteRequest castVoteRequest) throws LiquidoException {
@@ -102,14 +101,13 @@ public class VoteRestController {
     UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
     if (currentUser != null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast Vote. You should cast your vote anonymously. Do not send a SESSIONID.");
 
-    List<String> checksums = ballotService.castVote(castVoteRequest);   					// all validity checks are done inside ballotService.
+    String checksum = ballotService.castVote(castVoteRequest);   					// all validity checks are done inside ballotService.
 
     Map<String, Object> result = new HashMap<>();
-    result.put("msg", "OK, your vote was counted in "+checksums.size()+" ballots");
+    result.put("msg", "OK, your vote was counted.");
     result.put("poll", castVoteRequest.getPoll());
-    result.put("checksums", checksums);        // with these checksums, the voter can later confirm that his vote in this poll was counted for.
-		log.trace("<= POST /castVote for "+checksums.size()+ "voters");
-		// We do not send any voteOrder back in the response, because the voterOrder must not be related to this user's IP.
+    result.put("checksum", checksum);        // with these checksums, the voter can later confirm that his vote in this poll was counted for.
+		//TODO: result.put("delegatedVotes", delegatedVotes);
     return result;
   }
 
