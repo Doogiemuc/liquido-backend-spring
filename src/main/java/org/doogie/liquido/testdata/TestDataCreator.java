@@ -3,8 +3,11 @@ package org.doogie.liquido.testdata;
 import net.bytebuddy.utility.RandomString;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
+import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LawService;
+import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoProperties;
@@ -90,6 +93,9 @@ public class TestDataCreator implements CommandLineRunner {
   PollService pollService;
 
   @Autowired
+  CastVoteService castVoteService;
+
+  @Autowired
   LiquidoProperties props;
 
   /*
@@ -141,8 +147,8 @@ public class TestDataCreator implements CommandLineRunner {
       seedPollInElaborationPhase();
       seedPollInVotingPhase();
       seedLaws();
-      //seedBallots();
-			//TODO: cast some votes
+      seedVotes();
+
       auditorAware.setMockAuditor(null);
     }
   }
@@ -555,24 +561,43 @@ public class TestDataCreator implements CommandLineRunner {
     model.setUpdatedAt(daysAgo);
   }
 
-  @Deprecated
-  public void seedBallots() {
-    log.info("Seeding ballots ...");
+  public void seedVotes() {
+    log.info("Seeding votes ...");
 
     List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
     if (polls.size() == 0) throw new RuntimeException("cannot seed Ballots. There is no poll in voting phase.");  //MAYBE: create one
     PollModel pollInVoting = polls.get(0);
     if (pollInVoting.getNumCompetingProposals() < 2) throw new RuntimeException("Cannot seed ballots. Need at least two alternative proposals in VOTING phase");
 
-    Iterator<LawModel> proposals = pollInVoting.getProposals().iterator();
-    List<LawModel> voteOrder = new ArrayList<>();
-    voteOrder.add(proposals.next());
-    voteOrder.add(proposals.next());
-    //TODO: create real BCRYPT token in TestDataCreator   => Can TestDataCreator depend on LiquidoAnonymizer?  => Yes, but need to seed   salt value first!
-    //String voterTokenBCrypt = anonymizer.getBCryptVoterToken(currentUser, currentUser.getPasswordHash(), poll);
-    BallotModel newBallot = new BallotModel(pollInVoting, false, voteOrder, "dummyVoterToken");
-    ballotRepo.save(newBallot);
+		String basePath = springEnv.getProperty("spring.data.rest.base-path");
+
+		String pollURI = basePath+"/polls/"+pollInVoting.getId();
+
+		Iterator<LawModel> proposals = pollInVoting.getProposals().iterator();
+    List<String> voteOrder = new ArrayList<>();
+    voteOrder.add(basePath+"/laws/"+proposals.next().getId());		// CastVoteRequest contains URIs not full LawModels
+    voteOrder.add(basePath+"/laws/"+proposals.next().getId());
+
+    // Now we use the original CastVoteService to get a voterToken and cast our vote.
+    try {
+			String voterToken = castVoteService.getVoterToken(users.get(1), pollInVoting.getArea());
+			CastVoteRequest castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
+			castVoteService.castVote(castVoteRequest);
+		} catch (LiquidoException e) {
+    	log.error("Cannot seedVotes: "+e);
+		}
   }
+
+
+
+
+
+
+
+
+  //-------------------------------- UTILITY methods ------------------------------
+
+
 
 	private UserModel randUser() {
 		return users.get(rand.nextInt(NUM_USERS));

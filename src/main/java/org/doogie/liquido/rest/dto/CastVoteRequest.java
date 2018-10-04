@@ -21,10 +21,9 @@ public class CastVoteRequest {
 	List<String> voteOrder;
 
 	/**
-	 * First element in this list is the voter's own token, which will create a Ballot with ownVote = true
-	 * If user is a proxy then there might be more tokens. One for each delegee. */
+	 * The voter's own voterToken that MUST hash to a valid checksumModel. */
 	@NonNull
-	List<String> voterTokens;
+	String voterToken;
 
 	@Override
 	public String toString() {
@@ -34,7 +33,7 @@ public class CastVoteRequest {
 		buf.append(", voteOrder=[");
 		buf.append(voteOrder.stream().collect(Collectors.joining(",")));    // I love java :-) <sarcasm>   In PERL this would just simply be     $buf = join(",", @arr);
 		buf.append("]");
-		//do not expose secret voterTokens in toString!
+		//do not expose secret voterToken in toString!
 		return buf.toString();
 	}
 }
