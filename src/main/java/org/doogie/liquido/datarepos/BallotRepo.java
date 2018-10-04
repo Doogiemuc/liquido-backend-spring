@@ -2,6 +2,7 @@ package org.doogie.liquido.datarepos;
 
 import org.doogie.liquido.model.BallotModel;
 import org.doogie.liquido.model.PollModel;
+import org.doogie.liquido.model.TokenChecksumModel;
 import org.doogie.liquido.rest.VoteRestController;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.rest.core.annotation.RestResource;
@@ -40,11 +41,11 @@ public interface BallotRepo extends CrudRepository<BallotModel, Long> {
   */
 
   /**
-   * Find a ballot for a poll with a given checksum, ie. that was casted from a voter
-	 * who's secret voterToken hashes to this checksum.
+   * Find a ballot for a poll with a given checksumModel, ie. that was casted from a voter
+	 * who's secret voterToken hashes to this checksumModel.
    * @param poll a PollModel
-   * @param checksum hash(voterToken)
+   * @param checksumModel a stored checksumModel
    * @return the ballot for this (still anonymous) user's vote
    */
-  BallotModel findByPollAndChecksum(PollModel poll, String checksum);
+  BallotModel findByPollAndChecksumModel(PollModel poll, TokenChecksumModel checksumModel);
 }
