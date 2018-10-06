@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @RequiredArgsConstructor  //BUGFIX: https://jira.spring.io/browse/DATAREST-884
 @Table(name = "ballots", uniqueConstraints= {
-  @UniqueConstraint(columnNames = {"POLL_ID", "CHECKSUM_MODEL_CHECKSUM"} )   // a voter is only allowed to vote once per poll with his checksum!
+  @UniqueConstraint(columnNames = {"POLL_ID", "CHECKSUM"} )   // a voter is only allowed to vote once per poll with his checksum!
 })
 public class BallotModel {
 	//BallotModel deliberately does not extend BaseModel!
@@ -52,6 +52,15 @@ public class BallotModel {
   @NonNull   // needed so that level gets included as a required arg for the lombok constructor, even though Lombok shows a warning
   public int level;
 
+	/**
+	 * When user is a proxy for others, then the delegationCount is the number of delegations
+	 * that this ballot was counted for. Only the ballots that were actually set by the proxy's vote
+	 * are counted. Ballotes with a lower level, e.g. where a voter voted for himself, are not
+	 * counted.
+	 * There are separate ballots for all these delegated votes. The delegationCount is just for info. Do not sum it up.
+	 */
+	public int delegationCount = 0;
+
   /**
    * One vote puts some proposals of this poll into his personally preferred order.
    * One voter may put some or all proposals of the poll into his (ordered) ballot. But of course he may only vote at maximum once for every proposal.
@@ -66,14 +75,14 @@ public class BallotModel {
   /**
    * Encrypted and anonymous information about the voter that casted this vote into the ballot.
 	 * Only the voter knows the voterToken that this checksumModel was created from as
-	 *   checksumModel = hash(voterToken)
+	 *   checksum = hash(voterToken)
    */
   @NotNull
   @NonNull
-	@OneToOne
-  public TokenChecksumModel checksumModel;
+	//@OneToOne
+  public String checksum;
 
-	// DO NOT expose checksumModel in toString !!!
+	// DO NOT expose checksum in toString !!!
 	@Override
 	public String toString() {
 		String proposalIds = voteOrder.stream().map(law->law.getId().toString()).collect(Collectors.joining(","));
@@ -81,6 +90,7 @@ public class BallotModel {
 				"id=" + id +
 				", poll.id=" + poll.getId() +
 				", level=" + level +
+				//", checksum="+checksum +      // better do not expose checksum in toString
 				", voteOrder(proposalIds)=[" + proposalIds +"]"+
 				"}";
 	}

@@ -10,9 +10,7 @@ import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 
 /**
  * This spring component implements the business logic for {@link org.doogie.liquido.model.BallotModel}
@@ -36,6 +34,9 @@ public class CastVoteService {
 	TokenChecksumRepo checksumRepo;
 
 	@Autowired
+	DelegationRepo delegationRepo;
+
+	@Autowired
 	LiquidoRestUtils restUtils;
 
 	@Autowired
@@ -56,9 +57,10 @@ public class CastVoteService {
 		if (user == null || DoogiesUtil.isEmpty(user.getEmail())) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "User must be authenticated to getToken");
 		if (area == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need area when requesting a token.");
 
-		String voterToken = upsertVoterToken(user.getId(), user.getPasswordHash(), area.getId());
+		//TODO: !!! [Security] Do not read user's passwordHash.  Instead it(or the oauth token?) must be passed into getVoterToken!
+		String voterToken = upsertVoterTokenAndChecksum(user.getId(), user.getPasswordHash(), area.getId());
 
-		return voterToken;  // Important: secret voterToken is returned to user.  tokenChecksum was stored in the local DB.
+		return voterToken;  // Important: secret voterToken is returned to user. Checksum is only stored in the local DB.
 	}
 
 	/**
@@ -72,9 +74,9 @@ public class CastVoteService {
 	 * @param areaId voter can get one voter token per area
 	 * @return the voter token of user for this area. the checksumModel to validate this voter token was stored.
 	 */
-	public String upsertVoterToken(Long userId, String passwordHash, Long areaId) {
+	public String upsertVoterTokenAndChecksum(Long userId, String passwordHash, Long areaId) {
 		String voterToken = anonymizer.getBCrypetHash(userId+"", passwordHash, areaId+"");   // token that only this user must know
-		String tokenChecksum  = anonymizer.getBCrypetHash(voterToken);                             // token that can only be generated from the users voterToken and only by the server.
+		String tokenChecksum = getChecksumFromVoterToken(voterToken);                            // token that can only be generated from the users voterToken and only by the server.
 		TokenChecksumModel existingTokenModel = checksumRepo.findByChecksum(tokenChecksum);
 		if (existingTokenModel == null) {
 			TokenChecksumModel newToken = new TokenChecksumModel(tokenChecksum);
@@ -95,11 +97,11 @@ public class CastVoteService {
 	 * @return checksums of the user's own casted ballot.
 	 * @throws LiquidoException
 	 */
-	public String castVote(CastVoteRequest castVoteRequest) throws LiquidoException {
+	public BallotModel castVote(CastVoteRequest castVoteRequest) throws LiquidoException {
 		log.trace("castVote: "+ castVoteRequest);
 
 		// load models for URIs in castVoteRequst
-		//TODO: Should I move loading of models into the REST controller? As I did it for PollRestController? Should a REST controller directly handle repos? Or should only the service handle repos?
+		//TODO: !!! Should I move loading of models up into the REST controller? As I did it for PollRestController? Should a REST controller directly handle repos? Or should only the service handle repos?  See: RestUtils.class
 		Long pollId = restUtils.getIdFromURI("polls", castVoteRequest.getPoll());
 		PollModel poll = pollRepo.findOne(pollId);
 
@@ -110,18 +112,29 @@ public class CastVoteService {
 			voteOrder.add(law);
 		}
 
-		//----- cast users own vote
-		String unvalidatedChecksum = anonymizer.getBCrypetHash(castVoteRequest.getVoterToken());
-		TokenChecksumModel existingChecksum = checksumRepo.findByChecksum(unvalidatedChecksum);
-		if (existingChecksum == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "voterToken '"+castVoteRequest.getVoterToken()+"' is invalid. Does not match checksumModel.");
+		String tokenChecksum  = anonymizer.getBCrypetHash(castVoteRequest.getVoterToken());
+		BallotModel newBallot = new BallotModel(poll, 0, voteOrder, tokenChecksum);  //MAYBE: BallotModelBuilder.createFromVoterToken(...)   or would that be a bit of overengeneering
+		BallotModel savedBallot = storeBallot(newBallot);		// checksum will be validated inside storeBallot() -> checkBallot()
 
-		BallotModel ownBallot = storeBallot(poll, voteOrder, 0, existingChecksum);
-
-		return ownBallot.getChecksumModel().getChecksum();
+		return savedBallot;
 	}
 
 	/**
 	 * The upsert algorithm for ballots:
+	 *
+	 * 1) Check the integrity of the passed newBallot. Especially check the validity of its TokenChecksumModel.
+	 *    The checksum must be known.
+	 *
+	 * 2) IF there is NO existing ballot for this poll with that checksum,
+	 *    THEN save a new ballot
+	 *    ELSE // ballot with that checksum already exists
+	 *      IF the level of the existing ballot is SMALLER then the passed newBallot.level
+	 *      THEN do NOT update the existing ballot, because it was casted by a lower proxy or the user himself
+	 *      ELSE update the existing ballot's level and vote order
+	 *
+	 *  3) FOR EACH directly delegated TokenChecksumModel
+	 *
+	 *
 	 *
 	 * 1) Create a new (unvalidated) checksumModel from the passed voterToken
 	 * 2) Create a new BallotModel from the passed parameters with that checksumModel
@@ -141,34 +154,42 @@ public class CastVoteService {
 	 * If we'd just do   ballotRepo.save(ballot)   then we'd get a JdbcSQLException:
 	 *   Unique index or primary key violation: "UKJ4ELP2BMUSJ2YX6FYDKUTEDS4_INDEX_1 ON PUBLIC.BALLOTS(POLL_ID, CHECKSUM) ...
 	 *
-	 * @param poll The poll that the user want's to vote for
-	 * @param voteOrder Voters preferred order of proposals
-	 * @param level how directly did the user vote
-	 * @param validChecksum a {@link TokenChecksumModel} that was stored previously
+	 * @param newBallot the ballot that shall be stored. The ballot will be checked very thoroughly. Especially if the ballot's checksum is valid.
+	 * @return the newly created or updated existing ballot  OR
+	 *         null if the ballot wasn't stored due to an already existing ballot with a smaller level.
+	 *
 	 */
-	public BallotModel storeBallot(PollModel poll, List<LawModel> voteOrder, int level, TokenChecksumModel validChecksum) throws LiquidoException {
-		BallotModel newBallot = new BallotModel(poll, level, voteOrder, validChecksum);  //MAYBE: BallotModelBuilder.createFromVoterToken(...)   or would that be a bit of overengeneering
-		log.trace("storeBallot("+newBallot+")");
+	public BallotModel storeBallot(BallotModel newBallot) throws LiquidoException {
+		log.debug("storeBallot("+newBallot+")");
 		checkBallot(newBallot);
 
 		BallotModel savedBallot = null;
-		BallotModel existingBallot = ballotRepo.findByPollAndChecksumModel(newBallot.getPoll(), newBallot.getChecksumModel());
+		BallotModel existingBallot = ballotRepo.findByPollAndChecksum(newBallot.getPoll(), newBallot.getChecksum());
 		if (existingBallot == null) {
 			log.trace("Inserting new ballot");
 			savedBallot = ballotRepo.save(newBallot);
 		} else {
-			if (existingBallot.getLevel() < level) {
-				return existingBallot;   // Proxy must not overwrite a voter's own vote  OR  a vote from a proxy below
+			// Proxy must not overwrite a voter's own vote  OR  a vote from a proxy below
+			if (existingBallot.getLevel() < newBallot.getLevel()) {
+				log.trace("Will not overwrite existing ballot "+existingBallot);
+				return null;
 			}
+
 			log.trace("Updating existing ballot");
-			existingBallot.setVoteOrder(voteOrder);
-			existingBallot.setLevel(level);
-			if (!existingBallot.getChecksumModel().equals(validChecksum)) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Something is really wrong here!!! Checksums do not match");  // This should never happen
+			existingBallot.setVoteOrder(newBallot.getVoteOrder());
+			existingBallot.setLevel(newBallot.getLevel());
+			if (!existingBallot.getChecksum().equals(newBallot.getChecksum())) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Something is really wrong here!!! Checksums do not match");  // This should never happen
 
 			//----- recursively cast a vote for each delegated checksumModel
-			for(TokenChecksumModel delegatedChecksum: existingBallot.getChecksumModel().getProxyFor()) {
-				storeBallot(poll, voteOrder, level+1, delegatedChecksum);
+			int delegationCount = 0;   // number of delegations that this ballot was counted for. (without the ballot itself)
+			List<TokenChecksumModel> delegatedChecksums = checksumRepo.findByDelegatedTo(existingBallot.getChecksum());
+			for(TokenChecksumModel delegatedChecksum : delegatedChecksums) {
+				BallotModel childBallot = new BallotModel(newBallot.getPoll(), newBallot.getLevel()+1, newBallot.getVoteOrder(), delegatedChecksum.getChecksum());
+				BallotModel savedChildBallot = storeBallot(childBallot);  // will return null when childBallot level is to large and a smaller one was found  => then we stop this recursion tree
+				if (savedChildBallot != null) delegationCount = delegationCount + savedChildBallot.getDelegationCount();
 			}
+
+			existingBallot.setDelegationCount(delegationCount);
 
 			savedBallot = ballotRepo.save(existingBallot);
 		}
@@ -214,16 +235,28 @@ public class CastVoteService {
 			}
 		}
 
-		// check that there is an checksumModel
-		if (ballot.getChecksumModel() == null || ballot.getChecksumModel().getChecksum().length() < 5) {
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Invalid voterToken. It's checksumModel must be at least 5 chars!");
+		// check that there is a checksum
+		if (ballot.getChecksum() == null || ballot.getChecksum().length() < 5) {
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Invalid voterToken. It's checksum must be at least 5 chars!");
 		}
 
-		// Passed checksumModel in ballot must already exists in TokenChecksumRepo to be valid
-		TokenChecksumModel existingChecksum = checksumRepo.findByChecksum(ballot.getChecksumModel().getChecksum());
+		// Passed checksumModel in ballot MUST already exists in TokenChecksumRepo to be valid
+		TokenChecksumModel existingChecksum = checksumRepo.findByChecksum(ballot.getChecksum());
 		if (existingChecksum == null)
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "User's voterToken is invalid! Cannot find checksumModel to validate.");
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Ballot's checksum is invalid. (It cannot be found in TokenChecksumModel.)");
 
+	}
+
+	/**
+	 * Calculate the checksum value for the given voterToken.
+	 * The checksum is not stored or validated! This is just the mathematical calculation
+	 * Checksum must only be handled on the server. Do not return it to the voter!
+	 *
+	 * @param voterToken token passed from user
+	 * @return checksum = hash(voterToken, seed)
+	 */
+	public String getChecksumFromVoterToken(String voterToken) {
+		return anonymizer.getBCrypetHash(voterToken);
 	}
 
 }

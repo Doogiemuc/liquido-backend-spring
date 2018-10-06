@@ -2,10 +2,7 @@ package org.doogie.liquido.model;
 
 import lombok.*;
 
-import javax.persistence.Entity;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
+import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 
 /**
@@ -19,34 +16,32 @@ import javax.validation.constraints.NotNull;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-@RequiredArgsConstructor  //BUGFIX:  https://jira.spring.io/browse/DATAREST-884
-//@EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
+@RequiredArgsConstructor  					//see also:  https://jira.spring.io/browse/DATAREST-884
 @Table(name = "delegations", uniqueConstraints= {
-  @UniqueConstraint(columnNames = {"area_id", "from_user_id"})
+  @UniqueConstraint(columnNames = {"area_id", "from_user_id"})  // A user may only assign one proxy per area!
 })
-//@IdClass(DelegationID.class)    // This way I could also implement the composite primary key
+//@IdClass(DelegationID.class)    //MAYBE: composite primary key.  But has issues with spring data rest: How to post composite IDs
 public class DelegationModel extends BaseModel {
 
-  /** Area that this delegation is in */
-  @NonNull
-  @NotNull
-  @ManyToOne
-  public AreaModel area;
+	/** Area that this delegation is in */
+	@NonNull
+	@NotNull
+	@OneToOne
+	public AreaModel area;
 
-  /** reference to delegee that delegated his vote */
-  @NonNull
-  @NotNull
-  @ManyToOne
-  public UserModel fromUser;
+	/** Voter that delegated his right to vote to a proxy */
+	@NonNull
+	@NotNull
+	@OneToOne
+	public UserModel fromUser;
 
-  /** reference to proxy that receives the delegation */
+  /** Proxy that receives the delegation and can now cast votes in place of the voter */
   @NonNull
   @NotNull
-  @ManyToOne
+  @OneToOne
   public UserModel toProxy;
 
   // Implementation notes:
   // - A delegation is always implicitly created by "fromUser"
-  // - In case you wonder why we do not store any token together with the this delegation: There must not be a connection between fromUser and his token for keeping ballots anonymous.
 
 }
