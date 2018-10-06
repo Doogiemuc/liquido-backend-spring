@@ -1,9 +1,7 @@
 package org.doogie.liquido.test.testUtils;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.test.TestFixtures;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 
 @Slf4j
 //@Configuration

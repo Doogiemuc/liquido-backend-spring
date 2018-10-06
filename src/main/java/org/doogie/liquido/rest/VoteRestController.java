@@ -47,11 +47,15 @@ public class VoteRestController {
 	 * @throws LiquidoException when request parameter is missing
 	 */
 	@RequestMapping(value = "/voterToken", method = RequestMethod.GET)
-	public @ResponseBody Map getVoterToken(@RequestParam("area")AreaModel area /*@AuthenticationPrincipal User authUser, Principal principal*/) throws LiquidoException {
+	public @ResponseBody Map getVoterToken(@RequestParam("area")AreaModel area ) throws LiquidoException {
 		// injecting the AuthenticationPrincipal did not work for me. I do not know why.   But liquidoAuditorAware works, and is also great for testing:
+		//TOOD: should work like this: add parameter   @AuthenticationPrincipal(expression = "LiquidoAuthUser") LiquidoAuthUser liquidoAuthUser
+		//see https://docs.spring.io/spring-security/site/docs/current/reference/htmlsingle/#tech-userdetailsservice
+
 		UserModel user = liquidoAuditorAware.getCurrentAuditor();
 		log.info(user+" requests his voterToken for area "+area);
 
+		//TOOD: really check that authentication is valid. Then pass
 		String voterToken = ballotService.getVoterToken(user, area);   // preconditions are checked inside ballotService
 
 		Map<String, String> result = new HashMap<>();

@@ -1,11 +1,8 @@
 package org.doogie.liquido.model;
 
-import jdk.nashorn.internal.parser.Token;
 import lombok.*;
 
 import javax.persistence.*;
-import java.util.Date;
-import java.util.List;
 
 /**
  * When a voter requests a voterToken for an area , then the server calculates two values:
@@ -46,8 +43,15 @@ public class TokenChecksumModel {
 	List<TokenChecksumModel> proxyFor;
   */
 
+	/**
+	 * If a user want's to be a public proxy, then he CAN store his user together with his chechsum.
+	 * Then voters can automatically delegate their vote to this proxy.
+	 */
+	@OneToOne
+	UserModel publicProxy = null;		// by default no username is stored together with a checksum!!!
 
-	//There is deliberately no createdBy here! Tokens must not be related to any user. Tokens must be anonymous!
+
+	//There is deliberately no createdBy in this class
 	//For the same reason there is also no createdAt or updatedAt. They might lead to timing attacks.
 
 	// I thought about storing the area next to the checksumModel. But the area is already encoded inside this hash value.
