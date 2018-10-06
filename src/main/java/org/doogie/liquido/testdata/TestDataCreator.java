@@ -285,11 +285,11 @@ public class TestDataCreator implements CommandLineRunner {
   private void seedProxies() {
 		log.info("Seeding Proxies ...");
     List<int[]> delegations = new ArrayList<>();
-    delegations.add(new int[] {2,1});
-    delegations.add(new int[] {3,1});
-    delegations.add(new int[] {4,1});
-    delegations.add(new int[] {5,4});
-    delegations.add(new int[] {6,4});
+    delegations.add(new int[] {1,0});
+    delegations.add(new int[] {2,0});
+    delegations.add(new int[] {3,0});
+    delegations.add(new int[] {4,3});
+    delegations.add(new int[] {5,3});
 
     AreaModel area = areas.get(0);
 
@@ -300,7 +300,7 @@ public class TestDataCreator implements CommandLineRunner {
       try {
 				proxyService.assignProxyWithPassword(area, fromUser, toProxy, fromUser.getPasswordHash());
 			} catch (LiquidoException e) {
-        log.error("Cannot seedProxies: error for delegation [fromUser="+delegation[0]+", toProxy="+delegation[1]+"] : "+e);
+        log.error("Cannot seedProxies: error Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId()+": "+e);
       }
     }
 

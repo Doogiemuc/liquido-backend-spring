@@ -1,18 +1,11 @@
 package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.datarepos.LawEventHandler;
-import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.model.CommentModel;
-import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
-import org.doogie.liquido.util.LiquidoProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import javax.validation.constraints.NotNull;
-import java.util.Date;
 
 /**
  * Utility methods for comments of a proposal

@@ -10,7 +10,9 @@ import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 
 /**
  * This spring component implements the business logic for {@link org.doogie.liquido.model.BallotModel}
@@ -74,7 +76,7 @@ public class CastVoteService {
 	 * @param areaId voter can get one voter token per area
 	 * @return the voter token of user for this area. the checksumModel to validate this voter token was stored.
 	 */
-	public String upsertVoterTokenAndChecksum(Long userId, String passwordHash, Long areaId) {
+	private String upsertVoterTokenAndChecksum(Long userId, String passwordHash, Long areaId) {
 		String voterToken = anonymizer.getBCrypetHash(userId+"", passwordHash, areaId+"");   // token that only this user must know
 		String tokenChecksum = getChecksumFromVoterToken(voterToken);                            // token that can only be generated from the users voterToken and only by the server.
 		TokenChecksumModel existingTokenModel = checksumRepo.findByChecksum(tokenChecksum);
