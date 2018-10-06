@@ -1,0 +1,44 @@
+@startuml
+
+title Relationships - Class Diagram
+
+class user1 {
+  + String name
+  + String email
+  + Map<Area,User> proxies
+  .. private ..
+  - Map<Area,String> voterTokens
+  -- delegations  --
+  direct delegations = 3
+  sum of transitive delegations = 5
+}
+
+class ChecksumModel {
+  + String checksum
+  + Checksum delegatedToProxy
+}
+
+object user2 {
+  delegations = 0
+}
+object user3 {
+  delegations = 0
+}
+object user4 {
+  delegations = 2
+}
+object user5 {
+  delegations = 0
+}
+object user6 {
+  delegations = 0
+}
+
+user2 -up-> user1
+user3 -up-> user1
+user4 -up-> user1
+user5 -up-> user4
+user6 -up-> user4
+
+
+@enduml

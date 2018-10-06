@@ -101,13 +101,13 @@ public class VoteRestController {
     UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
     if (currentUser != null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast Vote. You should cast your vote anonymously. Do not send a SESSIONID.");
 
-    String checksum = ballotService.castVote(castVoteRequest);   					// all validity checks are done inside ballotService.
+    BallotModel ballot = ballotService.castVote(castVoteRequest);   					// all validity checks are done inside ballotService.
 
-    Map<String, Object> result = new HashMap<>();
-    result.put("msg", "OK, your vote was counted.");
-    result.put("poll", castVoteRequest.getPoll());
-    result.put("checksum", checksum);        // with these checksums, the voter can later confirm that his vote in this poll was counted for.
-		//TODO: result.put("delegatedVotes", delegatedVotes);
+		HashMap<String, String> result = new HashMap<>();
+		result.put("msg", "OK, your vote was counted.");
+		result.put("poll", castVoteRequest.getPoll());
+		result.put("checksum", ballot.getChecksum());
+		result.put("delegationCount", ballot.getDelegationCount()+"");
     return result;
   }
 

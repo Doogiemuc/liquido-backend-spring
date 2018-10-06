@@ -10,24 +10,22 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import java.util.List;
 
 /**
- * Database abstraction for "delegations".
- *
- * http://stackoverflow.com/questions/14014086/what-is-difference-between-crudrepository-and-jparepository-interfaces-in-spring
+ * Database abstraction for delegations from a voter to a proxy.
  */
-//@RepositoryRestResource(collectionResourceRel = "delegations", path = "delegations", itemResourceRel = "delegation")
+//NOT EXPOSED as REST Service!
 public interface DelegationRepo extends CrudRepository<DelegationModel, Long>, DelegationRepoCustom {
 
   //Delegations have a combined unique index on area,fromUSer
   //  for MongoDB   db.delegations.createIndex({ "area":1, "fromUser":1 }, { unique: true })
   //  for MySQL     ALTER TABLE delegations ADD CONSTRAINT DELEGATION_COMPOSITE_ID UNIQUE (area_id, from_user_id)
+	// http://stackoverflow.com/questions/14014086/what-is-difference-between-crudrepository-and-jparepository-interfaces-in-spring
   //
   //And their "foreign keys", the ObjectIDs must actually exist in the referenced user and area collections
   //which is checked by DelegationValidator.java
 
-  //TODO: do not allow posting to /delegations directly. Only allowed via /saveProxy  => do not expose Delegations as REST endpoint at all?
 
   /**
-   * find all currently assigned proxies of one user.
+   * find all currently assigned proxies of one user in all areas
    * @param fromUser the delegee
    * @return a list of proxies of this delegee
    */
