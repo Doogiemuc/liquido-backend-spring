@@ -1,7 +1,6 @@
 package org.doogie.liquido.model;
 
 import lombok.*;
-import org.hibernate.annotations.Cascade;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
