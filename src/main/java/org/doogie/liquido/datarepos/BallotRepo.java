@@ -44,8 +44,8 @@ public interface BallotRepo extends CrudRepository<BallotModel, Long> {
    * Find a ballot for a poll with a given checksumModel, ie. that was casted from a voter
 	 * who's secret voterToken hashes to this checksumModel.
    * @param poll a PollModel
-   * @param checksumModel a stored checksumModel
-   * @return the ballot for this (still anonymous) user's vote
+   * @param checksum a valid and stored checksum
+   * @return the ballot for this (still anonymous) checksum
    */
-  BallotModel findByPollAndChecksumModel(PollModel poll, TokenChecksumModel checksumModel);
+  BallotModel findByPollAndChecksum(PollModel poll, String checksum);
 }

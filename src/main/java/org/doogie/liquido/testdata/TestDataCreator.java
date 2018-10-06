@@ -5,10 +5,7 @@ import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.security.LiquidoAuditorAware;
-import org.doogie.liquido.services.CastVoteService;
-import org.doogie.liquido.services.LawService;
-import org.doogie.liquido.services.LiquidoException;
-import org.doogie.liquido.services.PollService;
+import org.doogie.liquido.services.*;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoProperties;
 import org.slf4j.Logger;
@@ -96,6 +93,9 @@ public class TestDataCreator implements CommandLineRunner {
   CastVoteService castVoteService;
 
   @Autowired
+	ProxyService proxyService;
+
+  @Autowired
   LiquidoProperties props;
 
   /*
@@ -141,7 +141,7 @@ public class TestDataCreator implements CommandLineRunner {
       auditorAware.setMockAuditor(this.users.get(0));   // Simulate that user is logged in.  This user will be set as @createdAt
       //seedGlobalProperties();
       seedAreas();
-      seedDelegations();
+      seedProxies();
       seedIdeas();
       seedProposals();
       seedPollInElaborationPhase();
@@ -234,7 +234,8 @@ public class TestDataCreator implements CommandLineRunner {
     }
   }
 
-  private void seedDelegations() {
+  /*
+  private void seedProxies() {
     log.info("Seeding delegations ...");
 
     /*   THIS WAS FOR TESTING.  LEARNED A LOT
@@ -250,7 +251,9 @@ public class TestDataCreator implements CommandLineRunner {
 
     DelegationModel existingDelegation = delegationRepo.findByAreaAndFromUserAndToProxy(areas.get(0), users.get(0), users.get(1));
     log.info("existing:*********** "+existingDelegation);
-    */
+
+
+    //------------
 
     List<DelegationModel> delegations = new ArrayList();
     // User0  is proxy  for users 1,2,3    in "Area 1"
@@ -276,6 +279,31 @@ public class TestDataCreator implements CommandLineRunner {
         log.trace("Created new delegation " + savedDelegation);
       }
     }
+  }
+  */
+
+  private void seedProxies() {
+		log.info("Seeding Proxies ...");
+    List<int[]> delegations = new ArrayList<>();
+    delegations.add(new int[] {2,1});
+    delegations.add(new int[] {3,1});
+    delegations.add(new int[] {4,1});
+    delegations.add(new int[] {5,4});
+    delegations.add(new int[] {6,4});
+
+    AreaModel area = areas.get(0);
+
+    for(int[] delegation: delegations) {
+      UserModel fromUser = users.get(delegation[0]);
+      UserModel toProxy  = users.get(delegation[1]);
+			log.debug("Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId());
+      try {
+				proxyService.assignProxyWithPassword(area, fromUser, toProxy, fromUser.getPasswordHash());
+			} catch (LiquidoException e) {
+        log.error("Cannot seedProxies: error for delegation [fromUser="+delegation[0]+", toProxy="+delegation[1]+"] : "+e);
+      }
+    }
+
   }
 
   private void seedIdeas() {
