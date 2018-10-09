@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.servlet.configuration.EnableWebMvcSecurity;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
@@ -31,7 +32,7 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
   //see http://docs.spring.io/spring-security/site/docs/4.2.1.RELEASE/reference/htmlsingle/#jc-authentication-userdetailsservice
   @Bean
   public LiquidoUserDetailsService liquidoUserDetailsService() {
-    log.debug("creating LiquidioUserDetailsService");
+    log.debug("creating LiquidoUserDetailsService");
     return new LiquidoUserDetailsService();
   }
 

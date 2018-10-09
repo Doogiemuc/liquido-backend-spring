@@ -1,5 +1,6 @@
 package org.doogie.liquido.datarepos;
 
+import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.TokenChecksumModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.CastVoteService;
@@ -30,9 +31,10 @@ public interface TokenChecksumRepo extends CrudRepository<TokenChecksumModel, Lo
 
 	/**
 	 * find the checksum of a public proxy so that a voter can delegate his checksum to it.
+	 * @pararm area area of the checksum and public proxy
 	 * @param proxy a public proxy that added his uername to his stored checksum
 	 * @return the checksum of the public proxy  or null if none was found
 	 */
-	TokenChecksumModel findByPublicProxy(UserModel proxy);
+	TokenChecksumModel findByAreaAndPublicProxy(AreaModel area, UserModel proxy);
 
 }

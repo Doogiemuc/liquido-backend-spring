@@ -24,7 +24,7 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
   @Override
   public UserModel getCurrentAuditor() {
     if (mockAuditor != null) {
-      //log.trace("Returning mock auditor "+mockAuditor.getEmail());
+      log.debug("Returning mock auditor "+mockAuditor.getEmail());
       return mockAuditor;
     }
     try {
@@ -41,7 +41,7 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
       //UserModel currentlyLoggedInUser = userRepo.findByEmail(principal.getUsername()) ;
     } catch (Exception e) {
       log.error("Cannot getCurrentAuditor: "+e);
-      return null;
+      throw e;
     }
   }
 

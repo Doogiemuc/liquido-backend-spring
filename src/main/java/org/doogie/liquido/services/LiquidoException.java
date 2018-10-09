@@ -10,36 +10,41 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 @ResponseStatus(value = HttpStatus.BAD_REQUEST)
 public class LiquidoException extends Exception {
 
-  Errors errorCode;
+  Errors error;
 
   public enum Errors {
-    CANNOT_CREATE_POLL(0),
-    CANNOT_ADD_PROPOSAL(1),
-    CANNOT_START_VOTING_PHASE(2),
-    USER_DOES_NOT_EXIST(3),
-    NO_LOGIN(4),                // when someone tries to call something without being authenticated!
-		CANNOT_SAVE_PROXY(5),
-		CANNOT_CAST_VOTE(6),
-    CANNOT_GET_TOKEN(7);
+		NO_LOGIN(1),                // when someone tries to call something without being authenticated!
+  	CANNOT_CREATE_POLL(2),
+    CANNOT_ADD_PROPOSAL(3),
+    CANNOT_START_VOTING_PHASE(4),
+    USER_DOES_NOT_EXIST(5),
+		CANNOT_SAVE_PROXY(6),				// assign or remove
+		CANNOT_ASSIGN_CIRCULAR_PROXY(7),
+		CANNOT_CAST_VOTE(8),
+    CANNOT_GET_TOKEN(9);
     int errorCode;
     Errors(int code) { this.errorCode = code; }
   }
 
   public LiquidoException(Errors errCode) {
     super(errCode.toString());
-    this.errorCode = errCode;
+    this.error = errCode;
   }
 
   public LiquidoException(Errors errCode, String msg) {
     super(msg);
-    this.errorCode = errCode;
+    this.error = errCode;
   }
+
+  public Errors getError() {
+  	return this.error;
+	}
 
   public int getErrorCodeAsInt() {
-    return errorCode.errorCode;
+    return error.errorCode;
   }
 
-  public String getErrorCodeName() {
-    return errorCode.name();
+  public String getErrorName() {
+    return error.name();
   }
 }

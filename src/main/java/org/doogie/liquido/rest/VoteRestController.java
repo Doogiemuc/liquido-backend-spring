@@ -6,18 +6,19 @@ import org.doogie.liquido.model.BallotModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.security.LiquidoAuthUser;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
-import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Controller for posting a ballot
@@ -34,7 +35,7 @@ import java.util.stream.Collectors;
 public class VoteRestController {
 
 	@Autowired
-	CastVoteService ballotService;
+	CastVoteService castVoteService;
 
 	@Autowired
 	LiquidoAuditorAware liquidoAuditorAware;
@@ -47,16 +48,18 @@ public class VoteRestController {
 	 * @throws LiquidoException when request parameter is missing
 	 */
 	@RequestMapping(value = "/voterToken", method = RequestMethod.GET)
-	public @ResponseBody Map getVoterToken(@RequestParam("area")AreaModel area ) throws LiquidoException {
+	public @ResponseBody Map getVoterToken(
+			@RequestParam("area")AreaModel area
+			// DOES NOT WORK!!! :-(  @AuthenticationPrincipal(expression = "liquidoUserModel", errorOnInvalidType = true) UserModel liquidoUserModel
+	) throws LiquidoException {
 		// injecting the AuthenticationPrincipal did not work for me. I do not know why.   But liquidoAuditorAware works, and is also great for testing:
-		//TOOD: should work like this: add parameter   @AuthenticationPrincipal(expression = "LiquidoAuthUser") LiquidoAuthUser liquidoAuthUser
 		//see https://docs.spring.io/spring-security/site/docs/current/reference/htmlsingle/#tech-userdetailsservice
 
 		UserModel user = liquidoAuditorAware.getCurrentAuditor();
 		log.info(user+" requests his voterToken for area "+area);
+		if (user == null) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Need login to get voterToken!");
 
-		//TOOD: really check that authentication is valid. Then pass
-		String voterToken = ballotService.getVoterToken(user, area);   // preconditions are checked inside ballotService
+		String voterToken = castVoteService.getVoterToken(user, area);   // preconditions are checked inside ballotService
 
 		Map<String, String> result = new HashMap<>();
 		result.put("voterToken", voterToken);
@@ -105,7 +108,7 @@ public class VoteRestController {
     UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
     if (currentUser != null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast Vote. You should cast your vote anonymously. Do not send a SESSIONID.");
 
-    BallotModel ballot = ballotService.castVote(castVoteRequest);   					// all validity checks are done inside ballotService.
+    BallotModel ballot = castVoteService.castVote(castVoteRequest);   					// all validity checks are done inside ballotService.
 
 		HashMap<String, String> result = new HashMap<>();
 		result.put("msg", "OK, your vote was counted.");

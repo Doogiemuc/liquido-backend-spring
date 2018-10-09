@@ -5,6 +5,7 @@ import org.doogie.liquido.model.UserModel;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.List;
  * see https://spring.io/guides/gs/accessing-mongodb-data-rest/
  */
 //@CrossOrigin(origins = "*")
+//TODO: @PreAuthorize("hasRole('ROLE_VOTER')")   TODO: externalize string ROLE_VOTER to central place
 @RepositoryRestResource(collectionResourceRel = "users", path = "users", itemResourceRel = "user")
 public interface UserRepo extends CrudRepository<UserModel, Long> {
 

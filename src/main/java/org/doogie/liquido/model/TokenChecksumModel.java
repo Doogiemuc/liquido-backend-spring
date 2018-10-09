@@ -30,10 +30,18 @@ public class TokenChecksumModel {
 	@NonNull
 	String checksum;
 
+	@OneToOne
+	@NonNull
+	AreaModel area;
+
 	/** TODO: Checksums are only valid for a given time */
 	//Date expiresAt;
 
-	/** A voter can delegate his right to vote to a proxy */
+	/**
+	 * A voter can delegate his right to vote to a proxy.
+	 * This voter may be a proxy himself. Then he delegates his own vote and all the votes delegated to him
+	 * to his parent proxy. This way a tree of proxies is formed.
+	 */
 	@ManyToOne
 	//@JoinColumn(name = "delegatedToProxy")
 	TokenChecksumModel delegatedTo;
