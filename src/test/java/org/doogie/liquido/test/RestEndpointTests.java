@@ -14,6 +14,7 @@ import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.test.testUtils.LiquidoTestErrorHandler;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
+import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.LiquidoProperties;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -534,7 +535,7 @@ public class RestEndpointTests {
     String proxyMapJson = client.getForObject(uri, String.class);
     String proxyInArea1_email = JsonPath.read(proxyMapJson, "$['"+TestFixtures.AREA1_TITLE+"'].email");
 
-    assertEquals("User "+TestFixtures.USER0_EMAIL+" should have "+TestFixtures.USER4_EMAIL+" as proxy", TestFixtures.USER4_EMAIL, proxyInArea1_email);
+    assertEquals("User "+TestFixtures.USER1_EMAIL+" should have "+TestFixtures.USER4_EMAIL+" as proxy", TestFixtures.USER4_EMAIL, proxyInArea1_email);
     log.trace("TEST SUCCESS: found expected "+TestFixtures.USER4_NUM_VOTES+" delegations for "+TestFixtures.USER4_EMAIL);
   }
 
