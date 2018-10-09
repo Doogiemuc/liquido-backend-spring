@@ -3,6 +3,7 @@ package org.doogie.liquido.security;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -23,13 +24,13 @@ public class LiquidoUserDetailsService implements UserDetailsService {
   @Autowired
   UserRepo userRepo;
 
-  //TODO: Cache autenticated users, because loadUserByUsername is called very often!
+  //TODO: Cache autenticated users, because loadUserByUsername is called very often! MAYBE simply extend CachingUserDetailsService ?
+
   /*See:
    @Cacheable("authenticedUsers")
    https://spring.io/guides/gs/caching/
    https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-caching.html
    https://docs.spring.io/spring/docs/current/spring-framework-reference/html/cache.html#cache-store-configuration-caffeine
-
    Do not forget to @CacheEvict the cache elem, when a user or its roles & rights change
   */
 
@@ -56,12 +57,10 @@ public class LiquidoUserDetailsService implements UserDetailsService {
     }
     */
 
-    //TODO: cache currently authenticated users
-
     UserModel userModel = userRepo.findByEmail(email);
     if (userModel == null) throw new UsernameNotFoundException("Could not find user '"+email+"'");
-
-    //TODO:  CHECK PASSWORD of User!! :-)
+    if (DoogiesUtil.isEmpty(userModel.getEmail()) || DoogiesUtil.isEmpty(userModel.getPasswordHash()))
+    	throw new UsernameNotFoundException("User's eMail or PasswordHash is emtpy.");
 
     return new LiquidoAuthUser(userModel.getEmail(), userModel.getPasswordHash(), getGrantedAuthorities(userModel), userModel);
   }

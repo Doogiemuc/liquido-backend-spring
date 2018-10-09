@@ -9,6 +9,7 @@ import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.testdata.TestDataCreator;
+import org.doogie.liquido.testdata.TestFixtures;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;

@@ -46,13 +46,11 @@ public class CastVoteService {
 
 	/**
 	 * A user wants to vote and therefore requests a voter token for this area. Each user has one token per area.
-	 * The hash value of the voterToken is the checksumModel. The checksumModel is stored in the DB.
-	 * If user is a proxy, then he will receive his own token and one token for each of his delegees.
-	 * @param user the currently logged in user
+	 * The hash value of the voterToken is its checksum. The checksumModel is stored in the DB.
+	 *
+	 * @param user the currently logged in and correctly authenticated user
 	 * @param area the area of the poll  (must be passed as numerical area.ID in the request. (Not an URI)
 	 * @return user's voterTokens, that only the user must know, and that will hash to the stored checksumModel.
-	 *         The first token in the list is the users own one. The list will always have at least this one token.
-	 *         If the user is a proxy, then there will be additional tokens. One for each delegee of this proxy.
 	 */
 	public String getVoterToken(UserModel user, AreaModel area) throws LiquidoException {
 		log.trace("getVoterToken: "+user+" requests voterToken for "+area);
@@ -60,31 +58,29 @@ public class CastVoteService {
 		if (area == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need area when requesting a token.");
 
 		//TODO: !!! [Security] Do not read user's passwordHash.  Instead it(or the oauth token?) must be passed into getVoterToken!
-		String voterToken = upsertVoterTokenAndChecksum(user.getId(), user.getPasswordHash(), area.getId());
+		String passwordHash = user.getPasswordHash();
 
-		return voterToken;  // Important: secret voterToken is returned to user. Checksum is only stored in the local DB.
-	}
-
-	/**
-	 * Create a voter token for the passed user.
-	 * Create a token checksumModel from that voterToken.
-	 * Store the checksumModel in the DB, if it doesn't exist yet. (And only store the checksumModel. Not the voterToken.)
-	 * Return the voterToken to the user. (And only return the voterToken, not the checksumModel.)
-	 *
-	 * @param userId a voter
-	 * @param passwordHash voters password hash
-	 * @param areaId voter can get one voter token per area
-	 * @return the voter token of user for this area. the checksumModel to validate this voter token was stored.
-	 */
-	private String upsertVoterTokenAndChecksum(Long userId, String passwordHash, Long areaId) {
-		String voterToken = anonymizer.getBCrypetHash(userId+"", passwordHash, areaId+"");   // token that only this user must know
-		String tokenChecksum = getChecksumFromVoterToken(voterToken);                            // token that can only be generated from the users voterToken and only by the server.
+		String voterToken = anonymizer.getBCrypetHash(user.getId()+"", passwordHash, area.getId()+"");   // token that only this user must know
+		String tokenChecksum = calcChecksumFromVoterToken(voterToken);                            // token that can only be generated from the users voterToken and only by the server.
 		TokenChecksumModel existingTokenModel = checksumRepo.findByChecksum(tokenChecksum);
 		if (existingTokenModel == null) {
-			TokenChecksumModel newToken = new TokenChecksumModel(tokenChecksum);
+			TokenChecksumModel newToken = new TokenChecksumModel(tokenChecksum, area);
 			checksumRepo.save(newToken);
 		}
 		return voterToken;
+	}
+
+	/**
+	 * check if the passed voterToken is valid, ie. its checksum=hash(voterToken) is already known
+	 * @param voterToken the token to check
+	 * @return true if voterToken hashes to an already known checksum
+	 */
+	public boolean isVoterTokenValid(String voterToken) {
+		if (voterToken == null) return false;
+		String tokenChecksum = calcChecksumFromVoterToken(voterToken);
+		TokenChecksumModel existingTokenModel = checksumRepo.findByChecksum(tokenChecksum);
+		return existingTokenModel != null && existingTokenModel.getChecksum() != null && existingTokenModel.getChecksum().length() > 5;
+
 	}
 
 	//TODO: When user changes his passwords, then invalidate all his tokens!!!
@@ -257,7 +253,7 @@ public class CastVoteService {
 	 * @param voterToken token passed from user
 	 * @return checksum = hash(voterToken, seed)
 	 */
-	public String getChecksumFromVoterToken(String voterToken) {
+	public String calcChecksumFromVoterToken(String voterToken) {
 		return anonymizer.getBCrypetHash(voterToken);
 	}
 

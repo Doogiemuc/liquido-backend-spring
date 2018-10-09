@@ -11,6 +11,7 @@ import org.doogie.liquido.util.LiquidoProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -55,13 +56,12 @@ public class TestDataCreator implements CommandLineRunner {
 
   public int NUM_LAWS = 2;
 
-
-  //@Autowired
-	//EntityManager em;
+	//@Value("${spring.data.rest.base-path}")   // value from application.properties file
+	//String restBasePath;
 
   @Autowired
   UserRepo userRepo;
-  List<UserModel> users = new ArrayList();    // will contain the list of created users that can be used in further repos, eg. as "createdBy" value
+  Map<String, UserModel> users = new HashMap<>();  // users by their email adress
 
   @Autowired
   AreaRepo areaRepo;
@@ -138,7 +138,7 @@ public class TestDataCreator implements CommandLineRunner {
       log.info("Populate test DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
       seedUsers();
-      auditorAware.setMockAuditor(this.users.get(0));   // Simulate that user is logged in.  This user will be set as @createdAt
+      auditorAware.setMockAuditor(this.users.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
       //seedGlobalProperties();
       seedAreas();
       seedProxies();
@@ -182,10 +182,10 @@ public class TestDataCreator implements CommandLineRunner {
 
   private void seedUsers() {
     log.info("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
-    this.users = new ArrayList<>();
+    this.users = new HashMap<>();
 
     for (int i = 0; i < NUM_USERS; i++) {
-      String email = "testuser" + i + "@liquido.de";    // Remember that DB IDs start at 1.   testuser4 has ID==5 in DB
+      String email = "testuser" + (i+1) + "@liquido.de";    // Remember that DB IDs start at 1. Testuser1 has ID=1 in DB. And there is no testuser0
       UserModel newUser = new UserModel(email, "dummyPasswordHash");
 
       UserProfileModel profile = new UserProfileModel();
@@ -203,8 +203,8 @@ public class TestDataCreator implements CommandLineRunner {
       }
 
       UserModel savedUser = userRepo.save(newUser);
-      this.users.add(savedUser);
-      if (i==0) auditorAware.setMockAuditor(this.users.get(0));   // prevent some warnings
+      this.users.put(savedUser.getEmail(), savedUser);
+      if (i==0) auditorAware.setMockAuditor(this.users.get(TestFixtures.USER1_EMAIL));   // prevent some warnings
     }
   }
 
@@ -215,7 +215,7 @@ public class TestDataCreator implements CommandLineRunner {
     log.info("Seeding Areas ...");
     this.areas = new ArrayList<>();
 
-    UserModel createdBy = this.users.get(0);
+    UserModel createdBy = this.users.get(TestFixtures.USER1_EMAIL);
 
     for (int i = 0; i < NUM_AREAS; i++) {
       String areaTitle = "Area " + i;
@@ -234,70 +234,24 @@ public class TestDataCreator implements CommandLineRunner {
     }
   }
 
-  /*
-  private void seedProxies() {
-    log.info("Seeding delegations ...");
-
-    /*   THIS WAS FOR TESTING.  LEARNED A LOT
-    DelegationModel delegation1 = new DelegationModel(areas.get(0), users.get(0), users.get(1));
-    DelegationModel delegation2 = new DelegationModel(areas.get(0), users.get(2), users.get(1));
-
-
-    DelegationModel savedDelegation1 = delegationRepo.save(delegation1);   // save will add id to passed object
-    log.trace("save1 "+savedDelegation1);
-
-    DelegationModel savedDelegation2 = delegationRepo.save(delegation2);
-    log.trace("save2 "+savedDelegation2);
-
-    DelegationModel existingDelegation = delegationRepo.findByAreaAndFromUserAndToProxy(areas.get(0), users.get(0), users.get(1));
-    log.info("existing:*********** "+existingDelegation);
-
-
-    //------------
-
-    List<DelegationModel> delegations = new ArrayList();
-    // User0  is proxy  for users 1,2,3    in "Area 1"
-    // and  user 0  then also delegated to user 4  (who now has five votes including his own)
-    delegations.add(new DelegationModel(areas.get(1), users.get(1), users.get(0)));
-    delegations.add(new DelegationModel(areas.get(1), users.get(2), users.get(0)));
-    delegations.add(new DelegationModel(areas.get(1), users.get(3), users.get(0)));
-    delegations.add(new DelegationModel(areas.get(1), users.get(0), users.get(4)));
-
-    // User0 is proxy for users 1 and 2 in  "Area 2"
-    delegations.add(new DelegationModel(areas.get(2), users.get(1), users.get(0)));
-    delegations.add(new DelegationModel(areas.get(2), users.get(2), users.get(0)));
-
-    // upsert delegations
-    for (DelegationModel newDele : delegations) {
-      DelegationModel existingDele = delegationRepo.findByAreaAndFromUser(newDele.getArea(), newDele.getFromUser());
-      if (existingDele != null) {
-        log.trace("Updating existing delegation: "+existingDele+" with new toProxy="+newDele.getToProxy());
-        existingDele.setToProxy(newDele.getToProxy());
-        delegationRepo.save(existingDele);
-      } else {
-        DelegationModel savedDelegation = delegationRepo.save(newDele);
-        log.trace("Created new delegation " + savedDelegation);
-      }
-    }
-  }
-  */
 
   private void seedProxies() {
 		log.info("Seeding Proxies ...");
-    List<int[]> delegations = new ArrayList<>();
-    delegations.add(new int[] {1,0});
-    delegations.add(new int[] {2,0});
-    delegations.add(new int[] {3,0});
-    delegations.add(new int[] {4,3});
-    delegations.add(new int[] {5,3});
+    List<String[]> delegations = new ArrayList<>();
+    delegations.add(new String[] {TestFixtures.USER2_EMAIL,TestFixtures.USER1_EMAIL});   // testuser2 delegates to proxy testuser1
+		delegations.add(new String[] {TestFixtures.USER3_EMAIL,TestFixtures.USER1_EMAIL});
+		delegations.add(new String[] {TestFixtures.USER4_EMAIL,TestFixtures.USER1_EMAIL});
+		delegations.add(new String[] {TestFixtures.USER5_EMAIL,TestFixtures.USER4_EMAIL});
+		delegations.add(new String[] {TestFixtures.USER6_EMAIL,TestFixtures.USER4_EMAIL});
 
-    AreaModel area = areas.get(0);
+    AreaModel area = areas.get(0);    // "Area 0"
 
-    for(int[] delegation: delegations) {
+    for(String[] delegation: delegations) {
       UserModel fromUser = users.get(delegation[0]);
       UserModel toProxy  = users.get(delegation[1]);
 			log.debug("Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId());
       try {
+        proxyService.becomePublicProxy(toProxy, area);
 				proxyService.assignProxyWithPassword(area, fromUser, toProxy, fromUser.getPasswordHash());
 			} catch (LiquidoException e) {
         log.error("Cannot seedProxies: error Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId()+": "+e);
@@ -315,7 +269,7 @@ public class TestDataCreator implements CommandLineRunner {
       ideaDescr.append(" ");
       ideaDescr.append(getLoremIpsum(0,400));
 
-      UserModel createdBy = this.users.get(i % NUM_USERS);
+      UserModel createdBy = this.randUser();
       auditorAware.setMockAuditor(createdBy);
       AreaModel area = this.areas.get(i % this.areas.size());
       LawModel newIdea = new LawModel(ideaTitle, ideaDescr.toString(), area, createdBy);
@@ -362,7 +316,7 @@ public class TestDataCreator implements CommandLineRunner {
     description.append(RandomString.make(8));    // prepend with some random chars to test sorting
     description.append(" ");
     description.append(getLoremIpsum(0,400));
-    UserModel createdBy = this.users.get(rand.nextInt(NUM_USERS));
+    UserModel createdBy = this.randUser();
     AreaModel area = this.areas.get(rand.nextInt(NUM_AREAS));
     LawModel proposal = createProposal(title, description.toString(), area, createdBy, rand.nextInt(10));
     return proposal;
@@ -379,7 +333,7 @@ public class TestDataCreator implements CommandLineRunner {
     }
     // make sure, that testuser0 has at least 5 proposals
     for (int i = 0; i < 5; i++) {
-			UserModel createdBy = this.users.get(0);
+			UserModel createdBy = this.users.get(TestFixtures.USER1_EMAIL);
     	String title = "Proposal " + i + " for user "+createdBy.getEmail();
       String description = getLoremIpsum(100,400);
       AreaModel area = this.areas.get(rand.nextInt(NUM_AREAS));
@@ -402,7 +356,7 @@ public class TestDataCreator implements CommandLineRunner {
     if (num >= users.size()-1) throw new RuntimeException("Cannot at "+num+" supporters to idea. There are not enough users.");
     // https://stackoverflow.com/questions/8378752/pick-multiple-random-elements-from-a-list-in-java
     LinkedList<UserModel> otherUsers = new LinkedList<>();
-    for (UserModel user: this.users) {
+    for (UserModel user: this.users.values()) {
       if (!user.equals(idea.getCreatedBy()))   otherUsers.add(user);
     }
     Collections.shuffle(otherUsers);
@@ -416,7 +370,7 @@ public class TestDataCreator implements CommandLineRunner {
 
   @Transactional
   private LawModel addCommentsToProposal(LawModel proposal) {
-  	UserModel randUser = users.get(rand.nextInt(NUM_USERS));
+  	UserModel randUser = this.randUser();
 		auditorAware.setMockAuditor(randUser);
 		CommentModel rootComment = new CommentModel("Comment on root level. I really like this idea, but needs to be improved.", null);
 		for (int i = 0; i < rand.nextInt(10); i++) {
@@ -460,7 +414,7 @@ public class TestDataCreator implements CommandLineRunner {
       //===== create Poll from initial Proposal
       title = "Initial Proposal in a poll that is in elaboration "+System.currentTimeMillis();
       desc = getLoremIpsum(100, 400);
-      createdBy = this.users.get(rand.nextInt(NUM_USERS));
+      createdBy = this.randUser();
       LawModel initialProposal = createProposal(title, desc, area, createdBy, 10);
 			addCommentsToProposal(initialProposal);
       PollModel newPoll = pollService.createPoll(initialProposal);
@@ -469,7 +423,7 @@ public class TestDataCreator implements CommandLineRunner {
       for (int i = 0; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
         title = "Alternative Proposal" + i + " in a poll that is in elaboration"+System.currentTimeMillis();
         desc = getLoremIpsum(100, 400);
-        createdBy = this.users.get(rand.nextInt(NUM_USERS));
+        createdBy = this.randUser();
         LawModel altProp = createProposal(title, desc, area, createdBy, 20);
 				altProp = addCommentsToProposal(altProp);
         pollService.addProposalToPoll(altProp, newPoll);
@@ -517,7 +471,7 @@ public class TestDataCreator implements CommandLineRunner {
   public void seedLaws() {
     log.info("Seeding laws");
     AreaModel area = this.areas.get(0);
-    UserModel createdBy = this.users.get(0);
+    UserModel createdBy = this.users.get(TestFixtures.USER1_EMAIL);
     auditorAware.setMockAuditor(createdBy);
 
     // These laws are not linked to a poll.      At the moment I do not need that yet...
@@ -528,7 +482,8 @@ public class TestDataCreator implements CommandLineRunner {
       String lawTitle = "Law " + i;
       LawModel realLaw = createProposal(lawTitle, getLoremIpsum(100,400), area, createdBy, 12);
       addSupportersToIdea(realLaw, getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)+5);
-      //TODO: reaLaw actually needs to have been part of a (finished) poll
+      //TODO: reaLaw actually needs to have been part of a (finished) poll with alternative proposals
+			//realLaw.setPoll(poll);
       realLaw.setReachedQuorumAt(DoogiesUtil.daysAgo(24));
       realLaw.setStatus(LawStatus.LAW);
       upsertLawModel(realLaw, 20+i);
@@ -608,7 +563,7 @@ public class TestDataCreator implements CommandLineRunner {
 
     // Now we use the original CastVoteService to get a voterToken and cast our vote.
     try {
-			String voterToken = castVoteService.getVoterToken(users.get(1), pollInVoting.getArea());
+			String voterToken = castVoteService.getVoterToken(users.get(TestFixtures.USER1_EMAIL), pollInVoting.getArea());
 			CastVoteRequest castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
 			castVoteService.castVote(castVoteRequest);
 		} catch (LiquidoException e) {
@@ -625,10 +580,14 @@ public class TestDataCreator implements CommandLineRunner {
 
   //-------------------------------- UTILITY methods ------------------------------
 
-
-
+	/**
+	 * get one random UserModel
+	 * @return a random user
+	 */
 	private UserModel randUser() {
-		return users.get(rand.nextInt(NUM_USERS));
+		Object[] entries = users.values().toArray();
+		return (UserModel)entries[rand.nextInt(entries.length)];
+
 	}
 
   private static final String loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, nam urna. Vitae aenean velit, voluptate velit rutrum. Elementum integer rhoncus rutrum morbi aliquam metus, morbi nulla, nec est phasellus dolor eros in libero. Volutpat dui feugiat, non magna, parturient dignissim lacus ipsum in adipiscing ut. Et quis adipiscing perferendis et, id consequat ac, dictum dui fermentum ornare rhoncus lobortis amet. Eveniet nulla sollicitudin, dolore nullam massa tortor ullamcorper mauris. Lectus ipsum lacus.\n" +
