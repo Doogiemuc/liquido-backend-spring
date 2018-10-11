@@ -6,7 +6,6 @@ import org.doogie.liquido.model.BallotModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.security.LiquidoAuditorAware;
-import org.doogie.liquido.security.LiquidoAuthUser;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,18 +13,14 @@ import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Controller for posting a ballot
- *
- * Resouces:
- *   POST /postBallot  -  post a users vote
- *
+ * Sprint REST controller for voting
  */
 @Slf4j
 @BasePathAwareController
@@ -47,19 +42,19 @@ public class VoteRestController {
 	 * @return JSON with voterToken
 	 * @throws LiquidoException when request parameter is missing
 	 */
-	@RequestMapping(value = "/voterToken", method = RequestMethod.GET)
+	@RequestMapping(value = "/my/voterToken", method = RequestMethod.GET)
 	public @ResponseBody Map getVoterToken(
-			@RequestParam("area")AreaModel area
-			// DOES NOT WORK!!! :-(  @AuthenticationPrincipal(expression = "liquidoUserModel", errorOnInvalidType = true) UserModel liquidoUserModel
+			@RequestParam("area")AreaModel area,
+			Authentication auth   //  <==== works
+			//@AuthenticationPrincipal(expression = "liquidoUserModel") UserModel liquidoUserModel    // <==== DOES NOT WORK
+			// injecting the AuthenticationPrincipal did not work for me. I do not know why.   But liquidoAuditorAware works, and is also great for testing:
+			// see https://docs.spring.io/spring-security/site/docs/current/reference/htmlsingle/#tech-userdetailsservice
 	) throws LiquidoException {
-		// injecting the AuthenticationPrincipal did not work for me. I do not know why.   But liquidoAuditorAware works, and is also great for testing:
-		//see https://docs.spring.io/spring-security/site/docs/current/reference/htmlsingle/#tech-userdetailsservice
-
 		UserModel user = liquidoAuditorAware.getCurrentAuditor();
 		log.info(user+" requests his voterToken for area "+area);
-		if (user == null) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Need login to get voterToken!");
+		if (user == null) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Need login to get voterToken!");			// [SECURITY]  This check is extremely important!
 
-		String voterToken = castVoteService.getVoterToken(user, area);   // preconditions are checked inside ballotService
+		String voterToken = castVoteService.getVoterToken(user, area, user.getPasswordHash());   // preconditions are checked inside castVoteService
 
 		Map<String, String> result = new HashMap<>();
 		result.put("voterToken", voterToken);
@@ -111,10 +106,10 @@ public class VoteRestController {
     BallotModel ballot = castVoteService.castVote(castVoteRequest);   					// all validity checks are done inside ballotService.
 
 		HashMap<String, String> result = new HashMap<>();
-		result.put("msg", "OK, your vote was counted.");
+		result.put("msg", "OK, your vote was counted successfully.");
 		result.put("poll", castVoteRequest.getPoll());
 		result.put("checksum", ballot.getChecksum());
-		result.put("delegationCount", ballot.getDelegationCount()+"");
+		if (ballot.getDelegationCount() > 0) result.put("delegationCount", ballot.getDelegationCount()+"");
     return result;
   }
 

@@ -47,7 +47,7 @@ public class LiquidoUserDetailsService implements UserDetailsService {
    */
   @Override
   public LiquidoAuthUser loadUserByUsername(String email) throws UsernameNotFoundException {
-    log.debug("loading user "+email+" from DB for authentication");
+    log.trace("loading user "+email+" from DB for authentication");
 
     //Just for testting
     /*
@@ -63,12 +63,6 @@ public class LiquidoUserDetailsService implements UserDetailsService {
     	throw new UsernameNotFoundException("User's eMail or PasswordHash is emtpy.");
 
     return new LiquidoAuthUser(userModel.getEmail(), userModel.getPasswordHash(), getGrantedAuthorities(userModel), userModel);
-  }
-
-  public UserModel getLiquidoUser(String email) throws Exception {
-    UserModel liquidoUser = userRepo.findByEmail(email);  // may return null!
-    if (liquidoUser == null) throw new Exception("Could not find liquidoUser with email "+email);
-    return liquidoUser;
   }
 
   private Collection<GrantedAuthority> getGrantedAuthorities(UserModel userModel) {

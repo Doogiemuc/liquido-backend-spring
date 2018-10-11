@@ -44,6 +44,13 @@ public class CastVoteService {
 	@Autowired
 	LiquidoAnonymizer anonymizer;
 
+	//TOOD: we need more fine grained access
+	// 1. calcVoterToken
+	// 2. calcChecksum
+	// 3. upsertVoterToken (and also checksum)
+	// 4. validate voterToken against stored checksum
+	// ProxyService only calls 1. and 2.
+
 	/**
 	 * A user wants to vote and therefore requests a voter token for this area. Each user has one token per area.
 	 * The hash value of the voterToken is its checksum. The checksumModel is stored in the DB.
@@ -52,20 +59,20 @@ public class CastVoteService {
 	 * @param area the area of the poll  (must be passed as numerical area.ID in the request. (Not an URI)
 	 * @return user's voterTokens, that only the user must know, and that will hash to the stored checksumModel.
 	 */
-	public String getVoterToken(UserModel user, AreaModel area) throws LiquidoException {
+	public String getVoterToken(UserModel user, AreaModel area, String passwordHash) throws LiquidoException {
 		log.trace("getVoterToken: "+user+" requests voterToken for "+area);
 		if (user == null || DoogiesUtil.isEmpty(user.getEmail())) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "User must be authenticated to getToken");
 		if (area == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need area when requesting a token.");
 
 		//TODO: !!! [Security] Do not read user's passwordHash.  Instead it(or the oauth token?) must be passed into getVoterToken!
-		String passwordHash = user.getPasswordHash();
+		//String passwordHash = user.getPasswordHash();
 
-		String voterToken = anonymizer.getBCrypetHash(user.getId()+"", passwordHash, area.getId()+"");   // token that only this user must know
-		String tokenChecksum = calcChecksumFromVoterToken(voterToken);                            // token that can only be generated from the users voterToken and only by the server.
-		TokenChecksumModel existingTokenModel = checksumRepo.findByChecksum(tokenChecksum);
-		if (existingTokenModel == null) {
-			TokenChecksumModel newToken = new TokenChecksumModel(tokenChecksum, area);
-			checksumRepo.save(newToken);
+		String voterToken = anonymizer.getBCryptHash(user.getId()+"", passwordHash, area.getId()+"");   // token that only this user must know
+		String tokenChecksum = calcChecksumFromVoterToken(voterToken);                            						// token that can only be generated from the users voterToken and only by the server.
+		TokenChecksumModel existingChecksumModel = checksumRepo.findByChecksum(tokenChecksum);
+		if (existingChecksumModel == null) {
+			TokenChecksumModel newChecksumModel = new TokenChecksumModel(tokenChecksum, area);
+			checksumRepo.save(newChecksumModel);
 		}
 		return voterToken;
 	}
@@ -73,14 +80,14 @@ public class CastVoteService {
 	/**
 	 * check if the passed voterToken is valid, ie. its checksum=hash(voterToken) is already known
 	 * @param voterToken the token to check
-	 * @return true if voterToken hashes to an already known checksum
+	 * @return the existing TokenChecksumModel  OR <b><NULL</b> if voterToken is invalid
 	 */
-	public boolean isVoterTokenValid(String voterToken) {
-		if (voterToken == null) return false;
+	public TokenChecksumModel isVoterTokenValid(String voterToken) {
+		if (voterToken == null || !voterToken.startsWith("$2") || voterToken.length() < 10) return null;  // BCRYPT hashes start with $2$ or $2
 		String tokenChecksum = calcChecksumFromVoterToken(voterToken);
 		TokenChecksumModel existingTokenModel = checksumRepo.findByChecksum(tokenChecksum);
-		return existingTokenModel != null && existingTokenModel.getChecksum() != null && existingTokenModel.getChecksum().length() > 5;
-
+		if (existingTokenModel == null) log.trace("VoterToken '"+voterToken+"' is INVALID!");
+		return existingTokenModel;
 	}
 
 	//TODO: When user changes his passwords, then invalidate all his tokens!!!
@@ -92,26 +99,30 @@ public class CastVoteService {
 	 * @param castVoteRequest which contains the poll that we want to vote for and
 	 *                        a list of voterTokens. The first token is the voter's own one.
 	 *                        Then there might be more tokens from delegees if that user is a proxy.
-	 * @return checksums of the user's own casted ballot.
-	 * @throws LiquidoException
+	 * @return BallotModel the casted ballot
+	 * @throws LiquidoException when something is wrong with the ballot
 	 */
 	public BallotModel castVote(CastVoteRequest castVoteRequest) throws LiquidoException {
 		log.trace("castVote: "+ castVoteRequest);
+
+		TokenChecksumModel checksumModel = isVoterTokenValid(castVoteRequest.getVoterToken());
+		if (checksumModel == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Your voter token seems to be invalid!");
 
 		// load models for URIs in castVoteRequst
 		//TODO: !!! Should I move loading of models up into the REST controller? As I did it for PollRestController? Should a REST controller directly handle repos? Or should only the service handle repos?  See: RestUtils.class
 		Long pollId = restUtils.getIdFromURI("polls", castVoteRequest.getPoll());
 		PollModel poll = pollRepo.findOne(pollId);
+		if (poll == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot find poll with poll.id="+pollId);
 
 		List<LawModel> voteOrder = new ArrayList<>();
 		for (String proposalId : castVoteRequest.getVoteOrder()) {
 			Long lawId = restUtils.getIdFromURI("laws", proposalId);
 			LawModel law = lawRepo.findOne(lawId);
+			if (law == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot find proposal with proposal.id="+lawId);
 			voteOrder.add(law);
 		}
 
-		String tokenChecksum  = anonymizer.getBCrypetHash(castVoteRequest.getVoterToken());
-		BallotModel newBallot = new BallotModel(poll, 0, voteOrder, tokenChecksum);  //MAYBE: BallotModelBuilder.createFromVoterToken(...)   or would that be a bit of overengeneering
+		BallotModel newBallot = new BallotModel(poll, 0, voteOrder, checksumModel.getChecksum());  //MAYBE: BallotModelBuilder.createFromVoterToken(...)   or would that be a bit of overengeneering
 		BallotModel savedBallot = storeBallot(newBallot);		// checksum will be validated inside storeBallot() -> checkBallot()
 
 		return savedBallot;
@@ -254,7 +265,7 @@ public class CastVoteService {
 	 * @return checksum = hash(voterToken, seed)
 	 */
 	public String calcChecksumFromVoterToken(String voterToken) {
-		return anonymizer.getBCrypetHash(voterToken);
+		return anonymizer.getBCryptHash(voterToken);
 	}
 
 }

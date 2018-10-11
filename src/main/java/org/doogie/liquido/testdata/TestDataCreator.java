@@ -189,7 +189,7 @@ public class TestDataCreator implements CommandLineRunner {
       UserModel newUser = new UserModel(email, "dummyPasswordHash");
 
       UserProfileModel profile = new UserProfileModel();
-      profile.setName("Test User" + i);
+      profile.setName("Test User" + (i+1));
       profile.setPicture("/static/img/photos/"+((i%3)+1)+".png");
       profile.setWebsite("http://www.liquido.de");
       newUser.setProfile(profile);
@@ -238,6 +238,7 @@ public class TestDataCreator implements CommandLineRunner {
   private void seedProxies() {
 		log.info("Seeding Proxies ...");
     List<String[]> delegations = new ArrayList<>();
+    // These needs to be aligned with TestFixtures.USER1_NUM_VOTES !
     delegations.add(new String[] {TestFixtures.USER2_EMAIL,TestFixtures.USER1_EMAIL});   // testuser2 delegates to proxy testuser1
 		delegations.add(new String[] {TestFixtures.USER3_EMAIL,TestFixtures.USER1_EMAIL});
 		delegations.add(new String[] {TestFixtures.USER4_EMAIL,TestFixtures.USER1_EMAIL});
@@ -245,14 +246,15 @@ public class TestDataCreator implements CommandLineRunner {
 		delegations.add(new String[] {TestFixtures.USER6_EMAIL,TestFixtures.USER4_EMAIL});
 
     AreaModel area = areas.get(0);    // "Area 0"
-
     for(String[] delegation: delegations) {
       UserModel fromUser = users.get(delegation[0]);
       UserModel toProxy  = users.get(delegation[1]);
 			log.debug("Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId());
       try {
-        proxyService.becomePublicProxy(toProxy, area);
-				proxyService.assignProxyWithPassword(area, fromUser, toProxy, fromUser.getPasswordHash());
+				String proxyVoterToken = castVoteService.getVoterToken(toProxy, area, toProxy.getPasswordHash());
+        proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
+				String userVoterToken = castVoteService.getVoterToken(toProxy, area, fromUser.getPasswordHash());
+				proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);
 			} catch (LiquidoException e) {
         log.error("Cannot seedProxies: error Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId()+": "+e);
       }
@@ -553,9 +555,8 @@ public class TestDataCreator implements CommandLineRunner {
     if (pollInVoting.getNumCompetingProposals() < 2) throw new RuntimeException("Cannot seed ballots. Need at least two alternative proposals in VOTING phase");
 
 		String basePath = springEnv.getProperty("spring.data.rest.base-path");
-
+    UserModel voter = users.get(TestFixtures.USER1_EMAIL);
 		String pollURI = basePath+"/polls/"+pollInVoting.getId();
-
 		Iterator<LawModel> proposals = pollInVoting.getProposals().iterator();
     List<String> voteOrder = new ArrayList<>();
     voteOrder.add(basePath+"/laws/"+proposals.next().getId());		// CastVoteRequest contains URIs not full LawModels
@@ -563,7 +564,7 @@ public class TestDataCreator implements CommandLineRunner {
 
     // Now we use the original CastVoteService to get a voterToken and cast our vote.
     try {
-			String voterToken = castVoteService.getVoterToken(users.get(TestFixtures.USER1_EMAIL), pollInVoting.getArea());
+			String voterToken = castVoteService.getVoterToken(voter, pollInVoting.getArea(), voter.getPasswordHash());
 			CastVoteRequest castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
 			castVoteService.castVote(castVoteRequest);
 		} catch (LiquidoException e) {

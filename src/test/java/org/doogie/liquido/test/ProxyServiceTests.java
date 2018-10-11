@@ -6,10 +6,12 @@ import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.DelegationModel;
+import org.doogie.liquido.model.TokenChecksumModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
+import org.doogie.liquido.testdata.TestFixtures;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,46 +52,67 @@ public class ProxyServiceTests {
 	 * GIVEN a public proxy P
 	 *   AND a voter V
 	 *  WHEN voter V assigns P as proxy in area A
-	 *  THEN the proxyMap of V contains P in area A
+	 *  THEN the new delegation points from V to P
+	 *   AND the user's checksumModel is delegatedTo P's checksum
+	 *   AND the proxyMap of V contains P in area A
 	 */
 	@Test
-	@WithUserDetails(USER1_EMAIL)
-	public void testAssignProxy() throws LiquidoException {
+	@WithUserDetails(USER2_EMAIL)
+	public void testAssignPublicProxy() throws LiquidoException {
 		//GIVEN
 		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL);
 		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL);
 		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
-		proxyService.becomePublicProxy(toProxy, area);
-		//assert: check for checksum in DB,  or  receive it via getChecksumOfPublicProxy ?   or via repo?
+
+		//make sure that toProxy is a public proxy
+		String proxyVoterToken = castVoteService.getVoterToken(toProxy, area, toProxy.getPasswordHash());
+		TokenChecksumModel proxyChecksumModel = proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
 
 		//WHEN
-		String voterToken  = castVoteService.getVoterToken(fromUser, area);
-		proxyService.assignProxy(area, fromUser, toProxy, voterToken);
+		String userVoterToken = castVoteService.getVoterToken(fromUser, area, fromUser.getPasswordHash());
+		DelegationModel newDelegation = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);
 
 		//THEN
+		assertNotNull("newly created delegation must not be null (Is toProxy a public proxy?)", newDelegation);
+		assertEquals(newDelegation.getFromUser(), fromUser);
+		assertEquals(newDelegation.getToProxy(), toProxy);
+
+		TokenChecksumModel userCheckumModel = castVoteService.isVoterTokenValid(userVoterToken);
+		assertEquals("Users checksum must be delegated to the proxy's checksum.", userCheckumModel.getDelegatedTo(), proxyChecksumModel);
+
 		Map<AreaModel, UserModel> proxyMap = proxyService.getProxyMap(fromUser);
 		log.info(proxyMap.toString());
-
 		assertEquals(toProxy+"is proxy of "+fromUser+" in area "+area, toProxy, proxyMap.get(area));
 	}
 
+	@Test
+	@WithUserDetails(USER1_EMAIL)
+	public void testGetNumVotes() {
+		log.trace("testGetNumVotes");
+		AreaModel area  = areaRepo.findByTitle(AREA0_TITLE);
+		UserModel proxy = userRepo.findByEmail(USER1_EMAIL);
+		int numVotes = proxyService.getNumVotes(area, proxy);
+		assertEquals(USER1_EMAIL+" should have "+TestFixtures.USER1_NUM_VOTES+" votes", TestFixtures.USER1_NUM_VOTES, numVotes);
+		log.trace("SUCCESS: Proxy "+USER1_EMAIL+" can cast "+TestFixtures.USER1_NUM_VOTES+" votes.");
+	}
+
 	/**
-	 * GIVEN a voter that delegeated to a proxy
+	 * GIVEN a voter that delegated to a proxy
 	 *   AND a chain of transitive delegations above that
 	 *  WHEN we query for the topmost proxy in that chain
 	 *  THEN the top most proxy at the end of the delegation chain is returned.
 	 */
 	@Test
-	public void testGetTopmostProxy() {
+	@WithUserDetails(USER5_EMAIL)
+	public void findTopProxy() {
 		log.trace("testGetTopmostProxy");
 		//GIVEN
 		UserModel voter             = userRepo.findByEmail(USER5_EMAIL);
 		UserModel expectedTopProxy  = userRepo.findByEmail(USER1_EMAIL);
 		AreaModel area      			  = areaRepo.findByTitle(AREA0_TITLE);
-		DelegationModel delegation  = delegationRepo.findByAreaAndFromUser(area, voter);
 
 		//WHEN
-		UserModel topmostProxy = proxyService.findTopmostProxy(delegation);
+		UserModel topmostProxy = proxyService.findTopProxy(area, voter);
 
 		//THEN
 		assertEquals(expectedTopProxy, topmostProxy);
@@ -107,27 +130,47 @@ public class ProxyServiceTests {
 	 * @throws LiquidoException
 	 */
 	@Test
+	@WithUserDetails(USER2_EMAIL)
 	public void testCircularDelegationErrorCases() throws LiquidoException {
 		//GIVEN
 		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL);
 		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL);
 		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
-		proxyService.becomePublicProxy(toProxy, area);
+		String proxyVoterToken = castVoteService.getVoterToken(toProxy, area, toProxy.getPasswordHash());
+		proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
 
 		//WHEN
-		String voterToken  = castVoteService.getVoterToken(fromUser, area);
-		proxyService.assignProxy(area, fromUser, toProxy, voterToken);
+		String userVoterToken = castVoteService.getVoterToken(fromUser, area, fromUser.getPasswordHash());
+		proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);
 
 		//THEN
 		assertFalse("Normal delegation should be allowed", proxyService.thisWouldBeCircularDelegation(area, fromUser, toProxy));
 		assertTrue("Circular delegation should be forbidden", proxyService.thisWouldBeCircularDelegation(area, toProxy, fromUser));
 		try {
-			proxyService.assignProxy(area, toProxy, fromUser, voterToken);
+			proxyService.assignProxy(area, toProxy, fromUser, userVoterToken);
 			fail("Trying to assign a proxy which leads to a circular delegation should have thrown a LiquidoException!");
 		} catch(LiquidoException e) {
 			if (e.getError() != LiquidoException.Errors.CANNOT_ASSIGN_CIRCULAR_PROXY)
 				fail("Trying to assign a proxy which leads to a circular delegation should have thrown a LiquidoException with Error == CANNOT_ASSIGN_CIRCULAR_PROXY!");
 		}
+	}
 
+	@Test
+	public void testRemoveProxy() throws LiquidoException {
+		//GIVEN
+		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL);
+		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL);
+		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
+
+		//WHEN
+		String userVoterToken = castVoteService.getVoterToken(fromUser, area, fromUser.getPasswordHash());
+		proxyService.removeProxy(area, fromUser, userVoterToken);
+
+		//THEN
+		DelegationModel delegation  = delegationRepo.findByAreaAndFromUser(area, fromUser);
+		assertNull("Delegation to proxy should not exist anymore", delegation);
+
+		//Cleanup
+		proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);
 	}
 }

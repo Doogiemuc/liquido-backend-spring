@@ -79,6 +79,7 @@ public class BallotModel {
   @NotNull
   @NonNull
 	//@OneToOne
+	//MAYBE: Should a ballot only contain the checksum or the full blown TokenChecksumModel.  It's the primary key anyway.
   public String checksum;
 
 	// DO NOT expose checksum in toString !!!
