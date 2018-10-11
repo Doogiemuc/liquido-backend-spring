@@ -65,11 +65,11 @@ public class ProxyServiceTests {
 		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
 
 		//make sure that toProxy is a public proxy
-		String proxyVoterToken = castVoteService.getVoterToken(toProxy, area, toProxy.getPasswordHash());
+		String proxyVoterToken = castVoteService.createVoterToken(toProxy, area, toProxy.getPasswordHash());
 		TokenChecksumModel proxyChecksumModel = proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
 
 		//WHEN
-		String userVoterToken = castVoteService.getVoterToken(fromUser, area, fromUser.getPasswordHash());
+		String userVoterToken = castVoteService.createVoterToken(fromUser, area, fromUser.getPasswordHash());
 		DelegationModel newDelegation = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);
 
 		//THEN
@@ -136,11 +136,11 @@ public class ProxyServiceTests {
 		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL);
 		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL);
 		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
-		String proxyVoterToken = castVoteService.getVoterToken(toProxy, area, toProxy.getPasswordHash());
+		String proxyVoterToken = castVoteService.createVoterToken(toProxy, area, toProxy.getPasswordHash());
 		proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
 
 		//WHEN
-		String userVoterToken = castVoteService.getVoterToken(fromUser, area, fromUser.getPasswordHash());
+		String userVoterToken = castVoteService.createVoterToken(fromUser, area, fromUser.getPasswordHash());
 		proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);
 
 		//THEN
@@ -163,7 +163,7 @@ public class ProxyServiceTests {
 		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
 
 		//WHEN
-		String userVoterToken = castVoteService.getVoterToken(fromUser, area, fromUser.getPasswordHash());
+		String userVoterToken = castVoteService.createVoterToken(fromUser, area, fromUser.getPasswordHash());
 		proxyService.removeProxy(area, fromUser, userVoterToken);
 
 		//THEN

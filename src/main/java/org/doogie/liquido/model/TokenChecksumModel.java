@@ -52,7 +52,7 @@ public class TokenChecksumModel {
   */
 
 	/**
-	 * If a user want's to be a public proxy, then he CAN store his user together with his chechsum.
+	 * If a user want's to be a public proxy, then he CAN store his user together with his checksum.
 	 * Then voters can automatically delegate their vote to this proxy.
 	 */
 	@OneToOne
@@ -62,6 +62,5 @@ public class TokenChecksumModel {
 	//There is deliberately no createdBy in this class
 	//For the same reason there is also no createdAt or updatedAt. They might lead to timing attacks.
 
-	// I thought about storing the area next to the checksumModel. But the area is already encoded inside this hash value.
 
 }

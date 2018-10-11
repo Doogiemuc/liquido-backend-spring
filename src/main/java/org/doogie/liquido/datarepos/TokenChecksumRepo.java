@@ -27,7 +27,7 @@ public interface TokenChecksumRepo extends CrudRepository<TokenChecksumModel, Lo
 	 * @param proxyChecksum checksum of a proxy
 	 * @return all checksums that are delegated to this proxy
 	 */
-	List<TokenChecksumModel> findByDelegatedTo(String proxyChecksum);
+	List<TokenChecksumModel> findByDelegatedTo(TokenChecksumModel proxyChecksum);
 
 	/**
 	 * find the checksum of a public proxy so that a voter can delegate his checksum to it.
