@@ -47,5 +47,5 @@ public interface BallotRepo extends CrudRepository<BallotModel, Long> {
    * @param checksum a valid and stored checksum
    * @return the ballot for this (still anonymous) checksum
    */
-  BallotModel findByPollAndChecksum(PollModel poll, String checksum);
+  BallotModel findByPollAndChecksum(PollModel poll, TokenChecksumModel checksum);
 }

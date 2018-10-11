@@ -25,9 +25,11 @@ import java.util.stream.Collectors;
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor  //BUGFIX: https://jira.spring.io/browse/DATAREST-884
+/*
 @Table(name = "ballots", uniqueConstraints= {
   @UniqueConstraint(columnNames = {"POLL_ID", "CHECKSUM"} )   // a voter is only allowed to vote once per poll with his checksum!
 })
+*/
 public class BallotModel {
 	//BallotModel deliberately does not extend BaseModel!
 	//No @CreatedDate, @LastModifiedDate or @CreatedBy here.
@@ -52,13 +54,13 @@ public class BallotModel {
   public int level;
 
 	/**
-	 * When user is a proxy for others, then the delegationCount is the number of delegations
-	 * that this ballot was counted for. Only the ballots that were actually set by the proxy's vote
-	 * are counted. Ballotes with a lower level, e.g. where a voter voted for himself, are not
-	 * counted.
-	 * There are separate ballots for all these delegated votes. The delegationCount is just for info. Do not sum it up.
+	 * By default a ballot stands for one vote.
+	 * But if other voters delegated their vote to a proxy, then this proxy may vote for that many times.
+	 * The voteCount is the sum of all delegated votes plus the vote of the proxy himself.
+	 *
+	 * IMPORTANT: There are separate ballots for all these delegated votes. The voteCount is just for info. Do not sum it up.
 	 */
-	public int delegationCount = 0;
+	public int voteCount = 1;
 
   /**
    * One vote puts some proposals of this poll into his personally preferred order.
@@ -67,7 +69,7 @@ public class BallotModel {
    */
   @NonNull
   @NotNull
-  @ManyToMany   //(cascade = CascadeType.MERGE, orphanRemoval = false)
+  @ManyToMany(fetch = FetchType.EAGER)   //(cascade = CascadeType.MERGE, orphanRemoval = false)
   @OrderColumn  // keep order in DB
   public List<LawModel> voteOrder;   //laws in voteOrder must not be duplicate! This is checked in VoteRestController.
 
@@ -78,9 +80,8 @@ public class BallotModel {
    */
   @NotNull
   @NonNull
-	//@OneToOne
-	//MAYBE: Should a ballot only contain the checksum or the full blown TokenChecksumModel.  It's the primary key anyway.
-  public String checksum;
+	@OneToOne
+  public TokenChecksumModel checksum;   //TODO: or just save the checksum as string?  had it like that but refactored it
 
 	// DO NOT expose checksum in toString !!!
 	@Override

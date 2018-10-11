@@ -5,6 +5,7 @@ import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
+import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.util.LiquidoProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * This spring component implements the business logic for {@link org.doogie.liquido.model.PollModel}
@@ -68,15 +72,24 @@ public class PollService {
    * @param proposal a proposal (in status PROPOSAL)
    * @param poll a poll in status ELABORATION
    * @return the newly created poll
-   * @throws LiquidoException if any status is wrong
+   * @throws LiquidoException if area or status of proposal or poll is wrong. And also when user already has a proposal in this poll.
    */
   public PollModel addProposalToPoll(@NotNull LawModel proposal, @NotNull PollModel poll) throws LiquidoException {
     if (proposal.getStatus() != LawModel.LawStatus.PROPOSAL)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot add proposal(id="+proposal.getId()+") to poll(id="+poll.getId()+", because proposal is not in state PROPOSAL.");
     if (poll.getStatus() != PollModel.PollStatus.ELABORATION)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot add proposal, because poll id="+poll.getId()+" is not in ELABORATION phase");
-    if (poll.getProposals().size() > 0 && !proposal.getArea().equals(poll.getProposals().iterator().next().getArea()))
+    if (poll.getProposals().size() > 0 && !proposal.getArea().equals(poll.getArea()))
       throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Added proposal must be in the same area as the other proposals in this poll.");
+
+		//Set<UserModel> usersInPoll = poll.getProposals().stream().map(prop -> prop.getCreatedBy()).collect(Collectors.toSet());   // the cool java8 stream one liner - that no one understands :-)
+		Set<UserModel> usersInPoll = new HashSet<>();
+    for (LawModel p : poll.getProposals()) {
+      usersInPoll.add(p.getCreatedBy());
+    }
+    if (usersInPoll.contains(proposal.getCreatedBy()))
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "You already have a proposal in poll(id="+poll.getId()+")");
+
     proposal.setStatus(LawModel.LawStatus.ELABORATION);
     poll.getProposals().add(proposal);
     proposal.setPoll(poll);

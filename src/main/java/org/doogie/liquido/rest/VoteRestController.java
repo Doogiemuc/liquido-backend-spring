@@ -12,8 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -54,7 +52,7 @@ public class VoteRestController {
 		log.info(user+" requests his voterToken for area "+area);
 		if (user == null) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Need login to get voterToken!");			// [SECURITY]  This check is extremely important!
 
-		String voterToken = castVoteService.getVoterToken(user, area, user.getPasswordHash());   // preconditions are checked inside castVoteService
+		String voterToken = castVoteService.createVoterToken(user, area, user.getPasswordHash());   // preconditions are checked inside castVoteService
 
 		Map<String, String> result = new HashMap<>();
 		result.put("voterToken", voterToken);
@@ -105,13 +103,15 @@ public class VoteRestController {
 
     BallotModel ballot = castVoteService.castVote(castVoteRequest);   					// all validity checks are done inside ballotService.
 
+		//throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "TEST EXCEPTION");
+
 		HashMap<String, String> result = new HashMap<>();
 		result.put("msg", "OK, your vote was counted successfully.");
 		result.put("poll", castVoteRequest.getPoll());
-		result.put("checksum", ballot.getChecksum());
-		if (ballot.getDelegationCount() > 0) result.put("delegationCount", ballot.getDelegationCount()+"");
+		result.put("checksum", ballot.getChecksum().getChecksum());
+		result.put("voteCount", ballot.getVoteCount()+"");
     return result;
-  }
+   }
 
 
   /*
