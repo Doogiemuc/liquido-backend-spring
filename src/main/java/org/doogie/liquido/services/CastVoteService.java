@@ -59,14 +59,10 @@ public class CastVoteService {
 	 * @param area the area of the poll  (must be passed as numerical area.ID in the request. (Not an URI)
 	 * @return user's voterTokens, that only the user must know, and that will hash to the stored checksumModel.
 	 */
-	public String getVoterToken(UserModel user, AreaModel area, String passwordHash) throws LiquidoException {
-		log.trace("getVoterToken: "+user+" requests voterToken for "+area);
-		if (user == null || DoogiesUtil.isEmpty(user.getEmail())) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "User must be authenticated to getToken");
-		if (area == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need area when requesting a token.");
-
-		//TODO: !!! [Security] Do not read user's passwordHash.  Instead it(or the oauth token?) must be passed into getVoterToken!
-		//String passwordHash = user.getPasswordHash();
-
+	public String createVoterToken(UserModel user, AreaModel area, String passwordHash) throws LiquidoException {
+		log.debug("createVoterToken: for "+user+" in "+area);
+		if (user == null || DoogiesUtil.isEmpty(user.getEmail()) || area == null ||passwordHash == null)
+			throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Need user, area and passwordHash to create a voterToken!");
 		String voterToken = anonymizer.getBCryptHash(user.getId()+"", passwordHash, area.getId()+"");   // token that only this user must know
 		String tokenChecksum = calcChecksumFromVoterToken(voterToken);                            						// token that can only be generated from the users voterToken and only by the server.
 		TokenChecksumModel existingChecksumModel = checksumRepo.findByChecksum(tokenChecksum);
@@ -86,7 +82,7 @@ public class CastVoteService {
 		if (voterToken == null || !voterToken.startsWith("$2") || voterToken.length() < 10) return null;  // BCRYPT hashes start with $2$ or $2
 		String tokenChecksum = calcChecksumFromVoterToken(voterToken);
 		TokenChecksumModel existingTokenModel = checksumRepo.findByChecksum(tokenChecksum);
-		if (existingTokenModel == null) log.trace("VoterToken '"+voterToken+"' is INVALID!");
+		if (existingTokenModel == null) log.warn("VoterToken '"+voterToken+"' is INVALID!");
 		return existingTokenModel;
 	}
 
@@ -103,7 +99,7 @@ public class CastVoteService {
 	 * @throws LiquidoException when something is wrong with the ballot
 	 */
 	public BallotModel castVote(CastVoteRequest castVoteRequest) throws LiquidoException {
-		log.trace("castVote: "+ castVoteRequest);
+		log.debug("castVote: "+ castVoteRequest);
 
 		TokenChecksumModel checksumModel = isVoterTokenValid(castVoteRequest.getVoterToken());
 		if (checksumModel == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Your voter token seems to be invalid!");
@@ -122,7 +118,7 @@ public class CastVoteService {
 			voteOrder.add(law);
 		}
 
-		BallotModel newBallot = new BallotModel(poll, 0, voteOrder, checksumModel.getChecksum());  //MAYBE: BallotModelBuilder.createFromVoterToken(...)   or would that be a bit of overengeneering
+		BallotModel newBallot = new BallotModel(poll, 0, voteOrder, checksumModel);  //MAYBE: BallotModelBuilder.createFromVoterToken(...)   or would that be a bit of overengeneering
 		BallotModel savedBallot = storeBallot(newBallot);		// checksum will be validated inside storeBallot() -> checkBallot()
 
 		return savedBallot;
@@ -166,44 +162,43 @@ public class CastVoteService {
 	 * @param newBallot the ballot that shall be stored. The ballot will be checked very thoroughly. Especially if the ballot's checksum is valid.
 	 * @return the newly created or updated existing ballot  OR
 	 *         null if the ballot wasn't stored due to an already existing ballot with a smaller level.
-	 *
 	 */
 	public BallotModel storeBallot(BallotModel newBallot) throws LiquidoException {
-		log.debug("storeBallot("+newBallot+")");
+		log.debug("storeBallot("+newBallot+") checksum="+newBallot.getChecksum().getChecksum());
+
+		//----- check validity of the ballot
 		checkBallot(newBallot);
 
-		BallotModel savedBallot = null;
+		//----- If there is no existing ballot yet with that checksum, then create a completely new one.
 		BallotModel existingBallot = ballotRepo.findByPollAndChecksum(newBallot.getPoll(), newBallot.getChecksum());
 		if (existingBallot == null) {
-			log.trace("Inserting new ballot");
-			savedBallot = ballotRepo.save(newBallot);
+			log.trace("  Inserting new ballot");
+			existingBallot = ballotRepo.save(newBallot);
 		} else {
-			// Proxy must not overwrite a voter's own vote  OR  a vote from a proxy below
+			//----- Proxy must not overwrite a voter's own vote  OR  a vote from a proxy below
 			if (existingBallot.getLevel() < newBallot.getLevel()) {
-				log.trace("Will not overwrite existing ballot "+existingBallot);
+				log.trace("  Will not overwrite existing ballot with smaller level " + existingBallot);
 				return null;
 			}
 
-			log.trace("Updating existing ballot");
+			log.trace("  Updating existing ballot");
 			existingBallot.setVoteOrder(newBallot.getVoteOrder());
 			existingBallot.setLevel(newBallot.getLevel());
-			if (!existingBallot.getChecksum().equals(newBallot.getChecksum())) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Something is really wrong here!!! Checksums do not match");  // This should never happen
-
-			//----- recursively cast a vote for each delegated checksumModel
-			int delegationCount = 0;   // number of delegations that this ballot was counted for. (without the ballot itself)
-			List<TokenChecksumModel> delegatedChecksums = checksumRepo.findByDelegatedTo(existingBallot.getChecksum());
-			for(TokenChecksumModel delegatedChecksum : delegatedChecksums) {
-				BallotModel childBallot = new BallotModel(newBallot.getPoll(), newBallot.getLevel()+1, newBallot.getVoteOrder(), delegatedChecksum.getChecksum());
-				BallotModel savedChildBallot = storeBallot(childBallot);  // will return null when childBallot level is to large and a smaller one was found  => then we stop this recursion tree
-				if (savedChildBallot != null) delegationCount = delegationCount + savedChildBallot.getDelegationCount();
-			}
-
-			existingBallot.setDelegationCount(delegationCount);
-
-			savedBallot = ballotRepo.save(existingBallot);
+			if (!existingBallot.getChecksum().equals(newBallot.getChecksum()))
+				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Something is really wrong here!!! Checksums do not match");  // This should never happen
 		}
-		return savedBallot;
 
+		//----- recursively cast a vote for each delegated checksumModel
+		int voteCount = 1;   // first vote is for the ballot itself.
+		List<TokenChecksumModel> delegatedChecksums = checksumRepo.findByDelegatedTo(existingBallot.getChecksum());
+		for (TokenChecksumModel delegatedChecksum : delegatedChecksums) {
+			BallotModel childBallot = new BallotModel(newBallot.getPoll(), newBallot.getLevel() + 1, newBallot.getVoteOrder(), delegatedChecksum);
+			//log.trace("checking delegated childBallot "+childBallot);
+			BallotModel savedChildBallot = storeBallot(childBallot);  // will return null when childBallot level is to large and a smaller one was found  => then we stop this recursion tree
+			if (savedChildBallot != null) voteCount = voteCount + savedChildBallot.getVoteCount();
+		}
+		existingBallot.setVoteCount(voteCount);
+		return ballotRepo.save(existingBallot);
 	}
 
 	/**
@@ -245,12 +240,12 @@ public class CastVoteService {
 		}
 
 		// check that there is a checksum
-		if (ballot.getChecksum() == null || ballot.getChecksum().length() < 5) {
+		if (ballot.getChecksum() == null || ballot.getChecksum().getChecksum().length() < 5) {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Invalid voterToken. It's checksum must be at least 5 chars!");
 		}
 
 		// Passed checksumModel in ballot MUST already exists in TokenChecksumRepo to be valid
-		TokenChecksumModel existingChecksum = checksumRepo.findByChecksum(ballot.getChecksum());
+		TokenChecksumModel existingChecksum = checksumRepo.findByChecksum(ballot.getChecksum().getChecksum());
 		if (existingChecksum == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Ballot's checksum is invalid. (It cannot be found in TokenChecksumModel.)");
 

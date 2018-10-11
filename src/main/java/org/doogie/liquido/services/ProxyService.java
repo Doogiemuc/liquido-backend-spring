@@ -53,7 +53,7 @@ public class ProxyService {
 
 	/* used for testing. normally proxy should be assigned with a valid voterToken
 	public DelegationModel assignProxyWithPassword(AreaModel area, UserModel fromUser, UserModel toProxy, String fromUserPasswordHash) throws LiquidoException {
-		String voterToken		 = castVoteService.getVoterToken(fromUser, area);
+		String voterToken		 = castVoteService.createVoterToken(fromUser, area);
 		return this.assignProxy(area, fromUser, toProxy, voterToken);
 	}
 	*/
@@ -79,12 +79,14 @@ public class ProxyService {
 		//----- sanity checks
 		if (area == null || fromUser == null || toProxy == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_SAVE_PROXY, "Cannot assign proxy. Need area, fromUser and toProxy!");
+		if (fromUser.equals(toProxy))
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_SAVE_PROXY, "Cannot delegate to myself!");
 
 		//----- check for circular delegation, which cannot allowed
 		if (thisWouldBeCircularDelegation(area, fromUser, toProxy))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ASSIGN_CIRCULAR_PROXY, "Cannot assign proxy. This would be a circular delegation which cannot be allowed.");
 
-		//----- get voters checksumModel, so that we can delegate it anonymously.
+		//----- validate voterToken and get voters checksumModel, so that we can delegate it anonymously.
 		TokenChecksumModel voterChecksumModel = castVoteService.isVoterTokenValid(voterToken);
 		if (voterChecksumModel == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_SAVE_PROXY, "Cannot assignProxy: voterToken seems to be invalid. Cannot not find its checksum.");
 
@@ -101,9 +103,17 @@ public class ProxyService {
 		// implementation note: some more interesting views un upsert in JPA: http://dkublik.github.io/persisting-natural-key-entities-with-spring-data-jpa/
 
 		//----- IF proxy has a public checksum THEN delegate to it ELSE ass a task, that proxy must confirm the delegation
-		TokenChecksumModel proxyChecksumModel = this.getChecksumModelOfPublicProxy(area, toProxy);
+		//TokenChecksumModel proxyChecksumModel = this.getChecksumModelOfPublicProxy(area, toProxy);
+
+		//TODO: is it ok that I use the proxies password to create a voter token for him when assigning a proxy?
+		String proxyToken = castVoteService.createVoterToken(toProxy, area, toProxy.getPasswordHash());
+		TokenChecksumModel proxyChecksumModel = castVoteService.isVoterTokenValid(proxyToken);
+
+		if (voterChecksumModel.equals(proxyChecksumModel))
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_SAVE_PROXY, "Cannot delegate checksum to itself!");
+
 		if (proxyChecksumModel == null) {
-			voterChecksumModel.setDelegatedTo(null);		//BUGFIX: need to null when there was a previous assignment
+			voterChecksumModel.setDelegatedTo(null);		//BUGFIX: need to null it when there was a previous assignment
 			//TODO: !!! store a task, that proxy must confirm the delegation.  TASK := delegation fromUser->toProxy exists  but fromUserChecksumModel.delegatedTo == null
 			log.warn("NOT YET IMPLEMENTED: store a task, that proxy must confirm the delegation. ");
 			return null;
@@ -112,7 +122,6 @@ public class ProxyService {
 			checksumRepo.save(voterChecksumModel);
 			return savedDelegation;
 		}
-
 	}
 
 	/**

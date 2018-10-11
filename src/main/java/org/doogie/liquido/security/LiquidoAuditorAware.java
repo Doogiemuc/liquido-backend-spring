@@ -24,7 +24,7 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
   @Override
   public UserModel getCurrentAuditor() {
     if (mockAuditor != null) {
-      log.debug("Returning mock auditor "+mockAuditor.getEmail());
+      //log.trace("Returning mock auditor "+mockAuditor.getEmail());
       return mockAuditor;
     }
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

@@ -11,7 +11,6 @@ import org.doogie.liquido.util.LiquidoProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -117,7 +116,6 @@ public class TestDataCreator implements CommandLineRunner {
   Random rand;
 
   public TestDataCreator() {
-    log.trace("=== ENTER TestDataCreator");
     this.rand = new Random(System.currentTimeMillis());
   }
 
@@ -133,9 +131,9 @@ public class TestDataCreator implements CommandLineRunner {
     for(String arg : args) {
       if ("--seedDB".equals(arg)) { seedDB = true; }
     }
+		log.info("=== RUN TestDataCreator --seedDB="+seedDB);
     if (seedDB) {
-      log.trace("=== running TestDataCreator with --seedDB");
-      log.info("Populate test DB: "+ jdbcTemplate.getDataSource().toString());
+      log.debug("Populate test DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
       seedUsers();
       auditorAware.setMockAuditor(this.users.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
@@ -251,9 +249,9 @@ public class TestDataCreator implements CommandLineRunner {
       UserModel toProxy  = users.get(delegation[1]);
 			log.debug("Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId());
       try {
-				String proxyVoterToken = castVoteService.getVoterToken(toProxy, area, toProxy.getPasswordHash());
+				String proxyVoterToken = castVoteService.createVoterToken(toProxy, area, toProxy.getPasswordHash());
         proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
-				String userVoterToken = castVoteService.getVoterToken(toProxy, area, fromUser.getPasswordHash());
+				String userVoterToken = castVoteService.createVoterToken(fromUser, area, fromUser.getPasswordHash());
 				proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);
 			} catch (LiquidoException e) {
         log.error("Cannot seedProxies: error Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId()+": "+e);
@@ -408,6 +406,9 @@ public class TestDataCreator implements CommandLineRunner {
   @Transactional
   private PollModel seedPollInElaborationPhase() {
     log.info("Seeding one poll in elaboration phase ...");
+    if (NUM_ALTERNATIVE_PROPOSALS > NUM_USERS)
+    	throw new RuntimeException("Cannot seedPollInElaborationPhase. Need at least "+NUM_ALTERNATIVE_PROPOSALS+" distinct users");
+
     try {
       AreaModel area = this.areas.get(0);
       String title, desc;
@@ -416,16 +417,16 @@ public class TestDataCreator implements CommandLineRunner {
       //===== create Poll from initial Proposal
       title = "Initial Proposal in a poll that is in elaboration "+System.currentTimeMillis();
       desc = getLoremIpsum(100, 400);
-      createdBy = this.randUser();
+      createdBy = getUser(0);
       LawModel initialProposal = createProposal(title, desc, area, createdBy, 10);
 			addCommentsToProposal(initialProposal);
       PollModel newPoll = pollService.createPoll(initialProposal);
 
       //===== add alternative proposals
-      for (int i = 0; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
+      for (int i = 1; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
         title = "Alternative Proposal" + i + " in a poll that is in elaboration"+System.currentTimeMillis();
         desc = getLoremIpsum(100, 400);
-        createdBy = this.randUser();
+        createdBy = getUser(i);
         LawModel altProp = createProposal(title, desc, area, createdBy, 20);
 				altProp = addCommentsToProposal(altProp);
         pollService.addProposalToPoll(altProp, newPoll);
@@ -456,7 +457,7 @@ public class TestDataCreator implements CommandLineRunner {
         proposal.setTitle("Proposal "+i+" in voting phase");
       }
       PollModel savedPoll = pollRepo.save(poll);
-      fakeCreateAt(savedPoll, getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS));
+      fakeCreateAt(savedPoll, getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)+1);
       fakeUpdatedAt(savedPoll, getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
 
       //===== Start the voting phase of this poll
@@ -524,7 +525,7 @@ public class TestDataCreator implements CommandLineRunner {
     Table tableAnnotation = model.getClass().getAnnotation(javax.persistence.Table.class);
     String tableName = tableAnnotation.name();
     String sql = "UPDATE " + tableName + " SET created_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
-    log.trace(sql);
+    //log.trace(sql);
     jdbcTemplate.execute(sql);
     Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
     model.setCreatedAt(daysAgo);
@@ -540,7 +541,7 @@ public class TestDataCreator implements CommandLineRunner {
     Table tableAnnotation = model.getClass().getAnnotation(javax.persistence.Table.class);
     String tableName = tableAnnotation.name();
     String sql = "UPDATE " + tableName + " SET updated_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
-    log.trace(sql);
+    //log.trace(sql);
     jdbcTemplate.execute(sql);
     Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
     model.setUpdatedAt(daysAgo);
@@ -564,7 +565,7 @@ public class TestDataCreator implements CommandLineRunner {
 
     // Now we use the original CastVoteService to get a voterToken and cast our vote.
     try {
-			String voterToken = castVoteService.getVoterToken(voter, pollInVoting.getArea(), voter.getPasswordHash());
+			String voterToken = castVoteService.createVoterToken(voter, pollInVoting.getArea(), voter.getPasswordHash());
 			CastVoteRequest castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
 			castVoteService.castVote(castVoteRequest);
 		} catch (LiquidoException e) {
@@ -588,7 +589,11 @@ public class TestDataCreator implements CommandLineRunner {
 	private UserModel randUser() {
 		Object[] entries = users.values().toArray();
 		return (UserModel)entries[rand.nextInt(entries.length)];
+	}
 
+	private UserModel getUser(int i) {
+		Object[] entries = users.values().toArray();
+		return (UserModel)entries[i];
 	}
 
   private static final String loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, nam urna. Vitae aenean velit, voluptate velit rutrum. Elementum integer rhoncus rutrum morbi aliquam metus, morbi nulla, nec est phasellus dolor eros in libero. Volutpat dui feugiat, non magna, parturient dignissim lacus ipsum in adipiscing ut. Et quis adipiscing perferendis et, id consequat ac, dictum dui fermentum ornare rhoncus lobortis amet. Eveniet nulla sollicitudin, dolore nullam massa tortor ullamcorper mauris. Lectus ipsum lacus.\n" +
