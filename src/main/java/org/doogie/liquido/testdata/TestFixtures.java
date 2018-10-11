@@ -18,7 +18,7 @@ public class TestFixtures {
 
 	public static final String AREA0_TITLE = "Area 0";
   public static final String AREA1_TITLE = "Area 1";
-  public static final long   USER4_NUM_VOTES = 5;     // testuser4@liquido.de  has 5 votes (including his own) due to (transitive) delegations
+  public static final long   USER1_NUM_VOTES = 6;     // testuser1@liquido.de  has 6 votes (including his own) due to (transitive) delegations
 
   //TODO: REST URLs should also be part of these TestFixtures. When an URL changes in the backend this should break a test.
 }

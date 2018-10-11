@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 /**
  * Main entry class for Liquido
@@ -15,7 +16,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Starts the SpringApplication.
  */
 @SpringBootApplication
-@EnableWebSecurity
+//@EnableWebSecurity
+//@EnableWebMvc
 public class LiquidoBackendSpringApplication {
   static Logger log = LoggerFactory.getLogger(LiquidoBackendSpringApplication.class);
 

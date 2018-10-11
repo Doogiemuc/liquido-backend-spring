@@ -515,12 +515,12 @@ public class RestEndpointTests {
     log.trace("TEST getNumVotes");
     long user4_id = this.users.get(4).getId();
     long area1_id = this.areas.get(1).getId();
-    String uri = "/users/"+user4_id+"/getNumVotes/"+area1_id;
+    String uri = "/my/numVotes"+area1_id;
 
     long numVotes = client.getForObject(uri, Long.class);
 
-    assertEquals("User "+TestFixtures.USER4_EMAIL+" should have "+TestFixtures.USER4_NUM_VOTES+" delegated votes in area='"+TestFixtures.AREA1_TITLE+"'", TestFixtures.USER4_NUM_VOTES, numVotes);
-    log.trace("TEST SUCCESS: found expected "+TestFixtures.USER4_NUM_VOTES+" delegations for "+TestFixtures.USER4_EMAIL);
+    assertEquals("User "+TestFixtures.USER4_EMAIL+" should have "+TestFixtures.USER1_NUM_VOTES+" delegated votes in area='"+TestFixtures.AREA1_TITLE+"'", TestFixtures.USER1_NUM_VOTES, numVotes);
+    log.trace("TEST SUCCESS: found expected "+TestFixtures.USER1_NUM_VOTES+" delegations for "+TestFixtures.USER4_EMAIL);
   }
 
   /**
@@ -530,13 +530,13 @@ public class RestEndpointTests {
   public void testGetProxyMap() {
     log.trace("TEST getProxyMap");
     long user0_id = this.users.get(0).getId();
-    String uri = "/users/"+user0_id+"/getProxyMap";
+    String uri = "/my/proxyMap";
 
     String proxyMapJson = client.getForObject(uri, String.class);
     String proxyInArea1_email = JsonPath.read(proxyMapJson, "$['"+TestFixtures.AREA1_TITLE+"'].email");
 
     assertEquals("User "+TestFixtures.USER1_EMAIL+" should have "+TestFixtures.USER4_EMAIL+" as proxy", TestFixtures.USER4_EMAIL, proxyInArea1_email);
-    log.trace("TEST SUCCESS: found expected "+TestFixtures.USER4_NUM_VOTES+" delegations for "+TestFixtures.USER4_EMAIL);
+    log.trace("TEST SUCCESS: found expected "+TestFixtures.USER1_NUM_VOTES+" delegations for "+TestFixtures.USER4_EMAIL);
   }
 
 

@@ -18,7 +18,6 @@ public class LiquidoAuthUser extends User {  // org.springframework.security.cor
   }
 
   public UserModel getLiquidoUserModel() {
-    System.out.println("========= getLiquidoUserModel will return "+liquidoUserModel);
   	return liquidoUserModel;
   }
 
