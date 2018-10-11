@@ -34,7 +34,7 @@ public class LiquidoAnonymizer {
 	 * @param str one or more input strings for the calculation
 	 * @return hash(str1+str2+str3+...+strN) using salt
 	 */
-  public String getBCrypetHash(String... str) {
+  public String getBCryptHash(String... str) {
     StringBuffer inputStr = new StringBuffer();
     for(String s: str) {
       inputStr.append(s);

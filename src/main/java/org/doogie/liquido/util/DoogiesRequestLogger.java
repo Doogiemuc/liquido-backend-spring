@@ -52,10 +52,12 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
     long startTime = System.currentTimeMillis();
+
+    String requestId = '[' + String.valueOf(startTime % 10000) + ']';
+
     StringBuilder reqInfo = new StringBuilder()
-     .append("[")
-     .append(startTime % 10000)  // request ID
-     .append("] ")
+     .append(requestId)
+     .append(" ")
      .append(request.getMethod())
      .append(" ")
      .append(request.getRequestURL());
@@ -111,7 +113,7 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     // I can only log the request's body AFTER the request has been made and ContentCachingRequestWrapper did its work.
     String requestBody = this.getContentAsString(wrappedRequest.getContentAsByteArray(), this.maxPayloadLength, request.getCharacterEncoding());
     if (requestBody.length() > 0) {
-      this.logger.debug("   "+reqInfo+" Request body was:\n" +requestBody);
+      this.logger.debug("   "+requestId+" Request body was:\n        " +requestBody);
       if (requestBody.length() > maxPayloadLength)
         this.logger.debug("[...]");
     } else {
@@ -120,7 +122,7 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
 	    }
     }
 
-    this.logger.debug("<= " + reqInfo + ": returned status=" + response.getStatus() + " in "+duration + "ms");
+    this.logger.debug("<= " + response.getStatus() + " in "+duration + "ms. "+reqInfo);
     if (includeResponsePayload) {
       byte[] buf = wrappedResponse.getContentAsByteArray();
       this.logger.debug("   returned response body:\n"+getContentAsString(buf, this.maxPayloadLength, response.getCharacterEncoding()));

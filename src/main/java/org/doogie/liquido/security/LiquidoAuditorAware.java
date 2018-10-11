@@ -27,22 +27,23 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
       log.debug("Returning mock auditor "+mockAuditor.getEmail());
       return mockAuditor;
     }
-    try {
-      Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-      if (authentication == null || !authentication.isAuthenticated()) {
-        log.warn("Cannot getCurrentAuditor. No one is currently authenticated");
-        return null;
-      }
-      LiquidoAuthUser authUser = (LiquidoAuthUser)authentication.getPrincipal();   // principal _IS_ a LiquidoAuthUser, because I put one in there   in LiquidoUserDetailsService.java
-      return authUser.getLiquidoUserModel();
-
-      //BUGFIX:  Must not do this, since this will lead to an endless loop StackOverflowException
-      //http://stackoverflow.com/questions/42315960/stackoverflowexception-in-spring-data-jpa-app-with-spring-security-auditoraware
-      //UserModel currentlyLoggedInUser = userRepo.findByEmail(principal.getUsername()) ;
-    } catch (Exception e) {
-      log.error("Cannot getCurrentAuditor: "+e);
-      throw e;
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication == null || !authentication.isAuthenticated()) {
+      log.warn("Cannot getCurrentAuditor. No one is currently authenticated");
+      return null;
     }
+
+    if (authentication.getPrincipal() != null && authentication.getPrincipal().equals("anonymousUser")) {
+      log.trace("Anonymous user");
+      return null;
+    }
+    LiquidoAuthUser authUser = (LiquidoAuthUser)authentication.getPrincipal();   // principal _IS_ a LiquidoAuthUser, because I put one in there   in LiquidoUserDetailsService.java
+    return authUser.getLiquidoUserModel();
+
+    //BUGFIX:  Must not do this, since this will lead to an endless loop StackOverflowException
+    //http://stackoverflow.com/questions/42315960/stackoverflowexception-in-spring-data-jpa-app-with-spring-security-auditoraware
+    //UserModel currentlyLoggedInUser = userRepo.findByEmail(principal.getUsername()) ;
+
   }
 
   public void setMockAuditor(UserModel mockAuditor) {

@@ -89,17 +89,7 @@ public class RepoTests {
     log.trace("TEST CreateIdeaWithMockAuditor SUCCESSFULL");
   }
 
-  @Test
-  public void getNumVotes() {
-    log.trace("TEST getNumVotes of "+ TestFixtures.USER4_EMAIL +" in area.title='"+ TestFixtures.AREA1_TITLE +"'");
-    UserModel user4 = userRepo.findByEmail(TestFixtures.USER4_EMAIL);
-    AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-    long numVotes = delegationRepo.getNumVotes(area1, user4);
-    assertEquals(TestFixtures.USER4_NUM_VOTES, numVotes);
-    log.info("TEST SUCCESS: "+ TestFixtures.USER4_EMAIL +" is proxy for "+ TestFixtures.USER4_NUM_VOTES +" delegates (including himself).");
-  }
-
-  @Test
+   @Test
   @WithUserDetails("testuser1@liquido.de")
   public void testUpdate() {
     log.trace("TEST update");
