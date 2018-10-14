@@ -21,7 +21,8 @@ public class LiquidoException extends Exception {
 		CANNOT_SAVE_PROXY(6),				// assign or remove
 		CANNOT_ASSIGN_CIRCULAR_PROXY(7),
 		CANNOT_CAST_VOTE(8),
-    CANNOT_GET_TOKEN(9);
+    CANNOT_GET_TOKEN(9),
+		CANNOT_FINISH_POLL(10);
 		int errorCode;
     Errors(int code) { this.errorCode = code; }
   }

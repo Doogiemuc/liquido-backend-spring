@@ -125,12 +125,12 @@ public class CastVoteService {
 	}
 
 	/**
-	 * The upsert algorithm for ballots:
+	 * This method calls itself recursivly. The <b>upsert</b> algorithm for storing a ballot:
 	 *
 	 * 1) Check the integrity of the passed newBallot. Especially check the validity of its TokenChecksumModel.
 	 *    The checksum must be known.
 	 *
-	 * 2) IF there is NO existing ballot for this poll with that checksum,
+	 * 2) IF there is NO existing ballot for this poll with that checksum yet,
 	 *    THEN save a new ballot
 	 *    ELSE // ballot with that checksum already exists
 	 *      IF the level of the existing ballot is SMALLER then the passed newBallot.level
@@ -138,33 +138,17 @@ public class CastVoteService {
 	 *      ELSE update the existing ballot's level and vote order
 	 *
 	 *  3) FOR EACH directly delegated TokenChecksumModel
+	 *              create a childBallot and recursively try to store this childBallot.
 	 *
-	 *
-	 *
-	 * 1) Create a new (unvalidated) checksumModel from the passed voterToken
-	 * 2) Create a new BallotModel from the passed parameters with that checksumModel
-	 * 3) Check integrity of the new BallotModel
-	 * 4) Then:
-	 *
-	 * passed   | existingBallot | update voteOrder of |
-	 * .ownVote | .ownVote       | existing ballot?    |
-	 * ---------+----------------+------------------+----------------
-	 * any      | no existing    | /                | Insert a new ballot with passed ownVote value
-	 * true     | true           | yes              | Voter updates his own vote order.
-	 * true     | false          | yes              | Voter overwrites previous vote of a proxy.
-	 * false    | true           | no               | Proxy must not overwrite voters own vote.
-	 * false    | false          | yes              | Proxy updated his vote order which is distributed to delegee.
-	 *
-	 * We MUST first check if that ballot already exists. And than proceed accordingly.
-	 * If we'd just do   ballotRepo.save(ballot)   then we'd get a JdbcSQLException:
-	 *   Unique index or primary key violation: "UKJ4ELP2BMUSJ2YX6FYDKUTEDS4_INDEX_1 ON PUBLIC.BALLOTS(POLL_ID, CHECKSUM) ...
+	 *  Remark: The child ballot might not be stored when there alrady is one with a smaller level. This is
+	 *          our recursion limit.
 	 *
 	 * @param newBallot the ballot that shall be stored. The ballot will be checked very thoroughly. Especially if the ballot's checksum is valid.
 	 * @return the newly created or updated existing ballot  OR
 	 *         null if the ballot wasn't stored due to an already existing ballot with a smaller level.
 	 */
 	public BallotModel storeBallot(BallotModel newBallot) throws LiquidoException {
-		log.debug("storeBallot("+newBallot+") checksum="+newBallot.getChecksum().getChecksum());
+		log.trace("storeBallot("+newBallot+") checksum="+newBallot.getChecksum().getChecksum());
 
 		//----- check validity of the ballot
 		checkBallot(newBallot);
@@ -233,7 +217,7 @@ public class CastVoteService {
 		// check that all proposals you wanna vote for are in this poll and that they are also in voting phase
 		for(LawModel proposal : ballot.getVoteOrder()) {
 			if (!proposal.getPoll().equals(ballot.getPoll()))
-				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: A proposal(id="+proposal.getId()+") is not part of poll(id="+ballot.getPoll().getId()+")!");
+				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Proposal(id="+proposal.getId()+") is not part of poll(id="+ballot.getPoll().getId()+")!");
 			if (!LawModel.LawStatus.VOTING.equals(proposal.getStatus())) {
 				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: proposals must be in voting phase.");
 			}

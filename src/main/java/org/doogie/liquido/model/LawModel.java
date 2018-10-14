@@ -23,7 +23,7 @@ import java.util.Set;
 @Entity
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "laws")
-public class LawModel extends BaseModel {
+public class LawModel extends BaseModel implements Comparable<LawModel> {
   /*
    * DEPRECATED
    * When a class uses a self references (as we formerly had it in initialLawId, then you must use a sequence for generating IDs,
@@ -70,6 +70,7 @@ public class LawModel extends BaseModel {
    *
    */
   @ManyToOne(optional = true)
+  //@JoinColumn(name="poll_id")  this column name is already the default
   public PollModel poll = null;
 
   /** suggestions for improvement */
@@ -100,6 +101,17 @@ public class LawModel extends BaseModel {
    */
   Date reachedQuorumAt;
 
+  /**
+   * compare two LawModels by their ID. This is used for sorting proposals in PollModel
+   * @param law another idea, proposal or law
+   * @return -1, 0 or +1
+   */
+  @Override
+  public int compareTo(LawModel law) {
+    if (law == null) return 0;
+    return law.getId().compareTo(this.getId());
+  }
+
   /** enumeration of law status */
   public enum LawStatus {
     IDEA(0),            // An idea is a newly created proposal for a law that did not reach its quorum yet.
@@ -107,8 +119,9 @@ public class LawModel extends BaseModel {
     ELABORATION(2),     // Proposal is part of a poll and can be discussed. Voting has not yet started.
     VOTING(3),          // When the voting phase starts, the description of a proposals cannot be changed anymore.
     LAW(4),             // The winning proposal becomes a law.
-    RETENTION(5),       // When a law looses support, it is in the retention phase
-    RETRACTED(6);       // When a law looses support for too long, it will be retracted.
+    DROPPED(5),         // All other porposals in the poll are dropped.
+    RETENTION(6),       // When a law looses support, it is in the retention phase
+    RETRACTED(7);       // When a law looses support for too long, it will be retracted.
     int statusId;
     LawStatus(int id) { this.statusId = id; }
   }

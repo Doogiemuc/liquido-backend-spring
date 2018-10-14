@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.Table;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import static org.doogie.liquido.model.LawModel.LawStatus;
@@ -51,7 +52,6 @@ public class TestDataCreator implements CommandLineRunner {
   public int NUM_PROPOSALS = 50;
 
   public int NUM_ALTERNATIVE_PROPOSALS = 5;   // proposals in poll
-  public int NUM_PROPOSALS_IN_VOTING = 4;     // proposals currently in voting phase
 
   public int NUM_LAWS = 2;
 
@@ -135,15 +135,15 @@ public class TestDataCreator implements CommandLineRunner {
     if (seedDB) {
       log.debug("Populate test DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
-      seedUsers();
+      seedUsers(NUM_USERS, "testuser");
       auditorAware.setMockAuditor(this.users.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
       //seedGlobalProperties();
       seedAreas();
       seedProxies();
       seedIdeas();
       seedProposals();
-      seedPollInElaborationPhase();
-      seedPollInVotingPhase();
+      seedPollInElaborationPhase(NUM_ALTERNATIVE_PROPOSALS);
+      seedPollInVotingPhase(NUM_ALTERNATIVE_PROPOSALS);
       seedLaws();
       seedVotes();
 
@@ -178,12 +178,12 @@ public class TestDataCreator implements CommandLineRunner {
     //return Integer.valueOf(getGlobalProperty(key));
   }
 
-  private void seedUsers() {
+  public Map<String, UserModel> seedUsers(int numUsers, String mailPrefix) {
     log.info("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
     this.users = new HashMap<>();
 
-    for (int i = 0; i < NUM_USERS; i++) {
-      String email = "testuser" + (i+1) + "@liquido.de";    // Remember that DB IDs start at 1. Testuser1 has ID=1 in DB. And there is no testuser0
+    for (int i = 0; i < numUsers; i++) {
+      String email = mailPrefix + (i+1) + "@liquido.de";    // Remember that DB IDs start at 1. Testuser1 has ID=1 in DB. And there is no testuser0
       UserModel newUser = new UserModel(email, "dummyPasswordHash");
 
       UserProfileModel profile = new UserProfileModel();
@@ -202,8 +202,9 @@ public class TestDataCreator implements CommandLineRunner {
 
       UserModel savedUser = userRepo.save(newUser);
       this.users.put(savedUser.getEmail(), savedUser);
-      if (i==0) auditorAware.setMockAuditor(this.users.get(TestFixtures.USER1_EMAIL));   // prevent some warnings
+      if (i==0) auditorAware.setMockAuditor(this.users.get(mailPrefix+"1@liquido.de"));   // prevent some warnings
     }
+    return this.users;
   }
 
   /**
@@ -404,9 +405,9 @@ public class TestDataCreator implements CommandLineRunner {
    * @return the poll in elaboration as it has been stored into the DB.
    */
   @Transactional
-  private PollModel seedPollInElaborationPhase() {
+  private PollModel seedPollInElaborationPhase(int numProposals) {
     log.info("Seeding one poll in elaboration phase ...");
-    if (NUM_ALTERNATIVE_PROPOSALS > NUM_USERS)
+    if (numProposals > this.users.size())
     	throw new RuntimeException("Cannot seedPollInElaborationPhase. Need at least "+NUM_ALTERNATIVE_PROPOSALS+" distinct users");
 
     try {
@@ -419,17 +420,17 @@ public class TestDataCreator implements CommandLineRunner {
       desc = getLoremIpsum(100, 400);
       createdBy = getUser(0);
       LawModel initialProposal = createProposal(title, desc, area, createdBy, 10);
-			addCommentsToProposal(initialProposal);
+			initialProposal = addCommentsToProposal(initialProposal);
       PollModel newPoll = pollService.createPoll(initialProposal);
 
       //===== add alternative proposals
-      for (int i = 1; i < NUM_ALTERNATIVE_PROPOSALS; i++) {
+      for (int i = 1; i < numProposals; i++) {
         title = "Alternative Proposal" + i + " in a poll that is in elaboration"+System.currentTimeMillis();
         desc = getLoremIpsum(100, 400);
         createdBy = getUser(i);
         LawModel altProp = createProposal(title, desc, area, createdBy, 20);
 				altProp = addCommentsToProposal(altProp);
-        pollService.addProposalToPoll(altProp, newPoll);
+        newPoll = pollService.addProposalToPoll(altProp, newPoll);
       }
 
       fakeCreateAt(newPoll, getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
@@ -447,14 +448,14 @@ public class TestDataCreator implements CommandLineRunner {
    * Seed a poll that already is in its voting phase.
    *   Will build upon a seedPollInElaborationPhase and then start the voting phase via pollService.
    */ 
-  public void seedPollInVotingPhase() {
+  public PollModel seedPollInVotingPhase(int numProposals) {
     log.info("Seeding one poll in voting phase ...");
     try {
-      PollModel poll = seedPollInElaborationPhase();
+      PollModel poll = seedPollInElaborationPhase(numProposals);
       int i = 1;
       for(LawModel proposal: poll.getProposals()) {
+        proposal.setTitle("Proposal "+i+" in voting phase "+System.currentTimeMillis());
         i++;
-        proposal.setTitle("Proposal "+i+" in voting phase");
       }
       PollModel savedPoll = pollRepo.save(poll);
       fakeCreateAt(savedPoll, getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)+1);
@@ -462,8 +463,11 @@ public class TestDataCreator implements CommandLineRunner {
 
       //===== Start the voting phase of this poll
       pollService.startVotingPhase(savedPoll);
-      savedPoll.setVotingStartAt(LocalDateTime.now().minusDays(1));
-      pollRepo.save(savedPoll);
+      LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
+      savedPoll.setVotingStartAt(yesterday);
+			savedPoll.setVotingEndAt(yesterday.truncatedTo(ChronoUnit.DAYS).plusDays(props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE)));     //voting ends in n days at midnight
+      PollModel finalPoll = pollRepo.save(savedPoll);
+      return finalPoll;
     } catch (Exception e) {
       log.error("Cannot seed Poll in voting phase: " + e);
       throw new RuntimeException("Cannot seed Poll in voting phase", e);
@@ -551,9 +555,11 @@ public class TestDataCreator implements CommandLineRunner {
     log.info("Seeding votes ...");
 
     List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
-    if (polls.size() == 0) throw new RuntimeException("cannot seed Ballots. There is no poll in voting phase.");  //MAYBE: create one
+    if (polls.size() == 0) throw new RuntimeException("cannot seed votes. There is no poll in voting phase.");  //MAYBE: create one
     PollModel pollInVoting = polls.get(0);
-    if (pollInVoting.getNumCompetingProposals() < 2) throw new RuntimeException("Cannot seed ballots. Need at least two alternative proposals in VOTING phase");
+    if (pollInVoting.getNumCompetingProposals() < 2) throw new RuntimeException("Cannot seed votes. Poll in voting must have at least two proposals.");
+
+    log.debug(pollInVoting.toString());
 
 		String basePath = springEnv.getProperty("spring.data.rest.base-path");
     UserModel voter = users.get(TestFixtures.USER1_EMAIL);
@@ -565,7 +571,9 @@ public class TestDataCreator implements CommandLineRunner {
 
     // Now we use the original CastVoteService to get a voterToken and cast our vote.
     try {
+    	auditorAware.setMockAuditor(voter);
 			String voterToken = castVoteService.createVoterToken(voter, pollInVoting.getArea(), voter.getPasswordHash());
+			auditorAware.setMockAuditor(null);
 			CastVoteRequest castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
 			castVoteService.castVote(castVoteRequest);
 		} catch (LiquidoException e) {
@@ -586,14 +594,18 @@ public class TestDataCreator implements CommandLineRunner {
 	 * get one random UserModel
 	 * @return a random user
 	 */
-	private UserModel randUser() {
+	public UserModel randUser() {
 		Object[] entries = users.values().toArray();
 		return (UserModel)entries[rand.nextInt(entries.length)];
 	}
 
-	private UserModel getUser(int i) {
+	public UserModel getUser(int i) {
 		Object[] entries = users.values().toArray();
 		return (UserModel)entries[i];
+	}
+
+	public AreaModel getArea(int i) {
+		return areas.get(i);
 	}
 
   private static final String loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, nam urna. Vitae aenean velit, voluptate velit rutrum. Elementum integer rhoncus rutrum morbi aliquam metus, morbi nulla, nec est phasellus dolor eros in libero. Volutpat dui feugiat, non magna, parturient dignissim lacus ipsum in adipiscing ut. Et quis adipiscing perferendis et, id consequat ac, dictum dui fermentum ornare rhoncus lobortis amet. Eveniet nulla sollicitudin, dolore nullam massa tortor ullamcorper mauris. Lectus ipsum lacus.\n" +
