@@ -67,11 +67,12 @@ public class BallotModel {
    * One voter may put some or all proposals of the poll into his (ordered) ballot. But of course he may only vote at maximum once for every proposal.
    * And one proposal may be voted for by several voters => ManyToMany relationship
    */
+  //BE CAREFULL: Lists are not easy to handle in hibernate: https://vladmihalcea.com/hibernate-facts-favoring-sets-vs-bags/
   @NonNull
   @NotNull
   @ManyToMany(fetch = FetchType.EAGER)   //(cascade = CascadeType.MERGE, orphanRemoval = false)
   @OrderColumn  // keep order in DB
-  public List<LawModel> voteOrder;   //laws in voteOrder must not be duplicate! This is checked in VoteRestController.
+  public List<LawModel> voteOrder;   		//proposals in voteOrder must not be duplicate! This is checked in VoteRestController.
 
   /**
    * Encrypted and anonymous information about the voter that casted this vote into the ballot.
@@ -83,7 +84,6 @@ public class BallotModel {
 	@OneToOne
   public TokenChecksumModel checksum;   //TODO: or just save the checksum as string?  had it like that but refactored it
 
-	// DO NOT expose checksum in toString !!!
 	@Override
 	public String toString() {
 		String proposalIds = voteOrder.stream().map(law->law.getId().toString()).collect(Collectors.joining(","));
@@ -91,8 +91,8 @@ public class BallotModel {
 				"id=" + id +
 				", poll.id=" + poll.getId() +
 				", level=" + level +
-				//", checksum="+checksum +      // better do not expose checksum in toString
 				", voteOrder(proposalIds)=[" + proposalIds +"]"+
+				", checksum="+checksum +
 				"}";
 	}
 }

@@ -4,13 +4,15 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+import org.hibernate.annotations.SortNatural;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Data model for a poll. A poll has a list of competing proposals
@@ -29,16 +31,24 @@ import java.util.Set;
 public class PollModel extends BaseModel {
 
   /**
-   * The proposals for a law of this Poll. All of these proposal must already have reached their quorum.
+   * The proposals for a law in this poll. All of these proposal must already have reached their quorum.
+	 * There must not be any duplicates. A proposal can join a poll only once.
    * When the poll is in PollStatus == ELABORATION, then these proposals may still be changed and further
    * proposals may be added. When The PollStauts == VOTING, then proposals must not be changed anymore.
    */
-  //Beginners guide to Hibernate Cascade types:  https://vladmihalcea.com/2015/03/05/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
+  // This is the ONE side of a bidirectional ManyToOne aggregation relationship.
   // https://vladmihalcea.com/2017/03/29/the-best-way-to-map-a-onetomany-association-with-jpa-and-hibernate/
-  @OneToMany(cascade = CascadeType.ALL, mappedBy="poll", fetch = FetchType.EAGER) //, orphanRemoval = true/false ??  Should a proposals be removed when the poll is deleted?
+  // Beginners guide to Hibernate Cascade types:  https://vladmihalcea.com/2015/03/05/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
+
+	// we deliberately fetch all proposals in this poll EAGERly, so that getNumCompetingProposals can be called on the returned entity.
+
+	// I had problems with ArrayList: https://stackoverflow.com/questions/1995080/hibernate-criteria-returns-children-multiple-times-with-fetchtype-eager
+	// So I used a SortedSet:   https://docs.jboss.org/hibernate/orm/5.2/userguide/html_single/Hibernate_User_Guide.html#collections-sorted-set
+  @OneToMany(cascade = CascadeType.MERGE, mappedBy="poll", fetch = FetchType.EAGER) //, orphanRemoval = true/false ??  Should a proposals be removed when the poll is deleted? => NO
   @NotNull
   @NonNull
-  Set<LawModel> proposals = new HashSet<>();
+	@SortNatural		// sort proposals in this poll by their ID  (LawModel implements Comparable)
+	SortedSet<LawModel> proposals = new TreeSet<>();
 
   // Keep in mind that you SHOULD NOT just simply call
   //   anyPoll.getProposals.add(someProposal)

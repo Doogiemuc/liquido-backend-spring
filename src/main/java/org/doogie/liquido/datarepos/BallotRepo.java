@@ -7,6 +7,8 @@ import org.doogie.liquido.rest.VoteRestController;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.rest.core.annotation.RestResource;
 
+import java.util.List;
+
 /**
  * Database abstraction for "ballots".
  *
@@ -37,8 +39,14 @@ public interface BallotRepo extends CrudRepository<BallotModel, Long> {
   @Override
   @RestResource(exported = false)
   void deleteAll();
-
   */
+
+	/**
+	 * find all ballots in a poll
+	 * @param poll
+	 * @return list of ballots that have been casted so far
+	 */
+  List<BallotModel> findByPoll(PollModel poll);
 
   /**
    * Find a ballot for a poll with a given checksumModel, ie. that was casted from a voter
