@@ -13,6 +13,7 @@ import java.util.Set;
 
 /**
  * Data model: proposal for ideas, proposals and law.
+ * Title must be unique!
  */
 //Lombok @Data does not work very well with spring. Need to use the individual annotations
 @Getter

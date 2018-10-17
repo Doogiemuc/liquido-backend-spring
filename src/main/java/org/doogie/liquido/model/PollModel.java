@@ -67,10 +67,15 @@ public class PollModel extends BaseModel {
   PollStatus status = PollStatus.ELABORATION;
 
   /** Date when the voting phase started. Will be set in PollService */
+  //TODO: LocalDateTime (without timezone)  or ZonedDateTime (with timezone)?
   LocalDateTime votingStartAt;
 
   /** Date when the voting phase will end. Will be set in PollService */
 	LocalDateTime votingEndAt;
+
+	/** The wining proposal of this poll, that became a law. Filled after poll is FINISHED. */
+	@OneToOne
+	LawModel winner = null;
 
   /** return the number of competing proposals */
   public int getNumCompetingProposals() {
