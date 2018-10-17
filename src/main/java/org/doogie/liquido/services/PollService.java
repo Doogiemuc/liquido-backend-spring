@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * This spring component implements the business logic for {@link org.doogie.liquido.model.PollModel}
@@ -38,6 +39,9 @@ public class PollService {
 
   @Autowired
 	BallotRepo ballotRepo;
+
+  //@Autowired
+	//TaskScheduler scheduler;
 
 
 	/**
@@ -103,6 +107,7 @@ public class PollService {
    * Poll must be in elaboration phase and must have at least two proposals
    * @param poll a poll in elaboration phase with at least two proposals
    */
+  @Transactional
   public void startVotingPhase(@NonNull PollModel poll) throws LiquidoException {
     log.info("startVotingPhase of "+poll.toString());
     if (poll.getStatus() != PollModel.PollStatus.ELABORATION)
@@ -113,16 +118,33 @@ public class PollService {
       proposal.setStatus(LawModel.LawStatus.VOTING);
     }
     poll.setStatus(PollModel.PollStatus.VOTING);
-    LocalDateTime votingStart = LocalDateTime.now();
+    LocalDateTime votingStart = LocalDateTime.now();			// LocalDateTime is without a timezone
     poll.setVotingStartAt(votingStart);   //record the exact datetime when the voting phase started.
     poll.setVotingEndAt(votingStart.truncatedTo(ChronoUnit.DAYS).plusDays(props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE)));     //voting ends in n days at midnight
-    pollRepo.save(poll);
+		pollRepo.save(poll);
+
+		//----- schedule a Task in Spring that will end the voting phase.
+		PollService that = this;
+		Runnable endVotingPhase = new Runnable() {
+			public void run() {
+				try {
+					that.finishVotingPhase(poll);
+				} catch (LiquidoException e) {
+					log.error("Could not finishVotingPhase of "+poll);
+				}
+			}
+		};
+		//TODO: scheduler.schedule(endVotingPhase, Date.from(poll.getVotingEndAt().atZone(ZoneId.systemDefault()).toInstant()));  // 		new CronTrigger("0 15 9-17 * * MON-FRI")
   }
 
-
-
-
-  public void finishVotingPhase(@NonNull PollModel poll) throws LiquidoException {
+	/**
+	 * Finish the voting phase of a poll and calculate the winning proposal.
+	 * @param poll A poll in voting phase
+	 * @return Winnin proposal of this poll that now is a law.
+	 * @throws LiquidoException When poll is not in voting phase
+	 */
+	@Transactional
+  public LawModel finishVotingPhase(@NonNull PollModel poll) throws LiquidoException {
     if (!poll.getStatus().equals(PollModel.PollStatus.VOTING))
       throw new LiquidoException(LiquidoException.Errors.CANNOT_FINISH_POLL, "Poll must be in status VOTING.");
 
@@ -130,19 +152,167 @@ public class PollService {
     for(LawModel proposal : poll.getProposals()) {
       proposal.setStatus(LawModel.LawStatus.DROPPED);
     }
+    poll.setVotingEndAt(LocalDateTime.now());
 
-		//TODO: calc winner(s) of poll with Schulz method
+		//calc winner(s) of poll
+		LawModel winningProposal = calcSchulzeMethodWinners(poll).get(0);
+		winningProposal.setStatus(LawModel.LawStatus.LAW);
+		poll.setWinner(winningProposal);
+		pollRepo.save(poll);
+    return winningProposal;
   }
+
+  
+
+
+
+	//========= Ranked Pairs voting   https://en.wikipedia.org/wiki/Ranked_pairs  ==================================
+	// adapted from https://gist.github.com/asafh/a8e9af7a3e5282cbba27
+
+	/**
+	 * Compare two majorities which one is "better" and wins.
+	 * A Majority is how often a candidate i was preferred to candidate j.
+	 * 		int[3] = { i, j, numPreferences_I_over_J }
+	 */
+	public class MajorityComparator implements Comparator<int[]> {
+		Matrix duelMatrix;
+
+		public MajorityComparator(Matrix duelMatrix) {
+			this.duelMatrix = duelMatrix;
+		}
+
+		/**
+		 * Compare two majorities m1 and m2
+		 * (1) The majority having more support for its alternative is ranked first.
+		 * (2) Where the majorities are equal, the majority with the smaller minority opposition is ranked first.
+		 * @param m1 majority one
+		 * @param m2 majority two
+		 * @return a negative number IF m1 < m2   OR
+		 *         a positive number IF m2 > m1
+		 */
+		@Override
+		public int compare(int[] m1, int[] m2) {
+			if (m1 == null && m2 == null) return 0;
+			if (m1.equals(m2)) return 0;
+			if (m1 == null) return -1;
+			if (m2 == null) return  1;
+			int diff = m2[2] - m1[2];  // (1)
+			if (diff == 0) {
+				return duelMatrix.get(m2[1], m2[0]) - duelMatrix.get(m1[1], m1[0]);	// (2)
+			} else {
+				return diff;
+			}
+		}
+	}
+
+	/**
+	 * A directed graph with nodes. (Without node weights)
+	 */
+	public class DirectedGraph extends HashMap<Integer, Set<Integer>> {
+		/** add an edge from a node to another node */
+		public boolean addDirectedEdge(int from, int to) {
+			if (from == to) throw new IllegalArgumentException("cannot add a circular edge from a node to itself");
+			if (this.get(from) == null) this.put(from, new HashSet<>());  // lazily create HashSet
+			return this.get(from).add(to);
+		}
+
+		/** @return true if there is a path from node A to node B along the directed edges */
+		public boolean reachable(int from, int to) {
+			Set<Integer> neighbors = this.get(from);
+			if (neighbors == null) return false;				// from is a leave
+			if (neighbors.contains(to)) return true;		// to can be directly reached as a neighbor
+			for(int neighbor: neighbors) {							// recursively check from all neighbors
+				if (reachable(neighbor, to)) return true;
+			}
+			return false;
+		}
+
+		/**
+		 * A "source" is a node that is not reachable from any other node.
+		 * @return all sources, ie. nodes with no incoming links.
+		 */
+		public Set<Integer> getSources() {
+			Set<Integer> sources = new HashSet(this.keySet());   // clone! of all nodes in this graph
+			for(int nodeKey : this.keySet()) {
+				Set<Integer> neighbors = this.get(nodeKey);
+				for (int neighbor: neighbors) sources.remove(neighbor);
+			}
+			return sources;
+		}
+
+		@Override
+		public String toString() {
+			StringBuffer sb = new StringBuffer();
+			sb.append("DirectedGraph[");
+			Iterator<Integer> it = this.keySet().iterator();
+			while (it.hasNext()) {
+				Integer key = it.next();
+				sb.append("["+key+"->[");
+				String neighborIDs = this.get(key).stream().map(id -> String.valueOf(id)).collect(Collectors.joining(","));
+				sb.append(neighborIDs);
+				sb.append("]");
+				if (it.hasNext()) sb.append(", ");
+			}
+			//if (this.keySet().size() > 0) sb.delete(sb.length()-2, sb.length()-1);
+			sb.append("]");
+			return sb.toString();
+		}
+	}
+
+	/**
+	 * Calculate the winning proposal(s) with the Ranked Pairs voting method.
+	 * @param poll a poll that finished his voting phase
+	 * @return the sorted list of winners. Best winner to least.
+	 */
+	public List<LawModel> calcRankedPairsWinners(PollModel poll) {
+		Matrix duelMatrix = calcDuelMatrix(poll);
+
+		// TALLY
+		// one "majority"       := how often was candidate i preferred over j
+		// list of "majorities" := sorted list of majorities i>j  with n votes
+		List<int[]> majorities = new ArrayList<>();
+		for (int i = 0; i < duelMatrix.getRows()-1; i++) {
+			for (int j = i+1; j < duelMatrix.getCols(); j++) {
+				int[] maj_ij = new int[] {i,j, duelMatrix.get(i,j)};
+				int[] maj_ji = new int[] {j,i, duelMatrix.get(j,i)};
+				majorities.add(maj_ij[2] > maj_ji[2] ? maj_ij : maj_ji);   // add the winner of this pair to the list of majorities
+			}
+		}
+
+		// SORT
+		majorities.sort(new MajorityComparator(duelMatrix));
+
+		// LOCK IN
+		DirectedGraph digraph = new DirectedGraph();
+		for (int[] majority : majorities) {
+			if (!digraph.reachable(majority[1], majority[0])) {
+				digraph.addDirectedEdge(majority[0], majority[1]);
+			}
+		}
+		// WINNERS
+		Set<Integer> sourceIds = digraph.getSources();
+
+		List<LawModel> winningProposals = new ArrayList<>();
+		int i = 0;
+		for(LawModel prop : poll.getProposals()) {
+			if (sourceIds.contains(i)) winningProposals.add(prop);  i++;
+		}
+
+		return winningProposals;
+	}
+
+
 
   //========= adapted from https://github.com/zephyr/schulze-voting/blob/master/src/java/dh/p/schulze/Election.java
 
   /**
-   * Calculate the number of voters that prefer proposal i over proposal j
+   * Calculate the number of voters that prefer proposal i over proposal j for every i != j
    * @param poll a poll where voting was just finished
-   * @return a two dimensional Matrix that contains the number of voters that prefere i over j
+   * @return a two dimensional Matrix that contains the number of voters that prefer i over j
    */
   public Matrix calcDuelMatrix(@NonNull PollModel poll) {
-    // First of all each proposal in the poll gets and array index (in poll.getProposals, which is only a Set)
+    // First of all each proposal in the poll gets an array index (poll.proposals is a SortedSet)
+		// Map: proposal -> array index of this proposal
 		Map<LawModel, Integer> proposalIdx = new HashMap<>();
 		int proposalIndex = 0;
 		for(LawModel prop : poll.getProposals()) {
@@ -155,16 +325,17 @@ public class PollService {
 		// number of ballots with this specific vote order. Mapped by hashCode of voteOrder
 		Map<Integer, Integer> numberOfBallots = new HashMap<>();
 
-		// array of proposals that have been voted for. Mapped by hashCode of voteOrder.
+		// proposals that have been voted for. Each array contains indexes of proposals (from proposalIdx)
 		Map<Integer, Integer[]> votedForMap = new HashMap<>();
 
-		// array of proposals that nave NOT been voted for at all in this voteOrder. Mapped by hashCode of voteOrder.
+		// proposals that nave NOT been voted for at all in this voteOrder.
 		Map<Integer, Integer[]> notVotedForMap = new HashMap<>();
 
+		//----- collect all ballots into buckets by their voteOrder
     for (BallotModel ballot : ballotRepo.findByPoll(poll)) {
 			int key = ballot.getVoteOrder().hashCode();
 			Integer numBallots = numberOfBallots.get(key);
-			// when a voteOrder appears for the first time, then calc:
+			// when a voteOrder appears for the first time, then calc voteForIndexes and notVotedForIndexes
 			if (numBallots == null) {
 				numberOfBallots.put(key, 1);
 
@@ -182,25 +353,23 @@ public class PollService {
 			}
 		}
 
-		//----- Fill the duelMatrix that stores the number of preferences i <-> j
+		//----- Fill the duelMatrix that stores the number of preferences i > j
 		int n = poll.getNumCompetingProposals();
 		Matrix duelMatrix = new Matrix(n, n);
 
 		// for each type of voteOrder that was casted
 		for(Integer key : votedForMap.keySet()) {
     	Integer[] idx = votedForMap.get(key);
+    	// for each pair candidate i > candidate j in the voteOrder of these ballots
 			for (int i = 0; i < idx.length-1; i++) {
-
-				// add a preference i<j for each other proposal sorted below for that number of ballots
 				for (int j = i+1; j < idx.length; j++) {
+					// add a preference i>j for that number of ballots
 					duelMatrix.add(idx[i], idx[j], numberOfBallots.get(key));
 				}
-
-				// and add a preference i<j for each proposal that was not voted for at all in this voteOrder
+				// and add a preference i>k for each proposal k that was not voted for at all in this voteOrder
 				for (int k = 0; k < notVotedForMap.get(key).length; k++) {
 					duelMatrix.add(idx[i], notVotedForMap.get(key)[k], numberOfBallots.get(key));
 				}
-
 			}
 		}
     return  duelMatrix;
@@ -244,7 +413,7 @@ public class PollService {
 	 * @param poll a poll where the voting phase is finished
 	 * @return the list of potential winners by the Schulze Method
 	 */
-  public List<LawModel> calcPotentialWinners(@NonNull PollModel poll) {
+  public List<LawModel> calcSchulzeMethodWinners(@NonNull PollModel poll) {
     List<LawModel> winnerList = new ArrayList<>();
     Matrix p = calcStrongestPathMatrix(poll);
     int C = poll.getNumCompetingProposals();
