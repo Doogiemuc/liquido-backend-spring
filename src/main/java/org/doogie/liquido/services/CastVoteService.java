@@ -74,7 +74,7 @@ public class CastVoteService {
 	}
 
 	/**
-	 * check if the passed voterToken is valid, ie. its checksum=hash(voterToken) is already known
+	 * Very thoroughly check if the passed voterToken is valid, ie. its checksum=hash(voterToken) is already known
 	 * @param voterToken the token to check
 	 * @return the existing TokenChecksumModel  OR <b><NULL</b> if voterToken is invalid
 	 */
@@ -118,7 +118,7 @@ public class CastVoteService {
 			voteOrder.add(law);
 		}
 
-		BallotModel newBallot = new BallotModel(poll, 0, voteOrder, checksumModel);  //MAYBE: BallotModelBuilder.createFromVoterToken(...)   or would that be a bit of overengeneering
+		BallotModel newBallot = new BallotModel(poll, 0, voteOrder, checksumModel);  //MAYBE: BallotModelBuilder.createFromVoteRequest(...)   or would that be a bit of overengeneering
 		BallotModel savedBallot = storeBallot(newBallot);		// checksum will be validated inside storeBallot() -> checkBallot()
 
 		return savedBallot;

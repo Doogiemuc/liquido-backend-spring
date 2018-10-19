@@ -261,6 +261,12 @@ public class PollService {
 
 	/**
 	 * Calculate the winning proposal(s) with the Ranked Pairs voting method.
+	 * 1. TALLY -   For each pair of proposals in the poll calculate the winner of the direct comparision
+	 *              Which proposal has more preferences i&lt;j compared to j&gt;i.
+	 * 2. SORT -    Sort these majorities by the number of preferences i over j
+	 * 3. LOCK IN - For each of the sorted majorities: add the majority to a directed graph,
+	 *              IF this edge does not introduce a circle in the graph.
+	 * 4. WINNERS - The source of the tree, ie. the node with no incoming links is the winner of the poll.
 	 * @param poll a poll that finished his voting phase
 	 * @return the sorted list of winners. Best winner to least.
 	 */

@@ -30,6 +30,10 @@ public class TokenChecksumModel {
 	@NonNull
 	String checksum;
 
+	/**
+	 * The area is actually already encoded in the voterToken.
+	 * So that means that the area in this TokenChecksumModel must correspond to the area of the voterToken
+	 */
 	@OneToOne
 	@NonNull
 	AreaModel area;
