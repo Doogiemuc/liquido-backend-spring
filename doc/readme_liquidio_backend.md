@@ -67,26 +67,26 @@ Here I write down everything I need during development of my little backend.
 
 https://www.draw.io/#LLiquido%20Architecture
 
-
 ## Links
 
- - [H2 DB Web Console](http://localhost:8080/h2-console)   JDBC URL: `jdbc:h2:mem:testdb`   Username: `sa` - no pwd, Driver Class: `org.h2.Driver`  
- - [Great Hibernate Tutorials](https://vladmihalcea.com/tutorials/hibernate/)  about mappings and sequences
- - Buch+++: High Performance Java Persistence: https://leanpub.com/high-performance-java-persistence?utm_source=blog&utm_medium=banner&utm_campaign=banner
-
+ - [H2 DB Web Console](http://localhost:8080/h2-console)   JDBC URL: `jdbc:h2:mem:testdb`   Username: `sa` - no pwd, Driver Class: `org.h2.Driver`
+ - https://springframework.guru/using-the-h2-database-console-in-spring-boot-with-spring-security/  
+ 
 ## Spring Security
+
  - [Spring Security Reference](http://docs.spring.io/spring-security/site/docs/current/reference/htmlsingle/#test-method-withuserdetails)
  - [Tutorial Spring Security with Angular JS](https://spring.io/guides/tutorials/spring-security-and-angular-js/#_the_login_page_angular_js_and_spring_security_part_ii)
  - [Hello Spring Security with Boot](http://docs.spring.io/spring-security/site/docs/current/guides/html5//helloworld-boot.html#updating-your-dependencies)
  - [Spring Data JPA Auditing](https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#auditing)
  - [Spring Data Rest - Security](http://docs.spring.io/spring-data/rest/docs/current/reference/html/#security)
- 
+
 
 ## Good Spring Boot Resources
-
- - https://springframework.guru/
- - https://springframework.guru/using-the-h2-database-console-in-spring-boot-with-spring-security/
- - baeldung
+ 
+ - [Baeldung Tutorials](https://www.baeldung.com/spring-security-oauth-jwt)
+ - [Very nice Sprint Boot example app for JWT](https://github.com/nydiarra/springboot-jwt)
+ - Book+++: High Performance Java Persistence: https://leanpub.com/high-performance-java-persistence?utm_source=blog&utm_medium=banner&utm_campaign=banner
+ - [Great Hibernate Tutorials](https://vladmihalcea.com/tutorials/hibernate/)  about mappings and sequences
  
  
  ### Old conneetion to MongoDB

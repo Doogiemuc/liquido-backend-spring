@@ -1,12 +1,12 @@
 package org.doogie.liquido.test;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.datarepos.BallotRepo;
+import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
-import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.LawModel;
-import org.doogie.liquido.model.PollModel;
-import org.doogie.liquido.model.UserModel;
-import org.doogie.liquido.rest.dto.CastVoteRequest;
+import org.doogie.liquido.datarepos.TokenChecksumRepo;
+import org.doogie.liquido.model.*;
+import org.doogie.liquido.rest.LiquidoRestUtils;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
@@ -26,6 +26,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
@@ -44,10 +45,22 @@ public class PollServiceTests {
 	PollRepo pollRepo;
 
 	@Autowired
+	TokenChecksumRepo checksumRepo;
+
+	@Autowired
 	CastVoteService castVoteService;
 
 	@Autowired
 	TestDataCreator testDataCreator;
+
+	@Autowired
+	LawRepo lawRepo;
+
+	@Autowired
+	BallotRepo ballotRepo;
+
+  @Autowired
+	LiquidoRestUtils restUtils;
 
 	@Autowired
 	Environment springEnv;
@@ -116,33 +129,60 @@ public class PollServiceTests {
 		log.info("Strongest path matrix:\n"+strong.toFormattedString());
 
 		List<LawModel> winningProposals = pollService.calcSchulzeMethodWinners(poll);
-		log.info("Potenetial Winners:" +winningProposals);
+		log.info("Potential Winners:" +winningProposals);
 
 		assertTrue("There should only be one winner in this example", winningProposals.size() == 1);
 		assertEquals(propsArray[4]+" should have one the election.", propsArray[4], winningProposals.get(0) );
 
-		log.info("Schulze Method calculations SUCCESSFULL.");
+		log.info("Schulze Method calculations SUCCESSFUL.");
 
 	}
 
-	private LawModel[] seedBallots(PollModel poll, int[][] voteOrderIndexes, int[] numBallots) throws LiquidoException {
+
+	/**
+	 * Quick and dirty hack to QUICKLY cast a vote.  NO CHECKS are perfomed at all.
+	 * For example the voterToken will always be valid: A TokenChecksumModel will be created.
+	 * @param voterToken
+	 * @param poll
+	 * @param voteOrder
+	 * @return
+	 * @throws LiquidoException
+	 */
+	BallotModel quickNdirtyCastVote(String voterToken, PollModel poll, List<LawModel> voteOrder) {
+		String proposalIds = voteOrder.stream().map(law->law.getId().toString()).collect(Collectors.joining(","));
+		log.debug("quickNDirtyCastVote(voterToken="+voterToken+", poll.id="+poll.getId()+" voteOrder(proposal.ids)=["+proposalIds+"]");
+		String tokenChecksum = "dummyChecksumFor "+voterToken;   //castVoteService.calcChecksumFromVoterToken(voterToken);
+  	AreaModel area = testDataCreator.getArea(0);
+		TokenChecksumModel checksumModel = new TokenChecksumModel(tokenChecksum, area);
+		checksumRepo.save(checksumModel);   // must save
+
+		int level = 0;
+		BallotModel ballot = new BallotModel(poll, level, voteOrder, checksumModel);
+		return ballotRepo.save(ballot);
+		//the real correct call would be:   return castVoteService.castVote(castVoteRequest);
+	}
+
+	LawModel[] seedBallots(PollModel poll, int[][] voteOrderIndexes, int[] numBallots) throws LiquidoException {
 		LawModel[] propsArray = poll.getProposals().stream().toArray(LawModel[]::new);
 		int count = 1;
 		for (int i = 0; i < voteOrderIndexes.length; i++) {
-			List<String> voteOrderURIs = new ArrayList<>();
+			List<LawModel> voteOrder = new ArrayList<>();
 			for (int j = 0; j < voteOrderIndexes[i].length; j++) {
-				voteOrderURIs.add(basePath+"/laws/"+propsArray[voteOrderIndexes[i][j]-1].getId());
+				voteOrder.add(propsArray[voteOrderIndexes[i][j]-1]);
 			}
 			log.debug("----- seeding "+numBallots[i]+" ballots with voteOrder "+voteOrderIndexes[i]);
 			for (int k = 0; k < numBallots[i]; k++) {
 				UserModel voter = users.get(mailPrefix+count+"@liquido.de");
 				count++;
 				auditor.setMockAuditor(voter);
-				//TODO: create dummy vote tooken more quickly for testing. Do not forget to also create valid checksum
-				String voterToken = castVoteService.createVoterToken(voter, poll.getArea(), "dummyPasswordHash");
-				auditor.setMockAuditor(null);
-				CastVoteRequest castVoteRequest = new CastVoteRequest(basePath+"/polls/"+poll.getId(), voteOrderURIs, voterToken);
-				castVoteService.castVote(castVoteRequest);
+
+				//String voterToken = castVoteService.createVoterToken(voter, poll.getArea(), "dummyPasswordHash");
+				//auditor.setMockAuditor(null);
+				//CastVoteRequest castVoteRequest = new CastVoteRequest(basePath+"/polls/"+poll.getId(), voteOrderURIs, voterToken);
+				//castVoteService.castVote(castVoteRequest);
+
+				//crude quick'n'dirty hack to make it QUICK!
+				quickNdirtyCastVote("$2dummyVoterToken"+count, poll, voteOrder);     // voterTokens must start with $2 !!!
 			}
 
 		}
