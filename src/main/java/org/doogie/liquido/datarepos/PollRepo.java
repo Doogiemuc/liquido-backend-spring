@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.data.rest.core.annotation.RestResource;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -25,12 +26,18 @@ public interface PollRepo extends CrudRepository<PollModel, Long> {
   PollModel save(PollModel pollModel);
 
   @RestResource(exported = false)
-  void delete(Long id);
+  <S extends PollModel> Iterable<S> saveAll(Iterable<S> polls);
 
   @RestResource(exported = false)
   void delete(PollModel ballot);
 
   @RestResource(exported = false)
+  void deleteById(Long id);
+
+  @RestResource(exported = false)
   void deleteAll();
+
+  @RestResource(exported = false)
+  void deleteAll(Iterable<? extends PollModel> var1);
 
 }

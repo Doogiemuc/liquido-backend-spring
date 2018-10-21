@@ -18,6 +18,7 @@ import org.springframework.hateoas.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -50,7 +51,8 @@ public class UserRestController {
   @RequestMapping(value = "/my/numVotes", method = GET)    // GET /my/numVotes?area=/uri/of/area  ?
   public @ResponseBody long getNumVotes(@RequestParam("area")AreaModel area) throws Exception {
     log.trace("=> GET /my/numVotes  area=" + area);
-    UserModel proxy = liquidoAuditorAware.getCurrentAuditor();
+    UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "You must be logged in to get your numVotes!"));
 		int numVotes = proxyService.getNumVotes(area, proxy);
     log.trace("<= GET numVotes(proxy=" + proxy + ", area=" + area + ") = "+numVotes);
     return numVotes;
@@ -62,9 +64,10 @@ public class UserRestController {
    * @return a Map with directProxy and topProxy per area
 	 */
   @RequestMapping(value = "/my/proxyMap", method = GET, produces = MediaType.APPLICATION_JSON_VALUE)
-  public @ResponseBody Map getProxyMap() {
-    UserModel user = liquidoAuditorAware.getCurrentAuditor();
-		Map<AreaModel, UserModel> proxyMap = proxyService.getProxyMap(user);
+  public @ResponseBody Map getProxyMap() throws LiquidoException {
+    UserModel user = liquidoAuditorAware.getCurrentAuditor()
+				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "You must be logged in to get your proxy map!"));
+    Map<AreaModel, UserModel> proxyMap = proxyService.getProxyMap(user);
 		HashMap<String, Object> result = new HashMap<>();
 		for(AreaModel area: proxyMap.keySet()) {
 			UserModel directProxy = proxyMap.get(area);
@@ -96,8 +99,8 @@ public class UserRestController {
     DelegationModel newDelegation = delegationResource.getContent();
 		log.info("assignProxy(delegation="+newDelegation+")");
 
-		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
-		if (currentUser == null) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Cannot save Proxy. Need an authenticated user.");
+		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
+				.orElseThrow(()-> new  LiquidoException(LiquidoException.Errors.NO_LOGIN, "Cannot save Proxy. Need an authenticated user."));
 
 		DelegationModel savedDelegation = proxyService.assignProxy(newDelegation.getArea(), currentUser, newDelegation.getToProxy(), currentUser.getPasswordHash());
 
@@ -128,8 +131,8 @@ public class UserRestController {
   @RequestMapping(value = "/deleteProxy/{areaId}", method = DELETE)
 	@ResponseStatus(HttpStatus.NO_CONTENT)
   public void deleteProxy(@PathVariable(name="areaId") AreaModel area) throws LiquidoException {
-		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
-		if (currentUser == null) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Need login to delete proxy!");
+		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Need login to delete proxy!"));
 		log.info("deleteProxy(voter="+currentUser+", area="+area+")");
     proxyService.removeProxy(area, currentUser, currentUser.getPasswordHash());
   }

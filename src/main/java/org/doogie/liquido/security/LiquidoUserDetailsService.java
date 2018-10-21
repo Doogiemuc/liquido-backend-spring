@@ -10,8 +10,10 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * This class loads users from the DB via {@link UserRepo} and grants them roles.
@@ -67,6 +69,7 @@ public class LiquidoUserDetailsService implements UserDetailsService {
 
   private Collection<GrantedAuthority> getGrantedAuthorities(UserModel userModel) {
     // if user.email == admin then return "ROLE_ADMIN" else ...
+    List<GrantedAuthority> authorities = new ArrayList<>();
     return Arrays.asList(new SimpleGrantedAuthority("ROLE_USER"));
   }
 }

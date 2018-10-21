@@ -78,7 +78,7 @@ public class PollServiceTests {
 	public void seedUsersForThisTest() {
 		if (users == null) {
 			log.debug("Seeding " + NUM_USERS + " users");
-			PollServiceTests.users = testDataCreator.seedUsers(NUM_USERS, mailPrefix);
+			PollServiceTests.users = testDataCreator.seedUsers(NUM_USERS, mailPrefix, "pollServcieTestPassword");
 		} else {
 			log.debug("Using existing "+users.size()+" users ");
 		}

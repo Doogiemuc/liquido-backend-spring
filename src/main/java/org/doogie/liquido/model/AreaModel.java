@@ -1,7 +1,6 @@
 package org.doogie.liquido.model;
 
 import lombok.*;
-import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedBy;
 
 import javax.persistence.*;
@@ -19,13 +18,11 @@ public class AreaModel extends BaseModel {
   // public fields are automatically exposed in REST endpoint
   @NotNull
   @NonNull
-  @NotEmpty
   @Column(unique = true)
   public String title;
 
   @NotNull
   @NonNull
-  @NotEmpty
   public String description;
 
   @CreatedBy

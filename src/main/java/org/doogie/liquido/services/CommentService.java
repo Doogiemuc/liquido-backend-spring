@@ -7,6 +7,8 @@ import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 /**
  * Utility methods for comments of a proposal
  */
@@ -23,10 +25,10 @@ public class CommentService {
    * @return true  IF this comment is already upvoted by the currently logged in user
    */
   public boolean isUpvotedByCurrentUser(CommentModel comment) {
-    UserModel currentlyLoggedInUser = liquidoAuditorAware.getCurrentAuditor();
-    log.debug("isUpvotedByCurrentUser(comment="+comment.id+") for currentUser= "+currentlyLoggedInUser.getId()+" "+currentlyLoggedInUser.getEmail()+" ===> "+comment.getUpVoters().contains(currentlyLoggedInUser));
-
-    return comment.getUpVoters().contains(currentlyLoggedInUser);
+    Optional<UserModel> currentlyLoggedInUser = liquidoAuditorAware.getCurrentAuditor();
+    //log.debug("isUpvotedByCurrentUser(comment="+comment.id+") for currentUser= "+currentlyLoggedInUser.getId()+" "+currentlyLoggedInUser.getEmail()+" ===> "+comment.getUpVoters().contains(currentlyLoggedInUser));
+    if (!currentlyLoggedInUser.isPresent()) return false;
+    return comment.getUpVoters().contains(currentlyLoggedInUser.get());
   }
 
   /**
@@ -35,8 +37,9 @@ public class CommentService {
    * @return true  IF this comment is already downvoted by the currently logged in user
    */
   public boolean isDownvotedByCurrentUser(CommentModel comment) {
-    UserModel currentlyLoggedInUser = liquidoAuditorAware.getCurrentAuditor();
-    return comment.getDownVoters().contains(currentlyLoggedInUser);
+    Optional<UserModel> currentlyLoggedInUser = liquidoAuditorAware.getCurrentAuditor();
+    if (!currentlyLoggedInUser.isPresent()) return false;
+    return comment.getDownVoters().contains(currentlyLoggedInUser.get());
   }
 
 

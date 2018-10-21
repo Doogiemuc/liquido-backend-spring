@@ -1,6 +1,6 @@
 package org.doogie.liquido.testdata;
 
-import net.bytebuddy.utility.RandomString;
+import lombok.NonNull;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
@@ -16,6 +16,8 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.oauth2.common.util.RandomValueStringGenerator;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +48,7 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
 public class TestDataCreator implements CommandLineRunner {
   private Logger log = LoggerFactory.getLogger(this.getClass());
 
+  private final String TESTUSER_PASSWORD = "dummyPassword";
   public int NUM_USERS = 20;
   public int NUM_AREAS = 10;
   public int NUM_IDEAS = 111;
@@ -64,11 +67,11 @@ public class TestDataCreator implements CommandLineRunner {
 
   @Autowired
   AreaRepo areaRepo;
-  List<AreaModel> areas = new ArrayList();
+  List<AreaModel> areas = new ArrayList<>();
 
   @Autowired
   LawRepo lawRepo;
-  List<LawModel> lawModels = new ArrayList();    // ideas, proposals and laws
+  List<LawModel> lawModels = new ArrayList<>();    // ideas, proposals and laws
 
   @Autowired
   LawService lawService;
@@ -129,13 +132,13 @@ public class TestDataCreator implements CommandLineRunner {
   public void run(String... args) {
     boolean seedDB = springEnv.acceptsProfiles("test") || "true".equals(springEnv.getProperty("seedDB"));
     for(String arg : args) {
-      if ("--seedDB".equals(arg)) { seedDB = true; }
+      if ("--seedDB".equalsIgnoreCase(arg)) { seedDB = true; }
     }
-		log.info("=== RUN TestDataCreator --seedDB="+seedDB);
     if (seedDB) {
+			log.info("===== START TestDataCreator");
       log.debug("Populate test DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
-      seedUsers(NUM_USERS, "testuser");
+      seedUsers(NUM_USERS, "testuser", TESTUSER_PASSWORD);
       auditorAware.setMockAuditor(this.users.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
       //seedGlobalProperties();
       seedAreas();
@@ -148,6 +151,8 @@ public class TestDataCreator implements CommandLineRunner {
       seedVotes();
 
       auditorAware.setMockAuditor(null);
+
+      log.info("===== TestDataCreator FINISHED");
     }
   }
 
@@ -178,13 +183,17 @@ public class TestDataCreator implements CommandLineRunner {
     //return Integer.valueOf(getGlobalProperty(key));
   }
 
-  public Map<String, UserModel> seedUsers(int numUsers, String mailPrefix) {
+  public Map<String, UserModel> seedUsers(int numUsers, String mailPrefix, String password) {
     log.info("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
     this.users = new HashMap<>();
 
+    /** all test users have the same password. For speeding things up */
+		BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+		String hashedPassword = passwordEncoder.encode(password);   // this takes a second!
+
     for (int i = 0; i < numUsers; i++) {
       String email = mailPrefix + (i+1) + "@liquido.de";    // Remember that DB IDs start at 1. Testuser1 has ID=1 in DB. And there is no testuser0
-      UserModel newUser = new UserModel(email, "dummyPasswordHash");
+      UserModel newUser = new UserModel(email, hashedPassword);
 
       UserProfileModel profile = new UserProfileModel();
       profile.setName("Test User" + (i+1));
@@ -200,9 +209,12 @@ public class TestDataCreator implements CommandLineRunner {
         log.debug("Creating new user " + newUser);
       }
 
+
+      if (i==0) auditorAware.setMockAuditor(new UserModel("mockUser", "noPassword"));
+
       UserModel savedUser = userRepo.save(newUser);
       this.users.put(savedUser.getEmail(), savedUser);
-      if (i==0) auditorAware.setMockAuditor(this.users.get(mailPrefix+"1@liquido.de"));   // prevent some warnings
+      if (i==0) auditorAware.setMockAuditor(savedUser);   // prevent some warnings
     }
     return this.users;
   }
@@ -266,7 +278,7 @@ public class TestDataCreator implements CommandLineRunner {
     for (int i = 0; i < NUM_IDEAS; i++) {
       String ideaTitle = "Idea " + i + " that suggest that we definitely need a longer title for ideas";
       StringBuffer ideaDescr = new StringBuffer();
-      ideaDescr.append(RandomString.make(8));    // prepend with some random chars to test sorting
+      ideaDescr.append(randString(8));    // prepend with some random chars to test sorting
       ideaDescr.append(" ");
       ideaDescr.append(getLoremIpsum(0,400));
 
@@ -314,7 +326,7 @@ public class TestDataCreator implements CommandLineRunner {
 
   private LawModel createRandomProposal(String title) {
     StringBuffer description = new StringBuffer();
-    description.append(RandomString.make(8));    // prepend with some random chars to test sorting
+    description.append(randString(8));    // prepend with some random chars to test sorting
     description.append(" ");
     description.append(getLoremIpsum(0,400));
     UserModel createdBy = this.randUser();
@@ -353,7 +365,7 @@ public class TestDataCreator implements CommandLineRunner {
    * @param num number of new supporters to add.
    * @return the idea with the added supporters. The idea might have reached its quorum and now be a proposal
    */
-  private LawModel addSupportersToIdea(LawModel idea, int num) {
+  private LawModel addSupportersToIdea(@NonNull LawModel idea, int num) {
     if (num >= users.size()-1) throw new RuntimeException("Cannot at "+num+" supporters to idea. There are not enough users.");
     // https://stackoverflow.com/questions/8378752/pick-multiple-random-elements-from-a-list-in-java
     LinkedList<UserModel> otherUsers = new LinkedList<>();
@@ -361,7 +373,9 @@ public class TestDataCreator implements CommandLineRunner {
       if (!user.equals(idea.getCreatedBy()))   otherUsers.add(user);
     }
     Collections.shuffle(otherUsers);
-    LawModel ideaFromDB = lawRepo.findOne(idea.getId());  // Get JPA "attached" entity
+    LawModel ideaFromDB = lawRepo.findById(idea.getId())  // Get JPA "attached" entity
+     .orElseThrow(()->new RuntimeException("Cannot find idea with id="+idea.getId()));
+
     List<UserModel> newSupporters = otherUsers.subList(0, num);
     for (UserModel supporter: newSupporters) {
       ideaFromDB = lawService.addSupporter(supporter, ideaFromDB);   //Remember: Don't just do idea.getSupporters().add(supporter);
@@ -618,6 +632,18 @@ public class TestDataCreator implements CommandLineRunner {
     if (endIndex >= loremIpsum.length()) endIndex = loremIpsum.length()-1;
     return loremIpsum.substring(0, endIndex);
   }
+	private static final char[] EASY_CHARS = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".toCharArray();
 
-
+	/**
+	 * Simply generate some random characters
+	 * @param len number of chars to generate
+	 * @return a String of length len with "easy" random characters and numbers
+	 */
+	public String randString(int len) {
+		StringBuffer buf = new StringBuffer();
+		for (int i = 0; i < len; i++) {
+			buf.append(EASY_CHARS[rand.nextInt(EASY_CHARS.length)]);
+		}
+		return buf.toString();
+	}
 }

@@ -107,14 +107,14 @@ public class CastVoteService {
 		// load models for URIs in castVoteRequst
 		//TODO: !!! Should I move loading of models up into the REST controller? As I did it for PollRestController? Should a REST controller directly handle repos? Or should only the service handle repos?  See: RestUtils.class
 		Long pollId = restUtils.getIdFromURI("polls", castVoteRequest.getPoll());
-		PollModel poll = pollRepo.findOne(pollId);
-		if (poll == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot find poll with poll.id="+pollId);
+		PollModel poll = pollRepo.findById(pollId)
+				.orElseThrow(()->new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot find poll with poll.id="+pollId));
 
 		List<LawModel> voteOrder = new ArrayList<>();
 		for (String proposalId : castVoteRequest.getVoteOrder()) {
 			Long lawId = restUtils.getIdFromURI("laws", proposalId);
-			LawModel law = lawRepo.findOne(lawId);
-			if (law == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot find proposal with proposal.id="+lawId);
+			LawModel law = lawRepo.findById(lawId)
+					.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot find proposal with proposal.id="+lawId));
 			voteOrder.add(law);
 		}
 
