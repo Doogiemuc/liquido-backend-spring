@@ -7,6 +7,7 @@ import org.doogie.liquido.util.LiquidoProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -26,6 +27,7 @@ public class PropertiesController {
    * @return all properties as JSON
    */
   @RequestMapping(value = "/globalProperties", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	@PreAuthorize("hasAuthority('ROLE_USER')")  //  => doesn't work.  Controll will not be mapped => must be configured in RecourseServerConfig
   public @ResponseBody ObjectNode getGlobalProperties() {
     ObjectMapper mapper = new ObjectMapper();
     ObjectNode json = mapper.createObjectNode().putObject("properties");

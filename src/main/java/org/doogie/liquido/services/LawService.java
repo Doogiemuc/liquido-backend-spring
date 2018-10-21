@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import javax.validation.constraints.NotNull;
 import java.util.Date;
+import java.util.Optional;
 
 /**
  * Utility methods for a Law. These are for example used by {@link org.doogie.liquido.model.LawProjection}
@@ -39,8 +40,9 @@ public class LawService {
    */
   public boolean isSupportedByCurrentUser(LawModel law) {
     //this is used in LawProjection.java
-    UserModel currentlyLoggedInUser = liquidoAuditorAware.getCurrentAuditor();
-    return law.getSupporters().contains(currentlyLoggedInUser);
+    Optional<UserModel> currentlyLoggedInUser = liquidoAuditorAware.getCurrentAuditor();
+    if (!currentlyLoggedInUser.isPresent()) return false;
+    return law.getSupporters().contains(currentlyLoggedInUser.get());
   }
 
 /**
