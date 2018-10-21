@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Sprint REST controller for voting
@@ -48,9 +49,9 @@ public class VoteRestController {
 			// injecting the AuthenticationPrincipal did not work for me. I do not know why.   But liquidoAuditorAware works, and is also great for testing:
 			// see https://docs.spring.io/spring-security/site/docs/current/reference/htmlsingle/#tech-userdetailsservice
 	) throws LiquidoException {
-		UserModel user = liquidoAuditorAware.getCurrentAuditor();
+		UserModel user = liquidoAuditorAware.getCurrentAuditor()
+				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Need login to get voterToken!"));			// [SECURITY]  This check is extremely important!
 		log.info(user+" requests his voterToken for area "+area);
-		if (user == null) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Need login to get voterToken!");			// [SECURITY]  This check is extremely important!
 
 		String voterToken = castVoteService.createVoterToken(user, area, user.getPasswordHash());   // preconditions are checked inside castVoteService
 
@@ -98,8 +99,8 @@ public class VoteRestController {
   @ResponseStatus(HttpStatus.CREATED)
   public @ResponseBody Map castVote(@RequestBody CastVoteRequest castVoteRequest) throws LiquidoException {
     log.trace("=> POST /castVote");
-    UserModel currentUser = liquidoAuditorAware.getCurrentAuditor();
-    if (currentUser != null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast Vote. You should cast your vote anonymously. Do not send a SESSIONID.");
+    UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
+				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast Vote. You should cast your vote anonymously. Do not send a SESSIONID."));
 
     BallotModel ballot = castVoteService.castVote(castVoteRequest);   					// all validity checks are done inside ballotService.
 

@@ -51,9 +51,9 @@ public class DelegationValidator implements Validator {
     Long fromUserId  = delegation.getFromUser().getId();
     Long toProxyId   = delegation.getToProxy().getId();
 
-    if (!areaRepo.exists(areaId)) errors.rejectValue("area", "objectId.mustExist", new Long[]{areaId}, "Referenced areaId does not exist: "+areaId);
-    if (!userRepo.exists(fromUserId)) errors.rejectValue("fromUser", "objectId.mustExist", new Long[]{fromUserId}, "Referenced userId does not exist: "+fromUserId);
-    if (!userRepo.exists(toProxyId)) errors.rejectValue("toProxy", "objectId.mustExist", new Long[]{toProxyId}, "Referenced userId does not exist: "+toProxyId);
+    if (!areaRepo.existsById(areaId)) errors.rejectValue("area", "objectId.mustExist", new Long[]{areaId}, "Referenced areaId does not exist: "+areaId);
+    if (!userRepo.existsById(fromUserId)) errors.rejectValue("fromUser", "objectId.mustExist", new Long[]{fromUserId}, "Referenced userId does not exist: "+fromUserId);
+    if (!userRepo.existsById(toProxyId)) errors.rejectValue("toProxy", "objectId.mustExist", new Long[]{toProxyId}, "Referenced userId does not exist: "+toProxyId);
 
     if (errors.hasErrors()) { log.trace("Validation of Delegation failed: "+ errors); }
   }

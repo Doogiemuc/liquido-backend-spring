@@ -17,8 +17,6 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
  * Starts the SpringApplication.
  */
 @SpringBootApplication
-//@EnableWebSecurity
-//@EnableWebMvc
 @EnableScheduling
 public class LiquidoBackendSpringApplication {
   static Logger log = LoggerFactory.getLogger(LiquidoBackendSpringApplication.class);
@@ -32,17 +30,6 @@ public class LiquidoBackendSpringApplication {
 		log.trace("====== Starting Liquido");
 		SpringApplication.run(LiquidoBackendSpringApplication.class, args);
   }
-
-  /**
-   * configure super advanced and elaborate logging of HTTP requests and responses
-   * Log each request with ReqID, full Request URI and its duration in ms.
-   * @return DoogiesRequestLogger
-   */
-  @Bean
-  public OncePerRequestFilter requestLoggingFilter() {
-		return new DoogiesRequestLogger();
-	}
-
 
   //TODO: package-by-feature  http://www.javapractices.com/topic/TopicAction.do?Id=205
 }

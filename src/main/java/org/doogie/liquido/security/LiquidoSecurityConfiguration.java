@@ -2,15 +2,24 @@ package org.doogie.liquido.security;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.config.annotation.web.servlet.configuration.EnableWebMvcSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.oauth2.provider.token.DefaultTokenServices;
+import org.springframework.security.oauth2.provider.token.TokenStore;
+import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
+import org.springframework.security.oauth2.provider.token.store.JwtTokenStore;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
@@ -21,18 +30,28 @@ import org.springframework.web.filter.CorsFilter;
  */
 @Slf4j
 @Configuration
-@EnableGlobalMethodSecurity(prePostEnabled = true)
 @EnableWebSecurity
+@EnableGlobalMethodSecurity(prePostEnabled = true)
 //@Order(SecurityProperties.ACCESS_OVERRIDE_ORDER)
 public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
   @Value("${spring.data.rest.base-path}")   // value from application.properties file
   String restBasePath;
 
+	@Value("${security.signing-key}")
+	private String signingKey;
+
+	@Value("${security.encoding-strength}")
+	private Integer encodingStrength;
+
+	@Value("${security.security-realm}")
+	private String securityRealm;
+
+
   //see http://docs.spring.io/spring-security/site/docs/4.2.1.RELEASE/reference/htmlsingle/#jc-authentication-userdetailsservice
   @Bean
   public LiquidoUserDetailsService liquidoUserDetailsService() {
-    log.debug("creating LiquidoUserDetailsService");
+     log.debug("creating LiquidoUserDetailsService");
     return new LiquidoUserDetailsService();
   }
 
@@ -48,24 +67,52 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
   */
 
 
-  //MAYBE: use Digest Autentication http://stackoverflow.com/questions/33918432/digest-auth-in-spring-security-with-rest-and-javaconfig
+  /**  This way global configuration could be configured.  Just an example
+	public void configure(AuthenticationManagerBuilder builder) throws Exception {
+		builder.inMemoryAuthentication()
+			.withUser("joe")
+			.password("123")
+			.roles("ADMIN");
+	}
+	 */
 
   /**
    * Configure HttpSecurity:
-   *   - Allow access to H2 DB web console under /h2-console
-   *   - allow authentication with HTTP basic auth
-   *   - TODO: digest authentication   http://stackoverflow.com/questions/33918432/digest-auth-in-spring-security-with-rest-and-javaconfig
+	 *   - We are a REST backend. So complete stateless sessions. (See OAuth)
+	 *   - Allow HTTP Basic Auth for getting an OAuth token
+   *   - H2 DB web console under /h2-console needs the X-Frame-Option to be disabled
    * @param http
    * @throws Exception
    */
   @Override
   protected void configure(HttpSecurity http) throws Exception {
     log.trace("Configuring HttpSecurity for "+restBasePath);
-    //http.authorizeRequests().anyRequest().authenticated().and().formLogin().and().httpBasic();
+		http
+				.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+			.and()
+				.httpBasic().realmName(securityRealm)
+			.and()
+				.authorizeRequests()
+				//.antMatchers("/h2-console/**").permitAll()            // Allow access to H2 DB web console
+				.antMatchers(restBasePath+"/_ping").permitAll()       // is alive
+				.antMatchers(restBasePath+"/globalProperties").permitAll()
+				.antMatchers(restBasePath+"/castVote").permitAll()    // allow anonymous voting
+				.anyRequest().authenticated()
+			.and()
+				.csrf().disable();												// TODO: re-enable CSRF check
+				//.headers().frameOptions().disable()   	// TODO: temporary necessary to make /h2-console working
 
+
+
+
+		/*
     http
-      .cors().disable()   //TODO: Turn CSRF back on an implement it on the client.
-      .csrf().disable()   //TODO: Turn CORS back on
+			.sessionManagement()
+			.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+			.and()
+			//MAYBE:  .rememberMe()...
+      .cors().disable()   //TODO: Turn CORS back on an implement it on the client.
+      .csrf().disable()   //TODO: Turn CSRF back on
       .authorizeRequests()
         .antMatchers("/h2-console/**").permitAll()            // Allow access to H2 DB web console
         .antMatchers(restBasePath+"/_ping").permitAll()       // is alive
@@ -73,10 +120,10 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
         .antMatchers(restBasePath+"/castVote").permitAll()    // allow anonymous voting
         .anyRequest().authenticated()
       .and()
-        .httpBasic()
+        .httpBasic().realmName(securityRealm)
       .and()
         .headers().frameOptions().disable();   // TODO: temporary necessary to make /h2-console working
-
+     */
   }
 
   /**
@@ -103,6 +150,41 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
     return bean;
   }
 
+  /******************************** for OAUTH 2.0 **********************/
+
+	@Bean
+	@Override
+	protected AuthenticationManager authenticationManager() throws Exception {
+		return super.authenticationManager();
+	}
+
+	@Bean
+	public BCryptPasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	@Bean
+	public JwtAccessTokenConverter accessTokenConverter() {
+		JwtAccessTokenConverter converter = new JwtAccessTokenConverter();
+		converter.setSigningKey(signingKey);
+		return converter;
+	}
+
+	@Bean
+	public TokenStore tokenStore() {
+		return new JwtTokenStore(accessTokenConverter());
+	}
+
+	@Bean
+	@Primary
+	//Making this primary to avoid any accidental duplication with another token service instance of the same name
+	public DefaultTokenServices tokenServices() {
+		DefaultTokenServices defaultTokenServices = new DefaultTokenServices();
+		defaultTokenServices.setTokenStore(tokenStore());
+		defaultTokenServices.setSupportRefreshToken(true);
+		return defaultTokenServices;
+	}
+
   /*
   @Bean
   public WebMvcConfigurer corsConfigurer() {
@@ -116,4 +198,5 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
   }
   */
 
+	//MAYBE: use Digest Autentication http://stackoverflow.com/questions/33918432/digest-auth-in-spring-security-with-rest-and-javaconfig
 }

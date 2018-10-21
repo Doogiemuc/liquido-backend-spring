@@ -1,7 +1,6 @@
 package org.doogie.liquido.model;
 
 import lombok.*;
-import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -12,8 +11,15 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Data model: proposal for ideas, proposals and law.
- * Title must be unique!
+ * <h3>Data model for an ida -> proposal -> law.</h3>
+ *
+ * User's can suggest ideas. Once an idea reaches its quorum, then it becomes a proposal. When a proposal joins
+ * a poll, then it can be discussed and elaborated. When the voting phase of the poll starts, then a
+ * proposal must not be changed anymore. Users can vote in the poll. When the voting phase is finished,
+ * then the winning proposal becomes a law. All other proposals in the poll are dropped.
+ *
+ *
+ * The title of every idea must be globally unique!
  */
 //Lombok @Data does not work very well with spring. Need to use the individual annotations
 @Getter
@@ -40,7 +46,6 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 
   @NotNull
   @NonNull
-  @NotEmpty
   @Column(unique = true)
   public String title;
 
@@ -48,17 +53,23 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
   //TODO: lawModel.tags
   //TODO: related ideas? => relations built automatically, when a proposal is added to a running poll.
 
+	/**
+	 * HTML description of this proposal. This description can only be edited by the creator
+	 * as long as the proposal is not yet in a poll in voting phase.
+	 */
   @NotNull
   @NonNull
-  @NotEmpty
   @Column(length = 1000)
   public String description;
 
+  /** Area of this idea/proposal/law */
   @NotNull
   @NonNull
   @ManyToOne(optional = false)
   public AreaModel area;
 
+  /** All users that support this proposal. */
+  //This cannot  just be a counter, because we must prevent that a user supports this more than once.
   @ManyToMany(fetch = FetchType.EAGER)
   Set<UserModel> supporters = new HashSet<>();
 
@@ -74,7 +85,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
   //@JoinColumn(name="poll_id")  this column name is already the default
   public PollModel poll = null;
 
-  /** suggestions for improvement */
+  /** Comments and suggestions for improvement for this proposal*/
 	@OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)  // fetch all comments when loading a an idea or proposal.  Prevents "LazyInitializationException, could not initialize proxy - no Session" but at the cost of performance.
 	//@Cascade(org.hibernate.annotations.CascadeType.ALL)   // https://vladmihalcea.com/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
   public Set<CommentModel> comments;
@@ -132,7 +143,8 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
   @NonNull
   public LawStatus status =  LawStatus.IDEA;
 
-  @CreatedBy
+  /** The user that initially created the idea */
+  @CreatedBy  // automatically handled by spring data jpa auditing
   @NonNull
   @NotNull
   @ManyToOne

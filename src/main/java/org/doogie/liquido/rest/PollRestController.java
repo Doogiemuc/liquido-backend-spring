@@ -91,10 +91,12 @@ public class PollRestController {
 		// https://stackoverflow.com/questions/49458567/mapping-hal-uri-in-requestbody-to-a-spring-data-rest-managed-entity
 
 		Long pollId = restUtils.getIdFromURI("polls", joinPollRequest.poll);
-		PollModel poll = pollRepo.findOne(pollId);
+		PollModel poll = pollRepo.findById(pollId)
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_JOIN_POLL, "Cannot find poll with id="+pollId));
 
 		Long proposalId = restUtils.getIdFromURI("laws", joinPollRequest.proposal);
-		LawModel proposal = lawRepo.findOne(proposalId);
+		LawModel proposal = lawRepo.findById(proposalId)
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_JOIN_POLL, "Cannot find proposal with id="+pollId));
 
 		PollModel updatedPoll = pollService.addProposalToPoll(proposal, poll);
 

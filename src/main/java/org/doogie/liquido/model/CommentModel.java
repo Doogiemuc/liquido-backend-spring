@@ -4,7 +4,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -30,7 +29,6 @@ public class CommentModel extends BaseModel {
   /** Suggestion for improvement or comment.  The comment can be written in HTML. */
   @NotNull
   @NonNull
-  @NotEmpty
   public String comment;
 
   /** Author of this comment */

@@ -17,6 +17,7 @@ import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.LiquidoProperties;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -28,9 +29,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.embedded.LocalServerPort;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.data.rest.webmvc.RestMediaTypes;
 import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.*;
@@ -241,7 +242,7 @@ public class RestEndpointTests {
 
 
   @Test
-  public void testPostNewArea() {
+  public void testPostNewArea() throws JSONException {
     log.trace("TEST POST new area");
 
     String areaTitle = "This is a newly created Area "+System.currentTimeMillis() % 10000;  // make test repeatable: Title must be unique!
@@ -266,7 +267,7 @@ public class RestEndpointTests {
   }
 
   @Test
-  public void testPatchArea() {
+  public void testPatchArea() throws JSONException {
     log.trace("TEST PATCH area");
 
     String newDescription = "Updated description";
@@ -314,7 +315,7 @@ public class RestEndpointTests {
    * Create a new proposal for a law. This test case posts an alternative proposal to an already existing proposal.
    */
   @Test
-  public void testPostAlternativeProposal() {
+  public void testPostAlternativeProposal() throws JSONException {
     log.trace("TEST postAlternativeProposal");
 
     // ===== Find a poll that is in VOTING phase
@@ -356,7 +357,7 @@ public class RestEndpointTests {
   // https://jira.spring.io/browse/DATAREST-884
 
   @Test
-  public void testPostBallot() {
+  public void testPostBallot() throws JSONException {
     log.trace("TEST postBallot");
 
     // ===== Find a poll tha is in VOTING phase
@@ -398,7 +399,7 @@ public class RestEndpointTests {
   }
 
   @Test
-  public void testPostDuplicateVote() {
+  public void testPostDuplicateVote() throws JSONException {
     log.trace("TEST postDuplicateVote");
 
     // ===== Find a poll tha is in VOTING phase
@@ -437,7 +438,7 @@ public class RestEndpointTests {
   @Test
   // USER1 is logged in via HTTP client.
   // This does not work for REST tests: @WithUserDetails(value=TestFixtures.USER0_EMAIL, userDetailsServiceBeanName="liquidoUserDetailsService")
-  public void testIdeaReachesQuorum() {
+  public void testIdeaReachesQuorum() throws JSONException {
     log.trace("TEST ideaReachesQuorum");
     LawModel idea = createIdea("Idea from testIdeaReachesQuorum");
 
@@ -486,7 +487,7 @@ public class RestEndpointTests {
    *                        because title MUST be unique.
    * @return the created idea (but without area filled!)
    */
-  private LawModel createIdea(String ideaTitlePrefix) {
+  private LawModel createIdea(String ideaTitlePrefix) throws JSONException {
     long now = System.currentTimeMillis() % 10000;
     String ideaTitle = ideaTitlePrefix+" "+now;  // title must be unique!
     String ideaDesc  = "This idea was created from a test case";
@@ -545,7 +546,7 @@ public class RestEndpointTests {
    * This creates NEW delegation directly by POSTing to the /delegations rest endpoint.
    */
   //@Test
-  public void testPostNewDelegation() {
+  public void testPostNewDelegation() throws JSONException {
     log.trace("TEST postDelegation");
 
     String url = "/delegations";
@@ -575,7 +576,7 @@ public class RestEndpointTests {
    * This updates a delegation and changes the toProxy via PUT to the /saveProxy endpoint
    */
   @Test
-  public void testSaveProxy() throws IOException {
+  public void testSaveProxy() throws IOException, JSONException {
     log.trace("TEST saveProxy");
 
     String url = "/saveProxy";
@@ -613,7 +614,7 @@ public class RestEndpointTests {
    * try to save a delegation with an invalid objectID
    */
   @Test
-  public void testPostInvalidDelegation() {
+  public void testPostInvalidDelegation() throws JSONException {
     log.trace("TEST postInvalidDelegation");
 
     String url = "/delegations";
@@ -641,7 +642,7 @@ public class RestEndpointTests {
   }
 
   @Test
-  public void testPostDuplicateArea() {
+  public void testPostDuplicateArea() throws JSONException {
     log.trace("TEST postDuplicateArea");
 
     String createdByUri  = basePath + "/users/" + this.users.get(0).getId();

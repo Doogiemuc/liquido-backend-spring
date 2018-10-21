@@ -4,7 +4,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.validator.constraints.NotEmpty;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -25,7 +24,6 @@ public class KeyValueModel /* extends BaseModel */ {
 
   @NonNull
   @NotNull
-  @NotEmpty
   @Column(unique = true)
   public String key;
 
