@@ -29,12 +29,12 @@ public interface TokenChecksumRepo extends CrudRepository<TokenChecksumModel, Lo
 	 */
 	List<TokenChecksumModel> findByDelegatedTo(TokenChecksumModel proxyChecksum);
 
-	/**
+	/**  DEPRECATED
 	 * find the checksum of a public proxy so that a voter can delegate his checksum to it.
 	 * @pararm area area of the checksum and public proxy
 	 * @param proxy a public proxy that added his uername to his stored checksum
 	 * @return the checksum of the public proxy  or null if none was found
-	 */
+	 *
 	TokenChecksumModel findByAreaAndPublicProxy(AreaModel area, UserModel proxy);
-
+	*/
 }

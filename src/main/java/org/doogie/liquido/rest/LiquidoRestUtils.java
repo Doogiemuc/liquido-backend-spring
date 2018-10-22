@@ -10,9 +10,6 @@ import java.util.regex.Pattern;
 @Service
 public class LiquidoRestUtils {
 
-	@Autowired
-	Environment springEnv;
-
 	/**
 	 * Quick and dirty hack to get the entity ID from an URI.
 	 * There is no other clean way to load a HATEOS entity from its URI.
@@ -21,11 +18,10 @@ public class LiquidoRestUtils {
 	 * @param uri        a fully qualified uri of a spring data rest entity. (links.self.href)
 	 * @return the internal db ID of the entity, i.e. just simply the number at the end of the string.
 	 */
-	public Long getIdFromURI(String entityName, String uri) {
-		String basePath = springEnv.getProperty("spring.data.rest.base-path");
-		Pattern regex = Pattern.compile(".*" + basePath + "/" + entityName + "\\/(\\d+)");
+	public static Long getIdFromURI(String entityName, String uri) {
+		Pattern regex = Pattern.compile(".*\\/" + entityName + "\\/(\\d+)");
 		Matcher matcher = regex.matcher(uri);
-		if (!matcher.matches()) throw new RuntimeException("Invalid uri");
+		if (!matcher.matches()) throw new RuntimeException("This does not seem to be an URI for an '"+entityName+"': "+uri);
 		String entityId = matcher.group(1);  // the number at the end of the uri
 		return Long.valueOf(entityId);
 	}

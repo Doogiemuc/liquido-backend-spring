@@ -48,7 +48,6 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
 public class TestDataCreator implements CommandLineRunner {
   private Logger log = LoggerFactory.getLogger(this.getClass());
 
-  private final String TESTUSER_PASSWORD = "dummyPassword";
   public int NUM_USERS = 20;
   public int NUM_AREAS = 10;
   public int NUM_IDEAS = 111;
@@ -68,6 +67,7 @@ public class TestDataCreator implements CommandLineRunner {
   @Autowired
   AreaRepo areaRepo;
   List<AreaModel> areas = new ArrayList<>();
+  Map<String, AreaModel> areaMap = new HashMap<>();
 
   @Autowired
   LawRepo lawRepo;
@@ -138,11 +138,11 @@ public class TestDataCreator implements CommandLineRunner {
 			log.info("===== START TestDataCreator");
       log.debug("Populate test DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
-      seedUsers(NUM_USERS, "testuser", TESTUSER_PASSWORD);
+      seedUsers(NUM_USERS, TestFixtures.MAIL_PREFIX, TestFixtures. TESTUSER_PASSWORD);
       auditorAware.setMockAuditor(this.users.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
       //seedGlobalProperties();
       seedAreas();
-      seedProxies();
+      seedProxies(TestFixtures.delegations);
       seedIdeas();
       seedProposals();
       seedPollInElaborationPhase(NUM_ALTERNATIVE_PROPOSALS);
@@ -242,28 +242,26 @@ public class TestDataCreator implements CommandLineRunner {
 
       AreaModel savedArea = areaRepo.save(newArea);
       this.areas.add(savedArea);
+      this.areaMap.put(savedArea.getTitle(), savedArea);
     }
   }
 
 
-  private void seedProxies() {
+	/**
+	 * seed delegations from email[0] to email[1] so that email[1] becomes a proxy
+	 * @param delegations list of email[0] -> email[1] pairs where the second element will become the proxy
+	 */
+  private void seedProxies(List<String[]> delegations) {
 		log.info("Seeding Proxies ...");
-    List<String[]> delegations = new ArrayList<>();
-    // These needs to be aligned with TestFixtures.USER1_NUM_VOTES !
-    delegations.add(new String[] {TestFixtures.USER2_EMAIL,TestFixtures.USER1_EMAIL});   // testuser2 delegates to proxy testuser1
-		delegations.add(new String[] {TestFixtures.USER3_EMAIL,TestFixtures.USER1_EMAIL});
-		delegations.add(new String[] {TestFixtures.USER4_EMAIL,TestFixtures.USER1_EMAIL});
-		delegations.add(new String[] {TestFixtures.USER5_EMAIL,TestFixtures.USER4_EMAIL});
-		delegations.add(new String[] {TestFixtures.USER6_EMAIL,TestFixtures.USER4_EMAIL});
 
-    AreaModel area = areas.get(0);    // "Area 0"
+		AreaModel area = areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
     for(String[] delegation: delegations) {
       UserModel fromUser = users.get(delegation[0]);
       UserModel toProxy  = users.get(delegation[1]);
 			log.debug("Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId());
       try {
-				String proxyVoterToken = castVoteService.createVoterToken(toProxy, area, toProxy.getPasswordHash());
-        proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
+				//String proxyVoterToken = castVoteService.createVoterToken(toProxy, area, toProxy.getPasswordHash());
+        //proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
 				String userVoterToken = castVoteService.createVoterToken(fromUser, area, fromUser.getPasswordHash());
 				proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);
 			} catch (LiquidoException e) {

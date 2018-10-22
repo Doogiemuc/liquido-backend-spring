@@ -1,5 +1,6 @@
 package org.doogie.liquido.services;
 
+import jdk.nashorn.internal.parser.Token;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.BallotRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
@@ -62,7 +63,6 @@ public class ProxyService {
 	 * User forwards his right to vote to a proxy in one area.
 	 *
 	 * After some sanity checks, this methods checks for a circular delegation which would be forbidden.
-	 * Then we fetch (or create) the user's voterToken. Therefore we need his password.
 	 * If toProxy is a public proxy, then we can directly delegate user's checksum to the public proxie's checksum.
 	 * Otherwise we have to store a task, so that the proxy needs to accept the delegation.
 	 *
@@ -82,7 +82,7 @@ public class ProxyService {
 		if (fromUser.equals(toProxy))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_SAVE_PROXY, "Cannot delegate to myself!");
 
-		//----- check for circular delegation, which cannot allowed
+		//----- check for circular delegation, which cannot be allowed
 		if (thisWouldBeCircularDelegation(area, fromUser, toProxy))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ASSIGN_CIRCULAR_PROXY, "Cannot assign proxy. This would be a circular delegation which cannot be allowed.");
 
@@ -143,7 +143,7 @@ public class ProxyService {
 	}
 
 
-	/**
+	/**    DEPRECATED
 	 * When a user opts-in to become a public proxy, then his username is stored to together with his checksum,
 	 * so that other users can delegate their right to vote to this "public" checksum.
 	 * @param publicProxy the voter that wants to become a public proxy
@@ -151,7 +151,7 @@ public class ProxyService {
 	 * @param proxyVoterToken the voters token
 	 * @return the proxy's public checksum
 	 * @throws LiquidoException when voterToken is invalid
-	 */
+
 	@Transactional
 	public TokenChecksumModel becomePublicProxy(UserModel publicProxy, AreaModel area, String proxyVoterToken) throws LiquidoException {
 		log.trace("becomePublicProxy("+publicProxy+", "+area+")");
@@ -160,6 +160,7 @@ public class ProxyService {
 		publicProxyChecksum.setPublicProxy(publicProxy);
 		return checksumRepo.save(publicProxyChecksum);
 	}
+	*/
 
 	/**
 	 * When a user is a public proxy, then his checksum is stored together with his username. That way
@@ -169,14 +170,40 @@ public class ProxyService {
 	 *
 	 * @param proxy the public proxy someone want's to delegate to
 	 * @return the checksumModel of this proxy
-	 */
+
 	public TokenChecksumModel getChecksumModelOfPublicProxy(AreaModel area, UserModel proxy) {
 		return checksumRepo.findByAreaAndPublicProxy(area, proxy);
 	}
+	*/
 
-	/*
-	 * When a user wants to know how his (transitive) proxy voted for him, then he can just simply look at his own ballot.
+
+	/**
+	 * When a user wants to check how his direct proxy has  voted for him.
+	 * @param poll a poll
+	 * @param voterChecksum the voter's checksum
+	 * @return the ballot of the vote's direct proxy in this poll.
+	 * @throws LiquidoException when this voter did not delegate his checksum to any proxy in this area
 	 */
+	public BallotModel getBallotOfDirectProxy(PollModel poll, TokenChecksumModel voterChecksum) throws LiquidoException {
+		if (voterChecksum.getDelegatedTo() == null)
+			throw new LiquidoException(LiquidoException.Errors.NO_DELEGATION, "You did not delegate your vote");
+		BallotModel proxyBallot = ballotRepo.findByPollAndChecksum(poll, voterChecksum.getDelegatedTo());
+		return proxyBallot;
+	}
+
+	public BallotModel getBallotOfTopProxy(PollModel poll, TokenChecksumModel voterChecksum) throws LiquidoException {
+		if (voterChecksum.getDelegatedTo() == null)
+			throw new LiquidoException(LiquidoException.Errors.NO_DELEGATION, "You did not delegate your vote");
+		TokenChecksumModel topChecksum = findTopChecksum(voterChecksum);
+		BallotModel proxyBallot = ballotRepo.findByPollAndChecksum(poll, topChecksum);
+		return proxyBallot;
+	}
+
+	TokenChecksumModel findTopChecksum(TokenChecksumModel checksum) {
+		if (checksum.getDelegatedTo() == null) return checksum;
+		return findTopChecksum(checksum.getDelegatedTo());
+	}
+
 
 	/**
 	 * Recursively find the "transitive" top proxy at the top of the delegation chain for this voter

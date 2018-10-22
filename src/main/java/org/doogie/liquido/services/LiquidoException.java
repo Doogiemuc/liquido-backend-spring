@@ -23,7 +23,8 @@ public class LiquidoException extends Exception {
 		CANNOT_ASSIGN_CIRCULAR_PROXY(8),
 		CANNOT_CAST_VOTE(9),
     CANNOT_GET_TOKEN(10),
-		CANNOT_FINISH_POLL(11);
+		CANNOT_FINISH_POLL(11),
+		NO_DELEGATION(12);
 		int errorCode;
     Errors(int code) { this.errorCode = code; }
   }

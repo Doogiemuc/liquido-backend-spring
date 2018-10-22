@@ -27,7 +27,7 @@ public class UserModel extends BaseModel {
   @NotNull
   @NonNull
   @JsonIgnore                       // tell jackson to not serialize this field
-  //@Getter(AccessLevel.PRIVATE)      // Lombok getter cannot be private because I need access to the password in LiquidoUserDetailsService.java
+  //@Getter(AccessLevel.PRIVATE)    // Lombok getter cannot be private because I need access to the password in LiquidoUserDetailsService.java
   @RestResource(exported = false)   // private: never exposed via REST!
   private String passwordHash;
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.ReadContext;
+import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
@@ -12,8 +13,11 @@ import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.services.CastVoteService;
+import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.testUtils.LiquidoTestErrorHandler;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
+import org.doogie.liquido.test.testUtils.OauthInterceptor;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.LiquidoProperties;
 import org.json.JSONArray;
@@ -25,8 +29,6 @@ import org.junit.Test;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.junit.runner.RunWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -41,31 +43,35 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import static org.junit.Assert.*;
+import static org.springframework.http.HttpMethod.*;
+
+
 
 /**
  * Integration test for Liquiodo REST endpoint.
  *
  * These test cases test the Liquido Java backend via its REST interface.
  */
+@Slf4j
 @RunWith(SpringRunner.class)
 @ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)  // This is so cool. This automatically sets up everything and starts the server. *like*
 //@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)  // Only run tests. Do not automatically start a server.
 public class RestEndpointTests {
-  private Logger log = LoggerFactory.getLogger(this.getClass());
 
-  /** base URL from application.properties */
+  /** path prefix for REST API from application.properties */
   @Value(value = "${spring.data.rest.base-path}")
   String basePath;
 
-  /** (random) port of local backend under test */
+  /** (random) port of local backend under test that spring creates */
   @LocalServerPort
   int localServerPort;
+
+  /** FQDN */
+  String rootUri;
 
   // My spring-data-jpa repositories for loading test data directly
   @Autowired
@@ -81,6 +87,9 @@ public class RestEndpointTests {
   PollRepo pollRepo;
 
   @Autowired
+  CastVoteService castVoteService;
+
+  @Autowired
   LiquidoProperties props;
 
   //@Autowired
@@ -89,11 +98,25 @@ public class RestEndpointTests {
   @Autowired
   RepositoryEntityLinks entityLinks;
 
+  // parameters for Oauth
+	@Value(value = "${security.jwt.client-id}")
+	private String CLIENT_ID;
+
+	@Value(value = "${security.jwt.client-secret}")
+	private String CLIENT_SECRET;
+
+	@Value(value = "${security.jwt.grant-type}")
+	private String GRANT_TYPE;
+
+	@Value(value = "${security.jwt.resource-ids}")
+	private String RESOURCE_IDs;
 
 
-  // preloaded data that most test cases need.
+
+	// preloaded data that most test cases need.
   List<UserModel> users;
   List<AreaModel> areas;
+  Map<String, AreaModel> areaMap;  // areas by title
   List<LawModel>  laws;
 
   //@Autowired
@@ -102,20 +125,128 @@ public class RestEndpointTests {
   /** our HTTP REST client */
   RestTemplate client;
 
+  /** the oauth interceptor can be configured for specific users */
+	OauthInterceptor oauthInterceptor;
+
+	/**
+	 * This is executed, when the Bean has been created and @Autowired references are injected and ready.
+	 * This runs before each test.
+	 */
+	@PostConstruct
+	public void postConstruct() {
+		initRestTemplateClient();
+
+		// Here you can do any one time setup necessary
+		log.trace("PostConstruct: pre-fetching data from DB");
+
+		this.users = new ArrayList<>();
+		for (UserModel userModel : userRepo.findAll()) {
+			this.users.add(userModel);
+		}
+		log.trace("loaded "+this.users.size()+ " users");
+
+		this.areas = new ArrayList<>();
+		this.areaMap = new HashMap<>();
+		for (AreaModel areaModel : areaRepo.findAll()) {
+			this.areas.add(areaModel);
+			this.areaMap.put(areaModel.getTitle(), areaModel);
+		}
+		log.trace("loaded "+this.areas.size()+ " areas");
+
+		this.laws = new ArrayList<>();
+		for (LawModel lawModel : lawRepo.findAll()) {
+			this.laws.add(lawModel);
+		}
+		log.trace("loaded "+this.laws.size()+ " laws");
+	}
+
   /** configure HTTP REST client */
   public void initRestTemplateClient() {
-    String rootUri = "http://localhost:"+localServerPort+basePath;
-    log.trace("====== configuring REST client for "+rootUri);
+    this.rootUri = "http://localhost:"+localServerPort+basePath;
+    log.trace("====== configuring RestTemplate HTTP client for "+rootUri);
+    this.oauthInterceptor = new OauthInterceptor("http://localhost:"+localServerPort, CLIENT_ID, CLIENT_SECRET, TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD);
     this.client = new RestTemplateBuilder()
-      .basicAuthorization(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD)
+      //.basicAuthorization(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD)
       .errorHandler(new LiquidoTestErrorHandler())
-      //.requestFactory(new HttpComponentsClientHttpRequestFactory())
+      .additionalInterceptors(this.oauthInterceptor)
       .additionalInterceptors(new LogClientRequestInterceptor())
       .rootUri(rootUri)
       .build();
-  }
+	}
 
 
+
+
+	/*==================
+	// MockMvc is nice. But it only mocks the HTTP requests (via a mocked DispatcherSrvlet)
+	// Rest Template does really send requests (via network)
+	// https://stackoverflow.com/questions/25901985/difference-between-mockmvc-and-resttemplate-in-integration-tests
+
+	@Autowired
+	private WebApplicationContext wac;
+
+	@Autowired
+	private FilterChainProxy springSecurityFilterChain;
+
+	// HTTP client configured for Oauth
+	private MockMvc mockMvc;
+
+
+	@Before
+	public void setupMockMvc() {
+
+		this.mockMvc = MockMvcBuilders
+				.webAppContextSetup(wac)
+				.addFilter(springSecurityFilterChain)
+				.build();
+	}
+
+
+
+	/**
+	 * get an Oauth access token for this user
+	 * @param username email adress
+	 * @param password password
+	 * @return the Oauth access token for this user
+	 * @throws Exception when HTTP request fails
+
+	private String obtainAccessToken(String username, String password) throws Exception {
+		MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+		params.add("grant_type", "password");
+		params.add("client_id", "fooClientIdPassword");
+		params.add("username", username);
+		params.add("password", password);
+
+		ResultActions result = mockMvc
+				.perform(post("/oauth/token")
+				.params(params)
+				.with(httpBasic(CLIENT_ID, CLIENT_SECRET))
+				.accept(CONTENT_TYPE))
+				.andExpect(status().isOk())
+				.andExpect(content().contentType(CONTENT_TYPE));
+
+		String resultString = result.andReturn().getResponse().getContentAsString();
+		JacksonJsonParser jsonParser = new JacksonJsonParser();
+		return jsonParser.parseMap(resultString).get("access_token").toString();
+
+	}
+
+	@Test
+	public void givenNoToken_whenGetSecureRequest_thenUnauthorized() throws Exception {
+		mockMvc.perform(get("/areas")).andExpect(status().isUnauthorized());
+	}
+
+	*/
+
+	//========= Tests with real REST calls =============
+
+	@Test
+	public void testOauthInterceptor() throws Exception {
+		OauthInterceptor oauthInterceptor = new OauthInterceptor("http://localhost:"+localServerPort, CLIENT_ID, CLIENT_SECRET, TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD);
+		String oauthAccessToken = oauthInterceptor.getOauthAccessToken();
+		assertNotNull("Oauth access_token must not be null", oauthAccessToken);
+		assertTrue("Oauth access_token must be at least 5 chars long", oauthAccessToken.length() > 5);
+	}
 
 
   /*
@@ -173,36 +304,7 @@ public class RestEndpointTests {
   */
 
 
-  /**
-   * This is executed, when the Bean has been created and @Autowired references are injected and ready.
-   * This runs before each test.
-   */
-  @PostConstruct
-  public void postConstruct() {
-    initRestTemplateClient();
 
-    // Here you can do any one time setup necessary
-    log.trace("PostConstruct: pre-fetching data from DB");
-
-    this.users = new ArrayList<>();
-    for (UserModel userModel : userRepo.findAll()) {
-      this.users.add(userModel);
-    }
-    log.trace("loaded "+this.users.size()+ " users");
-
-    this.areas = new ArrayList<>();
-    for (AreaModel areaModel : areaRepo.findAll()) {
-      this.areas.add(areaModel);
-    }
-    log.trace("loaded "+this.areas.size()+ " areas");
-
-    this.laws = new ArrayList<>();
-    for (LawModel lawModel : lawRepo.findAll()) {
-      this.laws.add(lawModel);
-    }
-    log.trace("loaded "+this.laws.size()+ " laws");
-
-  }
 
   /*
    * This will run before every single test case!
@@ -245,7 +347,7 @@ public class RestEndpointTests {
   public void testPostNewArea() throws JSONException {
     log.trace("TEST POST new area");
 
-    String areaTitle = "This is a newly created Area "+System.currentTimeMillis() % 10000;  // make test repeatable: Title must be unique!
+    String areaTitle = "This is a newly created Area "+System.currentTimeMillis();  // make test repeatable: Title must be unique!
 
     JSONObject newAreaJSON = new JSONObject()
       .put("title", areaTitle)
@@ -257,7 +359,7 @@ public class RestEndpointTests {
     headers.setContentType(MediaType.APPLICATION_JSON);
     HttpEntity<String> entity = new HttpEntity<>(newAreaJSON.toString(), headers);
 
-    ResponseEntity<AreaModel> response = client.exchange("/areas", HttpMethod.POST, entity, AreaModel.class);
+    ResponseEntity<AreaModel> response = client.exchange("/areas", POST, entity, AreaModel.class);
 
     assertEquals("expected HttpStatus.CREATED(201)", HttpStatus.CREATED, response.getStatusCode());
     AreaModel createdArea = response.getBody();
@@ -281,7 +383,7 @@ public class RestEndpointTests {
     HttpEntity<String> entity = new HttpEntity<>(newAreaJSON.toString(), headers);
 
     Long areaId = this.areas.get(0).getId();
-    ResponseEntity<AreaModel> response = client.exchange("/areas/"+areaId, HttpMethod.PATCH, entity, AreaModel.class);
+    ResponseEntity<AreaModel> response = client.exchange("/areas/"+areaId, PATCH, entity, AreaModel.class);
 
     AreaModel updatedArea = response.getBody();
     assertEquals(newDescription, updatedArea.getDescription());
@@ -385,7 +487,7 @@ public class RestEndpointTests {
 
     // Do not use client.postForObject here. It does not return any error. It simply returns null instead!
     // Endpoint is /postBallot    /ballots are not exposed as @RepositoryRestResource for writing!
-    ResponseEntity<String> response = client.exchange("/postBallot", HttpMethod.POST, entity, String.class);
+    ResponseEntity<String> response = client.exchange("/postBallot", POST, entity, String.class);
     log.debug("Response body:\n"+response.getBody());
 
     assertEquals(HttpStatus.CREATED, response.getStatusCode());
@@ -420,7 +522,7 @@ public class RestEndpointTests {
     headers.setContentType(MediaType.APPLICATION_JSON);
     HttpEntity<String> entity = new HttpEntity<>(newBallotJson.toString(), headers);
 
-    ResponseEntity<String> response = client.exchange("/postBallot", HttpMethod.POST, entity, String.class);
+    ResponseEntity<String> response = client.exchange("/postBallot", POST, entity, String.class);
 
     String responseBody = response.getBody();
     assertEquals(HttpStatus.BAD_REQUEST.value(), response.getStatusCodeValue());  // 400
@@ -440,22 +542,11 @@ public class RestEndpointTests {
   // This does not work for REST tests: @WithUserDetails(value=TestFixtures.USER0_EMAIL, userDetailsServiceBeanName="liquidoUserDetailsService")
   public void testIdeaReachesQuorum() throws JSONException {
     log.trace("TEST ideaReachesQuorum");
-    LawModel idea = createIdea("Idea from testIdeaReachesQuorum");
-
-    log.trace("======="+idea.toString());
-
-    // check that new idea has no supporters yet
-    //int numSupporters = JsonPath.read(responseEntity.getBody(), "$.numSupporters");
+    LawModel idea = postNewIdea("Idea from testIdeaReachesQuorum");
+    log.trace(idea.toString());
     assertEquals(0, idea.getNumSupporters());
 
-    // check that new idea is created by currently logged in user
-    //String createdByUri = JsonPath.read(responseEntity.getBody(), "$._links.createdBy.href");
-    //HttpEntity<UserModel> createdByResponse = client.getForEntity(createdByUri, UserModel.class);
-    //assertEquals("Idea should have been created by currently logged in user "+TestFixtures.USER1_EMAIL, TestFixtures.USER1_EMAIL, idea.getCreatedBy().getEmail());
-
     //===== add Supporters via JSON, so that idea reaches its quorum
-    //String supportersURL = JsonPath.read(responseEntity.getBody(), "$._links.supporters.href");
-
     int supportersForProposal = props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL);
     Assert.assertTrue("Need at least "+supportersForProposal+" users to run this test", this.users.size() >= supportersForProposal);
 
@@ -473,8 +564,6 @@ public class RestEndpointTests {
     }
 
     //===== idea should now have reached its quorum
-    //need to reload idea!
-
     LawModel updatedIdea = client.getForObject("/laws/"+idea.getId(), LawModel.class);
     Assert.assertEquals("Idea should have reached its quorum and be in status PROPOSAL", LawModel.LawStatus.PROPOSAL, updatedIdea.getStatus());
 
@@ -485,11 +574,10 @@ public class RestEndpointTests {
    * Helper to create a new idea (via REST)
    * @param ideaTitlePrefix the title of the idea. A random number will be added,
    *                        because title MUST be unique.
-   * @return the created idea (but without area filled!)
+   * @return the created idea (but without dependant entities such  as area and createdBy filled!)
    */
-  private LawModel createIdea(String ideaTitlePrefix) throws JSONException {
-    long now = System.currentTimeMillis() % 10000;
-    String ideaTitle = ideaTitlePrefix+" "+now;  // title must be unique!
+  private LawModel postNewIdea(String ideaTitlePrefix) throws JSONException {
+    String ideaTitle = ideaTitlePrefix+" "+System.currentTimeMillis();;  // title must be unique!
     String ideaDesc  = "This idea was created from a test case";
     String areaUri   = basePath + "/areas/" + this.areas.get(0).getId();
 
@@ -503,6 +591,7 @@ public class RestEndpointTests {
     HttpEntity<String> entity = new HttpEntity<>(ideaJson.toString(), headers);
 
     ResponseEntity<LawModel> createdIdea = client.postForEntity("/laws", entity, LawModel.class);
+    // Keep in mind that createdIdea.createdBy is not filled, because this is just the idea not the ideaProjection
     assertEquals(HttpStatus.CREATED, createdIdea.getStatusCode());
     return createdIdea.getBody();
   }
@@ -514,14 +603,13 @@ public class RestEndpointTests {
   @Test
   public void testGetNumVotes() {
     log.trace("TEST getNumVotes");
-    long user4_id = this.users.get(4).getId();
-    long area1_id = this.areas.get(1).getId();
-    String uri = "/my/numVotes"+area1_id;
+    AreaModel area = this.areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
+    String uri = "/my/numVotes?area="+area.getId();
 
     long numVotes = client.getForObject(uri, Long.class);
 
-    assertEquals("User "+TestFixtures.USER4_EMAIL+" should have "+TestFixtures.USER1_NUM_VOTES+" delegated votes in area='"+TestFixtures.AREA1_TITLE+"'", TestFixtures.USER1_NUM_VOTES, numVotes);
-    log.trace("TEST SUCCESS: found expected "+TestFixtures.USER1_NUM_VOTES+" delegations for "+TestFixtures.USER4_EMAIL);
+    assertEquals("User "+TestFixtures.USER1_EMAIL+" should have "+TestFixtures.USER1_NUM_VOTES+" delegated votes in area='"+TestFixtures.AREA_FOR_DELEGATIONS+"'", TestFixtures.USER1_NUM_VOTES, numVotes);
+    log.trace("TEST SUCCESS: found expected "+TestFixtures.USER1_NUM_VOTES+" delegations for "+TestFixtures.USER1_EMAIL + " in area "+TestFixtures.AREA_FOR_DELEGATIONS);
   }
 
   /**
@@ -530,115 +618,54 @@ public class RestEndpointTests {
   @Test
   public void testGetProxyMap() {
     log.trace("TEST getProxyMap");
-    long user0_id = this.users.get(0).getId();
     String uri = "/my/proxyMap";
+		String delegeeEMail = TestFixtures.delegations.get(0)[0];
+		String proxyEMail   = TestFixtures.delegations.get(0)[1];
 
+		// send request as the delegee who assigned his vote to a proxy
+		this.oauthInterceptor.setUsername(delegeeEMail);
     String proxyMapJson = client.getForObject(uri, String.class);
-    String proxyInArea1_email = JsonPath.read(proxyMapJson, "$['"+TestFixtures.AREA1_TITLE+"'].email");
 
-    assertEquals("User "+TestFixtures.USER1_EMAIL+" should have "+TestFixtures.USER4_EMAIL+" as proxy", TestFixtures.USER4_EMAIL, proxyInArea1_email);
-    log.trace("TEST SUCCESS: found expected "+TestFixtures.USER1_NUM_VOTES+" delegations for "+TestFixtures.USER4_EMAIL);
-  }
-
-
-  /* DEPRECATED  =>   must not post to /delegations directly. POST to   /saveProxy  insted
-   *
-   * This creates NEW delegation directly by POSTing to the /delegations rest endpoint.
-   */
-  //@Test
-  public void testPostNewDelegation() throws JSONException {
-    log.trace("TEST postDelegation");
-
-    String url = "/delegations";
-    String fromUserUri = basePath + "/users/" + this.users.get(0).getId();
-    String toProxyUri  = basePath + "/users/" + this.users.get(1).getId();
-    String areaUri     = basePath + "/areas/" + this.areas.get(0).getId();
-
-    //I am deliberately not using DelegationModel here. This is the JSON as a client would send it.
-    JSONObject newDelegationJSON = new JSONObject()
-        .put("fromUser", fromUserUri)
-        .put("toProxy",  toProxyUri)
-        .put("area",     areaUri);
-    log.trace("posting JSON Object:\n"+newDelegationJSON.toString(2));
-
-    HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<>(newDelegationJSON.toString(), headers);
-
-    ResponseEntity<String> response = client.exchange(url, HttpMethod.POST, entity, String.class);
-
-    log.debug("Response body:\n"+response.getBody());
-    assertEquals(HttpStatus.CREATED, response.getStatusCode());
-    log.trace("TEST SUCCESS: saved delegation to proxy successfully");
+    log.trace("got Proxy Map:\n"+proxyMapJson);
+    String actualProxyInArea = JsonPath.read(proxyMapJson, "$['"+TestFixtures.AREA_FOR_DELEGATIONS+"'].directProxy.email");
+    assertEquals(delegeeEMail+" should have "+proxyEMail+" as proxy", proxyEMail, actualProxyInArea);
   }
 
   /**
    * This updates a delegation and changes the toProxy via PUT to the /saveProxy endpoint
    */
   @Test
-  public void testSaveProxy() throws IOException, JSONException {
-    log.trace("TEST saveProxy");
-
-    String url = "/saveProxy";
-    UserModel toProxy  = this.users.get(2);
+  public void testAssignProxy() throws JSONException, LiquidoException {
+    String url = "/assignProxy";
+    UserModel fromUser = this.users.get(10);
+    UserModel toProxy  = this.users.get(11);
+    AreaModel area     = this.areas.get(0);
     String toProxyUri  = basePath + "/users/" + toProxy.getId();
-    String areaUri     = basePath + "/areas/" + this.areas.get(0).getId();
+    String areaUri     = basePath + "/areas/" + area.getId();
+    String voterToken  = castVoteService.createVoterToken(fromUser, area, fromUser.getPasswordHash());
 
-    //I am deliberately not using DelegationModel here. This is the plain JSON as any client might send it.
+    //TODO: delete delegation if it exists:  proxyServcie.removeProxy(...)
+
+
+
     JSONObject newDelegationJSON = new JSONObject()
       //.put("fromUser", fromUserUri)    fromUser is implicitly the currently logged in user!
       .put("toProxy",  toProxyUri)
-      .put("area",     areaUri);
+      .put("area",     areaUri)
+      .put("voterToken", voterToken);
     log.trace("posting JSON Object:\n"+newDelegationJSON.toString(2));
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
     HttpEntity<String> entity = new HttpEntity<>(newDelegationJSON.toString(), headers);
 
-    // send PUT that will create the new Delegation
-    ResponseEntity<String> response = client.exchange(url, HttpMethod.PUT, entity, String.class);
-    assertEquals(HttpStatus.OK, response.getStatusCode());
+    // send PUT that will assign the new proxy
+    ResponseEntity<String> response = client.exchange(url, PUT, entity, String.class);
+    assertEquals(HttpStatus.CREATED, response.getStatusCode());
     String updatedDelegationJson = response.getBody();
 
-    // extract URI of toProxy and make an additional request for the full userDetails
-    String proxyURI = JsonPath.read(updatedDelegationJson, "$._links.toProxy.href");
-    log.trace("fetching proxy user information from "+proxyURI);
-    ResponseEntity<UserModel> responseEntity = client.getForEntity(proxyURI, UserModel.class);
-
-    assertEquals("expected toProxy ID to be updated", responseEntity.getBody().getEmail(), toProxy.getEmail());
-    log.trace("TEST SUCCESS: updated proxy successfully to "+toProxy.getEmail());
-  }
-
-
-  /**
-   * try to save a delegation with an invalid objectID
-   */
-  @Test
-  public void testPostInvalidDelegation() throws JSONException {
-    log.trace("TEST postInvalidDelegation");
-
-    String url = "/delegations";
-
-    String fromUserUri = basePath + "/users/" + this.users.get(0).getId();
-    String toProxyUri  = basePath + "/users/" + this.users.get(1).getId();
-    String areaUri     = basePath + "/areas/4711";   // INVALID !
-
-    //I am deliberately not using DelegationModel here. This is the JSON as a client would send it.
-    JSONObject newDelegationJSON = new JSONObject()
-      .put("fromUser", fromUserUri)
-      .put("toProxy",  toProxyUri)
-      .put("area",     areaUri);
-    log.trace("posting JSON Object:\n"+newDelegationJSON.toString(2));
-
-    HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<>(newDelegationJSON.toString(), headers);
-
-    ResponseEntity<String> result = client.exchange(url, HttpMethod.POST, entity, String.class);
-
-    assertEquals(result.getStatusCode(), HttpStatus.BAD_REQUEST);
-
-    log.trace("TEST SUCCESS: invalid delegation was rejected as expected");
+    String actualProxyEmail = JsonPath.read(updatedDelegationJson, "$.toProxy.email");
+    assertEquals("expected toProxy ID to be updated", toProxy.getEmail(), actualProxyEmail);
   }
 
   @Test
