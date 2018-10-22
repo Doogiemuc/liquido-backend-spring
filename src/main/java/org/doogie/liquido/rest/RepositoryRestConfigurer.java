@@ -1,17 +1,45 @@
 package org.doogie.liquido.rest;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import org.doogie.liquido.datarepos.AreaRepo;
+import org.doogie.liquido.datarepos.LawRepo;
+import org.doogie.liquido.datarepos.PollRepo;
+import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.util.DoogiesRequestLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.json.JsonParseException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.support.ConfigurableConversionService;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.data.mapping.context.PersistentEntities;
+import org.springframework.data.repository.support.Repositories;
+import org.springframework.data.repository.support.RepositoryInvokerFactory;
+import org.springframework.data.rest.core.UriToEntityConverter;
+import org.springframework.data.rest.core.config.EntityLookupRegistrar;
 import org.springframework.data.rest.core.config.RepositoryRestConfiguration;
 import org.springframework.data.rest.core.mapping.RepositoryDetectionStrategy;
 import org.springframework.data.rest.webmvc.config.RepositoryRestConfigurerAdapter;
+import org.springframework.data.rest.webmvc.config.RepositoryRestMvcConfiguration;
+import org.springframework.data.rest.webmvc.json.PersistentEntityJackson2Module;
+import org.springframework.format.support.DefaultFormattingConversionService;
+import org.springframework.hateoas.mvc.TypeConstrainedMappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.List;
 
 /**
  * Configure the exposed REST HATEOAS services.
@@ -63,10 +91,80 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
     config.exposeIdsFor(LawModel.class);          // actually LawModel has its own LawProjection which exposes IDs.
     config.exposeIdsFor(PollModel.class);
 
-    //MAYBE: when available in future version of spring: config.getCorsRegistry()
+		//MAYBE: when available in future version of spring: config.getCorsRegistry()
   }
 
   // see also LiquidoAuditorAware for handling @CreatedBy   https://jaxenter.com/rest-api-spring-java-8-112289.html
+
+	@Autowired
+	AreaRepo areaRepo;
+
+	@Autowired
+	UserRepo userRepo;
+
+	@Autowired
+	PollRepo pollRepo;
+
+	@Autowired
+	LawRepo lawRepo;
+
+	/**
+	 * Configure our JSON parse so that it convert from URIs to Entity instances
+	 * that are loaded from the DB.
+	 * Solution https://stackoverflow.com/questions/37186417/resolving-entity-uri-in-custom-controller-spring-hateoas/52938767#52938767
+	 * @param objectMapper jackson JSON parser
+	 */
+	@Override
+	public void configureJacksonObjectMapper(ObjectMapper objectMapper) {
+		SimpleModule module = new SimpleModule();
+
+		module.addDeserializer(AreaModel.class, new JsonDeserializer<AreaModel>() {
+			@Override
+			public AreaModel deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+				String uri = p.getValueAsString();
+				//p.getParsingContext().getCurrentName()+"s"  == "areas" :-)
+				Long areaId = LiquidoRestUtils.getIdFromURI("areas", uri);
+				AreaModel area = areaRepo.findById(areaId).get();
+				return area;
+			}
+		});
+
+		module.addDeserializer(UserModel.class, new JsonDeserializer<UserModel>() {
+			@Override
+			public UserModel deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+				String uri = p.getValueAsString();
+				Long userId = LiquidoRestUtils.getIdFromURI("users", uri);
+				UserModel user = userRepo.findById(userId)
+						.orElseThrow(() -> new JsonParseException(new RuntimeException("Cannot find User with id="+userId)));
+				return user;
+			}
+		});
+
+		module.addDeserializer(PollModel.class, new JsonDeserializer<PollModel>() {
+			@Override
+			public PollModel deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+				String uri = p.getValueAsString();
+				Long pollId = LiquidoRestUtils.getIdFromURI("polls", uri);
+				PollModel poll = pollRepo.findById(pollId)
+						.orElseThrow(() -> new JsonParseException(new RuntimeException("Cannot find Poll with id="+pollId)));
+				return poll;
+			}
+		});
+
+		module.addDeserializer(LawModel.class, new JsonDeserializer<LawModel>() {
+			@Override
+			public LawModel deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+				String uri = p.getValueAsString();
+				Long lawId = LiquidoRestUtils.getIdFromURI("laws", uri);
+				LawModel poll = lawRepo.findById(lawId)
+						.orElseThrow(() -> new JsonParseException(new RuntimeException("Cannot find Law with id="+lawId)));
+				return poll;
+			}
+		});
+
+		objectMapper.registerModule(module);
+	}
+
 
 
 

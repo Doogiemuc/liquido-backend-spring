@@ -58,9 +58,12 @@ public class TokenChecksumModel {
 	/**
 	 * If a user want's to be a public proxy, then he CAN store his user together with his checksum.
 	 * Then voters can automatically delegate their vote to this proxy.
-	 */
+	 *
 	@OneToOne
 	UserModel publicProxy = null;		// by default no username is stored together with a checksum!!!
+  */
+
+	//MAYBE: mark a checksum as no proxy, when that user opts-out to note become a proxy at all.
 
 
 	//There is deliberately no createdBy in this class
