@@ -62,27 +62,29 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
      .append(" ")
      .append(request.getRequestURL());
 
+    StringBuilder reqInfoLong = new StringBuilder(reqInfo.toString());
+
     String queryString = request.getQueryString();
     if (queryString != null) {
-      reqInfo.append("?").append(queryString);
+      reqInfoLong.append("?").append(queryString);
     }
 
     if (request.getAuthType() != null) {
-      reqInfo.append(", authType=")
+      reqInfoLong.append(", authType=")
         .append(request.getAuthType());
     }
     if (request.getUserPrincipal() != null) {
-      reqInfo.append(", principalName=")
+      reqInfoLong.append(", principalName=")
         .append(request.getUserPrincipal().getName());
     }
     if (request.getRemoteUser() != null) {
-      reqInfo.append(", remoteUser=").append(request.getRemoteUser());
+      reqInfoLong.append(", remoteUser=").append(request.getRemoteUser());
     }
     if (request.getSession() !=  null) {
-      reqInfo.append(", sessionId=").append(request.getSession().getId());
+      reqInfoLong.append(", sessionId=").append(request.getSession().getId());
     }
 
-    this.logger.debug("=> " + reqInfo);
+    this.logger.debug("=> " + reqInfoLong);
 
     if (logRequestHeaders) {
     	this.logger.debug("   Request Headers:");
@@ -113,7 +115,7 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     // I can only log the request's body AFTER the request has been made and ContentCachingRequestWrapper did its work.
     String requestBody = this.getContentAsString(wrappedRequest.getContentAsByteArray(), this.maxPayloadLength, request.getCharacterEncoding());
     if (requestBody.length() > 0) {
-      this.logger.debug("   "+requestId+" Request body was:\n        " +requestBody);
+      this.logger.debug("   "+requestId+" Request body was: " +requestBody);
       if (requestBody.length() > maxPayloadLength)
         this.logger.debug("[...]");
     } else {
@@ -122,7 +124,7 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
 	    }
     }
 
-    this.logger.debug("<= " + response.getStatus() + " in "+duration + "ms. "+reqInfo);
+    this.logger.debug("<= " + reqInfo + " returned " + response.getStatus() + " in "+duration + "ms.");
     if (includeResponsePayload) {
       byte[] buf = wrappedResponse.getContentAsByteArray();
       this.logger.debug("   returned response body:\n"+getContentAsString(buf, this.maxPayloadLength, response.getCharacterEncoding()));

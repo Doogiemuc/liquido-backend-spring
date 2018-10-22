@@ -56,13 +56,14 @@ public class CastVoteService {
 	 * The hash value of the voterToken is its checksum. The checksumModel is stored in the DB.
 	 *
 	 * @param user the currently logged in and correctly authenticated user
-	 * @param area the area of the poll  (must be passed as numerical area.ID in the request. (Not an URI)
-	 * @return user's voterTokens, that only the user must know, and that will hash to the stored checksumModel.
+	 * @param area an area that the user's want's to vote in
+	 * @param passwordHash  user's hashed password
+	 * @return user's voterToken, that only the user must know, and that will hash to the stored checksumModel.
 	 */
 	public String createVoterToken(UserModel user, AreaModel area, String passwordHash) throws LiquidoException {
 		log.debug("createVoterToken: for "+user+" in "+area);
 		if (user == null || DoogiesUtil.isEmpty(user.getEmail()) || area == null ||passwordHash == null)
-			throw new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Need user, area and passwordHash to create a voterToken!");
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need user, area and passwordHash to create a voterToken!");
 		String voterToken = anonymizer.getBCryptHash(user.getId()+"", passwordHash, area.getId()+"");   // token that only this user must know
 		String tokenChecksum = calcChecksumFromVoterToken(voterToken);                            						// token that can only be generated from the users voterToken and only by the server.
 		TokenChecksumModel existingChecksumModel = checksumRepo.findByChecksum(tokenChecksum);
@@ -70,6 +71,9 @@ public class CastVoteService {
 			TokenChecksumModel newChecksumModel = new TokenChecksumModel(tokenChecksum, area);
 			checksumRepo.save(newChecksumModel);
 		}
+
+		//TODO: createVoterToken  should return both voterToken and ChecksumModel
+
 		return voterToken;
 	}
 

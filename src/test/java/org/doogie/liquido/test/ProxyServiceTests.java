@@ -58,7 +58,7 @@ public class ProxyServiceTests {
 	 */
 	@Test
 	@WithUserDetails(USER2_EMAIL)
-	public void testAssignPublicProxy() throws LiquidoException {
+	public void testAssignProxy() throws LiquidoException {
 		//GIVEN
 		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL);
 		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL);
@@ -66,7 +66,7 @@ public class ProxyServiceTests {
 
 		//make sure that toProxy is a public proxy
 		String proxyVoterToken = castVoteService.createVoterToken(toProxy, area, toProxy.getPasswordHash());
-		TokenChecksumModel proxyChecksumModel = proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
+		//TokenChecksumModel proxyChecksumModel = proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
 
 		//WHEN
 		String userVoterToken = castVoteService.createVoterToken(fromUser, area, fromUser.getPasswordHash());
@@ -78,6 +78,7 @@ public class ProxyServiceTests {
 		assertEquals(newDelegation.getToProxy(), toProxy);
 
 		TokenChecksumModel userCheckumModel = castVoteService.isVoterTokenValid(userVoterToken);
+		TokenChecksumModel proxyChecksumModel = castVoteService.isVoterTokenValid(proxyVoterToken);
 		assertEquals("Users checksum must be delegated to the proxy's checksum.", userCheckumModel.getDelegatedTo(), proxyChecksumModel);
 
 		Map<AreaModel, UserModel> proxyMap = proxyService.getProxyMap(fromUser);
@@ -137,7 +138,7 @@ public class ProxyServiceTests {
 		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL);
 		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
 		String proxyVoterToken = castVoteService.createVoterToken(toProxy, area, toProxy.getPasswordHash());
-		proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
+		//proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
 
 		//WHEN
 		String userVoterToken = castVoteService.createVoterToken(fromUser, area, fromUser.getPasswordHash());
