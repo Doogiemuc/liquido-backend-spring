@@ -86,13 +86,10 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
   protected void configure(HttpSecurity http) throws Exception {
     log.trace("Configuring HttpSecurity for "+ basePath);
 		http
-			.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+		    .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
 			.and()
 				.authorizeRequests().anyRequest().authenticated()
-			.and()
-				.antMatcher("/h2-console/**").headers().frameOptions().disable()  // needed for H2 DB console
-			.and()
-				.csrf().disable();												// TODO: re-enable CSRF check
+		  ;
   }
 
   /**

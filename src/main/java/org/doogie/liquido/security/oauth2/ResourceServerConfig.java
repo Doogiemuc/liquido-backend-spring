@@ -15,11 +15,10 @@ import org.springframework.security.oauth2.provider.token.ResourceServerTokenSer
  * This class configures the http security for our Oauth endpoints.
  *
  * org.springframework.core.annotation.Order: "Lower values have higher priority"
- * Resource Server by default has order = 3, so it will be checked before LiquidoSecurityConfiguration which has @Order(100)
+ * ResourceServerConfiguration has order = 3 by default. So it will be checked before LiquidoSecurityConfiguration which has @Order(100)
  */
 @Slf4j
 @Configuration
-//
 @EnableResourceServer
 public class ResourceServerConfig extends ResourceServerConfigurerAdapter {
     @Autowired
@@ -48,10 +47,10 @@ public class ResourceServerConfig extends ResourceServerConfigurerAdapter {
       http
 				.authorizeRequests()
 					.antMatchers(basePath +"/_ping").permitAll()       	// is alive  public endpoints must be configured here
-					.antMatchers("/h2-console/**").permitAll()
-					//.antMatchers(basePath +"/globalProperties").permitAll()
 					.antMatchers(basePath +"/castVote").permitAll()    	// allow anonymous voting
 					//.antMatchers(basePath +"/oauth/token").authenticated()   			// the oauth/token endpoint is already public by default
+
+					//TODO: .antMatchers("/error").permitAll()
 					//.antMatchers("/actuator/**", "/api-docs/**").permitAll()
 					.antMatchers(basePath+"/**" ).authenticated()				// our API
 					.anyRequest().denyAll();																				// prevent any leaking URL
