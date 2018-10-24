@@ -14,7 +14,7 @@ public class LiquidoRestUtils {
 	 * Quick and dirty hack to get the entity ID from an URI.
 	 * There is no other clean way to load a HATEOS entity from its URI.
 	 *
-	 * @param entityName the name of the entitry in the URI  (plural)
+	 * @param entityName the name of the entitry in the URI == the @RepositoryRestResource(path="...")
 	 * @param uri        a fully qualified uri of a spring data rest entity. (links.self.href)
 	 * @return the internal db ID of the entity, i.e. just simply the number at the end of the string.
 	 */
