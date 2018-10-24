@@ -61,6 +61,9 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
 	@Autowired
 	LiquidoUserDetailsService liquidoUserDetailsService;
 
+	@Value("${spring.data.rest.base-path}")   // value from application.properties file
+	String basePath;
+
 
 	//FIXME: Do I need to do this?  https://stackoverflow.com/questions/26636465/oauth2-bad-credentials-spring-boot
 
@@ -90,7 +93,16 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
 
 		((DefaultAccessTokenConverter) jwtAccessTokenConverter.getAccessTokenConverter()).setUserTokenConverter(userAuthenticationConverter);
 
+		//endpoints.getFrameworkEndpointHandlerMapping().getPath("/oauth/token");
+
 		endpoints
+				//.prefix("oauthPrefix")   // <== NO :-)  https://github.com/spring-projects/spring-security-oauth/issues/214
+				.pathMapping("/oauth/token", basePath+"/oauth/token")
+				.pathMapping("/oauth/authorize", basePath+"/oauth/authorize")
+				.pathMapping("/oauth/check_token", basePath+"/oauth/check_token")
+				.pathMapping("/oauth/confirm_access", basePath+"/oauth/confirm_access")
+				.pathMapping("/oauth/error", basePath+"/oauth/error")
+				.pathMapping("/oauth/token_key", basePath+"/oauth/token_key")
 				.tokenStore(tokenStore)
 		    .accessTokenConverter(jwtAccessTokenConverter)
 		    .tokenEnhancer(enhancerChain)

@@ -24,7 +24,8 @@ public class LiquidoException extends Exception {
 		CANNOT_CAST_VOTE(9),
     CANNOT_GET_TOKEN(10),
 		CANNOT_FINISH_POLL(11),
-		NO_DELEGATION(12);
+		NO_DELEGATION(12),
+		CANNOT_FIND(13);  // cannot find entity when deserializing
 		int errorCode;
     Errors(int code) { this.errorCode = code; }
   }
