@@ -81,6 +81,12 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
 		    .resourceIds(resourceIds);
 	}
 
+	/**
+	 * Configure sprint-security-oauth endpoints
+	 * Here we map the Oauth urls to our API basePath
+	 * @param endpoints
+	 * @throws Exception
+	 */
 	@Override
 	public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
 		TokenEnhancerChain enhancerChain = new TokenEnhancerChain();
