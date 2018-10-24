@@ -32,11 +32,11 @@ import org.springframework.web.filter.CorsFilter;
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
-//@Order(SecurityProperties.ACCESS_OVERRIDE_ORDER)
+//@Order(SecurityProperties.ACCESS_OVERRIDE_ORDER)  // WebSecurityConfigurerAdapter has @Order(100) by default
 public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
   @Value("${spring.data.rest.base-path}")   // value from application.properties file
-  String restBasePath;
+  String basePath;
 
 	@Value("${security.signing-key}")
 	private String signingKey;
@@ -77,53 +77,22 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
 	 */
 
   /**
-   * Configure HttpSecurity:
-	 *   - We are a REST backend. So complete stateless sessions. (See OAuth)
-	 *   - Allow HTTP Basic Auth for getting an OAuth token
-   *   - H2 DB web console under /h2-console needs the X-Frame-Option to be disabled
-   * @param http
+   * Configure HttpSecurity. Autentication is handled in {@link org.doogie.liquido.security.oauth2.ResourceServerConfig}
+	 * which has higher priority and comes first
+   * @param http spring http security
    * @throws Exception
    */
   @Override
   protected void configure(HttpSecurity http) throws Exception {
-    log.trace("Configuring HttpSecurity for "+restBasePath);
+    log.trace("Configuring HttpSecurity for "+ basePath);
 		http
-				.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+			.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
 			.and()
-				.httpBasic().realmName(securityRealm)
+				.authorizeRequests().anyRequest().authenticated()
 			.and()
-				.authorizeRequests()
-				//.antMatchers("/h2-console/**").permitAll()            // Allow access to H2 DB web console
-				.antMatchers(restBasePath+"/_ping").permitAll()       // is alive
-				.antMatchers(restBasePath+"/globalProperties").permitAll()
-				.antMatchers(restBasePath+"/castVote").permitAll()    // allow anonymous voting
-				.anyRequest().authenticated()
+				.antMatcher("/h2-console/**").headers().frameOptions().disable()  // needed for H2 DB console
 			.and()
 				.csrf().disable();												// TODO: re-enable CSRF check
-				//.headers().frameOptions().disable()   	// TODO: temporary necessary to make /h2-console working
-
-
-
-
-		/*
-    http
-			.sessionManagement()
-			.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-			.and()
-			//MAYBE:  .rememberMe()...
-      .cors().disable()   //TODO: Turn CORS back on an implement it on the client.
-      .csrf().disable()   //TODO: Turn CSRF back on
-      .authorizeRequests()
-        .antMatchers("/h2-console/**").permitAll()            // Allow access to H2 DB web console
-        .antMatchers(restBasePath+"/_ping").permitAll()       // is alive
-        .antMatchers(restBasePath+"/globalProperties").permitAll()
-        .antMatchers(restBasePath+"/castVote").permitAll()    // allow anonymous voting
-        .anyRequest().authenticated()
-      .and()
-        .httpBasic().realmName(securityRealm)
-      .and()
-        .headers().frameOptions().disable();   // TODO: temporary necessary to make /h2-console working
-     */
   }
 
   /**
@@ -191,8 +160,8 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
     return new WebMvcConfigurerAdapter() {
       @Override
       public void addCorsMappings(CorsRegistry registry) {
-        log.debug("adding CORS mapping for path="+restBasePath);
-        registry.addMapping(restBasePath).allowedOrigins("*").allowedMethods("*");
+        log.debug("adding CORS mapping for path="+basePath);
+        registry.addMapping(basePath).allowedOrigins("*").allowedMethods("*");
       }
     };
   }

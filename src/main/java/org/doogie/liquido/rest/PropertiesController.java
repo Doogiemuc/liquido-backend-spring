@@ -27,7 +27,7 @@ public class PropertiesController {
    * @return all properties as JSON
    */
   @RequestMapping(value = "/globalProperties", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	@PreAuthorize("hasAuthority('ROLE_USER')")  //  => doesn't work.  Controll will not be mapped => must be configured in RecourseServerConfig
+	//@PreAuthorize("hasAuthority('ROLE_USER')")
   public @ResponseBody ObjectNode getGlobalProperties() {
     ObjectMapper mapper = new ObjectMapper();
     ObjectNode json = mapper.createObjectNode().putObject("properties");
