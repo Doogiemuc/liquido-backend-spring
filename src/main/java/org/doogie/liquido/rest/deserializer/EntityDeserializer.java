@@ -2,8 +2,8 @@ package org.doogie.liquido.rest.deserializer;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import org.doogie.liquido.rest.LiquidoRestUtils;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import org.doogie.liquido.util.LiquidoRestUtils;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
@@ -29,7 +29,7 @@ import java.io.IOException;
  *
  * @param <T> your JPA entity class
  */
-public class EntityDeserializer<T> extends JsonDeserializer<T> {
+public class EntityDeserializer<T> extends StdDeserializer<T> {
 	//@Autowired
 	//private WebApplicationContext appContext;
 
@@ -38,7 +38,8 @@ public class EntityDeserializer<T> extends JsonDeserializer<T> {
 	/** part of the uri before the ID (normally in plural!) e.g.  "users" in  /api/users/4711 */
 	private String pathSegment;
 
-	public EntityDeserializer(CrudRepository<T, Long> rep) {
+	public EntityDeserializer(CrudRepository<T, Long> rep, Class<T> clazz) {
+		super(clazz);
 		this.repo = rep;
 		this.pathSegment = repo.getClass().getInterfaces()[0].getAnnotation(RepositoryRestResource.class).path();
 	}

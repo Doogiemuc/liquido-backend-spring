@@ -3,7 +3,7 @@ package org.doogie.liquido.services;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
-import org.doogie.liquido.rest.LiquidoRestUtils;
+import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.security.LiquidoAnonymizer;
 import org.doogie.liquido.util.DoogiesUtil;
