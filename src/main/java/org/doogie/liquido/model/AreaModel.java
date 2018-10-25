@@ -1,14 +1,10 @@
 package org.doogie.liquido.model;
 
 import lombok.*;
-import org.doogie.liquido.datarepos.AreaRepo;
-import org.doogie.liquido.rest.LiquidoRestUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.annotation.CreatedBy;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.util.Optional;
 
 // Using all three lombok annotations Getter,Setter and EqualsAndHashCode does not exactly(!) seem to be the same as the all-in-one @Data annotation
 @Getter

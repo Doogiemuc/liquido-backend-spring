@@ -1,7 +1,5 @@
-package org.doogie.liquido.rest;
+package org.doogie.liquido.util;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import java.util.regex.Matcher;
@@ -24,5 +22,12 @@ public class LiquidoRestUtils {
 		if (!matcher.matches()) throw new RuntimeException("This does not seem to be an URI for an '"+entityName+"': "+uri);
 		String entityId = matcher.group(1);  // the number at the end of the uri
 		return Long.valueOf(entityId);
+	}
+
+	public static final String PROJECTION = "{?projection}";
+	public static String cleanURI(String uri) {
+		if (uri.endsWith(PROJECTION)) uri = uri.substring(0, uri.length()-PROJECTION.length());
+
+		return uri;
 	}
 }

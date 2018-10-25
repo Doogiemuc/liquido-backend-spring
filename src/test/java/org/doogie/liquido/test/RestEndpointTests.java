@@ -2,8 +2,8 @@ package org.doogie.liquido.test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.ReadContext;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.LawRepo;
@@ -15,14 +15,12 @@ import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
-import org.doogie.liquido.test.testUtils.LiquidoTestErrorHandler;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.doogie.liquido.test.testUtils.OauthInterceptor;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.LiquidoProperties;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import org.doogie.liquido.util.LiquidoRestUtils;
+import org.doogie.liquido.util.Lson;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,13 +35,18 @@ import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.data.rest.webmvc.RestMediaTypes;
 import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.*;
+import org.springframework.security.oauth2.common.util.Jackson2JsonParser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.*;
 import static org.springframework.http.HttpMethod.*;
@@ -125,8 +128,27 @@ public class RestEndpointTests {
   /** our HTTP REST client */
   RestTemplate client;
 
-  /** the oauth interceptor can be configured for specific users */
-	OauthInterceptor oauthInterceptor;
+	// Spring needs some more wireing to create the Oauth Interceptor that is capable of injecting @Value annotations
+  // https://stackoverflow.com/questions/3813588/how-to-inject-dependencies-into-a-self-instantiated-object-in-spring#3813725
+	//private @Autowired
+	//AutowireCapableBeanFactory beanFactory;
+
+	/** singleton instance of OauthInterceptor. Do not access directly. Tests MUST use {@link #getOauthInterceptor()} */
+	OauthInterceptor oauthInterceptor = null;
+
+	private final Jackson2JsonParser jsonParser = new Jackson2JsonParser();
+
+	/**
+	 * Lazily create the singleton instance
+	 * @return OauthInterceptor
+	 */
+	public OauthInterceptor getOauthInterceptor() {
+		if (this.oauthInterceptor == null)
+		  this.oauthInterceptor = new OauthInterceptor(this.rootUri, CLIENT_ID, CLIENT_SECRET, TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD);
+		//beanFactory.autowireBean(oauthInterceptor);  // this triggers the spring autowiring
+		return oauthInterceptor;
+	}
+
 
 	/**
 	 * This is executed, when the Bean has been created and @Autowired references are injected and ready.
@@ -164,11 +186,10 @@ public class RestEndpointTests {
   public void initRestTemplateClient() {
     this.rootUri = "http://localhost:"+localServerPort+basePath;
     log.trace("====== configuring RestTemplate HTTP client for "+rootUri);
-    this.oauthInterceptor = new OauthInterceptor("http://localhost:"+localServerPort, CLIENT_ID, CLIENT_SECRET, TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD);
     this.client = new RestTemplateBuilder()
-      //.basicAuthorization(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD)
-      .errorHandler(new LiquidoTestErrorHandler())
-      .additionalInterceptors(this.oauthInterceptor)
+      //.basicAuthorization(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD)   // no more basic auth. We now have Oauth
+      //TODO:  .errorHandler(new LiquidoTestErrorHandler())     // the DefaultResponseErrorHandler throws exceptions
+      .additionalInterceptors(this.getOauthInterceptor())
       .additionalInterceptors(new LogClientRequestInterceptor())
       .rootUri(rootUri)
       .build();
@@ -177,76 +198,42 @@ public class RestEndpointTests {
 
 
 
-	/*==================
-	// MockMvc is nice. But it only mocks the HTTP requests (via a mocked DispatcherSrvlet)
-	// Rest Template does really send requests (via network)
-	// https://stackoverflow.com/questions/25901985/difference-between-mockmvc-and-resttemplate-in-integration-tests
 
-	@Autowired
-	private WebApplicationContext wac;
-
-	@Autowired
-	private FilterChainProxy springSecurityFilterChain;
-
-	// HTTP client configured for Oauth
-	private MockMvc mockMvc;
-
-
-	@Before
-	public void setupMockMvc() {
-
-		this.mockMvc = MockMvcBuilders
-				.webAppContextSetup(wac)
-				.addFilter(springSecurityFilterChain)
-				.build();
-	}
-
-
-
-	/**
-	 * get an Oauth access token for this user
-	 * @param username email adress
-	 * @param password password
-	 * @return the Oauth access token for this user
-	 * @throws Exception when HTTP request fails
-
-	private String obtainAccessToken(String username, String password) throws Exception {
-		MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-		params.add("grant_type", "password");
-		params.add("client_id", "fooClientIdPassword");
-		params.add("username", username);
-		params.add("password", password);
-
-		ResultActions result = mockMvc
-				.perform(post("/oauth/token")
-				.params(params)
-				.with(httpBasic(CLIENT_ID, CLIENT_SECRET))
-				.accept(CONTENT_TYPE))
-				.andExpect(status().isOk())
-				.andExpect(content().contentType(CONTENT_TYPE));
-
-		String resultString = result.andReturn().getResponse().getContentAsString();
-		JacksonJsonParser jsonParser = new JacksonJsonParser();
-		return jsonParser.parseMap(resultString).get("access_token").toString();
-
-	}
+	//========= Tests HTTP Security =============
 
 	@Test
-	public void givenNoToken_whenGetSecureRequest_thenUnauthorized() throws Exception {
-		mockMvc.perform(get("/areas")).andExpect(status().isUnauthorized());
-	}
-
-	*/
-
-	//========= Tests with real REST calls =============
-
-	@Test
-	public void testOauthInterceptor() throws Exception {
-		OauthInterceptor oauthInterceptor = new OauthInterceptor("http://localhost:"+localServerPort, CLIENT_ID, CLIENT_SECRET, TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD);
-		String oauthAccessToken = oauthInterceptor.getOauthAccessToken();
+	public void testOauthInterceptor() {
+		String oauthAccessToken = getOauthInterceptor().getOauthAccessToken();
 		assertNotNull("Oauth access_token must not be null", oauthAccessToken);
 		assertTrue("Oauth access_token must be at least 5 chars long", oauthAccessToken.length() > 5);
+
+		log.trace("Fetching second token for second user");
+		String secondAccessToken = getOauthInterceptor().getNewOauthToken(TestFixtures.USER2_EMAIL, TestFixtures.TESTUSER_PASSWORD);
+		assertNotNull(secondAccessToken);
+		assertTrue(secondAccessToken.length() > 5);
+		assertNotEquals(oauthAccessToken, secondAccessToken);
 	}
+
+	@Test
+	public void testPublicPingEndpoint() {
+		RestTemplate anonymousClient = new RestTemplateBuilder()
+				.additionalInterceptors(new LogClientRequestInterceptor())
+				.rootUri(rootUri)
+				.build();
+		ResponseEntity<String> res = anonymousClient.exchange("/_ping", HttpMethod.GET, null, String.class);
+		assertEquals("_ping endpoint should be reachable anonymously", HttpStatus.OK, res.getStatusCode());
+	}
+
+	@Test
+  public void testInvalidUrlShouldReturn404() {
+    try {
+			ResponseEntity<String> res = client.exchange("/invalidUrl", HttpMethod.GET, null, String.class);
+			fail("Should have thrown an exception with 404");
+		} catch (HttpClientErrorException err) {
+			assertEquals("Response should have status 404", HttpStatus.NOT_FOUND, err.getStatusCode());
+		}
+
+  }
 
 
   /*
@@ -303,21 +290,6 @@ public class RestEndpointTests {
 
   */
 
-
-
-
-  /*
-   * This will run before every single test case!
-   *
-  @Before
-  public void beforeEachTest() {
-    log.trace("Setting up JacksonTester for JSON assertions");
-    ObjectMapper objectMapper = new ObjectMapper();
-    // Possibly configure the mapper
-    JacksonTester.initFields(this, objectMapper);
-  }
-   */
-
   /**
    * Entry and exit logging for <b>all</b> test cases. Jiipppiiee. Did I already mention that I am a logging fanatic *G*
    */
@@ -325,58 +297,50 @@ public class RestEndpointTests {
   public TestWatcher slf4jTestWatcher = new TestWatcher() {
     @Override
     protected void starting(Description descr) {
-      log.trace("=========== TEST STARTING "+descr.getClassName()+"."+descr.getMethodName()+": "+descr.getDisplayName());
+      log.trace("===== TEST STARTING "+descr.getDisplayName());
     }
 
     @Override
     protected void failed(Throwable e, Description descr) {
-      log.error("=========== TEST FAILED "+descr.getClassName()+"."+descr.getMethodName()+": "+descr.getDisplayName());
-      log.error(e.getMessage());
+      log.error("===== TEST FAILED "+descr.getDisplayName()+ ": "+e.toString());
     }
 
     @Override
     protected void succeeded(Description descr) {
-      log.trace("=========== TEST SUCCEDED "+descr.getClassName()+"."+descr.getMethodName()+": "+descr.getDisplayName());
+      log.trace("===== TEST SUCCESS "+descr.getDisplayName());
     }
 
 
   };
 
-
   @Test
-  public void testPostNewArea() throws JSONException {
-    log.trace("TEST POST new area");
-
+  public void testPostNewArea() {
     String areaTitle = "This is a newly created Area "+System.currentTimeMillis();  // make test repeatable: Title must be unique!
-
-    JSONObject newAreaJSON = new JSONObject()
+		String newAreaJSON = new Lson()
       .put("title", areaTitle)
-      .put("description", "Very nice description for new area");
+      .put("description", "Very nice description for new area")
+			.toString();
 
-    log.trace("posting JSON Object:\n"+newAreaJSON.toString(2));
+    log.trace("posting JSON Object:\n"+newAreaJSON);
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<>(newAreaJSON.toString(), headers);
+    HttpEntity<String> entity = new HttpEntity<>(newAreaJSON, headers);
 
     ResponseEntity<AreaModel> response = client.exchange("/areas", POST, entity, AreaModel.class);
 
     assertEquals("expected HttpStatus.CREATED(201)", HttpStatus.CREATED, response.getStatusCode());
     AreaModel createdArea = response.getBody();
     assertEquals(areaTitle, createdArea.getTitle());
-
-    log.trace("TEST SUCCESSFUL: new area created: "+createdArea);
   }
 
   @Test
-  public void testPatchArea() throws JSONException {
-    log.trace("TEST PATCH area");
-
-    String newDescription = "Updated description";
-    JSONObject newAreaJSON = new JSONObject()
-      .put("description", newDescription);
-
-    log.trace("JSON Payload for PATCH request: "+newAreaJSON.toString());
+  public void testPatchArea() {
+  	String newDescription = "Updated description";
+    String newAreaJSON = new Lson()
+      .put("description", newDescription)
+			.toString();
+		log.trace("JSON Payload for PATCH request: "+newAreaJSON);
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
@@ -384,11 +348,8 @@ public class RestEndpointTests {
 
     Long areaId = this.areas.get(0).getId();
     ResponseEntity<AreaModel> response = client.exchange("/areas/"+areaId, PATCH, entity, AreaModel.class);
-
     AreaModel updatedArea = response.getBody();
     assertEquals(newDescription, updatedArea.getDescription());
-
-    log.trace("TEST SUCCESSFUL: updated area : "+updatedArea);
   }
 
   @Test
@@ -417,7 +378,7 @@ public class RestEndpointTests {
    * Create a new proposal for a law. This test case posts an alternative proposal to an already existing proposal.
    */
   @Test
-  public void testPostAlternativeProposal() throws JSONException {
+  public void testPostAlternativeProposal() {
     log.trace("TEST postAlternativeProposal");
 
     // ===== Find a poll that is in VOTING phase
@@ -432,15 +393,15 @@ public class RestEndpointTests {
     String pollUri  = basePath + "/polls/" + polls.get(0).getId();
     String newLawTitle = "Law from test "+System.currentTimeMillis() % 10000;  // law.title must be unique!!
 
-    JSONObject newLawJson = new JSONObject()
+    String newLawJson = new Lson()
       .put("title", newLawTitle)
       .put("description", "Dummy description from testPostProposalForLaw")
-      .put("status", LawModel.LawStatus.IDEA)     //TODO: Actually the server should decide about the status.
+      //.put("status", LawModel.LawStatus.IDEA)     //TODO: Actually the server should decide about the status.
       .put("area", areaUri)
-      .put("poll", pollUri);
+      .put("poll", pollUri)
+			.toString();
       // Remark: it is not necessary to send a createdBy user URI
-
-    log.trace("posting JSON Object:\n"+newLawJson.toString(2));
+    log.trace("posting JSON Object:\n"+newLawJson);
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
@@ -453,53 +414,7 @@ public class RestEndpointTests {
     log.trace("TEST postAlternativeProposal successfully created "+createdLaw);
   }
 
-  //Problems I had when implementing this test.
-  // http://stackoverflow.com/questions/40986738/spring-data-rest-no-string-argument-constructor-factory-method-to-deserialize/40986739
-  // https://jira.spring.io/browse/DATAREST-687
-  // https://jira.spring.io/browse/DATAREST-884
-
-  @Test
-  public void testPostBallot() throws JSONException {
-    log.trace("TEST postBallot");
-
-    // ===== Find a poll tha is in VOTING phase
-    List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
-    assertTrue("Need a poll that currently is in VOTING phase for this test", polls != null && polls.size() > 0);
-    PollModel pollInVoting = polls.get(0);
-    assertTrue("Need a poll that has at least two alternative proposals", pollInVoting.getProposals().size() >= 2);
-
-    // ===== Create a ballot with a voteOrder
-    Iterator<LawModel> alternativeProposals = pollInVoting.getProposals().iterator();
-    String pollUri       = basePath + "/polls/" + pollInVoting.getId();
-    String voteOrderUri1 = basePath + "/laws/" + alternativeProposals.next().getId();
-    String voteOrderUri2 = basePath + "/laws/" + alternativeProposals.next().getId();
-
-    JSONObject newBallotJson = new JSONObject()
-        .put("poll", pollUri)
-        .put("voteOrder", new JSONArray()
-                                .put(voteOrderUri1)
-                                .put(voteOrderUri2));
-    log.trace("posting JSON Object:\n"+newBallotJson.toString(2));
-
-    HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<>(newBallotJson.toString(), headers);
-
-    // Do not use client.postForObject here. It does not return any error. It simply returns null instead!
-    // Endpoint is /postBallot    /ballots are not exposed as @RepositoryRestResource for writing!
-    ResponseEntity<String> response = client.exchange("/postBallot", POST, entity, String.class);
-    log.debug("Response body:\n"+response.getBody());
-
-    assertEquals(HttpStatus.CREATED, response.getStatusCode());
-    ReadContext ctx = JsonPath.parse(response.getBody());
-    String returnedVoterToken = ctx.read("$.ballotToken");
-    assertTrue("Expected a voter token", returnedVoterToken != null && returnedVoterToken.length() > 10);
-    Long delegees = ctx.read("$.delegees", Long.class);
-    assertTrue("Expteded delegees to be a positive number.", delegees > 0);
-
-    log.trace("TEST SUCCESSFUL: new ballot successfully posted.");
-  }
-
+  /* TODO
   @Test
   public void testPostDuplicateVote() throws JSONException {
     log.trace("TEST postDuplicateVote");
@@ -530,6 +445,7 @@ public class RestEndpointTests {
     assertTrue(responseBody.contains("Duplicate vote for proposal"));
     log.trace("TEST postInvalidBallot successful: received correct status and error message in response.");
   }
+  */
 
 
   /**
@@ -540,7 +456,7 @@ public class RestEndpointTests {
   @Test
   // USER1 is logged in via HTTP client.
   // This does not work for REST tests: @WithUserDetails(value=TestFixtures.USER0_EMAIL, userDetailsServiceBeanName="liquidoUserDetailsService")
-  public void testIdeaReachesQuorum() throws JSONException {
+  public void testIdeaReachesQuorum() {
     log.trace("TEST ideaReachesQuorum");
     LawModel idea = postNewIdea("Idea from testIdeaReachesQuorum");
     log.trace(idea.toString());
@@ -576,24 +492,28 @@ public class RestEndpointTests {
    *                        because title MUST be unique.
    * @return the created idea (but without dependant entities such  as area and createdBy filled!)
    */
-  private LawModel postNewIdea(String ideaTitlePrefix) throws JSONException {
+  private LawModel postNewIdea(String ideaTitlePrefix) {
     String ideaTitle = ideaTitlePrefix+" "+System.currentTimeMillis();;  // title must be unique!
     String ideaDesc  = "This idea was created from a test case";
     String areaUri   = basePath + "/areas/" + this.areas.get(0).getId();
 
-    JSONObject ideaJson = new JSONObject()
-            .put("title", ideaTitle)
-            .put("description", ideaDesc)
-            .put("area", areaUri);
+		Jackson2JsonParser jsonParser = new Jackson2JsonParser();
+		Map<String, Object> jsonMap = new HashMap<>();
+		jsonMap.put("title", ideaTitle);
+		jsonMap.put("description", ideaDesc);
+		jsonMap.put("area", areaUri);
+		String jsonBody = jsonParser.formatMap(jsonMap);
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<>(ideaJson.toString(), headers);
+    HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
 
-    ResponseEntity<LawModel> createdIdea = client.postForEntity("/laws", entity, LawModel.class);
+		ResponseEntity<LawModel> createdIdea = client.postForEntity("/laws", entity, LawModel.class);
+
     // Keep in mind that createdIdea.createdBy is not filled, because this is just the idea not the ideaProjection
     assertEquals(HttpStatus.CREATED, createdIdea.getStatusCode());
     return createdIdea.getBody();
+
   }
 
 
@@ -623,7 +543,7 @@ public class RestEndpointTests {
 		String proxyEMail   = TestFixtures.delegations.get(0)[1];
 
 		// send request as the delegee who assigned his vote to a proxy
-		this.oauthInterceptor.setUsername(delegeeEMail);
+		getOauthInterceptor().setUsername(delegeeEMail);
     String proxyMapJson = client.getForObject(uri, String.class);
 
     log.trace("got Proxy Map:\n"+proxyMapJson);
@@ -635,7 +555,7 @@ public class RestEndpointTests {
    * This updates a delegation and changes the toProxy via PUT to the /saveProxy endpoint
    */
   @Test
-  public void testAssignProxy() throws JSONException, LiquidoException {
+  public void testAssignProxy() throws LiquidoException {
     String url = "/assignProxy";
     UserModel fromUser = this.users.get(10);
     UserModel toProxy  = this.users.get(11);
@@ -646,14 +566,20 @@ public class RestEndpointTests {
 
     //TODO: delete delegation if it exists:  proxyServcie.removeProxy(...)
 
+		String newDelegationJSON = new Lson()
+				.put("toProxy",  toProxyUri)
+				.put("area",     areaUri)
+				.put("voterToken", voterToken)
+				.toString();
 
-
+		/*
     JSONObject newDelegationJSON = new JSONObject()
       //.put("fromUser", fromUserUri)    fromUser is implicitly the currently logged in user!
       .put("toProxy",  toProxyUri)
       .put("area",     areaUri)
       .put("voterToken", voterToken);
-    log.trace("posting JSON Object:\n"+newDelegationJSON.toString(2));
+    */
+    log.trace("posting JSON Object:\n"+newDelegationJSON);
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
@@ -669,25 +595,25 @@ public class RestEndpointTests {
   }
 
   @Test
-  public void testPostDuplicateArea() throws JSONException {
-    log.trace("TEST postDuplicateArea");
-
+  public void testPostDuplicateArea() {
     String createdByUri  = basePath + "/users/" + this.users.get(0).getId();
-
-    JSONObject duplicateAreaJson = new JSONObject()
+    String duplicateAreaJson = new Lson()
       .put("title", TestFixtures.AREA1_TITLE)           // area with that title already exists.
       .put("description", "duplicate Area from test")
-      .put("createdBy", createdByUri);
+      .put("createdBy", createdByUri).toString();
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<>(duplicateAreaJson.toString(), headers);
+    HttpEntity<String> entity = new HttpEntity<>(duplicateAreaJson, headers);
 
-    ResponseEntity<String> responseEntity = client.postForEntity("/areas", entity, String.class);  // This will return HTTP status 409(Conflict) because of the duplicate composite key.
+		try {
+    	ResponseEntity<String> responseEntity = client.postForEntity("/areas", entity, String.class);  // This will return HTTP status 409(Conflict) because of the duplicate composite key.
+			fail("Should have thrown an exception with 409 (Conflict)");
+		} catch (HttpClientErrorException err) {
+			assertEquals("Response should have status 400", HttpStatus.CONFLICT, err.getStatusCode());
+			log.trace("TEST postDuplicateArea SUCCESS: Did receive expected HttpStatus=409 (Conflict)");
+		}
 
-    log.trace("responseEntity:\n" + responseEntity);
-    assertEquals("Expected HTTP error code 409 == conflict", responseEntity.getStatusCode(), HttpStatus.CONFLICT);  // status == 409
-    log.trace("TEST postDuplicateArea SUCCESS: Did receive expected HttpStatus=409 (Conflict)");
   }
 
   @Test
@@ -699,15 +625,116 @@ public class RestEndpointTests {
     assertNotNull(responseJSON);
   }
 
-  /**
-   * GIVEN an idea that reached its quorum and became a proposal
-   * WHEN  author of this idea creates a new poll
-   * THEN  the poll is in state ELABORATION
-   * AND   the idea is the initial proposal in this poll.
-   */
+	/**
+	 * cast a vote via real REST requests
+	 */
   @Test
-  public void testCreateNewPoll() {
+  public void testCastVote() {
 
-  }
+		//----- find poll that is in voting
+		String pollsJson = client.getForObject("/polls/search/findByStatus?status=VOTING", String.class);
+		DocumentContext ctx = JsonPath.parse(pollsJson);
+		String pollURI       = ctx.read("$._embedded.polls[0]._links.self.href", String.class);
+		String proposal1_URI = ctx.read("$._embedded.polls[0]._embedded.proposals[0]_links.self.href", String.class);
+		String proposal2_URI = ctx.read("$._embedded.polls[0]._embedded.proposals[1]_links.self.href", String.class);
+		String areaId        = ctx.read("$._embedded.polls[0].area.id", String.class);
+		proposal1_URI = LiquidoRestUtils.cleanURI(proposal1_URI);
+		proposal2_URI = LiquidoRestUtils.cleanURI(proposal2_URI);
+
+		log.trace("casting vote in poll.id="+pollURI);
+
+		//----- get voterToken
+		//Mock: String voterToken  = castVoteService.createVoterToken(fromUser, area, fromUser.getPasswordHash());
+		String voterTokenJson = client.getForObject("/my/voterToken?area="+areaId, String.class);
+		assertNotNull(voterTokenJson);
+		String voterToken = JsonPath.read(voterTokenJson, "voterToken");
+		log.trace("with voterToken: "+voterToken);
+
+		//----- cast vote
+		Map<String, Object> jsonMap = new HashMap<>();
+		jsonMap.put("poll", pollURI);
+		jsonMap.put("voterToken", voterToken);
+		jsonMap.put("voteOrder", new String[]{proposal1_URI, proposal2_URI});
+		String jsonBody = jsonParser.formatMap(jsonMap);
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		HttpEntity<String> castVoteEntity = new HttpEntity<>(jsonBody, headers);
+
+		ResponseEntity<String> castVoteRes = client.postForEntity("/castVote", castVoteEntity, String.class);
+
+		assertEquals(HttpStatus.CREATED, castVoteRes.getStatusCode());
+		ctx = JsonPath.parse(castVoteRes.getBody());
+		Long voteCount = ctx.read("voteCount", Long.class);
+		assertTrue(voteCount > 0);
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	/*==================
+	// MockMvc is nice. But it only mocks the HTTP requests (via a mocked DispatcherSrvlet)
+	// Rest Template does really send requests (via network)
+	// https://stackoverflow.com/questions/25901985/difference-between-mockmvc-and-resttemplate-in-integration-tests
+
+	@Autowired
+	private WebApplicationContext wac;
+
+	@Autowired
+	private FilterChainProxy springSecurityFilterChain;
+
+	// Moch HTTP client configured for Oauth
+	private MockMvc mockMvc;
+
+	@Before
+	public void setupMockMvc() {
+
+		this.mockMvc = MockMvcBuilders
+				.webAppContextSetup(wac)
+				.addFilter(springSecurityFilterChain)
+				.build();
+	}
+
+	/**
+	 * get an Oauth access token for this user
+	 * @param username email adress
+	 * @param password password
+	 * @return the Oauth access token for this user
+	 * @throws Exception when HTTP request fails
+
+	private String obtainAccessToken(String username, String password) throws Exception {
+		MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+		params.add("grant_type", "password");
+		params.add("client_id", "fooClientIdPassword");
+		params.add("username", username);
+		params.add("password", password);
+
+		ResultActions result = mockMvc
+				.perform(post("/oauth/token")
+				.params(params)
+				.with(httpBasic(CLIENT_ID, CLIENT_SECRET))
+				.accept(CONTENT_TYPE))
+				.andExpect(status().isOk())
+				.andExpect(content().contentType(CONTENT_TYPE));
+
+		String resultString = result.andReturn().getResponse().getContentAsString();
+		Jackson2JsonParser jsonParser = new JacksonJsonParser();
+		return jsonParser.parseMap(resultString).get("access_token").toString();
+
+	}
+
+	@Test
+	public void givenNoToken_whenGetSecureRequest_thenUnauthorized() throws Exception {
+		mockMvc.perform(get("/areas")).andExpect(status().isUnauthorized());
+	}
+
+	*/
 
 }

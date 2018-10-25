@@ -8,6 +8,7 @@ import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.rest.dto.JoinPollRequest;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
+import org.doogie.liquido.util.LiquidoRestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
@@ -38,7 +39,7 @@ public class PollRestController {
   PollRepo pollRepo;
 
   @Autowired
-  LiquidoRestUtils restUtils;
+	LiquidoRestUtils restUtils;
 
   //see https://docs.spring.io/spring-data/rest/docs/current/reference/html/#customizing-sdr.overriding-sdr-response-handlers
 

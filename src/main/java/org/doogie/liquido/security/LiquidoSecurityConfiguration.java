@@ -164,5 +164,5 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
   }
   */
 
-	//MAYBE: use Digest Autentication http://stackoverflow.com/questions/33918432/digest-auth-in-spring-security-with-rest-and-javaconfig
+
 }
