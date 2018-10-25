@@ -1,5 +1,6 @@
 package org.doogie.liquido.util;
 
+import org.springframework.http.HttpMethod;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
@@ -25,7 +26,7 @@ import java.util.Enumeration;
 public class DoogiesRequestLogger extends OncePerRequestFilter {
 
   private boolean includeResponsePayload = true;
-  private boolean logRequestHeaders = true;
+  private boolean logRequestHeaders = false;
   private int maxPayloadLength = 1000;
 
   private String getContentAsString(byte[] buf, int maxLength, String charsetName) {
@@ -33,7 +34,7 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     int length = Math.min(buf.length, this.maxPayloadLength);
     try {
       String s = new String(buf, 0, length, charsetName);
-      if (buf.length > maxLength) s = s + "...";
+      if (buf.length > maxLength) s = s + " [...]";
       return s;
     } catch (UnsupportedEncodingException ex) {
       return "Unsupported Encoding";
@@ -99,35 +100,34 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     // ========= Log request and response payload ("body") ========
     // We CANNOT simply read the request payload here, because then the InputStream would be consumed and cannot be read again by the actual processing/server.
     // DO NOT DO THIS:  this.logger.debug("Request body: "+DoogiesUtil._stream2String(request.getInputStream()));
-
-
-
-
-    // So we need to apply some stronger magic here :-)
-    ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request);
+    // Springs ContentCachingRequestWrapper works, but it can only log the request body AFTER the request was sent.
+    //ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request);
     ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
 
-    //TODO: can I first log the request body and then reset the reader like this?   wrappedRequest.getReader().reset();
+    // So we need to apply some stronger magic on Dumbledore Level
+		BufferedRequestWrapper wrap = new BufferedRequestWrapper(request);
 
-    filterChain.doFilter(wrappedRequest, wrappedResponse);     // ======== This performs the actual request!
+		// Log request payload body
+		if (wrap.getBufferedContent().length > 0 && logger.isDebugEnabled()) {
+			String requestBody = this.getContentAsString(wrap.getBufferedContent(), this.maxPayloadLength, request.getCharacterEncoding());
+			String logStr = "   " +requestBody;
+			this.logger.debug(logStr);
+		} else {
+			if (HttpMethod.POST.matches(request.getMethod())) {
+				this.logger.debug("   "+reqInfo+" EMPTY request body POSTed");
+			}
+		}
+
+		// ======== perform the actual HTTP request ==========
+    filterChain.doFilter(wrap, wrappedResponse);
+		// ===================================================
+
+		// Log response
     long duration = System.currentTimeMillis() - startTime;
-
-    // I can only log the request's body AFTER the request has been made and ContentCachingRequestWrapper did its work.
-    String requestBody = this.getContentAsString(wrappedRequest.getContentAsByteArray(), this.maxPayloadLength, request.getCharacterEncoding());
-    if (requestBody.length() > 0) {
-      this.logger.debug("   "+requestId+" Request body was: " +requestBody);
-      if (requestBody.length() > maxPayloadLength)
-        this.logger.debug("[...]");
-    } else {
-    	if ("POST".equals(request.getMethod())) {
-    		this.logger.debug("   "+reqInfo+" EMPTY request body posted");
-	    }
-    }
-
     this.logger.debug("<= " + reqInfo + " returned " + response.getStatus() + " in "+duration + "ms.");
-    if (includeResponsePayload) {
+    if (includeResponsePayload && logger.isDebugEnabled() && wrappedResponse.getContentSize() > 0) {
       byte[] buf = wrappedResponse.getContentAsByteArray();
-      this.logger.debug("   returned response body:\n"+getContentAsString(buf, this.maxPayloadLength, response.getCharacterEncoding()));
+      this.logger.debug("   server's response body:\n"+getContentAsString(buf, this.maxPayloadLength, response.getCharacterEncoding()));
     }
 
     wrappedResponse.copyBodyToResponse();  // IMPORTANT: copy content of response back into original response

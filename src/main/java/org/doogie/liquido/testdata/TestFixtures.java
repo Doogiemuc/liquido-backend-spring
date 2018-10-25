@@ -19,7 +19,7 @@ public class TestFixtures {
   public static final String USER5_EMAIL = MAIL_PREFIX+"5@liquido.de";
 	public static final String USER6_EMAIL = MAIL_PREFIX+"6@liquido.de";
 
-  public static final String TESTUSER_PASSWORD = "dummyPassword";  // passworwd for all created users, that will be hashed
+  public static final String TESTUSER_PASSWORD = "dummyPassword";  // password for all created users, that will be hashed
 
 	public static final String AREA0_TITLE = "Area 0";
   public static final String AREA1_TITLE = "Area 1";

@@ -1,9 +1,13 @@
 package org.doogie.liquido.rest.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.Data;
 import lombok.NonNull;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.rest.deserializer.AreaModelDeserializer;
+import org.doogie.liquido.rest.deserializer.LawModelDeserializer;
+import org.doogie.liquido.rest.deserializer.UserModelDeserializer;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.hateoas.Resource;
 
@@ -19,10 +23,12 @@ import java.util.stream.Collectors;
 public class AssignProxyRequest {
 	/** proxy that the voter want's to assign */
 	@NonNull
+	@JsonDeserialize(using=UserModelDeserializer.class)   // this way the client can pass URIs e.g. "toProxy": "/liquido/v2/users/1"
 	UserModel toProxy;
 
 	/** Area of the assignment */
 	@NonNull
+	@JsonDeserialize(using=AreaModelDeserializer.class)
 	AreaModel area;
 
 	/** The voter's own voterToken that MUST hash to a valid checksumModel. */

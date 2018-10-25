@@ -6,7 +6,7 @@ import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.TokenChecksumRepo;
 import org.doogie.liquido.model.*;
-import org.doogie.liquido.rest.LiquidoRestUtils;
+import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
