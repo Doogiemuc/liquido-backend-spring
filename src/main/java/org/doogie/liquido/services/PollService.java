@@ -8,16 +8,24 @@ import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.model.BallotModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
+import org.doogie.liquido.services.scheduler.FinishPollJob;
 import org.doogie.liquido.util.LiquidoProperties;
 import org.doogie.liquido.util.Matrix;
+import org.quartz.*;
+import org.quartz.impl.StdSchedulerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static org.quartz.JobBuilder.newJob;
+import static org.quartz.TriggerBuilder.newTrigger;
 
 /**
  * This spring component implements the business logic for {@link org.doogie.liquido.model.PollModel}
@@ -108,7 +116,7 @@ public class PollService {
    * @param poll a poll in elaboration phase with at least two proposals
    */
   @Transactional
-  public void startVotingPhase(@NonNull PollModel poll) throws LiquidoException {
+  public void startVotingPhase(@NonNull PollModel poll) throws LiquidoException, SchedulerException {
     log.info("startVotingPhase of "+poll.toString());
     if (poll.getStatus() != PollModel.PollStatus.ELABORATION)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Poll must be in status ELABORATION");
@@ -123,19 +131,51 @@ public class PollService {
     poll.setVotingEndAt(votingStart.truncatedTo(ChronoUnit.DAYS).plusDays(props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE)));     //voting ends in n days at midnight
 		pollRepo.save(poll);
 
-		//----- schedule a Task in Spring that will end the voting phase.
-		PollService that = this;
-		Runnable endVotingPhase = new Runnable() {
-			public void run() {
-				try {
-					that.finishVotingPhase(poll);
-				} catch (LiquidoException e) {
-					log.error("Could not finishVotingPhase of "+poll);
-				}
-			}
-		};
-		//TODO: scheduler.schedule(endVotingPhase, Date.from(poll.getVotingEndAt().atZone(ZoneId.systemDefault()).toInstant()));  // 		new CronTrigger("0 15 9-17 * * MON-FRI")
+		//----- schedule a Quartz Job that will finish the voting phase at poll.votingEndAt() date
+		scheduleJobToFinishPoll(poll);
   }
+
+  /** An auto-configured spring bean that gives us access to the Quartz scheduler */
+  @Autowired
+	SchedulerFactoryBean schedulerFactoryBean;
+
+	/**
+	 * Schedule a Quartz job that will end the voting phase of this poll
+	 * @param poll a poll in voting phase
+	 * @throws SchedulerException
+	 */
+	private void scheduleJobToFinishPoll(@NonNull PollModel poll) throws SchedulerException {
+		JobDetail jobDetail = newJob(FinishPollJob.class)
+				.withIdentity("finishVoting_pollId="+poll.getId(), "pollJobs")
+				.withDescription("Finish voting phase of poll.id="+poll.getId())
+				.usingJobData("poll.id", poll.getId())
+				.storeDurably()
+				.build();
+
+		Date votingEndAtDate = Date.from(poll.getVotingEndAt().atZone(ZoneId.systemDefault()).toInstant());
+
+		Trigger trigger = newTrigger()
+				.withIdentity("finishVotingTrigger_poll.id="+poll.getId(), "pollTrigger")
+				.withDescription("Finish voting phase of poll.id="+poll.getId())
+				.startAt(votingEndAtDate )
+				.withSchedule(SimpleScheduleBuilder.simpleSchedule()
+						.withRepeatCount(0)
+						.withIntervalInMinutes(1)
+						.withMisfireHandlingInstructionFireNow()		// If backend was down at the time when the Job would have been scheduled, then fire the job immidiately when the app is back up
+				)
+				.build();
+
+		try {
+			//Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
+			Scheduler scheduler = schedulerFactoryBean.getScheduler();
+			if (!scheduler.isStarted())
+				log.warn("Quartz job scheduler is not started. It should be started!");
+			scheduler.scheduleJob(jobDetail, trigger);
+		} catch (SchedulerException e) {
+			log.error("Cannot schedule task to finish poll.", e);
+			throw e;
+		}
+	}
 
 	/**
 	 * Finish the voting phase of a poll and calculate the winning proposal.
@@ -145,8 +185,9 @@ public class PollService {
 	 */
 	@Transactional
   public LawModel finishVotingPhase(@NonNull PollModel poll) throws LiquidoException {
+		log.debug("finishVotingPhase(poll.id="+poll.getId()+")");
     if (!poll.getStatus().equals(PollModel.PollStatus.VOTING))
-      throw new LiquidoException(LiquidoException.Errors.CANNOT_FINISH_POLL, "Poll must be in status VOTING.");
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_FINISH_POLL, "Cannot finishVotingPhase: Poll must be in status VOTING.");
 
     poll.setStatus(PollModel.PollStatus.FINISHED);
     for(LawModel proposal : poll.getProposals()) {
@@ -155,7 +196,8 @@ public class PollService {
     poll.setVotingEndAt(LocalDateTime.now());
 
 		//calc winner(s) of poll
-		LawModel winningProposal = calcSchulzeMethodWinners(poll).get(0);
+		//TODO: make the method of calculating a winner configurable: LawModel winningProposal = calcSchulzeMethodWinners(poll).get(0);
+		LawModel winningProposal =  calcRankedPairsWinners(poll).get(0);
 		winningProposal.setStatus(LawModel.LawStatus.LAW);
 		poll.setWinner(winningProposal);
 		pollRepo.save(poll);
