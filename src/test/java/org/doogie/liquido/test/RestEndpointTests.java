@@ -143,6 +143,9 @@ public class RestEndpointTests {
 	 * @return OauthInterceptor
 	 */
 	public OauthInterceptor getOauthInterceptor() {
+		//implementation note: Be carefull when creating classes with "new". Then spring does not know about
+		// this instance, and does not handle it as a bean. For example @Autowire will then not work.
+		// You can register an instance as a bean manually, e.g. https://github.com/eugenp/tutorials/blob/master/spring-quartz/src/main/java/org/baeldung/springquartz/config/AutoWiringSpringBeanJobFactory.java
 		if (this.oauthInterceptor == null)
 		  this.oauthInterceptor = new OauthInterceptor(this.rootUri, CLIENT_ID, CLIENT_SECRET, TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD);
 		//beanFactory.autowireBean(oauthInterceptor);  // this triggers the spring autowiring

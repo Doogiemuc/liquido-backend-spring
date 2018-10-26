@@ -1,18 +1,16 @@
 package org.doogie.liquido;
 
-import org.doogie.liquido.util.DoogiesRequestLogger;
+import org.quartz.Scheduler;
+import org.quartz.SchedulerException;
+import org.quartz.impl.StdSchedulerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 /**
- * Main entry class for Liquido
+ * Main entry class for Liquido Backend
  *
  * Starts the SpringApplication.
  */
@@ -22,14 +20,26 @@ public class LiquidoBackendSpringApplication {
   static Logger log = LoggerFactory.getLogger(LiquidoBackendSpringApplication.class);
 
   /**
-   * main method when run without an application container.
-   * spring provides its owen internal app server (jetty). This can be used for testing.
+   * Main entry point for Liquido Spring backend.
    * @param args command line arguments (none currently used)
    */
-  public static void main(String[] args) {
+  public static void main(String[] args) throws SchedulerException {
 		log.trace("====== Starting Liquido");
+		/*
+		try {
+			Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
+			scheduler.start();
+		} catch (SchedulerException e) {
+			log.error("Cannot start Quartz scheduler", e);
+			throw e;
+		}
+		*/
+
 		SpringApplication.run(LiquidoBackendSpringApplication.class, args);
-  }
+
+
+
+	}
 
   //TODO: package-by-feature  http://www.javapractices.com/topic/TopicAction.do?Id=205
 }

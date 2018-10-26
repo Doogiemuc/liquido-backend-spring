@@ -5,7 +5,7 @@
 
 	<groupId>org.doogie.liquido</groupId>
 	<artifactId>liquido-backend-spring</artifactId>
-	<version>0.15.0</version>
+	<version>0.16.0</version>
 	<packaging>jar</packaging>
 
 	<name>liquido-backend-spring</name>
@@ -116,7 +116,15 @@
 			<artifactId>h2</artifactId>
 		</dependency>
 
-    	<!-- spring-boot-starter-test: JUnit test case support -->
+        <!-- Spring boot starter Quartz - task scheduler -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-quartz</artifactId>
+            <version>2.0.6.RELEASE</version>
+        </dependency>
+
+
+        <!-- spring-boot-starter-test: JUnit test case support -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
