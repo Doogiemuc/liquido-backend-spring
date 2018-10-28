@@ -147,6 +147,7 @@ public class TestDataCreator implements CommandLineRunner {
       seedProposals();
       seedPollInElaborationPhase(NUM_ALTERNATIVE_PROPOSALS);
       seedPollInVotingPhase(NUM_ALTERNATIVE_PROPOSALS);
+			seedPollFinished(NUM_ALTERNATIVE_PROPOSALS);
       seedLaws();
       seedVotes();
 
@@ -413,7 +414,7 @@ public class TestDataCreator implements CommandLineRunner {
 
   /**
    * Seed a poll that has some alternative proposals and is still in its elaboration phase,
-   * ie. voting has not yet started
+   * ie. voting has not yet started. Also add some comments to each proposal in that poll.
    * @return the poll in elaboration as it has been stored into the DB.
    */
   @Transactional
@@ -486,6 +487,33 @@ public class TestDataCreator implements CommandLineRunner {
     }
   }
 
+  public void seedPollFinished(int numProposals) {
+		log.info("Seeding one finished poll  ...");
+		try {
+			PollModel poll = seedPollInVotingPhase(numProposals);
+
+			//---- fake some dates to be in the past
+			int daysFinished = 5;  // poll was finished 5 days ago
+			int daysVotingStarts = getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS);
+			int durationVotingPhase = getGlobalPropertyAsInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE);
+			LocalDateTime votingStartAt = LocalDateTime.now().minusDays(durationVotingPhase+daysFinished);
+			poll.setVotingStartAt(votingStartAt);
+			LocalDateTime votingEndAt = LocalDateTime.now().minusDays(daysFinished).truncatedTo(ChronoUnit.DAYS);  // voting ends at midnight
+			poll.setVotingEndAt(votingEndAt);
+
+			pollRepo.save(poll);
+			fakeCreateAt(poll, daysVotingStarts+durationVotingPhase+daysFinished);
+			fakeUpdatedAt(poll, 1);
+
+			//----- end voting Phase
+			LawModel winner = pollService.finishVotingPhase(poll);
+
+			log.info("Created finished poll (id="+poll.getId()+" with winning proposal.id="+winner.getId());
+		} catch (Exception e) {
+			log.error("Cannot seed finished poll", e);
+			throw new RuntimeException("Cannot seed finished poll", e);
+		}
+	}
 
   public void seedLaws() {
     log.info("Seeding laws");

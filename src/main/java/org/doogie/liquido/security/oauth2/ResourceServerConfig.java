@@ -36,7 +36,7 @@ public class ResourceServerConfig extends ResourceServerConfigurerAdapter {
     }
 
 	/**
-	 * The basePath+"/oauth/.." endpoints need to configured here. This has order = 3 in the filter chain. So it comes first
+	 * Configure access to several endpoints. This configruation has order = 3 in the filter chain. So it comes first!
 	 * The rest of our API is configured in {@link org.doogie.liquido.security.LiquidoSecurityConfiguration}
 	 *
 	 * @param http spring HttpSecurity
@@ -47,12 +47,12 @@ public class ResourceServerConfig extends ResourceServerConfigurerAdapter {
       http
 				.authorizeRequests()
 					.antMatchers(basePath +"/_ping").permitAll()       	// is alive  public endpoints must be configured here
+					.antMatchers(basePath +"/globalProperties").permitAll() // client needs to load globalProperties, before a user is logged in  => basicAuth?
 					.antMatchers(basePath +"/castVote").permitAll()    	// allow anonymous voting
-					//.antMatchers(basePath +"/oauth/token").authenticated()   			// the oauth/token endpoint is already public by default
-
+					//Remark: the /oauth/token endpoint is already secured with basic auth by default
 					//TODO: .antMatchers("/error").permitAll()
-					//.antMatchers("/actuator/**", "/api-docs/**").permitAll()
-					.antMatchers(basePath+"/**" ).authenticated()				// our API
+					//.antMatchers("/actuator/**", "/api-docs/**").permitAll()			// why would I need that?????
+					.antMatchers(basePath+"/**" ).authenticated()				// our liquido API
 					.anyRequest().denyAll();																				// prevent any leaking URL
     }
 }
