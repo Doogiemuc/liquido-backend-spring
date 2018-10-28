@@ -152,7 +152,7 @@ public class CastVoteService {
 	 *         null if the ballot wasn't stored due to an already existing ballot with a smaller level.
 	 */
 	public BallotModel storeBallot(BallotModel newBallot) throws LiquidoException {
-		log.trace("storeBallot("+newBallot+") checksum="+newBallot.getChecksum().getChecksum());
+		log.debug("storeBallot("+newBallot+") checksum="+newBallot.getChecksum().getChecksum());
 
 		//----- check validity of the ballot
 		checkBallot(newBallot);

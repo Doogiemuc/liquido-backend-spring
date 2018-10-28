@@ -23,7 +23,10 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
 	@Autowired
 	Environment springEnv;
 
+	boolean warnIfMockAuditor = false;
   UserModel mockAuditor = null;
+
+
 
   /**
    * @return the currently logged in user (may return null!)
@@ -31,8 +34,8 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
   @Override
   public Optional<UserModel> getCurrentAuditor() {
     if (mockAuditor != null) {
-    	//TODO: only warn is spring env != TEST
-			if (!springEnv.acceptsProfiles("test"))
+    	//TODO: only warn when not --seedDB
+			if (!springEnv.acceptsProfiles("test") && warnIfMockAuditor)
 				log.warn("Returning mock auditor "+mockAuditor.getEmail());
       return Optional.of(mockAuditor);
     }

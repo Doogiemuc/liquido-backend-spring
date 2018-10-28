@@ -1,8 +1,10 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.datarepos.BallotRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
+import org.doogie.liquido.model.BallotModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.rest.dto.JoinPollRequest;
@@ -14,10 +16,9 @@ import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.hateoas.Resource;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.*;
 
 /**
  * REST controller for working with Polls.
@@ -37,6 +38,9 @@ public class PollRestController {
 
   @Autowired
   PollRepo pollRepo;
+
+  @Autowired
+	BallotRepo ballotRepo;
 
   @Autowired
 	LiquidoRestUtils restUtils;
@@ -102,6 +106,32 @@ public class PollRestController {
 		PollModel updatedPoll = pollService.addProposalToPoll(proposal, poll);
 
 		return resourceAssembler.toResource(updatedPoll);
+	}
+
+	@RequestMapping("/polls/{id}/result")
+	public List getPollResult(@PathVariable PollModel poll) throws LiquidoException {
+  	if (poll == null)
+  		throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND, "Cannot find poll with that id");
+  	if (!PollModel.PollStatus.FINISHED.equals(poll.getStatus()))
+			throw new LiquidoException(LiquidoException.Errors.INVALID_STATUS, "Poll.id="+poll.getId()+" is not in status FINISHED");
+
+		List<BallotModel> ballots = ballotRepo.findByPoll(poll);
+
+		// For each place (1st, 2nd, ,3rd, ...) this list contains a mapping from the proposal.id to the
+		// count how often this proposal was ordered in that place.
+		List<Map<Long, Long>> counts = new ArrayList<>();
+		for (int i = 0; i < 3; i++) {
+			Map<Long, Long> counts_i = new HashMap<>();
+			counts.add(counts_i);
+			for (BallotModel ballot: ballots) {
+				if (i < ballot.getVoteOrder().size()) {											// if voteOrder has that many places
+					LawModel proposal = ballot.getVoteOrder().get(i);
+					counts_i.merge(proposal.getId(), 1L, Long::sum);   // add 1 to the count for this proposal
+				}
+			}
+		}
+
+		return counts;
 	}
 
 }
