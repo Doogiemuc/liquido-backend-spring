@@ -6,6 +6,8 @@ import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.TokenChecksumRepo;
 import org.doogie.liquido.model.*;
+import org.doogie.liquido.services.voting.RankedPairVoting;
+import org.doogie.liquido.services.voting.SchulzeMethod;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.CastVoteService;
@@ -107,9 +109,9 @@ public class PollServiceTests {
 		int[] numBallots = new int[] { 5, 5, 8, 3, 7, 2, 7, 8 };
 
 		LawModel[] propsArray = poll.getProposals().stream().toArray(LawModel[]::new);
-		seedBallots(poll, voteOrderIndexes, numBallots);
+		List<BallotModel> ballots = seedBallots(poll, voteOrderIndexes, numBallots);
 
-		Matrix duel = pollService.calcDuelMatrix(poll);
+		Matrix duel = RankedPairVoting.calcDuelMatrix(poll, ballots);
 		log.info("Duel matrix:\n"+duel.toFormattedString());
 
 		// Some checks for random positions of the result
@@ -125,10 +127,10 @@ public class PollServiceTests {
 		assertEquals( 0, duel.get(3, 3));
 		assertEquals(31, duel.get(4, 3));
 
-		Matrix strong = pollService.calcStrongestPathMatrix(poll);
+		Matrix strong = SchulzeMethod.calcStrongestPathMatrix(poll, ballots);
 		log.info("Strongest path matrix:\n"+strong.toFormattedString());
 
-		List<LawModel> winningProposals = pollService.calcSchulzeMethodWinners(poll);
+		List<LawModel> winningProposals = SchulzeMethod.calcSchulzeMethodWinners(poll, ballots);
 		log.info("Potential Winners:" +winningProposals);
 
 		assertTrue("There should only be one winner in this example", winningProposals.size() == 1);
@@ -162,8 +164,17 @@ public class PollServiceTests {
 		//the real correct call would be:   return castVoteService.castVote(castVoteRequest);
 	}
 
-	LawModel[] seedBallots(PollModel poll, int[][] voteOrderIndexes, int[] numBallots) throws LiquidoException {
+	/**
+	 * Quickly create many ballots. This is only used for testing. It does not check any voterTokens
+	 * @param poll a new poll in voting phase
+	 * @param voteOrderIndexes list of voteOrders (inner index is index of proposal in poll.getProposals() )
+	 * @param numBallots How many times each voteOrder should be casted
+	 * @return the list of casted ballots
+	 * @throws LiquidoException
+	 */
+	List<BallotModel> seedBallots(PollModel poll, int[][] voteOrderIndexes, int[] numBallots) throws LiquidoException {
 		LawModel[] propsArray = poll.getProposals().stream().toArray(LawModel[]::new);
+		List<BallotModel> ballots = new ArrayList<>();
 		int count = 1;
 		for (int i = 0; i < voteOrderIndexes.length; i++) {
 			List<LawModel> voteOrder = new ArrayList<>();
@@ -182,11 +193,12 @@ public class PollServiceTests {
 				//castVoteService.castVote(castVoteRequest);
 
 				//crude quick'n'dirty hack to make it QUICK!
-				quickNdirtyCastVote("$2dummyVoterToken"+count, poll, voteOrder);     // voterTokens must start with $2 !!!
+				BallotModel ballot = quickNdirtyCastVote("$2dummyVoterToken" + count, poll, voteOrder);// voterTokens must start with $2 !!!
+				ballots.add(ballot);
 			}
 
 		}
-		return propsArray;
+		return ballots;
 	}
 
 	@Test
@@ -212,9 +224,9 @@ public class PollServiceTests {
 		voteOrderIndexes[3] = new int[]{3, 4, 2, 1};
 		int[] numBallots = new int[] { 42, 26, 15, 17 };   // 100 ballots == 100%
 
-		LawModel[] lawModels = seedBallots(poll, voteOrderIndexes, numBallots);
+		List<BallotModel> ballots = seedBallots(poll, voteOrderIndexes, numBallots);
 
-		List<LawModel> winners = pollService.calcRankedPairsWinners(poll);
+		List<LawModel> winners = RankedPairVoting.calcRankedPairsWinners(poll, ballots);
 
 		log.debug("===== Votes ");
 		for (int i = 0; i < voteOrderIndexes.length; i++) {
@@ -229,7 +241,7 @@ public class PollServiceTests {
 
 
 		assertTrue("There should be one winner with this example data", winners.size() == 1);
-		assertEquals("Nashville should have won the poll", lawModels[1], winners.get(0));
+		assertEquals("Nashville should have won the poll", cities[1], winners.get(0).getTitle());
 
 		log.info("Winner is "+winners.get(0).getTitle());
 
