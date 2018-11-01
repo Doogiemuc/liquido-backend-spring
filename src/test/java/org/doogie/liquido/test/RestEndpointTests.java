@@ -35,7 +35,6 @@ import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.data.rest.webmvc.RestMediaTypes;
 import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.*;
-import org.springframework.security.oauth2.common.util.Jackson2JsonParser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.HttpClientErrorException;
@@ -136,8 +135,6 @@ public class RestEndpointTests {
 	/** singleton instance of OauthInterceptor. Do not access directly. Tests MUST use {@link #getOauthInterceptor()} */
 	OauthInterceptor oauthInterceptor = null;
 
-	private final Jackson2JsonParser jsonParser = new Jackson2JsonParser();
-
 	/**
 	 * Lazily create the singleton instance
 	 * @return OauthInterceptor
@@ -192,7 +189,7 @@ public class RestEndpointTests {
     this.client = new RestTemplateBuilder()
       //.basicAuthorization(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD)   // no more basic auth. We now have Oauth
       //TODO:  .errorHandler(new LiquidoTestErrorHandler())     // the DefaultResponseErrorHandler throws exceptions
-      .additionalInterceptors(this.getOauthInterceptor())
+     // .additionalInterceptors(this.getOauthInterceptor())
       .additionalInterceptors(new LogClientRequestInterceptor())
       .rootUri(rootUri)
       .build();
@@ -204,6 +201,7 @@ public class RestEndpointTests {
 
 	//========= Tests HTTP Security =============
 
+	/*
 	@Test
 	public void testOauthInterceptor() {
 		String oauthAccessToken = getOauthInterceptor().getOauthAccessToken();
@@ -216,6 +214,7 @@ public class RestEndpointTests {
 		assertTrue(secondAccessToken.length() > 5);
 		assertNotEquals(oauthAccessToken, secondAccessToken);
 	}
+	*/
 
 	@Test
 	public void testPublicPingEndpoint() {
@@ -225,6 +224,21 @@ public class RestEndpointTests {
 				.build();
 		ResponseEntity<String> res = anonymousClient.exchange("/_ping", HttpMethod.GET, null, String.class);
 		assertEquals("_ping endpoint should be reachable anonymously", HttpStatus.OK, res.getStatusCode());
+	}
+
+	@Test
+	public void testProposalsUrlShouldNeedAuth() {
+		RestTemplate anonymousClient = new RestTemplateBuilder()
+				.additionalInterceptors(new LogClientRequestInterceptor())
+				.rootUri(rootUri)
+				.build();
+		try {
+			ResponseEntity<String> res = anonymousClient.exchange("/laws", HttpMethod.GET, null, String.class);
+		} catch (Exception e) {
+			log.trace("ok");
+		}
+		fail();
+		//assertEquals("_ping endpoint should be reachable anonymously", HttpStatus.OK, res.getStatusCode());
 	}
 
 	@Test
@@ -500,12 +514,11 @@ public class RestEndpointTests {
     String ideaDesc  = "This idea was created from a test case";
     String areaUri   = basePath + "/areas/" + this.areas.get(0).getId();
 
-		Jackson2JsonParser jsonParser = new Jackson2JsonParser();
-		Map<String, Object> jsonMap = new HashMap<>();
-		jsonMap.put("title", ideaTitle);
-		jsonMap.put("description", ideaDesc);
-		jsonMap.put("area", areaUri);
-		String jsonBody = jsonParser.formatMap(jsonMap);
+		String jsonBody = Lson.create()
+		  .put("title", ideaTitle)
+		  .put("description", ideaDesc)
+		  .put("area", areaUri)
+			.toString();
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
@@ -654,14 +667,15 @@ public class RestEndpointTests {
 		log.trace("with voterToken: "+voterToken);
 
 		//----- cast vote
-		Map<String, Object> jsonMap = new HashMap<>();
-		jsonMap.put("poll", pollURI);
-		jsonMap.put("voterToken", voterToken);
-		jsonMap.put("voteOrder", new String[]{proposal1_URI, proposal2_URI});
-		String jsonBody = jsonParser.formatMap(jsonMap);
+		String body = Lson.create()
+		  .put("poll", pollURI)
+		  .put("voterToken", voterToken)
+		  .put("voteOrder", "["+proposal1_URI+", "+proposal2_URI+"]")
+			.toString();
+
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
-		HttpEntity<String> castVoteEntity = new HttpEntity<>(jsonBody, headers);
+		HttpEntity<String> castVoteEntity = new HttpEntity<>(body, headers);
 
 		ResponseEntity<String> castVoteRes = client.postForEntity("/castVote", castVoteEntity, String.class);
 

@@ -96,12 +96,13 @@
 			<version>1.0.9.RELEASE</version>
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/org.springframework.security.oauth/spring-security-oauth2 -->
+		<!-- https://mvnrepository.com/artifact/org.springframework.security.oauth/spring-security-oauth2
 		<dependency>
 			<groupId>org.springframework.security.oauth</groupId>
 			<artifactId>spring-security-oauth2</artifactId>
 			<version>2.1.0.RELEASE</version>
 		</dependency>
+		-->
 
 		<!-- Spring Developer Tools https://docs.spring.io/spring-boot/docs/current/reference/html/using-boot-devtools.html  provide /h2-console for H2 DB  -->
 		<dependency>
@@ -116,12 +117,12 @@
 			<artifactId>h2</artifactId>
 		</dependency>
 
-        <!-- Spring boot starter Quartz - task scheduler -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-quartz</artifactId>
-            <version>2.0.6.RELEASE</version>
-        </dependency>
+		<!-- Spring boot starter Quartz - task scheduler -->
+		<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-starter-quartz</artifactId>
+				<version>2.0.6.RELEASE</version>
+		</dependency>
 
 
         <!-- spring-boot-starter-test: JUnit test case support -->
