@@ -139,7 +139,7 @@ public class TestDataCreator implements CommandLineRunner {
 			log.info("===== START TestDataCreator");
       log.debug("Populate test DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
-      seedUsers(NUM_USERS, TestFixtures.MAIL_PREFIX, TestFixtures. TESTUSER_PASSWORD);
+      seedUsers(NUM_USERS, TestFixtures.MAIL_PREFIX, TestFixtures.TESTUSER_PASSWORD);
       auditorAware.setMockAuditor(this.users.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
       //seedGlobalProperties();
       seedAreas();
@@ -178,18 +178,12 @@ public class TestDataCreator implements CommandLineRunner {
     */
   }
 
-  private Integer getGlobalPropertyAsInt(LiquidoProperties.KEY key) {
-    return props.getInt(key);
-
-    //return Integer.valueOf(getGlobalProperty(key));
-  }
-
   public Map<String, UserModel> seedUsers(int numUsers, String mailPrefix, String password) {
     log.info("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
     this.users = new HashMap<>();
 
-    /** all test users have the same password. For speeding things up */
-	  PasswordEncoder passwordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();   // defaults to "bcrypt"
+    /** Hashing a password takes time. So all test users have the same password to speed TestDataCreator up alot. */
+	  PasswordEncoder passwordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();   // Springs default password encoder uses "bcrypt"
 		String hashedPassword = passwordEncoder.encode(password);           // Password encoding takes a second! And it should take a second, for security reasons!
 
     for (int i = 0; i < numUsers; i++) {
@@ -286,19 +280,10 @@ public class TestDataCreator implements CommandLineRunner {
       LawModel newIdea = new LawModel(ideaTitle, ideaDescr.toString(), area, createdBy);
       lawRepo.save(newIdea);
 
-      int numSupporters = rand.nextInt(getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)-1);
+	    // add some supporters, but not enough to become a proposal
+      int numSupporters = rand.nextInt(props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)-1);
       //log.debug("adding "+numSupporters+" supporters to idea "+newIdea);
-      addSupportersToIdea(newIdea, numSupporters);   // add some supporters, but not enough to become a proposal
-
-      /*
-      LawModel existingIdea = lawRepo.findByTitle(ideaTitle);
-      if (existingIdea != null) {
-        log.trace("Updating existing idea with id=" + existingIdea.getId());
-        newIdea.setId(existingIdea.getId());
-      } else {
-        log.trace("Creating new idea " + newIdea);
-      }
-      */
+      addSupportersToIdea(newIdea, numSupporters);
 
       //LawModel savedIdea = lawRepo.save(newIdea);
       fakeCreateAt(newIdea, i+1);
@@ -313,7 +298,7 @@ public class TestDataCreator implements CommandLineRunner {
     auditorAware.setMockAuditor(createdBy);
     LawModel proposal = new LawModel(title, description, area, createdBy);
     lawRepo.save(proposal);
-    proposal = addSupportersToIdea(proposal, getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
+    proposal = addSupportersToIdea(proposal, props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
     //proposal.setStatus(LawStatus.PROPOSAL);
     //LawModel savedProposal = lawRepo.save(proposal);
     fakeCreateAt(proposal,  ageInDays);
@@ -445,8 +430,8 @@ public class TestDataCreator implements CommandLineRunner {
         newPoll = pollService.addProposalToPoll(altProp, newPoll);
       }
 
-      fakeCreateAt(newPoll, getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
-      fakeUpdatedAt(newPoll, getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
+      fakeCreateAt(newPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
+      fakeUpdatedAt(newPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
       log.trace("Created poll in elaboration phase: "+newPoll);
       return newPoll;
     } catch (Exception e) {
@@ -470,8 +455,8 @@ public class TestDataCreator implements CommandLineRunner {
         i++;
       }
       PollModel savedPoll = pollRepo.save(poll);
-      fakeCreateAt(savedPoll, getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)+1);
-      fakeUpdatedAt(savedPoll, getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
+      fakeCreateAt(savedPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)+1);
+      fakeUpdatedAt(savedPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
 
       //===== Start the voting phase of this poll
       pollService.startVotingPhase(savedPoll);
@@ -500,7 +485,7 @@ public class TestDataCreator implements CommandLineRunner {
     for (int i = 0; i < NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
       LawModel realLaw = createProposal(lawTitle, getLoremIpsum(100,400), area, createdBy, 12);
-      addSupportersToIdea(realLaw, getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)+5);
+      addSupportersToIdea(realLaw, props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)+5);
       //TODO: reaLaw actually needs to have been part of a (finished) poll with alternative proposals
 			//realLaw.setPoll(poll);
       realLaw.setReachedQuorumAt(DoogiesUtil.daysAgo(24));
