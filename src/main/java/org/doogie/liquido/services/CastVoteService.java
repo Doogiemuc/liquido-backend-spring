@@ -7,7 +7,7 @@ import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -41,11 +41,9 @@ public class CastVoteService {
 	@Autowired
 	LiquidoRestUtils restUtils;
 
-	/* Strong password encoder for creating BCrypt tokens */
-	BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
-
 	/** A secret only known to the this server. So that only we can create token checksums */
 	private static final String SERVER_SECRET = "liquidoServerSecret";
+	private static final String bcryptSaltForChecksums = BCrypt.gensalt();
 
 	//TOOD: we need more fine grained access
 	// 1. calcVoterToken
@@ -67,8 +65,11 @@ public class CastVoteService {
 		log.debug("createVoterToken: for "+user+" in "+area);
 		if (user == null || DoogiesUtil.isEmpty(user.getEmail()) || area == null ||passwordHash == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need user, area and passwordHash to create a voterToken!");
-		String voterToken = bcrypt.encode(user.getId()+passwordHash+area.getId());          // voterToken that only this user must know
-		String tokenChecksum = calcChecksumFromVoterToken(voterToken);                            			// checksum of voterToken that can only be generated from the users voterToken and only by the server.
+		// Create a new voterToken for this user in that area with the BCRYPT hashing algorithm
+		// Generate a new salt for every voterToken. Bcrypt prepends the salt into the returned token value!!!
+		String salt = BCrypt.gensalt();
+		String voterToken = BCrypt.hashpw(user.getId()+passwordHash+area.getId(), salt);      // voterToken that only this user must know
+		String tokenChecksum = calcChecksumFromVoterToken(voterToken);                            		  // checksum of voterToken that can only be generated from the users voterToken and only by the server.
 		TokenChecksumModel existingChecksumModel = checksumRepo.findByChecksum(tokenChecksum);
 		if (existingChecksumModel == null) {
 			TokenChecksumModel newChecksumModel = new TokenChecksumModel(tokenChecksum, area);
@@ -251,7 +252,8 @@ public class CastVoteService {
 	 * @return checksum = hash(voterToken + secret)
 	 */
 	private String calcChecksumFromVoterToken(String voterToken) {
-		return bcrypt.encode(voterToken + SERVER_SECRET);
+		log.trace("calcChecksumFromVoterToken salt="+bcryptSaltForChecksums);
+		return BCrypt.hashpw(voterToken + SERVER_SECRET, bcryptSaltForChecksums);
 	}
 
 }
