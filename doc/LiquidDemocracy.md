@@ -1,4 +1,7 @@
-# Liquido - Liquid Democracy
+# Liquido - Liquid Democracy - Technical backround
+
+**DRAFT!**  This is a very rough draft of a future user guide.
+
 
 ## A modern aproach to interactive representative direct democracy
 
