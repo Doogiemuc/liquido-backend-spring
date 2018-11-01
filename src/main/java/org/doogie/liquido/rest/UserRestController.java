@@ -1,9 +1,11 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.datarepos.OneTimeTokenRepo;
+import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.DelegationModel;
-import org.doogie.liquido.model.DelegationProjection;
+import org.doogie.liquido.model.OneTimeToken;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.AssignProxyRequest;
 import org.doogie.liquido.rest.dto.ProxyMapResponseElem;
@@ -12,19 +14,22 @@ import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.projection.ProjectionFactory;
+import org.springframework.core.env.Environment;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
-import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
-import org.springframework.hateoas.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 import static org.springframework.web.bind.annotation.RequestMethod.*;
 
@@ -35,6 +40,9 @@ import static org.springframework.web.bind.annotation.RequestMethod.*;
 @BasePathAwareController
 public class UserRestController {
 
+	@Autowired
+	Environment springEnv;
+
   @Autowired
 	CastVoteService castVoteService;
 
@@ -43,6 +51,80 @@ public class UserRestController {
 
   @Autowired
   LiquidoAuditorAware liquidoAuditorAware;
+
+  @Autowired
+	UserRepo userRepo;
+
+  @Autowired
+  OneTimeTokenRepo tokenRepo;
+
+
+	/**
+	 * SMS login flow - step 1 - user requests login code via SMS
+	 * @param mobile users mobile phone number. MUST be a known user
+	 * @return HttpStatus.OK, when code was sent via SMS
+	 *        OR HttpStatus.NOT_FOUND when mobile phone number was not found and user msut register first.
+	 */
+  @RequestMapping("/login/requestSmsCode")
+  public @ResponseBody ResponseEntity<String> requestSmsCode(@RequestParam("mobile") String mobile) {
+  	log.debug("request SMS login code for mobile="+mobile);
+	  UserModel user = userRepo.findByProfilePhonenumber(mobile);
+	  if (user == null) return new ResponseEntity<>("No user found with mobile "+mobile+". You must register first.", HttpStatus.NOT_FOUND);
+
+	  // Create new SMS token: four random digits between [1000...9999]
+	  String code = String.valueOf(new Random().nextInt(9000)+ 1000);
+	  LocalDateTime validUntil = LocalDateTime.now().plusHours(1);  // login token via SMS is valid for one hour. That should be enough!
+		OneTimeToken oneTimeToken = new OneTimeToken(code, user, OneTimeToken.TOKEN_TYPE.SMS, validUntil);
+		tokenRepo.save(oneTimeToken);
+	  if (springEnv.acceptsProfiles("dev", "test")) {
+		  return new ResponseEntity<>(code, HttpStatus.OK);  // when debugging, return the code
+	  } else {
+		  return new ResponseEntity<>(HttpStatus.OK);
+	  }
+  }
+
+	/**
+	 * SMS login flow - step 2 - login with received SMS code
+	 * This endpoint must be public.
+	 * @param code the 4 digit code from the SMS
+	 * @return Oauth access token
+	 */
+  @RequestMapping("/login/withSmsCode")
+  public @ResponseBody ResponseEntity<String> loginWithSmsCode(
+		  @RequestParam("mobile") String mobile,
+  		@RequestParam("code") String code
+  ) {
+	  log.debug("login with sms code="+code);
+	  OneTimeToken oneTimeToken = tokenRepo.findByToken(code);
+	  if (oneTimeToken == null)
+	  	return new ResponseEntity<>("Invalid/Unknown sms login code.", HttpStatus.UNAUTHORIZED);
+	  if (!mobile.equals(oneTimeToken.getUser().getProfile().getPhonenumber()))
+		  return new ResponseEntity<>("Invalid/Unknown sms login code.", HttpStatus.UNAUTHORIZED);
+	  if (!oneTimeToken.getToken_type().equals(OneTimeToken.TOKEN_TYPE.SMS))
+		  return new ResponseEntity<>("This is not an SMS login token.", HttpStatus.UNAUTHORIZED);
+	  if (LocalDateTime.now().isAfter(oneTimeToken.getValidUntil())) {
+	  	tokenRepo.delete(oneTimeToken);
+		  return new ResponseEntity<>("This sms login token is expired.", HttpStatus.UNAUTHORIZED);
+	  }
+
+	  //MAYBE: login user with Oauth? need to adapt code from OAuth2AuthenticationProcessingFilter  => smells like overengeneering!!
+	  //Authentication authResult = authenticationManager.authenticate(authentication);
+
+	  // Authenticate without password: Adapted from https://github.com/creactiviti/spring-security-passwordless
+	  Object principal = oneTimeToken.getUser();
+	  Authentication authentication = new UsernamePasswordAuthenticationToken(principal, null, AuthorityUtils.createAuthorityList("ROLE_USER"));
+	  SecurityContextHolder.getContext().setAuthentication(authentication);
+
+    /** The JWT way   NOT TESTED
+	  String secretKey = "secretKey";
+	  MacSigner macSigner = new MacSigner(secretKey);
+	  String content = String.valueOf(oneTimeToken.getUser().getId());
+	  String jwtToken = JwtHelper.encode(content, macSigner).getEncoded();
+	  */
+
+	  tokenRepo.delete(oneTimeToken);  // delete used one time token
+	  return new ResponseEntity<>(HttpStatus.OK);
+  }
 
 	/**
 	 * get own user information
@@ -152,6 +234,8 @@ public class UserRestController {
 
 
   //TODO: change a user's password => delete all tokens and checksums
+
+	//TODO: @ExceptionHandler(LiquidoRestException.class)  => handle liquido exception. Return JSON with Error Code
 
 }
 

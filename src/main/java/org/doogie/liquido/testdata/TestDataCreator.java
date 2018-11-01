@@ -16,8 +16,8 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.oauth2.common.util.RandomValueStringGenerator;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +44,7 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * http://www.generatedata.com/
  */
 @Component
+//TODO: @Profile("dev")    // run test data creator only during development
 @Order(Ordered.HIGHEST_PRECEDENCE)   // seed DB first, then run the other CommandLineRunners
 public class TestDataCreator implements CommandLineRunner {
   private Logger log = LoggerFactory.getLogger(this.getClass());
@@ -130,7 +131,7 @@ public class TestDataCreator implements CommandLineRunner {
    * @param args command line args
    */
   public void run(String... args) {
-    boolean seedDB = springEnv.acceptsProfiles("test") || "true".equals(springEnv.getProperty("seedDB"));
+    boolean seedDB = springEnv.acceptsProfiles("dev", "test") || "true".equalsIgnoreCase(springEnv.getProperty("seedDB"));
     for(String arg : args) {
       if ("--seedDB".equalsIgnoreCase(arg)) { seedDB = true; }
     }
@@ -188,8 +189,8 @@ public class TestDataCreator implements CommandLineRunner {
     this.users = new HashMap<>();
 
     /** all test users have the same password. For speeding things up */
-		BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-		String hashedPassword = passwordEncoder.encode(password);   // this takes a second!
+	  PasswordEncoder passwordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();   // defaults to "bcrypt"
+		String hashedPassword = passwordEncoder.encode(password);           // Password encoding takes a second! And it should take a second, for security reasons!
 
     for (int i = 0; i < numUsers; i++) {
       String email = mailPrefix + (i+1) + "@liquido.de";    // Remember that DB IDs start at 1. Testuser1 has ID=1 in DB. And there is no testuser0
@@ -199,6 +200,8 @@ public class TestDataCreator implements CommandLineRunner {
       profile.setName("Test User" + (i+1));
       profile.setPicture("/static/img/photos/"+((i%3)+1)+".png");
       profile.setWebsite("http://www.liquido.de");
+      profile.setPhonenumber(randomDigits(10));
+      if (i==0) profile.setPhonenumber("1234567890");  // make sure that there is one user with that phonenumber
       newUser.setProfile(profile);
 
       UserModel existingUser = userRepo.findByEmail(email);
@@ -208,9 +211,6 @@ public class TestDataCreator implements CommandLineRunner {
       } else {
         log.debug("Creating new user " + newUser);
       }
-
-
-      if (i==0) auditorAware.setMockAuditor(new UserModel("mockUser", "noPassword"));
 
       UserModel savedUser = userRepo.save(newUser);
       this.users.put(savedUser.getEmail(), savedUser);
@@ -630,6 +630,8 @@ public class TestDataCreator implements CommandLineRunner {
     if (endIndex >= loremIpsum.length()) endIndex = loremIpsum.length()-1;
     return loremIpsum.substring(0, endIndex);
   }
+
+
 	private static final char[] EASY_CHARS = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".toCharArray();
 
 	/**
@@ -643,5 +645,12 @@ public class TestDataCreator implements CommandLineRunner {
 			buf.append(EASY_CHARS[rand.nextInt(EASY_CHARS.length)]);
 		}
 		return buf.toString();
+	}
+
+	public String randomDigits(long len) {          // Example: len = 3
+		long max = (long) Math.pow(len, 10);          // 10^3  = 1000
+		long min = (long) Math.pow(len-1, 10);        // 10^2  =  100
+		long number = min + (rand.nextLong() % (max-min));  //  100 + [0...899]  = [100...999]
+		return String.valueOf(number);
 	}
 }
