@@ -27,6 +27,19 @@ public class Lson extends HashMap<String, Object> {
 		return this;
 	}
 
+	/**
+	 * Add a json attribute with an <b>array of strings</b> as value.
+	 * Not any JSON builder I know of has this obvious helper !! :-)
+	 * <pre>String validJson = Lson.create().put("jsonArray", "arrayElemOne", "arrayElemTwo", "arrayElemThree").toString();</pre>
+	 * @param key attribute name
+	 * @param values a list of strings. Can have any length
+	 * @return this for chaining of further fluid calls
+	 */
+	public Lson put(String key, String... values) {
+		super.put(key, values);
+		return this;
+	}
+
 	public String toString() {
 		try {
 			return mapper.writeValueAsString(this);

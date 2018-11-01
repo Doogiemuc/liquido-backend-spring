@@ -77,6 +77,7 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
 			  .antMatchers(basePath+"/login/**").permitAll()        // login via one time token
 			  .anyRequest().authenticated()
 			.and()
+			  .csrf().disable()
 			  .httpBasic();
   }
 
