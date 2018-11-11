@@ -20,9 +20,9 @@ import java.io.IOException;
  * <pre>
  * @JsonComponent
  * public class MyEntityDeserializer extends EntityDeserializer<MyEntity> {
- * 	@Autowired
+ * 	@Autowired  // myRepo can simply be injected
  * 	public AreaModelDeserializer(MyRepo myRepo) {
- * 		super(myRepo);
+ * 		super(myRepo, MyEntity.class);
  * 	}
  * }
  * </pre>
@@ -38,8 +38,11 @@ public class EntityDeserializer<T> extends StdDeserializer<T> {
 	/** part of the uri before the ID (normally in plural!) e.g.  "users" in  /api/users/4711 */
 	private String pathSegment;
 
+	//private Class<T> type;
+
 	public EntityDeserializer(CrudRepository<T, Long> rep, Class<T> clazz) {
 		super(clazz);
+		//this.type = clazz;    // Nice hack
 		this.repo = rep;
 		this.pathSegment = repo.getClass().getInterfaces()[0].getAnnotation(RepositoryRestResource.class).path();
 	}
@@ -48,10 +51,11 @@ public class EntityDeserializer<T> extends StdDeserializer<T> {
 	public T deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
 		/*  This way one could automatically get the CrudRepository
 		Repositories repositories = new Repositories(appContext);
-		Object obj = repositories.getRepositoryFor(T.class)  // <=== But java doesn't support reification :-(
+		Object obj = repositories.getRepositoryFor(type)  // <=== Here we need the Class<T> hack
 				.orElseThrow(() -> new RuntimeException("Cannot find repo for "));
 		CrudRepository<T, Long> repo = (CrudRepository)obj;
 		*/
+
 		String uri = p.getValueAsString();
 		Long id = LiquidoRestUtils.getIdFromURI(this.pathSegment, uri);
 		T entity = repo.findById(id)

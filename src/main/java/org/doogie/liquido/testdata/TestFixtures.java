@@ -19,11 +19,13 @@ public class TestFixtures {
   public static final String USER5_EMAIL = MAIL_PREFIX+"5@liquido.de";
 	public static final String USER6_EMAIL = MAIL_PREFIX+"6@liquido.de";
 
-  public static final String TESTUSER_PASSWORD = "dummyPassword";  // password for all created users, that will be hashed
+	/* password for all created users. This password will be sent as BasicAuth. It will be hashed when stored in the DB. */
+  public static final String TESTUSER_PASSWORD = "dummyPassword";
 
 	public static final String AREA0_TITLE = "Area 0";
   public static final String AREA1_TITLE = "Area 1";
 
+  // this must match RestEndpointTests.testGetProxyMap() !!!
 	public static List<String[]> delegations = new ArrayList<>();
 	public static final String AREA_FOR_DELEGATIONS = AREA0_TITLE;
 	public static final long   USER1_NUM_VOTES = 6;     // testuser1@liquido.de  has 6 votes (including his own) due to (transitive) delegations

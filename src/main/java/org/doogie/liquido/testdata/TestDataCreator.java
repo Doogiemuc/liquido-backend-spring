@@ -16,8 +16,8 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.oauth2.common.util.RandomValueStringGenerator;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +44,7 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * http://www.generatedata.com/
  */
 @Component
+//TODO: @Profile("dev")    // run test data creator only during development
 @Order(Ordered.HIGHEST_PRECEDENCE)   // seed DB first, then run the other CommandLineRunners
 public class TestDataCreator implements CommandLineRunner {
   private Logger log = LoggerFactory.getLogger(this.getClass());
@@ -130,7 +131,7 @@ public class TestDataCreator implements CommandLineRunner {
    * @param args command line args
    */
   public void run(String... args) {
-    boolean seedDB = springEnv.acceptsProfiles("test") || "true".equals(springEnv.getProperty("seedDB"));
+    boolean seedDB = springEnv.acceptsProfiles("dev", "test") || "true".equalsIgnoreCase(springEnv.getProperty("seedDB"));
     for(String arg : args) {
       if ("--seedDB".equalsIgnoreCase(arg)) { seedDB = true; }
     }
@@ -138,7 +139,7 @@ public class TestDataCreator implements CommandLineRunner {
 			log.info("===== START TestDataCreator");
       log.debug("Populate test DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
-      seedUsers(NUM_USERS, TestFixtures.MAIL_PREFIX, TestFixtures. TESTUSER_PASSWORD);
+      seedUsers(NUM_USERS, TestFixtures.MAIL_PREFIX, TestFixtures.TESTUSER_PASSWORD);
       auditorAware.setMockAuditor(this.users.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
       //seedGlobalProperties();
       seedAreas();
@@ -178,19 +179,13 @@ public class TestDataCreator implements CommandLineRunner {
     */
   }
 
-  private Integer getGlobalPropertyAsInt(LiquidoProperties.KEY key) {
-    return props.getInt(key);
-
-    //return Integer.valueOf(getGlobalProperty(key));
-  }
-
   public Map<String, UserModel> seedUsers(int numUsers, String mailPrefix, String password) {
     log.info("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
     this.users = new HashMap<>();
 
-    /** all test users have the same password. For speeding things up */
-		BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-		String hashedPassword = passwordEncoder.encode(password);   // this takes a second!
+    /** Hashing a password takes time. So all test users have the same password to speed TestDataCreator up alot. */
+	  PasswordEncoder passwordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();   // Springs default password encoder uses "bcrypt"
+		String hashedPassword = passwordEncoder.encode(password);           // Password encoding takes a second! And it should take a second, for security reasons!
 
     for (int i = 0; i < numUsers; i++) {
       String email = mailPrefix + (i+1) + "@liquido.de";    // Remember that DB IDs start at 1. Testuser1 has ID=1 in DB. And there is no testuser0
@@ -200,6 +195,8 @@ public class TestDataCreator implements CommandLineRunner {
       profile.setName("Test User" + (i+1));
       profile.setPicture("/static/img/photos/"+((i%3)+1)+".png");
       profile.setWebsite("http://www.liquido.de");
+      profile.setPhonenumber(randomDigits(10));
+      if (i==0) profile.setPhonenumber("1234567890");  // make sure that there is one user with that phonenumber
       newUser.setProfile(profile);
 
       UserModel existingUser = userRepo.findByEmail(email);
@@ -209,9 +206,6 @@ public class TestDataCreator implements CommandLineRunner {
       } else {
         log.debug("Creating new user " + newUser);
       }
-
-
-      if (i==0) auditorAware.setMockAuditor(new UserModel("mockUser", "noPassword"));
 
       UserModel savedUser = userRepo.save(newUser);
       this.users.put(savedUser.getEmail(), savedUser);
@@ -287,19 +281,10 @@ public class TestDataCreator implements CommandLineRunner {
       LawModel newIdea = new LawModel(ideaTitle, ideaDescr.toString(), area, createdBy);
       lawRepo.save(newIdea);
 
-      int numSupporters = rand.nextInt(getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)-1);
+	    // add some supporters, but not enough to become a proposal
+      int numSupporters = rand.nextInt(props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)-1);
       //log.debug("adding "+numSupporters+" supporters to idea "+newIdea);
-      addSupportersToIdea(newIdea, numSupporters);   // add some supporters, but not enough to become a proposal
-
-      /*
-      LawModel existingIdea = lawRepo.findByTitle(ideaTitle);
-      if (existingIdea != null) {
-        log.trace("Updating existing idea with id=" + existingIdea.getId());
-        newIdea.setId(existingIdea.getId());
-      } else {
-        log.trace("Creating new idea " + newIdea);
-      }
-      */
+      addSupportersToIdea(newIdea, numSupporters);
 
       //LawModel savedIdea = lawRepo.save(newIdea);
       fakeCreateAt(newIdea, i+1);
@@ -314,7 +299,7 @@ public class TestDataCreator implements CommandLineRunner {
     auditorAware.setMockAuditor(createdBy);
     LawModel proposal = new LawModel(title, description, area, createdBy);
     lawRepo.save(proposal);
-    proposal = addSupportersToIdea(proposal, getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
+    proposal = addSupportersToIdea(proposal, props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
     //proposal.setStatus(LawStatus.PROPOSAL);
     //LawModel savedProposal = lawRepo.save(proposal);
     fakeCreateAt(proposal,  ageInDays);
@@ -446,8 +431,8 @@ public class TestDataCreator implements CommandLineRunner {
         newPoll = pollService.addProposalToPoll(altProp, newPoll);
       }
 
-      fakeCreateAt(newPoll, getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
-      fakeUpdatedAt(newPoll, getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
+      fakeCreateAt(newPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
+      fakeUpdatedAt(newPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
       log.trace("Created poll in elaboration phase: "+newPoll);
       return newPoll;
     } catch (Exception e) {
@@ -471,8 +456,8 @@ public class TestDataCreator implements CommandLineRunner {
         i++;
       }
       PollModel savedPoll = pollRepo.save(poll);
-      fakeCreateAt(savedPoll, getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)+1);
-      fakeUpdatedAt(savedPoll, getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
+      fakeCreateAt(savedPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)+1);
+      fakeUpdatedAt(savedPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
 
       //===== Start the voting phase of this poll
       pollService.startVotingPhase(savedPoll);
@@ -528,7 +513,7 @@ public class TestDataCreator implements CommandLineRunner {
     for (int i = 0; i < NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
       LawModel realLaw = createProposal(lawTitle, getLoremIpsum(100,400), area, createdBy, 12);
-      addSupportersToIdea(realLaw, getGlobalPropertyAsInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)+5);
+      addSupportersToIdea(realLaw, props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)+5);
       //TODO: reaLaw actually needs to have been part of a (finished) poll with alternative proposals
 			//realLaw.setPoll(poll);
       realLaw.setReachedQuorumAt(DoogiesUtil.daysAgo(24));
@@ -658,6 +643,8 @@ public class TestDataCreator implements CommandLineRunner {
     if (endIndex >= loremIpsum.length()) endIndex = loremIpsum.length()-1;
     return loremIpsum.substring(0, endIndex);
   }
+
+
 	private static final char[] EASY_CHARS = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".toCharArray();
 
 	/**
@@ -671,5 +658,12 @@ public class TestDataCreator implements CommandLineRunner {
 			buf.append(EASY_CHARS[rand.nextInt(EASY_CHARS.length)]);
 		}
 		return buf.toString();
+	}
+
+	public String randomDigits(long len) {          // Example: len = 3
+		long max = (long) Math.pow(len, 10);          // 10^3  = 1000
+		long min = (long) Math.pow(len-1, 10);        // 10^2  =  100
+		long number = min + (rand.nextLong() % (max-min));  //  100 + [0...899]  = [100...999]
+		return String.valueOf(number);
 	}
 }
