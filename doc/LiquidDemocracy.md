@@ -1,4 +1,7 @@
-# Liquido - Liquid Democracy
+# Liquido - Liquid Democracy - Technical backround
+
+**DRAFT!**  This is a very rough draft of a future user guide.
+
 
 ## A modern aproach to interactive representative direct democracy
 
@@ -271,4 +274,9 @@ THEN  all members of the chain shall get notified
 => Or simpler: Always inform any citizen that has not voted yet on a closing poll (either trough delegation or on his own.)
 
 
+# REFERENCES
 
+ - https://www.polys.me online voting platform based on blockchain technology and backed with transparent crypto algorithms.
+ - https://github.com/stonecoldpat/anonymousvoting
+ - https://github.com/descampsk/wavevote based on the previous
+ 

@@ -15,13 +15,14 @@ import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
+import org.doogie.liquido.test.testUtils.LiquidoBasicAuthInterceptor;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
-import org.doogie.liquido.test.testUtils.OauthInterceptor;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.LiquidoProperties;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Lson;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestWatcher;
@@ -35,7 +36,6 @@ import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.data.rest.webmvc.RestMediaTypes;
 import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.*;
-import org.springframework.security.oauth2.common.util.Jackson2JsonParser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.HttpClientErrorException;
@@ -73,7 +73,7 @@ public class RestEndpointTests {
   @LocalServerPort
   int localServerPort;
 
-  /** FQDN */
+  /** full uri: https://localhost:{port}/{basePath}/ */
   String rootUri;
 
   // My spring-data-jpa repositories for loading test data directly
@@ -95,13 +95,16 @@ public class RestEndpointTests {
   @Autowired
   LiquidoProperties props;
 
-  //@Autowired
-  //DelegationRepo delegationRepo;
-
   @Autowired
   RepositoryEntityLinks entityLinks;
 
-  // parameters for Oauth
+	/**
+	 * HTTP request interceptor that sends basic auth header
+	 * AND can change the logged in user.
+	 */
+	LiquidoBasicAuthInterceptor basicAuthInterceptor;
+
+  /* parameters for Oauth
 	@Value(value = "${security.jwt.client-id}")
 	private String CLIENT_ID;
 
@@ -113,7 +116,7 @@ public class RestEndpointTests {
 
 	@Value(value = "${security.jwt.resource-ids}")
 	private String RESOURCE_IDs;
-
+  */
 
 
 	// preloaded data that most test cases need.
@@ -133,15 +136,13 @@ public class RestEndpointTests {
 	//private @Autowired
 	//AutowireCapableBeanFactory beanFactory;
 
-	/** singleton instance of OauthInterceptor. Do not access directly. Tests MUST use {@link #getOauthInterceptor()} */
+	/** singleton instance of OauthInterceptor. Do not access directly. Tests MUST use {@link #getOauthInterceptor()}
 	OauthInterceptor oauthInterceptor = null;
-
-	private final Jackson2JsonParser jsonParser = new Jackson2JsonParser();
 
 	/**
 	 * Lazily create the singleton instance
 	 * @return OauthInterceptor
-	 */
+
 	public OauthInterceptor getOauthInterceptor() {
 		//implementation note: Be carefull when creating classes with "new". Then spring does not know about
 		// this instance, and does not handle it as a bean. For example @Autowire will then not work.
@@ -151,11 +152,12 @@ public class RestEndpointTests {
 		//beanFactory.autowireBean(oauthInterceptor);  // this triggers the spring autowiring
 		return oauthInterceptor;
 	}
+	*/
 
 
 	/**
 	 * This is executed, when the Bean has been created and @Autowired references are injected and ready.
-	 * This runs before each test.
+	 * This runs once for all tests
 	 */
 	@PostConstruct
 	public void postConstruct() {
@@ -185,14 +187,33 @@ public class RestEndpointTests {
 		log.trace("loaded "+this.laws.size()+ " laws");
 	}
 
-  /** configure HTTP REST client */
+	/**
+	 * This runs before each individual test
+	 *  - by default USER1_EMAIL is logged in.
+	 */
+	@Before
+	public void beforeEachTest() {
+		basicAuthInterceptor.login(TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD);
+	}
+
+  /**
+   * Configure a HTTP REST client
+   *  - USER1 is logged in
+   *  - logs the client requetss with {@link LogClientRequestInterceptor}
+   *  - has a rootUri
+   */
   public void initRestTemplateClient() {
     this.rootUri = "http://localhost:"+localServerPort+basePath;
-    log.trace("====== configuring RestTemplate HTTP client for "+rootUri);
-    this.client = new RestTemplateBuilder()
-      //.basicAuthorization(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD)   // no more basic auth. We now have Oauth
+    log.trace("====== configuring RestTemplate HTTP client for "+rootUri+ " with user "+TestFixtures.USER1_EMAIL);
+
+	  this.basicAuthInterceptor = new LiquidoBasicAuthInterceptor(TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD);
+
+	  this.client = new RestTemplateBuilder()
+      //.basicAuthorization(TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD)
+		    .additionalInterceptors(basicAuthInterceptor)
       //TODO:  .errorHandler(new LiquidoTestErrorHandler())     // the DefaultResponseErrorHandler throws exceptions
-      .additionalInterceptors(this.getOauthInterceptor())
+		  //TODO: need to add CSRF header https://stackoverflow.com/questions/32029780/json-csrf-interceptor-for-resttemplate
+      //.additionalInterceptors(this.getOauthInterceptor())
       .additionalInterceptors(new LogClientRequestInterceptor())
       .rootUri(rootUri)
       .build();
@@ -200,10 +221,9 @@ public class RestEndpointTests {
 
 
 
-
-
 	//========= Tests HTTP Security =============
 
+	/*
 	@Test
 	public void testOauthInterceptor() {
 		String oauthAccessToken = getOauthInterceptor().getOauthAccessToken();
@@ -216,6 +236,7 @@ public class RestEndpointTests {
 		assertTrue(secondAccessToken.length() > 5);
 		assertNotEquals(oauthAccessToken, secondAccessToken);
 	}
+	*/
 
 	@Test
 	public void testPublicPingEndpoint() {
@@ -224,7 +245,21 @@ public class RestEndpointTests {
 				.rootUri(rootUri)
 				.build();
 		ResponseEntity<String> res = anonymousClient.exchange("/_ping", HttpMethod.GET, null, String.class);
-		assertEquals("_ping endpoint should be reachable anonymously", HttpStatus.OK, res.getStatusCode());
+		assertEquals("/_ping endpoint should be reachable anonymously", HttpStatus.OK, res.getStatusCode());
+	}
+
+	@Test
+	public void testProposalsUrlShouldNeedAuth() {
+		RestTemplate anonymousClient = new RestTemplateBuilder()
+				.additionalInterceptors(new LogClientRequestInterceptor())
+				.rootUri(rootUri)
+				.build();
+		try {
+			ResponseEntity<String> res = anonymousClient.exchange("/laws", HttpMethod.GET, null, String.class);
+			fail("Should have thrown an exception with unauthorized(401)");
+		} catch (HttpClientErrorException err) {
+			assertEquals("Response should have status unauthorized(401)", HttpStatus.UNAUTHORIZED, err.getStatusCode());
+		}
 	}
 
 	@Test
@@ -356,7 +391,7 @@ public class RestEndpointTests {
   }
 
   @Test
-  //@WithUserDetails(value="testuser0@liquido.de", userDetailsServiceBeanName="liquidoUserDetailsService")    HTTP BasicAuth is already configured above
+  //@WithUserDetails(value="testuser0@liquido.de", userDetailsServiceBeanName="liquidoUserDetailsService")
   public void testFindMostRecentIdeas() throws IOException {
     log.trace("TEST testFindMostRecentIdeas");
 
@@ -457,10 +492,10 @@ public class RestEndpointTests {
    * Test for {@link org.doogie.liquido.services.LawService#checkQuorum(LawModel)}
    */
   @Test
-  // USER1 is logged in via HTTP client.
-  // This does not work for REST tests: @WithUserDetails(value=TestFixtures.USER0_EMAIL, userDetailsServiceBeanName="liquidoUserDetailsService")
+  //This would only work with MockMvc:  @WithUserDetails(value=TestFixtures.USER1_EMAIL , userDetailsServiceBeanName="liquidoUserDetailsService")
   public void testIdeaReachesQuorum() {
     log.trace("TEST ideaReachesQuorum");
+
     LawModel idea = postNewIdea("Idea from testIdeaReachesQuorum");
     log.trace(idea.toString());
     assertEquals(0, idea.getNumSupporters());
@@ -500,12 +535,11 @@ public class RestEndpointTests {
     String ideaDesc  = "This idea was created from a test case";
     String areaUri   = basePath + "/areas/" + this.areas.get(0).getId();
 
-		Jackson2JsonParser jsonParser = new Jackson2JsonParser();
-		Map<String, Object> jsonMap = new HashMap<>();
-		jsonMap.put("title", ideaTitle);
-		jsonMap.put("description", ideaDesc);
-		jsonMap.put("area", areaUri);
-		String jsonBody = jsonParser.formatMap(jsonMap);
+		String jsonBody = Lson.create()
+		  .put("title", ideaTitle)
+		  .put("description", ideaDesc)
+		  .put("area", areaUri)
+			.toString();
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
@@ -539,14 +573,19 @@ public class RestEndpointTests {
    * User0 should have delegated his vote to User4 in Area1
    */
   @Test
+  //TODO: How to send requests with that user? @WithUserDetails("testuser1@liquido.de")
   public void testGetProxyMap() {
     log.trace("TEST getProxyMap");
     String uri = "/my/proxyMap";
 		String delegeeEMail = TestFixtures.delegations.get(0)[0];
 		String proxyEMail   = TestFixtures.delegations.get(0)[1];
 
+		log.trace("Checking if "+delegeeEMail+" has proxy "+proxyEMail);
+
+	  basicAuthInterceptor.login(delegeeEMail, TestFixtures.TESTUSER_PASSWORD);
 		// send request as the delegee who assigned his vote to a proxy
-		getOauthInterceptor().setUsername(delegeeEMail);
+		//getOauthInterceptor().setUsername(delegeeEMail);
+
     String proxyMapJson = client.getForObject(uri, String.class);
 
     log.trace("got Proxy Map:\n"+proxyMapJson);
@@ -633,7 +672,6 @@ public class RestEndpointTests {
 	 */
   @Test
   public void testCastVote() {
-
 		//----- find poll that is in voting
 		String pollsJson = client.getForObject("/polls/search/findByStatus?status=VOTING", String.class);
 		DocumentContext ctx = JsonPath.parse(pollsJson);
@@ -653,15 +691,18 @@ public class RestEndpointTests {
 		String voterToken = JsonPath.read(voterTokenJson, "voterToken");
 		log.trace("with voterToken: "+voterToken);
 
+
+
 		//----- cast vote
-		Map<String, Object> jsonMap = new HashMap<>();
-		jsonMap.put("poll", pollURI);
-		jsonMap.put("voterToken", voterToken);
-		jsonMap.put("voteOrder", new String[]{proposal1_URI, proposal2_URI});
-		String jsonBody = jsonParser.formatMap(jsonMap);
+		String body = Lson.create()
+		  .put("poll", pollURI)
+		  .put("voterToken", voterToken)
+		  .put("voteOrder",  proposal1_URI, proposal2_URI)
+			.toString();
+
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
-		HttpEntity<String> castVoteEntity = new HttpEntity<>(jsonBody, headers);
+		HttpEntity<String> castVoteEntity = new HttpEntity<>(body, headers);
 
 		ResponseEntity<String> castVoteRes = client.postForEntity("/castVote", castVoteEntity, String.class);
 
