@@ -114,7 +114,7 @@ public class PollRestController {
   	if (poll == null)
   		throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND, "Cannot find poll with that id");
   	if (!PollModel.PollStatus.FINISHED.equals(poll.getStatus()))
-			throw new LiquidoException(LiquidoException.Errors.INVALID_STATUS, "Poll.id="+poll.getId()+" is not in status FINISHED");
+			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Poll.id="+poll.getId()+" is not in status FINISHED");
 
 		List<BallotModel> ballots = ballotRepo.findByPoll(poll);
 

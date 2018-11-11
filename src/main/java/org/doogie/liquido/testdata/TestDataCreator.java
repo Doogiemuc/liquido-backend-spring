@@ -479,8 +479,8 @@ public class TestDataCreator implements CommandLineRunner {
 
 			//---- fake some dates to be in the past
 			int daysFinished = 5;  // poll was finished 5 days ago
-			int daysVotingStarts = getGlobalPropertyAsInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS);
-			int durationVotingPhase = getGlobalPropertyAsInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE);
+			int daysVotingStarts = props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS);
+			int durationVotingPhase = props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE);
 			LocalDateTime votingStartAt = LocalDateTime.now().minusDays(durationVotingPhase+daysFinished);
 			poll.setVotingStartAt(votingStartAt);
 			LocalDateTime votingEndAt = LocalDateTime.now().minusDays(daysFinished).truncatedTo(ChronoUnit.DAYS);  // voting ends at midnight
