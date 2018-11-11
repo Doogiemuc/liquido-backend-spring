@@ -2,31 +2,25 @@ package org.doogie.liquido.security;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.oauth2.provider.token.DefaultTokenServices;
-import org.springframework.security.oauth2.provider.token.TokenStore;
-import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
-import org.springframework.security.oauth2.provider.token.store.JwtTokenStore;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
 
 /**
- * Configure everything related to Spring Security
+ * Configure spring Security.
+ *
+ * Here we configure authentication for our api endpoints.A
  */
 @Slf4j
 @Configuration
@@ -35,9 +29,11 @@ import org.springframework.web.filter.CorsFilter;
 //@Order(SecurityProperties.ACCESS_OVERRIDE_ORDER)  // WebSecurityConfigurerAdapter has @Order(100) by default
 public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
-  @Value("${spring.data.rest.base-path}")   // value from application.properties file
+	// REST base path from application.properties
+  @Value("${spring.data.rest.base-path}")
   String basePath;
 
+  /*  DEPRECATED old Oauth stuff
 	@Value("${security.signing-key}")
 	private String signingKey;
 
@@ -46,7 +42,7 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
 	@Value("${security.security-realm}")
 	private String securityRealm;
-
+  */
 
   //see http://docs.spring.io/spring-security/site/docs/4.2.1.RELEASE/reference/htmlsingle/#jc-authentication-userdetailsservice
   @Bean
@@ -66,31 +62,34 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
   }
   */
 
-
-  /**  This way global configuration could be configured.  Just an example
-	public void configure(AuthenticationManagerBuilder builder) throws Exception {
-		builder.inMemoryAuthentication()
-			.withUser("joe")
-			.password("123")
-			.roles("ADMIN");
-	}
-	 */
-
   /**
-   * Configure HttpSecurity. Autentication is handled in {@link org.doogie.liquido.security.oauth2.ResourceServerConfig}
-	 * which has higher priority and comes first
+   * Configure HttpSecurity. This config has the highest priority and comes first.
    * @param http spring http security
-   * @throws Exception
+   * @throws Exception when request is unauthorized
    */
   @Override
   protected void configure(HttpSecurity http) throws Exception {
     log.trace("Configuring HttpSecurity for "+ basePath);
-		http
-		    .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+	  http
+			 //TODO: .antMatcher(basePath).authenticationProvider(new LiquidoTokenAuthProvider())  can I add my token auth that way?
+			.authorizeRequests()
+			  .antMatchers(basePath+"/_ping").permitAll()        // is alive
+			  .antMatchers(basePath+"/login/**").permitAll()        // login via one time token
+			  .anyRequest().authenticated()
 			.and()
-				.authorizeRequests().anyRequest().authenticated()
-		  ;
+			  .csrf().disable()
+			  .httpBasic();
   }
+
+	/**
+	 * Bean for default Password encoder. Needed since
+	 * <a href="https://spring.io/blog/2017/11/01/spring-security-5-0-0-rc1-released#password-encoding">Sprint-securty 5.0</a>
+	 * @return a default delegatingPasswordEncoder
+	 */
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+	}
 
   /**
    * Configure CORS so that access from localhost:3001 is allowed.
@@ -116,7 +115,7 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
     return bean;
   }
 
-  /******************************** for OAUTH 2.0 **********************/
+  /*  ******************************* DEPRECATED stuff for  OAUTH 2.0 ******************
 
 	@Bean
 	@Override
@@ -150,6 +149,8 @@ public class LiquidoSecurityConfiguration extends WebSecurityConfigurerAdapter {
 		defaultTokenServices.setSupportRefreshToken(true);
 		return defaultTokenServices;
 	}
+
+	*/
 
   /*
   @Bean

@@ -27,7 +27,6 @@ public class LiquidoRestUtils {
 	public static final String PROJECTION = "{?projection}";
 	public static String cleanURI(String uri) {
 		if (uri.endsWith(PROJECTION)) uri = uri.substring(0, uri.length()-PROJECTION.length());
-
 		return uri;
 	}
 }
