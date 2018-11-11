@@ -50,8 +50,9 @@ public class BallotModel {
 	 * level = 1: direct proxy
 	 * level = 2: transitive proxy voted
 	 * etc. */
-  @NonNull   // needed so that level gets included as a required arg for the lombok constructor, even though Lombok shows a warning
-  public int level;
+  @NonNull   // level must be set in RequiredArgsConstructor
+	@NotNull
+  public Integer level;
 
 	/**
 	 * By default a ballot stands for one vote.
