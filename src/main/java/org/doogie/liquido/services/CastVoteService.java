@@ -41,7 +41,7 @@ public class CastVoteService {
 	@Autowired
 	LiquidoRestUtils restUtils;
 
-	/** A secret only known to the this server. So that only we can create token checksums */
+	/** A secret only known to the this server. So that only we can builder token checksums */
 	private static final String SERVER_SECRET = "liquidoServerSecret";
 	private static final String bcryptSaltForChecksums = BCrypt.gensalt();
 
@@ -64,7 +64,7 @@ public class CastVoteService {
 	public String createVoterToken(UserModel user, AreaModel area, String passwordHash) throws LiquidoException {
 		log.debug("createVoterToken: for "+user+" in "+area);
 		if (user == null || DoogiesUtil.isEmpty(user.getEmail()) || area == null ||passwordHash == null)
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need user, area and passwordHash to create a voterToken!");
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need user, area and passwordHash to builder a voterToken!");
 		// Create a new voterToken for this user in that area with the BCRYPT hashing algorithm
 		// Generate a new salt for every voterToken. Bcrypt prepends the salt into the returned token value!!!
 		String salt = BCrypt.gensalt();
@@ -146,7 +146,7 @@ public class CastVoteService {
 	 *      ELSE update the existing ballot's level and vote order
 	 *
 	 *  3) FOR EACH directly delegated TokenChecksumModel
-	 *              create a childBallot and recursively try to store this childBallot.
+	 *              builder a childBallot and recursively try to store this childBallot.
 	 *
 	 *  Remark: The child ballot might not be stored when there alrady is one with a smaller level. This is
 	 *          our recursion limit.
@@ -161,7 +161,7 @@ public class CastVoteService {
 		//----- check validity of the ballot
 		checkBallot(newBallot);
 
-		//----- If there is no existing ballot yet with that checksum, then create a completely new one.
+		//----- If there is no existing ballot yet with that checksum, then builder a completely new one.
 		BallotModel existingBallot = ballotRepo.findByPollAndChecksum(newBallot.getPoll(), newBallot.getChecksum());
 		if (existingBallot == null) {
 			log.trace("  Inserting new ballot");

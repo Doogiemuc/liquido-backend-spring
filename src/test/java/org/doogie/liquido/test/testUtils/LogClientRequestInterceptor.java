@@ -22,7 +22,7 @@ public class LogClientRequestInterceptor implements ClientHttpRequestInterceptor
       log.trace("  "+key+": "+headerMap.get(key));
     }
     ClientHttpResponse response = clientHttpRequestExecution.execute(httpRequest, bytes);
-		log.trace("<=" + CLIENT + " " + httpRequest.getMethod()+ " " + httpRequest.getURI()+" "+response.getStatusText()+"("+response.getStatusCode()+")");
+		log.trace("<=" + CLIENT + " " + httpRequest.getMethod()+ " " + httpRequest.getURI()+" returned "+response.getStatusText()+"("+response.getStatusCode()+")");
 		// TODO: log response body, especially in case of errors.
 		if (response.getStatusCode().is4xxClientError() || response.getStatusCode().is5xxServerError()) {
 			String responseBody = DoogiesUtil._stream2String(response.getBody());

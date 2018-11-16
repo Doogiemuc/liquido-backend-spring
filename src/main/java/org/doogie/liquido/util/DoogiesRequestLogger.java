@@ -2,7 +2,6 @@ package org.doogie.liquido.util;
 
 import org.springframework.http.HttpMethod;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import javax.servlet.FilterChain;
@@ -26,7 +25,7 @@ import java.util.Enumeration;
 public class DoogiesRequestLogger extends OncePerRequestFilter {
 
   private boolean includeResponsePayload = true;
-  private boolean logRequestHeaders = false;
+  private boolean logRequestHeaders = true;
   private int maxPayloadLength = 1000;
 
   private String getContentAsString(byte[] buf, int maxLength, String charsetName) {
@@ -63,12 +62,12 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
      .append(" ")
      .append(request.getRequestURL());
 
-    StringBuilder reqInfoLong = new StringBuilder(reqInfo.toString());
-
     String queryString = request.getQueryString();
     if (queryString != null) {
-      reqInfoLong.append("?").append(queryString);
+      reqInfo.append("?").append(queryString);
     }
+
+	  StringBuilder reqInfoLong = new StringBuilder(reqInfo.toString());
 
     if (request.getAuthType() != null) {
       reqInfoLong.append(", authType=")
@@ -127,7 +126,12 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     this.logger.debug("<= " + reqInfo + " returned " + response.getStatus() + " in "+duration + "ms.");
     if (includeResponsePayload && logger.isDebugEnabled() && wrappedResponse.getContentSize() > 0) {
       byte[] buf = wrappedResponse.getContentAsByteArray();
-      this.logger.debug("   server's response body:\n"+getContentAsString(buf, this.maxPayloadLength, response.getCharacterEncoding()));
+      String responseStr = getContentAsString(buf, this.maxPayloadLength, response.getCharacterEncoding());
+      if (responseStr.indexOf("\n") > 0) {
+	      this.logger.debug("   server's response body:\n"+responseStr);
+      } else {
+	      this.logger.debug("   server's response body: "+responseStr);
+      }
     }
 
     wrappedResponse.copyBodyToResponse();  // IMPORTANT: copy content of response back into original response
