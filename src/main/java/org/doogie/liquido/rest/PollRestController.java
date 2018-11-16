@@ -44,11 +44,11 @@ public class PollRestController {
   //see https://docs.spring.io/spring-data/rest/docs/current/reference/html/#customizing-sdr.overriding-sdr-response-handlers
 
   /**
-   * When an idea reaches its quorum then it becomes a law and its creator <i>can</i> create a new poll for this proposal.
+   * When an idea reaches its quorum then it becomes a law and its creator <i>can</i> builder a new poll for this proposal.
    * Other proposals need to join this poll before voting can be started.
    * @param pollResource the new poll with the link to (at least) one proposal, e.g.
    *          <pre>{ "proposals": [ "/liquido/v2/laws/152" ] }</pre>
-   * @param resourceAssembler spring's PersistentEntityResourceAssembler that can create the reply
+   * @param resourceAssembler spring's PersistentEntityResourceAssembler that can builder the reply
    * @return the saved poll as HATEOAS resource with all _links
    * @throws LiquidoException when sent LawModel is not in state PROPOSAL or creation of new poll failed
    */

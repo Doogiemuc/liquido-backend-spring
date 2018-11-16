@@ -13,6 +13,7 @@ import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
+import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
@@ -40,6 +41,8 @@ import static org.springframework.web.bind.annotation.RequestMethod.*;
 @BasePathAwareController
 public class UserRestController {
 
+	private static final int MIN_PASSWORD_LENGTH = 8;
+
 	@Autowired
 	Environment springEnv;
 
@@ -58,28 +61,49 @@ public class UserRestController {
   @Autowired
   OneTimeTokenRepo tokenRepo;
 
+	/**
+	 * Register as a new user
+	 * @param newUser UserModel with at least username and password.   Profile.phonenumber can also be filled.
+	 * @return HTTP OK(200)
+	 * @throws LiquidoException when newUser is not ok.
+	 */
+	@RequestMapping("/auth/register")
+	public @ResponseBody ResponseEntity registerNewUser(@RequestBody UserModel newUser) throws LiquidoException {
+		log.info("register new user "+newUser);
+		//----- sanity checks
+		if (newUser == null || DoogiesUtil.isEmpty(newUser.getEmail()) || DoogiesUtil.isEmpty(newUser.getPasswordHash()) ||
+		    newUser.getPasswordHash().length() < MIN_PASSWORD_LENGTH)
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need data for new user");
+		UserModel existingUser = userRepo.findByEmail(newUser.getEmail());
+		if (existingUser != null)
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "User already exists");
+
+		//----- save new user
+		userRepo.save(newUser);
+		return ResponseEntity.ok("");
+	}
 
 	/**
 	 * SMS login flow - step 1 - user requests login code via SMS
 	 * @param mobile users mobile phone number. MUST be a known user
 	 * @return HttpStatus.OK, when code was sent via SMS
-	 *        OR HttpStatus.NOT_FOUND when mobile phone number was not found and user msut register first.
+	 *        OR HttpStatus.NOT_FOUND when mobile phone number was not found and user must register first.
 	 */
-  @RequestMapping("/login/requestSmsCode")
-  public @ResponseBody ResponseEntity<String> requestSmsCode(@RequestParam("mobile") String mobile) {
-  	log.debug("request SMS login code for mobile="+mobile);
+  @RequestMapping(path = "/auth/requestSmsCode", produces = MediaType.TEXT_PLAIN_VALUE, method = RequestMethod.GET)
+  public String requestSmsCode(@RequestParam("mobile") String mobile) throws LiquidoException {
+  	log.info("request SMS login code for mobile="+mobile);
 	  UserModel user = userRepo.findByProfilePhonenumber(mobile);
-	  if (user == null) return new ResponseEntity<>("No user found with mobile "+mobile+". You must register first.", HttpStatus.NOT_FOUND);
+	  if (user == null) throw new LiquidoException(LiquidoException.Errors.MUST_REGISTER,  "No user found with mobile "+mobile+". You must register first.");
 
 	  // Create new SMS token: four random digits between [1000...9999]
-	  String code = String.valueOf(new Random().nextInt(9000)+ 1000);
+	  String smsCode = String.valueOf(new Random().nextInt(9000)+ 1000);
 	  LocalDateTime validUntil = LocalDateTime.now().plusHours(1);  // login token via SMS is valid for one hour. That should be enough!
-		OneTimeToken oneTimeToken = new OneTimeToken(code, user, OneTimeToken.TOKEN_TYPE.SMS, validUntil);
+		OneTimeToken oneTimeToken = new OneTimeToken(smsCode, user, OneTimeToken.TOKEN_TYPE.SMS, validUntil);
 		tokenRepo.save(oneTimeToken);
 	  if (springEnv.acceptsProfiles("dev", "test")) {
-		  return new ResponseEntity<>(code, HttpStatus.OK);  // when debugging, return the code
+		  return smsCode;  // when debugging, return the code
 	  } else {
-		  return new ResponseEntity<>(HttpStatus.OK);
+	  	return "";
 	  }
   }
 
@@ -89,22 +113,22 @@ public class UserRestController {
 	 * @param code the 4 digit code from the SMS
 	 * @return Oauth access token
 	 */
-  @RequestMapping("/login/withSmsCode")
-  public @ResponseBody ResponseEntity<String> loginWithSmsCode(
+  @RequestMapping(path = "/auth/loginWithSmsCode", produces = MediaType.TEXT_PLAIN_VALUE)
+  public @ResponseBody String loginWithSmsCode(
 		  @RequestParam("mobile") String mobile,
   		@RequestParam("code") String code
-  ) {
+  ) throws LiquidoException {
 	  log.debug("login with sms code="+code);
 	  OneTimeToken oneTimeToken = tokenRepo.findByToken(code);
 	  if (oneTimeToken == null)
-	  	return new ResponseEntity<>("Invalid/Unknown sms login code.", HttpStatus.UNAUTHORIZED);
+	  	throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN, "Invalid/Unknown sms login code.");
 	  if (!mobile.equals(oneTimeToken.getUser().getProfile().getPhonenumber()))
-		  return new ResponseEntity<>("Invalid/Unknown sms login code.", HttpStatus.UNAUTHORIZED);
+		  throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN, "Invalid/Unknown sms login code.");
 	  if (!oneTimeToken.getToken_type().equals(OneTimeToken.TOKEN_TYPE.SMS))
-		  return new ResponseEntity<>("This is not an SMS login token.", HttpStatus.UNAUTHORIZED);
+		  throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN, "This is not an SMS login token.");
 	  if (LocalDateTime.now().isAfter(oneTimeToken.getValidUntil())) {
 	  	tokenRepo.delete(oneTimeToken);
-		  return new ResponseEntity<>("This sms login token is expired.", HttpStatus.UNAUTHORIZED);
+		  throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN, "This sms login token is expired.");
 	  }
 
 	  //MAYBE: login user with Oauth? need to adapt code from OAuth2AuthenticationProcessingFilter  => smells like overengeneering!!
@@ -123,7 +147,7 @@ public class UserRestController {
 	  */
 
 	  tokenRepo.delete(oneTimeToken);  // delete used one time token
-	  return new ResponseEntity<>(HttpStatus.OK);
+	  return "dummyJwtToken";
   }
 
 	/**
@@ -131,9 +155,9 @@ public class UserRestController {
 	 * @return UserModel of the currently logged in user
 	 * @throws LiquidoException
 	 */
-  @RequestMapping("/me")
+  @RequestMapping("/my/user")
 	public @ResponseBody UserModel getOwnUser() throws LiquidoException {
-  	log.trace("GET /me");
+  	log.trace("GET /my/user");
   	UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "You must be logged in to get your own user info."));
   	return currentUser;
@@ -182,7 +206,7 @@ public class UserRestController {
    *         If you you need full detailed data of all referenced entities, you can request the delegationProjection.
    *         Or you can send additional requests for example for the "_links.toProxy.href" URI
    */
-  @RequestMapping(value = "/assignProxy", method = PUT)
+  @RequestMapping(value = "/my/proxy", method = PUT)
 	@ResponseStatus(value = HttpStatus.CREATED)
   public
     @ResponseBody ResponseEntity<?>   							// Return normal HTTP response with savedDelegation
@@ -223,7 +247,7 @@ public class UserRestController {
    * @param area the area where to delete the proxy
    * @return HTTP status 204 (NoContent) on success
    */
-  @RequestMapping(value = "/deleteProxy/{areaId}", method = DELETE)
+  @RequestMapping(value = "/my/proxy/{areaId}", method = DELETE)
 	@ResponseStatus(HttpStatus.NO_CONTENT)
   public void deleteProxy(@PathVariable(name="areaId") AreaModel area) throws LiquidoException {
 		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()

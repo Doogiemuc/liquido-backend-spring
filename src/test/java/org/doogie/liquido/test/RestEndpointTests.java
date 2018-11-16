@@ -18,6 +18,7 @@ import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.testUtils.LiquidoBasicAuthInterceptor;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.doogie.liquido.testdata.TestFixtures;
+import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoProperties;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Lson;
@@ -131,7 +132,7 @@ public class RestEndpointTests {
   /** our HTTP REST client */
   RestTemplate client;
 
-	// Spring needs some more wireing to create the Oauth Interceptor that is capable of injecting @Value annotations
+	// Spring needs some more wireing to builder the Oauth Interceptor that is capable of injecting @Value annotations
   // https://stackoverflow.com/questions/3813588/how-to-inject-dependencies-into-a-self-instantiated-object-in-spring#3813725
 	//private @Autowired
 	//AutowireCapableBeanFactory beanFactory;
@@ -140,7 +141,7 @@ public class RestEndpointTests {
 	OauthInterceptor oauthInterceptor = null;
 
 	/**
-	 * Lazily create the singleton instance
+	 * Lazily builder the singleton instance
 	 * @return OauthInterceptor
 
 	public OauthInterceptor getOauthInterceptor() {
@@ -347,9 +348,38 @@ public class RestEndpointTests {
     protected void succeeded(Description descr) {
       log.trace("===== TEST SUCCESS "+descr.getDisplayName());
     }
-
-
   };
+
+  //===================== Register and login ============================
+
+
+	@Test
+	public void testRegisterAndLoginViaSms() {
+		String phonenumber = "00491511234567";
+		HttpEntity<String> entity = Lson.builder()
+				.put("email", "userFromTest-" + System.currentTimeMillis())
+				.put("passwordHash", "dummyPasswordHashFromTest")
+				.put("profile", Lson.builder("phonenumber", phonenumber))
+				.toHttpEntity();
+		//entity.getHeaders().add(HttpHeaders.ACCEPT, MediaType.TEXT_PLAIN_VALUE);
+		ResponseEntity<String> res = client.postForEntity("/auth/register", entity, String.class);
+		assertEquals(res.getStatusCode(), HttpStatus.OK);
+		log.debug("Successfully registered new user");
+
+		res = client.getForEntity("/auth/requestSmsCode?mobile="+phonenumber, String.class);
+		String smsCode = res.getBody();
+		assertFalse("Did not receive code.", DoogiesUtil.isEmpty(smsCode));
+		log.debug("Received login code via SMS: "+smsCode);
+
+		res = client.getForEntity("/auth/loginWithSmsCode?mobile="+phonenumber+"&code="+smsCode, String.class);
+		assertTrue("Did not receive JWT.", res.getBody() != null && res.getBody().length() > 20);
+		log.debug("Logged in successfully. Received JWT: "+res.getBody());
+	}
+
+
+	//===================== basic requets =================================
+
+
 
   @Test
   public void testPostNewArea() {
@@ -447,7 +477,7 @@ public class RestEndpointTests {
 
     LawModel createdLaw = client.postForObject("/laws", entity, LawModel.class);  // this actually deserializes the response into a LawModel. But that's ok. Makes the assertions much easier than digging around in a plain String response.
     assertNotNull("ERROR: could not post proposal for new law", createdLaw);   // createdLaw will be null, when there was an error.  (I hate methods that return null instead of throwing exceptions!)
-    assertEquals("ERROR: create law title does not match", newLawTitle, createdLaw.getTitle());
+    assertEquals("ERROR: builder law title does not match", newLawTitle, createdLaw.getTitle());
 
     log.trace("TEST postAlternativeProposal successfully created "+createdLaw);
   }
@@ -525,7 +555,7 @@ public class RestEndpointTests {
   }
 
   /**
-   * Helper to create a new idea (via REST)
+   * Helper to builder a new idea (via REST)
    * @param ideaTitlePrefix the title of the idea. A random number will be added,
    *                        because title MUST be unique.
    * @return the created idea (but without dependant entities such  as area and createdBy filled!)
@@ -535,7 +565,7 @@ public class RestEndpointTests {
     String ideaDesc  = "This idea was created from a test case";
     String areaUri   = basePath + "/areas/" + this.areas.get(0).getId();
 
-		String jsonBody = Lson.create()
+		String jsonBody = Lson.builder()
 		  .put("title", ideaTitle)
 		  .put("description", ideaDesc)
 		  .put("area", areaUri)
@@ -694,7 +724,7 @@ public class RestEndpointTests {
 
 
 		//----- cast vote
-		String body = Lson.create()
+		String body = Lson.builder()
 		  .put("poll", pollURI)
 		  .put("voterToken", voterToken)
 		  .put("voteOrder",  proposal1_URI, proposal2_URI)
