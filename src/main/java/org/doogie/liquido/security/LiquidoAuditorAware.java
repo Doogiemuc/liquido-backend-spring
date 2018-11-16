@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.model.UserModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,13 +27,14 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
   UserModel mockAuditor = null;
 
   /**
-   * @return the currently logged in user (may return null!)
+   * Get the currently logged in user
+   * @return (An Java optional that resolves to) the currently logged in user as a liquido UserModel
    */
   @Override
   public Optional<UserModel> getCurrentAuditor() {
     if (mockAuditor != null) {
     	// warn about mock users if we are not in dev or test
-			if (!springEnv.acceptsProfiles("dev", "test"))
+			if (!springEnv.acceptsProfiles(Profiles.of("dev", "test")))
 				log.warn("Returning mock auditor "+mockAuditor.getEmail());
       return Optional.of(mockAuditor);
     }

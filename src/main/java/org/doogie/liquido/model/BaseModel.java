@@ -44,7 +44,7 @@ public abstract class BaseModel implements Identifiable<Long> {
   //No default createdBy here in the BaseModel, because some Models (e.g. BallotModel!!!) do not need it.
 
   /*
-   THIS WAY the ID field could also be exposed for every Model. But I am doing it in the Projections and in the RepositoryRestConfigurer
+   THIS WAY the ID field could also be exposed for every Model. But I am doing it in the Projections and in the LiquidoRepositoryRestConfigurer
   public String getID() {
     return getId().toString();
   }

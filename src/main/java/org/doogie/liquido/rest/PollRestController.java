@@ -112,7 +112,7 @@ public class PollRestController {
 	@RequestMapping("/polls/{id}/result")
 	public List getPollResult(@PathVariable PollModel poll) throws LiquidoException {
   	if (poll == null)
-  		throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND, "Cannot find poll with that id");
+  		throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "Cannot find poll with that id");
   	if (!PollModel.PollStatus.FINISHED.equals(poll.getStatus()))
 			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Poll.id="+poll.getId()+" is not in status FINISHED");
 

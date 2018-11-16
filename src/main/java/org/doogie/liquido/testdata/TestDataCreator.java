@@ -15,6 +15,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -131,7 +132,7 @@ public class TestDataCreator implements CommandLineRunner {
    * @param args command line args
    */
   public void run(String... args) {
-    boolean seedDB = springEnv.acceptsProfiles("dev", "test") || "true".equalsIgnoreCase(springEnv.getProperty("seedDB"));
+    boolean seedDB = springEnv.acceptsProfiles(Profiles.of("dev", "test")) || "true".equalsIgnoreCase(springEnv.getProperty("seedDB"));
     for(String arg : args) {
       if ("--seedDB".equalsIgnoreCase(arg)) { seedDB = true; }
     }
@@ -195,7 +196,7 @@ public class TestDataCreator implements CommandLineRunner {
       profile.setName("Test User" + (i+1));
       profile.setPicture("/static/img/photos/"+((i%3)+1)+".png");
       profile.setWebsite("http://www.liquido.de");
-      profile.setPhonenumber(randomDigits(10));
+      profile.setPhonenumber(DoogiesUtil.randomDigits(10));
       if (i==0) profile.setPhonenumber("1234567890");  // make sure that there is one user with that phonenumber
       newUser.setProfile(profile);
 
@@ -271,7 +272,7 @@ public class TestDataCreator implements CommandLineRunner {
     for (int i = 0; i < NUM_IDEAS; i++) {
       String ideaTitle = "Idea " + i + " that suggest that we definitely need a longer title for ideas";
       StringBuffer ideaDescr = new StringBuffer();
-      ideaDescr.append(randString(8));    // prepend with some random chars to test sorting
+      ideaDescr.append(DoogiesUtil.randString(8));    // prepend with some random chars to test sorting
       ideaDescr.append(" ");
       ideaDescr.append(getLoremIpsum(0,400));
 
@@ -310,7 +311,7 @@ public class TestDataCreator implements CommandLineRunner {
 
   private LawModel createRandomProposal(String title) {
     StringBuffer description = new StringBuffer();
-    description.append(randString(8));    // prepend with some random chars to test sorting
+    description.append(DoogiesUtil.randString(8));    // prepend with some random chars to test sorting
     description.append(" ");
     description.append(getLoremIpsum(0,400));
     UserModel createdBy = this.randUser();
@@ -645,25 +646,5 @@ public class TestDataCreator implements CommandLineRunner {
   }
 
 
-	private static final char[] EASY_CHARS = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".toCharArray();
 
-	/**
-	 * Simply generate some random characters
-	 * @param len number of chars to generate
-	 * @return a String of length len with "easy" random characters and numbers
-	 */
-	public String randString(int len) {
-		StringBuffer buf = new StringBuffer();
-		for (int i = 0; i < len; i++) {
-			buf.append(EASY_CHARS[rand.nextInt(EASY_CHARS.length)]);
-		}
-		return buf.toString();
-	}
-
-	public String randomDigits(long len) {          // Example: len = 3
-		long max = (long) Math.pow(len, 10);          // 10^3  = 1000
-		long min = (long) Math.pow(len-1, 10);        // 10^2  =  100
-		long number = min + (rand.nextLong() % (max-min));  //  100 + [0...899]  = [100...999]
-		return String.valueOf(number);
-	}
 }

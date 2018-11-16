@@ -7,6 +7,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Random;
 
 public class DoogiesUtil {
 
@@ -42,6 +43,34 @@ public class DoogiesUtil {
     cal.setTime(date);
     cal.add(Calendar.DATE, days); //minus number would decrement the days
     return cal.getTime();
+  }
+
+  static final Random rand = new Random();
+  private static final char[] EASY_CHARS = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".toCharArray();
+
+  /**
+   * Simply generate some random characters
+   * @param len number of chars to generate
+   * @return a String of length len with "easy" random characters and numbers
+   */
+  public static String randString(int len) {
+    StringBuffer buf = new StringBuffer();
+    for (int i = 0; i < len; i++) {
+      buf.append(EASY_CHARS[rand.nextInt(EASY_CHARS.length)]);
+    }
+    return buf.toString();
+  }
+
+  /**
+   * Create a string that consists of random digits [0-9] of that length. Can be used as validation token.
+   * @param len number of digits to produce
+   * @return a string of length "len" that consists of random digits
+   */
+  public static String randomDigits(int len) {         // Example: len = 3
+    long max = (long) Math.pow(len, 10);                // 10^3  = 1000
+    long min = (long) Math.pow(len-1, 10);              // 10^2  =  100
+    long number = min + (Math.abs(rand.nextLong()) % (max-min));  // 100 + [0...899]  = [100...999]
+    return String.valueOf(number);
   }
 
 

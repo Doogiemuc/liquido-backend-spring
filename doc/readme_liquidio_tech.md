@@ -106,6 +106,8 @@ https://www.draw.io/#LLiquido%20Architecture
 
 ## Oauth 2.0
 
+ - [Spring-Security 5.1 now natively supports OAuth 2.0](https://docs.spring.io/spring-security/site/docs/current/reference/html/new.html)
+
  - [Baelddung Oauth Tutorials Overview](https://www.baeldung.com/spring-security-oauth)
  - [Baeldung Tutorial Oauth with JWT](https://www.baeldung.com/spring-security-oauth-jwt)
  - [Very nice Sprint Boot example app for JWT](https://github.com/nydiarra/springboot-jwt)
