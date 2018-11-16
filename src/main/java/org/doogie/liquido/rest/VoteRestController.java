@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Sprint REST controller for voting
@@ -65,7 +64,7 @@ public class VoteRestController {
 		/**
 		 * Post a ballot, called when a User casts his vote.
 		 * Each ballot is signed with a voter's token. When a user is proxy for some other users, then this method
-		 * will create one ballot for each ballotToken that has been assigned to this proxy.
+		 * will builder one ballot for each ballotToken that has been assigned to this proxy.
 		 *
 		 * This endpoint must be used instead of the default HATEOAS POST endpoint for /ballots!
 		 * http://docs.spring.io/spring-data/rest/docs/current/reference/html/#customizing-sdr.overriding-sdr-response-handlers
@@ -127,7 +126,7 @@ public class VoteRestController {
 		return resourceAssembler.toResource(responseJpaEntity)
 	}
 
-	 * Remark: POST for create, PUT would be for update! See http://stackoverflow.com/questions/630453/put-vs-post-in-rest?rq=1
+	 * Remark: POST for builder, PUT would be for update! See http://stackoverflow.com/questions/630453/put-vs-post-in-rest?rq=1
 		 *
 		 * Related resources for @RepositoryRestController
 		 * Example by Oliver Ghierke:  https://github.com/olivergierke/spring-restbucks

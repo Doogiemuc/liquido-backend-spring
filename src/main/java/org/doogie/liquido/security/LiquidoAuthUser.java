@@ -27,7 +27,7 @@ public class LiquidoAuthUser extends User {  // org.springframework.security.cor
   //TODO: This is just for testing
   @Override
   public String getPassword() {
-    System.out.println("SEC TRACE: Some code is getting the password of "+this.getUsername());
+    System.out.println("SEC TRACE: (LiquidoAuthUser.java:30): Some code is getting the password of "+this.getUsername());
     return super.getPassword();
   }
 }
