@@ -12,7 +12,6 @@ import org.doogie.liquido.services.scheduler.FinishPollJob;
 import org.doogie.liquido.util.LiquidoProperties;
 import org.doogie.liquido.util.Matrix;
 import org.quartz.*;
-import org.quartz.impl.StdSchedulerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Service;
@@ -69,7 +68,7 @@ public class PollService {
     if (proposal.getPoll() != null)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Proposal (id="+proposal.getId()+") is already part of another poll!");
 
-    //===== create new Poll with one initial proposal
+    //===== builder new Poll with one initial proposal
     log.info("Create new poll. InitialProposal (id={}): {}", proposal.getId(), proposal.getTitle());
     PollModel poll = new PollModel();
     // voting starts n days in the future (at midnight)
@@ -254,7 +253,7 @@ public class PollService {
 		/** add an edge from a node to another node */
 		public boolean addDirectedEdge(int from, int to) {
 			if (from == to) throw new IllegalArgumentException("cannot add a circular edge from a node to itself");
-			if (this.get(from) == null) this.put(from, new HashSet<>());  // lazily create HashSet
+			if (this.get(from) == null) this.put(from, new HashSet<>());  // lazily builder HashSet
 			return this.get(from).add(to);
 		}
 

@@ -412,7 +412,7 @@ public class TestDataCreator implements CommandLineRunner {
       String title, desc;
       UserModel createdBy;
 
-      //===== create Poll from initial Proposal
+      //===== builder Poll from initial Proposal
       title = "Initial Proposal in a poll that is in elaboration "+System.currentTimeMillis();
       desc = getLoremIpsum(100, 400);
       createdBy = getUser(0);
@@ -495,9 +495,9 @@ public class TestDataCreator implements CommandLineRunner {
   }
 
   /**
-   * Will create a new law or update an existing one with matching title.
+   * Will builder a new law or update an existing one with matching title.
    * And will set the createdAt date to n days ago
-   * @param lawModel the new law to create (or update)
+   * @param lawModel the new law to builder (or update)
    * @param ageInDays will setCreatedAt to so many days ago (measured from now)
    * @return the saved law
    */
@@ -552,7 +552,7 @@ public class TestDataCreator implements CommandLineRunner {
     log.info("Seeding votes ...");
 
     List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
-    if (polls.size() == 0) throw new RuntimeException("cannot seed votes. There is no poll in voting phase.");  //MAYBE: create one
+    if (polls.size() == 0) throw new RuntimeException("cannot seed votes. There is no poll in voting phase.");  //MAYBE: builder one
     PollModel pollInVoting = polls.get(0);
     if (pollInVoting.getNumCompetingProposals() < 2) throw new RuntimeException("Cannot seed votes. Poll in voting must have at least two proposals.");
 

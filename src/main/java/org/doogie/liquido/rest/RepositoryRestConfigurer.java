@@ -1,11 +1,5 @@
 package org.doogie.liquido.rest;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
@@ -15,7 +9,6 @@ import org.doogie.liquido.util.DoogiesRequestLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.json.JsonParseException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
@@ -24,8 +17,6 @@ import org.springframework.data.rest.core.mapping.RepositoryDetectionStrategy;
 import org.springframework.data.rest.webmvc.config.RepositoryRestConfigurerAdapter;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.io.IOException;
 
 /**
  * Configure the exposed REST HATEOAS services.
@@ -166,7 +157,7 @@ public class RepositoryRestConfigurer extends RepositoryRestConfigurerAdapter {
 
   /*  this manual validator for foreign keys was only necessary with MongoDB. Right now this is handled by MySQL foreign key constraints
 
-  @Autowired        // Do not create an instance with "new". Let Spring inject the dependency, so that it can ba handled by Spring.
+  @Autowired        // Do not builder an instance with "new". Let Spring inject the dependency, so that it can ba handled by Spring.
   private DelegationValidator delegationValidator;
 
   @Override

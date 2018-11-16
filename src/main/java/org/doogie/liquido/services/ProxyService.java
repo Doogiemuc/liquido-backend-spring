@@ -1,6 +1,5 @@
 package org.doogie.liquido.services;
 
-import jdk.nashorn.internal.parser.Token;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.BallotRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
@@ -71,7 +70,7 @@ public class ProxyService {
 	 * @param toProxy proxy that receives the right and thus can vote in place of fromUser
 	 * @param voterToken user's voterToken, so that we calculate his checksum. BE CAREFULL, DO NOT PASS a password
 	 * @return the newly created or updated DelegationModel or null, when the proxy is not public and must still confirm the delegation
-	 * @throws LiquidoException when the assignment would create a circular proxy chain or when voterToken is invalid
+	 * @throws LiquidoException when the assignment would builder a circular proxy chain or when voterToken is invalid
 	 */
 	@Transactional
 	public DelegationModel assignProxy(AreaModel area, UserModel fromUser, UserModel toProxy, String voterToken) throws LiquidoException {
@@ -105,7 +104,7 @@ public class ProxyService {
 		//----- IF proxy has a public checksum THEN delegate to it ELSE ass a task, that proxy must confirm the delegation
 		//TokenChecksumModel proxyChecksumModel = this.getChecksumModelOfPublicProxy(area, toProxy);
 
-		//TODO: is it ok that I use the proxies password to create a voter token for him when assigning a proxy?
+		//TODO: is it ok that I use the proxies password to builder a voter token for him when assigning a proxy?
 		String proxyToken = castVoteService.createVoterToken(toProxy, area, toProxy.getPasswordHash());
 		TokenChecksumModel proxyChecksumModel = castVoteService.isVoterTokenValid(proxyToken);
 

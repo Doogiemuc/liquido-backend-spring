@@ -7,7 +7,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.data.rest.core.annotation.RestResource;
 
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -20,7 +19,7 @@ public interface PollRepo extends CrudRepository<PollModel, Long> {
   List<PollModel> findByStatus(@Param("status") PollModel.PollStatus status);
 
 
-  // the /polls  endpoint is read-only.  To create a poll one must use the PollRestController
+  // the /polls  endpoint is read-only.  To builder a poll one must use the PollRestController
 
   @RestResource(exported = false)
   PollModel save(PollModel pollModel);
