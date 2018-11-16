@@ -9,12 +9,14 @@ import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.UserRepo;
+import org.doogie.liquido.jwt.JwtTokenProvider;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
+import org.doogie.liquido.test.testUtils.JwtAuthInterceptor;
 import org.doogie.liquido.test.testUtils.LiquidoBasicAuthInterceptor;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.doogie.liquido.testdata.TestFixtures;
@@ -99,27 +101,6 @@ public class RestEndpointTests {
   @Autowired
   RepositoryEntityLinks entityLinks;
 
-	/**
-	 * HTTP request interceptor that sends basic auth header
-	 * AND can change the logged in user.
-	 */
-	LiquidoBasicAuthInterceptor basicAuthInterceptor;
-
-  /* parameters for Oauth
-	@Value(value = "${security.jwt.client-id}")
-	private String CLIENT_ID;
-
-	@Value(value = "${security.jwt.client-secret}")
-	private String CLIENT_SECRET;
-
-	@Value(value = "${security.jwt.grant-type}")
-	private String GRANT_TYPE;
-
-	@Value(value = "${security.jwt.resource-ids}")
-	private String RESOURCE_IDs;
-  */
-
-
 	// preloaded data that most test cases need.
   List<UserModel> users;
   List<AreaModel> areas;
@@ -132,29 +113,24 @@ public class RestEndpointTests {
   /** our HTTP REST client */
   RestTemplate client;
 
-	// Spring needs some more wireing to builder the Oauth Interceptor that is capable of injecting @Value annotations
-  // https://stackoverflow.com/questions/3813588/how-to-inject-dependencies-into-a-self-instantiated-object-in-spring#3813725
-	//private @Autowired
-	//AutowireCapableBeanFactory beanFactory;
-
-	/** singleton instance of OauthInterceptor. Do not access directly. Tests MUST use {@link #getOauthInterceptor()}
-	OauthInterceptor oauthInterceptor = null;
+  /** anonymous HTTP client without any auth, for testing register, login and cast vote */
+	RestTemplate anonymousClient;
 
 	/**
-	 * Lazily builder the singleton instance
-	 * @return OauthInterceptor
+	 * HTTP request interceptor that sends basic auth header
+	 * AND can change the logged in user.
+	 */
+	//LiquidoBasicAuthInterceptor basicAuthInterceptor;
 
-	public OauthInterceptor getOauthInterceptor() {
-		//implementation note: Be carefull when creating classes with "new". Then spring does not know about
-		// this instance, and does not handle it as a bean. For example @Autowire will then not work.
-		// You can register an instance as a bean manually, e.g. https://github.com/eugenp/tutorials/blob/master/spring-quartz/src/main/java/org/baeldung/springquartz/config/AutoWiringSpringBeanJobFactory.java
-		if (this.oauthInterceptor == null)
-		  this.oauthInterceptor = new OauthInterceptor(this.rootUri, CLIENT_ID, CLIENT_SECRET, TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD);
-		//beanFactory.autowireBean(oauthInterceptor);  // this triggers the spring autowiring
-		return oauthInterceptor;
-	}
-	*/
+	// Json Web Tokens   JWT
 
+	@Autowired
+	JwtTokenProvider jwtTokenProvider;
+
+	JwtAuthInterceptor jwtAuthInterceptor = new JwtAuthInterceptor();
+
+  /** for JSON parsing */
+	ObjectMapper jsonMapper = new ObjectMapper();
 
 	/**
 	 * This is executed, when the Bean has been created and @Autowired references are injected and ready.
@@ -162,7 +138,7 @@ public class RestEndpointTests {
 	 */
 	@PostConstruct
 	public void postConstruct() {
-		initRestTemplateClient();
+		initHttpClients();
 
 		// Here you can do any one time setup necessary
 		log.trace("PostConstruct: pre-fetching data from DB");
@@ -189,13 +165,37 @@ public class RestEndpointTests {
 	}
 
 	/**
-	 * This runs before each individual test
-	 *  - by default USER1_EMAIL is logged in.
+	 * This runs before every test method
+	 * By Default USER1_EMAIL is logged in
 	 */
 	@Before
 	public void beforeEachTest() {
-		basicAuthInterceptor.login(TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD);
+		//basicAuthInterceptor.login(TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD);
+		String jwt = jwtTokenProvider.generateToken(TestFixtures.USER1_EMAIL);
+		jwtAuthInterceptor.setJwtToken(jwt);
 	}
+
+
+	/**
+	 * Entry and exit logging for <b>all</b> test cases. Jiipppiiee. Did I already mention that I am a logging fanatic *G*
+	 */
+	@Rule
+	public TestWatcher slf4jTestWatcher = new TestWatcher() {
+		@Override
+		protected void starting(Description descr) {
+			log.trace("===== TEST STARTING "+descr.getDisplayName());
+		}
+
+		@Override
+		protected void failed(Throwable e, Description descr) {
+			log.error("===== TEST FAILED "+descr.getDisplayName()+ ": "+e.toString());
+		}
+
+		@Override
+		protected void succeeded(Description descr) {
+			log.trace("===== TEST SUCCESS "+descr.getDisplayName());
+		}
+	};
 
   /**
    * Configure a HTTP REST client
@@ -203,48 +203,35 @@ public class RestEndpointTests {
    *  - logs the client requetss with {@link LogClientRequestInterceptor}
    *  - has a rootUri
    */
-  public void initRestTemplateClient() {
+  public void initHttpClients() {
     this.rootUri = "http://localhost:"+localServerPort+basePath;
     log.trace("====== configuring RestTemplate HTTP client for "+rootUri+ " with user "+TestFixtures.USER1_EMAIL);
 
-	  this.basicAuthInterceptor = new LiquidoBasicAuthInterceptor(TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD);
+	  //this.basicAuthInterceptor = new LiquidoBasicAuthInterceptor(TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD);
 
 	  this.client = new RestTemplateBuilder()
       //.basicAuthorization(TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD)
-		    .additionalInterceptors(basicAuthInterceptor)
+		  //.additionalInterceptors(basicAuthInterceptor)
       //TODO:  .errorHandler(new LiquidoTestErrorHandler())     // the DefaultResponseErrorHandler throws exceptions
 		  //TODO: need to add CSRF header https://stackoverflow.com/questions/32029780/json-csrf-interceptor-for-resttemplate
       //.additionalInterceptors(this.getOauthInterceptor())
       .additionalInterceptors(new LogClientRequestInterceptor())
+			.additionalInterceptors(this.jwtAuthInterceptor)
       .rootUri(rootUri)
       .build();
+
+		this.anonymousClient = new RestTemplateBuilder()
+				.additionalInterceptors(new LogClientRequestInterceptor())
+				.rootUri(rootUri)
+				.build();
 	}
 
 
 
 	//========= Tests HTTP Security =============
 
-	/*
-	@Test
-	public void testOauthInterceptor() {
-		String oauthAccessToken = getOauthInterceptor().getOauthAccessToken();
-		assertNotNull("Oauth access_token must not be null", oauthAccessToken);
-		assertTrue("Oauth access_token must be at least 5 chars long", oauthAccessToken.length() > 5);
-
-		log.trace("Fetching second token for second user");
-		String secondAccessToken = getOauthInterceptor().getNewOauthToken(TestFixtures.USER2_EMAIL, TestFixtures.TESTUSER_PASSWORD);
-		assertNotNull(secondAccessToken);
-		assertTrue(secondAccessToken.length() > 5);
-		assertNotEquals(oauthAccessToken, secondAccessToken);
-	}
-	*/
-
 	@Test
 	public void testPublicPingEndpoint() {
-		RestTemplate anonymousClient = new RestTemplateBuilder()
-				.additionalInterceptors(new LogClientRequestInterceptor())
-				.rootUri(rootUri)
-				.build();
 		ResponseEntity<String> res = anonymousClient.exchange("/_ping", HttpMethod.GET, null, String.class);
 		assertEquals("/_ping endpoint should be reachable anonymously", HttpStatus.OK, res.getStatusCode());
 	}
@@ -271,84 +258,8 @@ public class RestEndpointTests {
 		} catch (HttpClientErrorException err) {
 			assertEquals("Response should have status 404", HttpStatus.NOT_FOUND, err.getStatusCode());
 		}
-
   }
 
-
-  /*
-   * I tried A LOT with this auto injected TestRestTemplate. But it doesn't work.
-   * - First of all it doesn't take basePath into account :-(
-   * - It doesn't support PATCH requests
-   * -
-   *
-   * REST client that is automatically configured with localServerPort of running test server.
-   * use with WebEnvironment.RANDOM_PORT   (when SpringBootTest starts the server)
-   * client is further configured in method.
-
-  TestRestTemplate testRestTemplate;
-
-  @Autowired
-  public void setTestRestTemplate(TestRestTemplate testRestTemplate) {
-    log.debug("configuring TestRestTemplate for " + basePath);
-    //BUGFIX: TestRestClient does not take application.properties  spring.data.rest.base-path  into account. We must manually configure this.
-    // https://jira.spring.io/browse/DATAREST-968
-    // https://github.com/spring-projects/spring-boot/issues/7816
-
-    //client.getRestTemplate().setRequestFactory(new HttpComponentsClientHttpRequestFactory());  // must replace  default SimpleClientHttpRequestFactory because it cannot handle PATCH requests http://stackoverflow.com/questions/29447382/resttemplate-patch-request
-    testRestTemplate.getRestTemplate().setUriTemplateHandler(new RootUriTemplateHandler("http://localhost:"+ localServerPort + basePath));
-    testRestTemplate.getRestTemplate().getInterceptors().add(new LogClientRequestInterceptor());
-    testRestTemplate.getRestTemplate().getInterceptors().add(new BasicAuthorizationInterceptor(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD));
-    //TODO:  for API keys
-    //testRestTemplate.getRestTemplate().setDefaultUriVariables();
-    this.testRestTemplate = testRestTemplate;
-  }
-  */
-
-
- /*
-  THESE WERE SOME TRIES TO CONFIGURE TestRestTemplate  WHEN RUNNING WITH WebEnvironment.NONE
-  // http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/htmlsingle/#boot-features-rest-templates-test-utility
-
-  private TestRestTemplate client = new TestRestTemplate();
-
-  @TestConfiguration
-  static class Config {
-
-    @Bean
-    public RestTemplateBuilder restTemplateBuilder() {
-      String rootUri = "http://localhost:"+localServerPort+basePath;
-      log.trace("Creating and configuring RestTemplate for "+rootUri);
-      return new RestTemplateBuilder()
-        .basicAuthorization(TestFixtures.USER1_EMAIL, TestFixtures.USER1_PWD)
-        .errorHandler(new LiquidoTestErrorHandler())
-        //.requestFactory(new HttpComponentsClientHttpRequestFactory())
-        .additionalInterceptors(new LogRequestInterceptor())
-        .rootUri(rootUri);
-    }
-  }
-
-  */
-
-  /**
-   * Entry and exit logging for <b>all</b> test cases. Jiipppiiee. Did I already mention that I am a logging fanatic *G*
-   */
-  @Rule
-  public TestWatcher slf4jTestWatcher = new TestWatcher() {
-    @Override
-    protected void starting(Description descr) {
-      log.trace("===== TEST STARTING "+descr.getDisplayName());
-    }
-
-    @Override
-    protected void failed(Throwable e, Description descr) {
-      log.error("===== TEST FAILED "+descr.getDisplayName()+ ": "+e.toString());
-    }
-
-    @Override
-    protected void succeeded(Description descr) {
-      log.trace("===== TEST SUCCESS "+descr.getDisplayName());
-    }
-  };
 
   //===================== Register and login ============================
 
@@ -361,19 +272,40 @@ public class RestEndpointTests {
 				.put("passwordHash", "dummyPasswordHashFromTest")
 				.put("profile", Lson.builder("phonenumber", phonenumber))
 				.toHttpEntity();
-		//entity.getHeaders().add(HttpHeaders.ACCEPT, MediaType.TEXT_PLAIN_VALUE);
-		ResponseEntity<String> res = client.postForEntity("/auth/register", entity, String.class);
+
+		// register
+		ResponseEntity<String> res = anonymousClient.postForEntity("/auth/register", entity, String.class);
 		assertEquals(res.getStatusCode(), HttpStatus.OK);
 		log.debug("Successfully registered new user");
 
-		res = client.getForEntity("/auth/requestSmsCode?mobile="+phonenumber, String.class);
-		String smsCode = res.getBody();
+		// request SMS login code
+		res = anonymousClient.getForEntity("/auth/requestSmsCode?mobile="+phonenumber, String.class);
+		String smsCode = res.getBody();  // when spring profile is TEST then backend returns code. that would normally be sent via SMS
 		assertFalse("Did not receive code.", DoogiesUtil.isEmpty(smsCode));
 		log.debug("Received login code via SMS: "+smsCode);
 
-		res = client.getForEntity("/auth/loginWithSmsCode?mobile="+phonenumber+"&code="+smsCode, String.class);
-		assertTrue("Did not receive JWT.", res.getBody() != null && res.getBody().length() > 20);
-		log.debug("Logged in successfully. Received JWT: "+res.getBody());
+		// login with received SMS code
+		res = anonymousClient.getForEntity("/auth/loginWithSmsCode?mobile="+phonenumber+"&code="+smsCode, String.class);
+		String jwtToken = res.getBody();
+		log.debug("received JWT: "+jwtToken);
+		assertTrue("Invalid JWT: "+jwtToken, jwtToken != null && jwtToken.length() > 20);
+		log.debug("Logged in successfully. Received JWT: "+jwtToken);
+
+		// verify that user is logged in with that token
+		this.jwtAuthInterceptor.setJwtToken(jwtToken);
+		String userJson = client.getForObject("/my/user", String.class);
+		log.debug("Logged in as : "+userJson);
+
+		try {
+			UserModel receivedUser = jsonMapper.readValue(userJson, UserModel.class);
+			assertEquals("Logged in user should have the phone number that we registered with", phonenumber, receivedUser.getProfile().getPhonenumber());
+		} catch (IOException e) {
+			String errMsg = "Cannot read read JSON returned from GET /my/user: "+e;
+			log.error(errMsg);
+			fail(errMsg);
+		}
+
+
 	}
 
 
@@ -612,9 +544,13 @@ public class RestEndpointTests {
 
 		log.trace("Checking if "+delegeeEMail+" has proxy "+proxyEMail);
 
-	  basicAuthInterceptor.login(delegeeEMail, TestFixtures.TESTUSER_PASSWORD);
-		// send request as the delegee who assigned his vote to a proxy
+		//Login via basic auth: basicAuthInterceptor.login(delegeeEMail, TestFixtures.TESTUSER_PASSWORD);
+		//Login via oauth: send request as the delegee who assigned his vote to a proxy
 		//getOauthInterceptor().setUsername(delegeeEMail);
+
+		// login with jwtToken that we can create very simple
+		String jwt = jwtTokenProvider.generateToken(delegeeEMail);
+		this.jwtAuthInterceptor.setJwtToken(jwt);
 
     String proxyMapJson = client.getForObject(uri, String.class);
 
@@ -628,7 +564,7 @@ public class RestEndpointTests {
    */
   @Test
   public void testAssignProxy() throws LiquidoException {
-    String url = "/assignProxy";
+    String url = "/my/proxy";
     UserModel fromUser = this.users.get(10);
     UserModel toProxy  = this.users.get(11);
     AreaModel area     = this.areas.get(0);
@@ -775,40 +711,6 @@ public class RestEndpointTests {
 				.addFilter(springSecurityFilterChain)
 				.build();
 	}
-
-	/**
-	 * get an Oauth access token for this user
-	 * @param username email adress
-	 * @param password password
-	 * @return the Oauth access token for this user
-	 * @throws Exception when HTTP request fails
-
-	private String obtainAccessToken(String username, String password) throws Exception {
-		MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-		params.add("grant_type", "password");
-		params.add("client_id", "fooClientIdPassword");
-		params.add("username", username);
-		params.add("password", password);
-
-		ResultActions result = mockMvc
-				.perform(post("/oauth/token")
-				.params(params)
-				.with(httpBasic(CLIENT_ID, CLIENT_SECRET))
-				.accept(CONTENT_TYPE))
-				.andExpect(status().isOk())
-				.andExpect(content().contentType(CONTENT_TYPE));
-
-		String resultString = result.andReturn().getResponse().getContentAsString();
-		Jackson2JsonParser jsonParser = new JacksonJsonParser();
-		return jsonParser.parseMap(resultString).get("access_token").toString();
-
-	}
-
-	@Test
-	public void givenNoToken_whenGetSecureRequest_thenUnauthorized() throws Exception {
-		mockMvc.perform(get("/areas")).andExpect(status().isUnauthorized());
-	}
-
-	*/
+  */
 
 }
