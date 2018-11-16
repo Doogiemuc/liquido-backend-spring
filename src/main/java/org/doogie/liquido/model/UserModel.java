@@ -1,6 +1,7 @@
 package org.doogie.liquido.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.data.rest.core.annotation.RestResource;
@@ -26,8 +27,8 @@ public class UserModel extends BaseModel {
 
   @NotNull
   @NonNull
-  @JsonIgnore                       // tell jackson to not serialize this field
-  //@Getter(AccessLevel.PRIVATE)    // Lombok getter cannot be private because I need access to the password in LiquidoUserDetailsService.java
+  //JsonIgnore                      // tell jackson to not serialize this field  => needs more  CHI
+  //@Getter(AccessLevel.PRIVATE)    // Getter cannot be private because I need access to the password in LiquidoUserDetailsService.java
   @RestResource(exported = false)   // private: never exposed via REST!
   private String passwordHash;
 
@@ -35,6 +36,23 @@ public class UserModel extends BaseModel {
 	@Embedded
 	public UserProfileModel profile;
 
+	/**
+	 * get the Password.  Do not serialize this field with jackson
+	 * @return
+	 */
+	@JsonIgnore
+	public String getPasswordHash() {
+		return passwordHash;
+	}
+
+	/**
+	 * set passwordHash. This can be deserialized from JSON
+	 * @param passwordHash
+	 */
+	@JsonProperty
+	public void setPasswordHash(String passwordHash) {
+		this.passwordHash = passwordHash;
+	}
 
 
   /* DEPRECATED: replaced by DelegationModel
@@ -69,10 +87,14 @@ public class UserModel extends BaseModel {
 	// This is extremely important! Do not expose password in toString() !!!
   @Override
   public String toString() {
-    return "UserModel[" +
-            "email='" + email + '\'' +
-            ", id=" + id +
-            ']';
+  	StringBuffer buf = new StringBuffer();
+    buf.append("UserModel[");
+		buf.append("id=" + id);
+		buf.append(", email='" + email + '\'');
+		if (this.getProfile() != null)
+			buf.append(", profile.phonenumber="+this.getProfile().getPhonenumber());
+		buf.append(']');
+		return buf.toString();
   }
 
 }

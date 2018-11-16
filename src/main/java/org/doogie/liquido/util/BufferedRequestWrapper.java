@@ -105,7 +105,7 @@ public class BufferedRequestWrapper extends HttpServletRequestWrapper {
 			}
 			// copy from InputStream into cachedContent
 			this.cachedContent = StreamUtils.copyToByteArray(is);
-			// create a new InputStream from that ByteArray that we can read from.
+			// builder a new InputStream from that ByteArray that we can read from.
 			this.cachedInputStream = new ByteArrayInputStream(this.cachedContent);
 		}
 
