@@ -3,6 +3,7 @@ package org.doogie.liquido.rest;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.OneTimeTokenRepo;
 import org.doogie.liquido.datarepos.UserRepo;
+import org.doogie.liquido.jwt.JwtTokenProvider;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.OneTimeToken;
@@ -16,6 +17,7 @@ import org.doogie.liquido.services.ProxyService;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.http.HttpStatus;
@@ -25,6 +27,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -38,7 +41,9 @@ import static org.springframework.web.bind.annotation.RequestMethod.*;
  * Rest Controller for handling user data and (voting) proxy
  */
 @Slf4j
-@BasePathAwareController
+//@BasePathAwareController
+@RestController
+@RequestMapping("${spring.data.rest.base-path}")
 public class UserRestController {
 
 	private static final int MIN_PASSWORD_LENGTH = 8;
@@ -61,6 +66,9 @@ public class UserRestController {
   @Autowired
   OneTimeTokenRepo tokenRepo;
 
+  @Autowired
+	JwtTokenProvider jwtTokenProvider;
+
 	/**
 	 * Register as a new user
 	 * @param newUser UserModel with at least username and password.   Profile.phonenumber can also be filled.
@@ -68,7 +76,7 @@ public class UserRestController {
 	 * @throws LiquidoException when newUser is not ok.
 	 */
 	@RequestMapping("/auth/register")
-	public @ResponseBody ResponseEntity registerNewUser(@RequestBody UserModel newUser) throws LiquidoException {
+	public ResponseEntity registerNewUser(@RequestBody UserModel newUser) throws LiquidoException {
 		log.info("register new user "+newUser);
 		//----- sanity checks
 		if (newUser == null || DoogiesUtil.isEmpty(newUser.getEmail()) || DoogiesUtil.isEmpty(newUser.getPasswordHash()) ||
@@ -89,18 +97,19 @@ public class UserRestController {
 	 * @return HttpStatus.OK, when code was sent via SMS
 	 *        OR HttpStatus.NOT_FOUND when mobile phone number was not found and user must register first.
 	 */
-  @RequestMapping(path = "/auth/requestSmsCode", produces = MediaType.TEXT_PLAIN_VALUE, method = RequestMethod.GET)
+  @RequestMapping("/auth/requestSmsCode")
   public String requestSmsCode(@RequestParam("mobile") String mobile) throws LiquidoException {
   	log.info("request SMS login code for mobile="+mobile);
 	  UserModel user = userRepo.findByProfilePhonenumber(mobile);
-	  if (user == null) throw new LiquidoException(LiquidoException.Errors.MUST_REGISTER,  "No user found with mobile "+mobile+". You must register first.");
+	  if (user == null) throw new LiquidoException(LiquidoException.Errors.MUST_REGISTER,  "No user found with mobile "+mobile+". You must register first.");  //TODO: return 404
 
 	  // Create new SMS token: four random digits between [1000...9999]
 	  String smsCode = String.valueOf(new Random().nextInt(9000)+ 1000);
 	  LocalDateTime validUntil = LocalDateTime.now().plusHours(1);  // login token via SMS is valid for one hour. That should be enough!
 		OneTimeToken oneTimeToken = new OneTimeToken(smsCode, user, OneTimeToken.TOKEN_TYPE.SMS, validUntil);
 		tokenRepo.save(oneTimeToken);
-	  if (springEnv.acceptsProfiles("dev", "test")) {
+		log.debug("User "+user.getEmail()+" may login. Sending code via SMS.");
+	  if (springEnv.acceptsProfiles(Profiles.of("dev", "test"))) {
 		  return smsCode;  // when debugging, return the code
 	  } else {
 	  	return "";
@@ -114,7 +123,7 @@ public class UserRestController {
 	 * @return Oauth access token
 	 */
   @RequestMapping(path = "/auth/loginWithSmsCode", produces = MediaType.TEXT_PLAIN_VALUE)
-  public @ResponseBody String loginWithSmsCode(
+  public String loginWithSmsCode(
 		  @RequestParam("mobile") String mobile,
   		@RequestParam("code") String code
   ) throws LiquidoException {
@@ -131,23 +140,11 @@ public class UserRestController {
 		  throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN, "This sms login token is expired.");
 	  }
 
-	  //MAYBE: login user with Oauth? need to adapt code from OAuth2AuthenticationProcessingFilter  => smells like overengeneering!!
-	  //Authentication authResult = authenticationManager.authenticate(authentication);
+	  //---- delete used one time token
+		tokenRepo.delete(oneTimeToken);
 
-	  // Authenticate without password: Adapted from https://github.com/creactiviti/spring-security-passwordless
-	  Object principal = oneTimeToken.getUser();
-	  Authentication authentication = new UsernamePasswordAuthenticationToken(principal, null, AuthorityUtils.createAuthorityList("ROLE_USER"));
-	  SecurityContextHolder.getContext().setAuthentication(authentication);
-
-    /** The JWT way   NOT TESTED
-	  String secretKey = "secretKey";
-	  MacSigner macSigner = new MacSigner(secretKey);
-	  String content = String.valueOf(oneTimeToken.getUser().getId());
-	  String jwtToken = JwtHelper.encode(content, macSigner).getEncoded();
-	  */
-
-	  tokenRepo.delete(oneTimeToken);  // delete used one time token
-	  return "dummyJwtToken";
+    // return JWT token for this email
+		return jwtTokenProvider.generateToken(oneTimeToken.getUser().getEmail());
   }
 
 	/**
@@ -156,7 +153,7 @@ public class UserRestController {
 	 * @throws LiquidoException
 	 */
   @RequestMapping("/my/user")
-	public @ResponseBody UserModel getOwnUser() throws LiquidoException {
+	public UserModel getOwnUser() throws LiquidoException {
   	log.trace("GET /my/user");
   	UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "You must be logged in to get your own user info."));
@@ -170,7 +167,7 @@ public class UserRestController {
    * @return the number of votes this user may cast in this area, including his own one!
    */
   @RequestMapping(value = "/my/numVotes", method = GET)    // GET /my/numVotes?area=/uri/of/area  ?
-  public @ResponseBody long getNumVotes(@RequestParam("area")AreaModel area) throws LiquidoException {
+  public long getNumVotes(@RequestParam("area")AreaModel area) throws LiquidoException {
     log.trace("=> GET /my/numVotes  area=" + area);
     UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "You must be logged in to get your numVotes!"));

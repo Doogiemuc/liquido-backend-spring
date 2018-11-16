@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED;
 
 /**
+ * DEPRECATED
  * Http request interceptor that automatically fetches an Oauth token
  * if the request does not contain one yet.
  * (Singleton)
@@ -67,7 +68,7 @@ public class OauthInterceptor implements ClientHttpRequestInterceptor {
 		if (cachedToken != null) return cachedToken;
 
 		RestTemplate basicAuthClient = new RestTemplateBuilder()
-				.basicAuthorization(clientId, clientSecret)
+				.basicAuthentication(clientId, clientSecret)
 				.additionalInterceptors(new LogClientRequestInterceptor())
 				.rootUri(rootUri)
 				.build();

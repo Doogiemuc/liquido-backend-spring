@@ -1,17 +1,16 @@
 package org.doogie.liquido.datarepos;
 
 import org.doogie.liquido.model.DelegationModel;
-import org.doogie.liquido.rest.RepositoryRestConfigurer;
+import org.doogie.liquido.rest.LiquidoRepositoryRestConfigurer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
 
 /**
  * Will validate Delegations for the existence of the references foreign keys
- * This Validator is manually registered in {@link RepositoryRestConfigurer}
+ * This Validator is manually registered in {@link LiquidoRepositoryRestConfigurer}
  *
  * See
  * http://www.baeldung.com/spring-data-rest-validators
