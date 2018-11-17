@@ -23,13 +23,9 @@ import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.AuthorityUtils;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.awt.*;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -38,24 +34,17 @@ import java.util.Random;
 import static org.springframework.web.bind.annotation.RequestMethod.*;
 
 /**
- * Rest Controller for handling user data and (voting) proxy
+ * Rest Controller for registration, login and user data
  */
 @Slf4j
-//@BasePathAwareController
-@RestController
+//@BasePathAwareController   //see https://stackoverflow.com/questions/38607421/spring-data-rest-controllers-behaviour-and-usage-of-basepathawarecontroller
+@RestController              // I want this to be a normal Spring Rest controller.   No spring-dta-jpa magic.
 @RequestMapping("${spring.data.rest.base-path}")
 public class UserRestController {
-
 	private static final int MIN_PASSWORD_LENGTH = 8;
 
 	@Autowired
 	Environment springEnv;
-
-  @Autowired
-	CastVoteService castVoteService;
-
-  @Autowired
-  ProxyService proxyService;
 
   @Autowired
   LiquidoAuditorAware liquidoAuditorAware;
@@ -64,10 +53,21 @@ public class UserRestController {
 	UserRepo userRepo;
 
   @Autowired
+	ProxyService proxyService;
+
+  @Autowired
   OneTimeTokenRepo tokenRepo;
 
   @Autowired
 	JwtTokenProvider jwtTokenProvider;
+
+  // ******************************************************************************************
+  // If you want to return text/plain from any controller method, then you must it here in this @RestController.
+	// A @BasePathAwareController cannot return plain string
+	// See
+	// https://stackoverflow.com/questions/38607421/spring-data-rest-controllers-behaviour-and-usage-of-basepathawarecontroller
+	// https://stackoverflow.com/questions/33687722/spring-data-rest-custom-method-return-string
+	// ******************************************************************************************
 
 	/**
 	 * Register as a new user
@@ -97,7 +97,7 @@ public class UserRestController {
 	 * @return HttpStatus.OK, when code was sent via SMS
 	 *        OR HttpStatus.NOT_FOUND when mobile phone number was not found and user must register first.
 	 */
-  @RequestMapping("/auth/requestSmsCode")
+  @RequestMapping(value = "/auth/requestSmsCode", produces = MediaType.TEXT_PLAIN_VALUE)
   public String requestSmsCode(@RequestParam("mobile") String mobile) throws LiquidoException {
   	log.info("request SMS login code for mobile="+mobile);
 	  UserModel user = userRepo.findByProfilePhonenumber(mobile);
@@ -160,101 +160,25 @@ public class UserRestController {
   	return currentUser;
 	}
 
-  /**
-   * Calculate the number of votes a proxy may cast (including his own one) because of (transitive) delegation
-   * of votes to this proxy.
-   * @param area ID of area
-   * @return the number of votes this user may cast in this area, including his own one!
-   */
-  @RequestMapping(value = "/my/numVotes", method = GET)    // GET /my/numVotes?area=/uri/of/area  ?
-  public long getNumVotes(@RequestParam("area")AreaModel area) throws LiquidoException {
-    log.trace("=> GET /my/numVotes  area=" + area);
-    UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
+
+	/**
+	 * Calculate the number of votes a proxy may cast (including his own one) because of (transitive) delegation
+	 * of votes to this proxy.
+	 * @param area ID of area
+	 * @return the number of votes this user may cast in this area, including his own one!
+	 */
+	@RequestMapping(value = "/my/numVotes", method = GET)    // GET /my/numVotes?area=/uri/of/area  ?
+	public long getNumVotes(@RequestParam("area")AreaModel area) throws LiquidoException {
+		log.trace("=> GET /my/numVotes  area=" + area);
+		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "You must be logged in to get your numVotes!"));
 		int numVotes = proxyService.getNumVotes(area, proxy);
-    log.trace("<= GET numVotes(proxy=" + proxy + ", area=" + area + ") = "+numVotes);
-    return numVotes;
-  }
+		log.trace("<= GET numVotes(proxy=" + proxy + ", area=" + area + ") = "+numVotes);
+		return numVotes;
+	}
 
 
-  /**
-   * get all proxies that this user currently has assigned (per area)
-   * @return a Map with directProxy and topProxy per area
-	 */
-  @RequestMapping(value = "/my/proxyMap", method = GET, produces = MediaType.APPLICATION_JSON_VALUE)
-  public @ResponseBody Map getProxyMap() throws LiquidoException {
-    UserModel user = liquidoAuditorAware.getCurrentAuditor()
-				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "You must be logged in to get your proxy map!"));
-    Map<AreaModel, UserModel> proxyMap = proxyService.getProxyMap(user);
-		HashMap<String, Object> result = new HashMap<>();
-		for(AreaModel area: proxyMap.keySet()) {
-			UserModel directProxy = proxyMap.get(area);
-			UserModel topProxy = proxyService.findTopProxy(area, user);
-			ProxyMapResponseElem elem = new ProxyMapResponseElem(directProxy, topProxy);
-			result.put(area.getTitle(), elem);
-		}
-		return result;
-  }
-
-  /**
-   * Save a proxy for the logged in user. This will insert a new delegation or update an existing one in that area.
-   * @param assignProxyRequest assign proxy toProxy in area with voterToken
-   * @return the created (or updated) delegation as HAL+JSON
-   *         If you you need full detailed data of all referenced entities, you can request the delegationProjection.
-   *         Or you can send additional requests for example for the "_links.toProxy.href" URI
-   */
-  @RequestMapping(value = "/my/proxy", method = PUT)
-	@ResponseStatus(value = HttpStatus.CREATED)
-  public
-    @ResponseBody ResponseEntity<?>   							// Return normal HTTP response with savedDelegation
-		//PersistentEntityResource 						// Return HAL representation of Model
-    //HttpEntity<DelegationProjection>    // This way one could return the DelegationProjection  (with inlined referenced objects)  but that cannot be used by the client for further updates
-    assignProxy(
-			@RequestBody AssignProxyRequest assignProxyRequest,
-			PersistentEntityResourceAssembler resourceAssembler
-      //Authentication auth  // not needed anymore - spring-security authentication object could be injected like this
-    ) throws LiquidoException {
-    	log.info("assignProxy("+assignProxyRequest+")");
-			UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
-					.orElseThrow(()-> new  LiquidoException(LiquidoException.Errors.NO_LOGIN, "Cannot save Proxy. Need an authenticated user."));
-
-			DelegationModel savedDelegation = proxyService.assignProxy(assignProxyRequest.getArea(), currentUser, assignProxyRequest.getToProxy(), assignProxyRequest.getVoterToken());
-			if (savedDelegation == null) {
-				log.info("Proxy is not yet assigned. Proxy must still confirm.");
-				return new ResponseEntity(HttpStatus.ACCEPTED);  // 202
-			} else {
-				log.info("Assigned new proxy");
-				return new ResponseEntity<>(savedDelegation, HttpStatus.CREATED);  // 201
-			}
-
-
-
-			// Return HATEOS representation of Delegation => does not work correctly, cause delegationRepo is not exposed as spring-data-rest endpoint.
-			//return resourceAssembler.toResource(savedDelegation);
-
-
-			// You should not return a DelegationProjection here, as this code would:
-			//   return new ResponseEntity<>(savedDelegation, HttpStatus.OK);
-			// because that cannot be used for further updates by the client.
-			// http://stackoverflow.com/questions/30220333/why-is-an-excerpt-projection-not-applied-automatically-for-a-spring-data-rest-it
-  }
-
-  /**
-   * delete a proxy of the currently logged in user in one area.
-   * @param area the area where to delete the proxy
-   * @return HTTP status 204 (NoContent) on success
-   */
-  @RequestMapping(value = "/my/proxy/{areaId}", method = DELETE)
-	@ResponseStatus(HttpStatus.NO_CONTENT)
-  public void deleteProxy(@PathVariable(name="areaId") AreaModel area) throws LiquidoException {
-		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
-				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Need login to delete proxy!"));
-		log.info("deleteProxy(voter="+currentUser+", area="+area+")");
-    proxyService.removeProxy(area, currentUser, currentUser.getPasswordHash());
-  }
-
-
-  //TODO: change a user's password => delete all tokens and checksums
+	//TODO: change a user's password => delete all tokens and checksums
 
 	//TODO: @ExceptionHandler(LiquidoRestException.class)  => handle liquido exception. Return JSON with Error Code
 
