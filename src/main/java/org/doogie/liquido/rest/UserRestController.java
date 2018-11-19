@@ -4,34 +4,26 @@ import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.OneTimeTokenRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.jwt.JwtTokenProvider;
-import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.OneTimeToken;
 import org.doogie.liquido.model.UserModel;
-import org.doogie.liquido.rest.dto.AssignProxyRequest;
-import org.doogie.liquido.rest.dto.ProxyMapResponseElem;
 import org.doogie.liquido.security.LiquidoAuditorAware;
-import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
-import org.springframework.data.rest.webmvc.BasePathAwareController;
-import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.awt.*;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 
-import static org.springframework.web.bind.annotation.RequestMethod.*;
+import static org.springframework.web.bind.annotation.RequestMethod.GET;
 
 /**
  * Rest Controller for registration, login and user data
@@ -162,18 +154,20 @@ public class UserRestController {
 
 
 	/**
-	 * Calculate the number of votes a proxy may cast (including his own one) because of (transitive) delegation
-	 * of votes to this proxy.
-	 * @param area ID of area
-	 * @return the number of votes this user may cast in this area, including his own one!
+	 * Calculate the number of votes a voter may cast. If this is a normal voter without any delegations this method will return 1.
+	 * If this voter is a proxy, because other checksums were delegated to him, then this method will return
+	 * the recursive count of those delegations plus the one vote of the proxy himself.
+	 *
+	 * @param voterToken voterToken of a voter
+	 * @return the number of votes this user may cast with this voterToken in an area.
 	 */
-	@RequestMapping(value = "/my/numVotes", method = GET)    // GET /my/numVotes?area=/uri/of/area  ?
-	public long getNumVotes(@RequestParam("area")AreaModel area) throws LiquidoException {
-		log.trace("=> GET /my/numVotes  area=" + area);
+	@RequestMapping(value = "/my/numVotes", method = GET)
+	public long getNumVotes(@RequestParam("voterToken")String voterToken) throws LiquidoException {
+		log.trace("=> GET /my/numVotes");
 		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "You must be logged in to get your numVotes!"));
-		int numVotes = proxyService.getNumVotes(area, proxy);
-		log.trace("<= GET numVotes(proxy=" + proxy + ", area=" + area + ") = "+numVotes);
+		long numVotes = proxyService.getNumVotes(voterToken);
+		log.trace("<= GET numVotes(proxy=" + proxy +") = "+numVotes);
 		return numVotes;
 	}
 

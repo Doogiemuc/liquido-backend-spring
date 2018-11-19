@@ -5,7 +5,6 @@ import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
 import java.util.List;
 
@@ -13,7 +12,7 @@ import java.util.List;
  * Database abstraction for delegations from a voter to a proxy.
  */
 //NOT EXPOSED as REST Service!
-public interface DelegationRepo extends CrudRepository<DelegationModel, Long>, DelegationRepoCustom {
+public interface DelegationRepo extends CrudRepository<DelegationModel, Long> {
 
   //Delegations have a combined unique index on area,fromUSer
   //  for MongoDB   db.delegations.createIndex({ "area":1, "fromUser":1 }, { unique: true })

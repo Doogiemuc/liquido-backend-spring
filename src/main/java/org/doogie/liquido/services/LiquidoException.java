@@ -35,14 +35,14 @@ public class LiquidoException extends Exception {
     Errors(int code) { this.errorCode = code; }
   }
 
-  public LiquidoException(Errors errCode) {
-    super(errCode.toString());
-    this.error = errCode;
-  }
-
   public LiquidoException(Errors errCode, String msg) {
     super(msg);
     this.error = errCode;
+  }
+
+  public LiquidoException(Errors errCode, String msg, Throwable childException) {
+  	super(msg, childException);
+	  this.error = errCode;
   }
 
   public Errors getError() {

@@ -23,18 +23,32 @@ public interface TokenChecksumRepo extends CrudRepository<TokenChecksumModel, Lo
 	TokenChecksumModel findByChecksum(String checksum);
 
 	/**
-	 * Find checksums of voters that delegated their right to vote to a proxie's checksum
+	 * Find all checksums that are delegated to this proxy.
 	 * @param proxyChecksum checksum of a proxy
-	 * @return all checksums that are delegated to this proxy
+	 * @return all checksums that are delegated to this proxy. Transitive and non transitive ones.
 	 */
 	List<TokenChecksumModel> findByDelegatedTo(TokenChecksumModel proxyChecksum);
 
-	/**  DEPRECATED
+	/**
+	 * Find checksums that are delegated to this proxy with a check for (non-)transitive delegations
+	 * @param proxyChecksum checksum of a proxy
+	 * @param transitive whether to check for transitive or non-transitive delegations only
+	 * @return all checksums that are delegated to this proxy either transitively or non-transitively
+	 */
+	List<TokenChecksumModel> findByDelegatedToAndTransitive(TokenChecksumModel proxyChecksum, boolean transitive);
+
+	/**
 	 * find the checksum of a public proxy so that a voter can delegate his checksum to it.
 	 * @pararm area area of the checksum and public proxy
-	 * @param proxy a public proxy that added his uername to his stored checksum
+	 * @param proxy a public proxy that added his username to his stored checksum   {@link org.doogie.liquido.services.ProxyService#becomePublicProxy(UserModel, AreaModel, String)}
 	 * @return the checksum of the public proxy  or null if none was found
-	 *
+	 */
 	TokenChecksumModel findByAreaAndPublicProxy(AreaModel area, UserModel proxy);
-	*/
+
+	/**
+	 * Count number of pending delegation requests.
+	 * @param proxy the proxy that receives the delegations
+	 * @return number of pending delegation requests
+	 */
+	long countByRequestedDelegationTo(UserModel proxy);
 }

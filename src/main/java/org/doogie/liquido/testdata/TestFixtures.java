@@ -25,17 +25,26 @@ public class TestFixtures {
 	public static final String AREA0_TITLE = "Area 0";
   public static final String AREA1_TITLE = "Area 1";
 
-  // this must match RestEndpointTests.testGetProxyMap() !!!
-	public static List<String[]> delegations = new ArrayList<>();
-	public static final String AREA_FOR_DELEGATIONS = AREA0_TITLE;
-	public static final long   USER1_NUM_VOTES = 6;     // testuser1@liquido.de  has 6 votes (including his own) due to (transitive) delegations
+  /* Example data for delegations:
 
+	          user1
+	        /   |   \
+	   user2  user3  user4
+	                 /  (\)   <---- 6->4  non-transitive
+	             user5  user6
+	 */
+  // This test data must match RestEndpointTests.testGetProxyMap()  and ProxyServiceTests.testGetNumVotes !!!
+  public static List<String[]> delegations = new ArrayList<>();
+	public static final String AREA_FOR_DELEGATIONS = AREA0_TITLE;
+	public static final long   USER1_NUM_VOTES = 5;     // testuser1@liquido.de  has 5 votes (including his own) due to (transitive) delegations
+	public static final long   USER4_NUM_VOTES = 3;     // testuser4@liquido.de  has 3 votes (including his own) due to direct delegations
 	static {
-		delegations.add(new String[]{TestFixtures.USER2_EMAIL, TestFixtures.USER1_EMAIL});   // testuser2 delegates to proxy testuser1
-		delegations.add(new String[]{TestFixtures.USER3_EMAIL, TestFixtures.USER1_EMAIL});
-		delegations.add(new String[]{TestFixtures.USER4_EMAIL, TestFixtures.USER1_EMAIL});
-		delegations.add(new String[]{TestFixtures.USER5_EMAIL, TestFixtures.USER4_EMAIL});
-		delegations.add(new String[]{TestFixtures.USER6_EMAIL, TestFixtures.USER4_EMAIL});
+		// fromUser, toProxy, transitive?
+		delegations.add(new String[]{TestFixtures.USER2_EMAIL, TestFixtures.USER1_EMAIL, "true"});   // testuser2 delegates to proxy testuser1
+		delegations.add(new String[]{TestFixtures.USER3_EMAIL, TestFixtures.USER1_EMAIL, "true"});
+		delegations.add(new String[]{TestFixtures.USER4_EMAIL, TestFixtures.USER1_EMAIL, "true"});
+		delegations.add(new String[]{TestFixtures.USER5_EMAIL, TestFixtures.USER4_EMAIL, "true"});
+		delegations.add(new String[]{TestFixtures.USER6_EMAIL, TestFixtures.USER4_EMAIL, "false"});  // delegation from user6 to user4 is non-transitive
 	}
 
 

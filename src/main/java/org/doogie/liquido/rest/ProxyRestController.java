@@ -2,7 +2,7 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.DelegationModel;
+import org.doogie.liquido.model.TokenChecksumModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.AssignProxyRequest;
 import org.doogie.liquido.rest.dto.ProxyMapResponseElem;
@@ -20,9 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.springframework.web.bind.annotation.RequestMethod.DELETE;
-import static org.springframework.web.bind.annotation.RequestMethod.GET;
-import static org.springframework.web.bind.annotation.RequestMethod.PUT;
+import static org.springframework.web.bind.annotation.RequestMethod.*;
 
 /**
  * Liquido REST endpoint for working with proxies.
@@ -46,7 +44,7 @@ public class ProxyRestController {
 	Map getProxyMap() throws LiquidoException {
 		UserModel user = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "You must be logged in to get your proxy map!"));
-		Map<AreaModel, UserModel> proxyMap = proxyService.getProxyMap(user);
+		Map<AreaModel, UserModel> proxyMap = proxyService.getDirectProxies(user);
 		HashMap<String, Object> result = new HashMap<>();
 		for(AreaModel area: proxyMap.keySet()) {
 			UserModel directProxy = proxyMap.get(area);
@@ -79,14 +77,16 @@ public class ProxyRestController {
 		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(()-> new  LiquidoException(LiquidoException.Errors.NO_LOGIN, "Cannot save Proxy. Need an authenticated user."));
 
-		DelegationModel savedDelegation = proxyService.assignProxy(assignProxyRequest.getArea(), currentUser, assignProxyRequest.getToProxy(), assignProxyRequest.getVoterToken());
-		if (savedDelegation == null) {
+		TokenChecksumModel proxiesChecksumModel = proxyService.assignProxy(assignProxyRequest.getArea(), currentUser, assignProxyRequest.getToProxy(), assignProxyRequest.getVoterToken(), assignProxyRequest.isTransitive());
+		if (proxiesChecksumModel == null) {
 			log.info("Proxy is not yet assigned. Proxy must still confirm.");
 			return new ResponseEntity(HttpStatus.ACCEPTED);  // 202
 		} else {
 			log.info("Assigned new proxy");
-			return new ResponseEntity<>(savedDelegation, HttpStatus.CREATED);  // 201
+			return new ResponseEntity<>(proxiesChecksumModel, HttpStatus.CREATED);  // 201
 		}
+
+		//Implementation note  about different ways of returning data back to the client.
 
 		// Return HATEOS representation of Delegation => does not work correctly, cause delegationRepo is not exposed as spring-data-rest endpoint.
 		//return resourceAssembler.toResource(savedDelegation);

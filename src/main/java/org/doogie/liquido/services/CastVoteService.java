@@ -7,9 +7,11 @@ import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -41,42 +43,51 @@ public class CastVoteService {
 	@Autowired
 	LiquidoRestUtils restUtils;
 
-	/** A secret only known to the this server. So that only we can builder token checksums */
-	private static final String SERVER_SECRET = "liquidoServerSecret";
-	private static final String bcryptSaltForChecksums = BCrypt.gensalt();
+	@Value("${liquido.bcrypt.salt}")
+	String bcryptSalt;
 
-	//TOOD: we need more fine grained access
-	// 1. calcVoterToken
-	// 2. calcChecksum
-	// 3. upsertVoterToken (and also checksum)
-	// 4. validate voterToken against stored checksum
-	// ProxyService only calls 1. and 2.
+	@Value("${liquido.bcrypt.secret}")
+	String serverSecret;
+
+	@Value("${liquido.checksum.expiration.hours}")
+	int checksumExpirationHours;
 
 	/**
 	 * A user wants to vote and therefore requests a voter token for this area. Each user has one token per area.
 	 * The hash value of the voterToken is its checksum. The checksumModel is stored in the DB.
 	 *
+	 * <h3>Implementation notes</h3>
+	 * <pre>
+	 *   voterToken = hash(user.id + passwordHash + area.id + serverSecret)
+	 *   checksum   = hash(voterToken + serverSecret)
+	 * </pre>
+	 *
+	 * When creating new voterTokens, then we do not calculate a new BCrypt salt. Because a voter might request his voterToken
+	 * multiple times. And we have to return the same voterToken every time.
+	 *
 	 * @param user the currently logged in and correctly authenticated user
 	 * @param area an area that the user's want's to vote in
 	 * @param passwordHash  user's hashed password
+	 * @param publicProxy true if voter immediately wants to become a public proxy. Voter can also decide later with {@link ProxyService#becomePublicProxy(UserModel, AreaModel, String)}
 	 * @return user's voterToken, that only the user must know, and that will hash to the stored checksumModel.
 	 */
-	public String createVoterToken(UserModel user, AreaModel area, String passwordHash) throws LiquidoException {
-		log.debug("createVoterToken: for "+user+" in "+area);
+	public String createVoterTokenAndStoreChecksum(UserModel user, AreaModel area, String passwordHash, boolean publicProxy) throws LiquidoException {
+		log.debug("createVoterTokenAndStoreChecksum: for "+user+" in "+area);
 		if (user == null || DoogiesUtil.isEmpty(user.getEmail()) || area == null ||passwordHash == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need user, area and passwordHash to builder a voterToken!");
 		// Create a new voterToken for this user in that area with the BCRYPT hashing algorithm
-		// Generate a new salt for every voterToken. Bcrypt prepends the salt into the returned token value!!!
-		String salt = BCrypt.gensalt();
-		String voterToken = BCrypt.hashpw(user.getId()+passwordHash+area.getId(), salt);      // voterToken that only this user must know
-		String tokenChecksum = calcChecksumFromVoterToken(voterToken);                            		  // checksum of voterToken that can only be generated from the users voterToken and only by the server.
-		TokenChecksumModel existingChecksumModel = checksumRepo.findByChecksum(tokenChecksum);
-		if (existingChecksumModel == null) {
-			TokenChecksumModel newChecksumModel = new TokenChecksumModel(tokenChecksum, area);
-			checksumRepo.save(newChecksumModel);
+		// Remark: Bcrypt prepends the salt into the returned token value!!!
+		String voterToken = BCrypt.hashpw(user.getId()+passwordHash+area.getId()+serverSecret, bcryptSalt);  // voterToken that only this user must know
+		String tokenChecksum = calcChecksumFromVoterToken(voterToken);                            		   // checksum of voterToken that can only be generated from the users voterToken and only by the server.
+		TokenChecksumModel checksumModel = checksumRepo.findByChecksum(tokenChecksum);
+		if (checksumModel == null) {
+			checksumModel = new TokenChecksumModel(tokenChecksum, area);
 		}
+		checksumModel.setPublicProxy(publicProxy ? user : null);
+		checksumModel.setExpiresAt(LocalDateTime.now().plusHours(checksumExpirationHours));
+		TokenChecksumModel savedChecksumModel1 = checksumRepo.save(checksumModel);
 
-		//TODO: createVoterToken  should return both voterToken and ChecksumModel
+		//TODO: createVoterTokenAndStoreChecksum  should return both voterToken and ChecksumModel
 
 		return voterToken;
 	}
@@ -84,13 +95,16 @@ public class CastVoteService {
 	/**
 	 * Very thoroughly check if the passed voterToken is valid, ie. its checksum=hash(voterToken) is already known
 	 * @param voterToken the token to check
-	 * @return the existing TokenChecksumModel  OR <b><NULL</b> if voterToken is invalid
+	 * @return the existing TokenChecksumModel
+	 * @throws LiquidoException when voterToken is invalid
 	 */
-	public TokenChecksumModel isVoterTokenValid(String voterToken) {
-		if (voterToken == null || !voterToken.startsWith("$2") || voterToken.length() < 10) return null;  // BCRYPT hashes start with $2$ or $2
+	public TokenChecksumModel isVoterTokenValidAndGetChecksum(String voterToken) throws LiquidoException {
+		if (voterToken == null || !voterToken.startsWith("$2") || voterToken.length() < 10)
+			throw new LiquidoException(LiquidoException.Errors.INVALID_VOTER_TOKEN, "Voter token has wrong format");  // BCRYPT hashes start with $2$ or $2
 		String tokenChecksum = calcChecksumFromVoterToken(voterToken);
 		TokenChecksumModel existingTokenModel = checksumRepo.findByChecksum(tokenChecksum);
-		if (existingTokenModel == null) log.warn("VoterToken '"+voterToken+"' is INVALID!");
+		if (existingTokenModel == null)
+			throw new LiquidoException(LiquidoException.Errors.INVALID_VOTER_TOKEN, "Voter token is invalid. It's checksum is not known as valid.");
 		return existingTokenModel;
 	}
 
@@ -109,7 +123,7 @@ public class CastVoteService {
 	public BallotModel castVote(CastVoteRequest castVoteRequest) throws LiquidoException {
 		log.debug("castVote: "+ castVoteRequest);
 
-		TokenChecksumModel checksumModel = isVoterTokenValid(castVoteRequest.getVoterToken());
+		TokenChecksumModel checksumModel = isVoterTokenValidAndGetChecksum(castVoteRequest.getVoterToken());
 		if (checksumModel == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Your voter token seems to be invalid!");
 
 		// load models for URIs in castVoteRequst
@@ -245,15 +259,14 @@ public class CastVoteService {
 
 	/**
 	 * Calculate the checksum value for the given voterToken.
-	 * The checksum is not stored or validated! This is just the mathematical calculation
-	 * Checksum must only be handled on the server. Do not return it to the voter!
+	 * The checksum is not stored or validated! This is just the mathematical calculation.
 	 *
 	 * @param voterToken token passed from user
-	 * @return checksum = hash(voterToken + secret)
+	 * @return checksum = BCrypt.hashpw(voterToken + serverSecret, bcryptSalt)
 	 */
 	private String calcChecksumFromVoterToken(String voterToken) {
-		log.trace("calcChecksumFromVoterToken salt="+bcryptSaltForChecksums);
-		return BCrypt.hashpw(voterToken + SERVER_SECRET, bcryptSaltForChecksums);
+		//log.trace("calcChecksumFromVoterToken");
+		return BCrypt.hashpw(voterToken + serverSecret, bcryptSalt);
 	}
 
 }
