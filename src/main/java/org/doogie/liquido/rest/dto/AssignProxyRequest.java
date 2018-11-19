@@ -6,18 +6,13 @@ import lombok.NonNull;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.deserializer.AreaModelDeserializer;
-import org.doogie.liquido.rest.deserializer.LawModelDeserializer;
 import org.doogie.liquido.rest.deserializer.UserModelDeserializer;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
-import org.springframework.hateoas.Resource;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * DTO for assigning a Proxy
  * POST /assignProxy
- * @see org.doogie.liquido.rest.UserRestController#assignProxy(AssignProxyRequest, PersistentEntityResourceAssembler)
+ * @see org.doogie.liquido.rest.ProxyRestController#assignProxy(AssignProxyRequest, PersistentEntityResourceAssembler)
  */
 @Data
 public class AssignProxyRequest {
@@ -34,6 +29,9 @@ public class AssignProxyRequest {
 	/** The voter's own voterToken that MUST hash to a valid checksumModel. */
 	@NonNull
 	String voterToken;
+
+	/** Should the delegation be transitive, so that the proxy in turn can forward it */
+	boolean transitive;
 
 	@Override
 	public String toString() {

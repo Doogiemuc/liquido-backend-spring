@@ -91,6 +91,9 @@ public class TestDataCreator implements CommandLineRunner {
   PollRepo pollRepo;
 
   @Autowired
+  TokenChecksumRepo checksumRepo;
+
+  @Autowired
   PollService pollService;
 
   @Autowired
@@ -251,20 +254,25 @@ public class TestDataCreator implements CommandLineRunner {
 		log.info("Seeding Proxies ...");
 
 		AreaModel area = areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
-    for(String[] delegation: delegations) {
-      UserModel fromUser = users.get(delegation[0]);
-      UserModel toProxy  = users.get(delegation[1]);
-			log.debug("Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId());
+    for(String[] delegationData: delegations) {
+      UserModel fromUser   = users.get(delegationData[0]);
+      UserModel toProxy    = users.get(delegationData[1]);
+      boolean   transitive = "true".equalsIgnoreCase(delegationData[2]);
       try {
-				//String proxyVoterToken = castVoteService.createVoterToken(toProxy, area, toProxy.getPasswordHash());
-        //proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
-				String userVoterToken = castVoteService.createVoterToken(fromUser, area, fromUser.getPasswordHash());
-				proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);
-			} catch (LiquidoException e) {
+
+	      if (!isPublicProxy(area, toProxy))
+		      castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, toProxy.getPasswordHash(), true);
+				String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, fromUser.getPasswordHash(), true);
+	      TokenChecksumModel voterChecksumModel = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, transitive);
+	      log.debug("Created delegation from "+fromUser+ "(checksum="+voterChecksumModel.getChecksum()+") -> to proxy " + toProxy + " (checksum="+voterChecksumModel.getDelegatedTo().getChecksum()+")");
+      } catch (LiquidoException e) {
         log.error("Cannot seedProxies: error Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId()+": "+e);
       }
     }
+  }
 
+  private boolean isPublicProxy(AreaModel area, UserModel proxy) {
+  	return checksumRepo.findByAreaAndPublicProxy(area, proxy) != null;
   }
 
   private void seedIdeas() {
@@ -581,7 +589,7 @@ public class TestDataCreator implements CommandLineRunner {
     log.info("Seeding votes ...");
 
     List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
-    if (polls.size() == 0) throw new RuntimeException("cannot seed votes. There is no poll in voting phase.");  //MAYBE: builder one
+    if (polls.size() == 0) throw new RuntimeException("cannot seed votes. There is no poll in voting phase.");
     PollModel pollInVoting = polls.get(0);
     if (pollInVoting.getNumCompetingProposals() < 2) throw new RuntimeException("Cannot seed votes. Poll in voting must have at least two proposals.");
 
@@ -598,7 +606,7 @@ public class TestDataCreator implements CommandLineRunner {
     // Now we use the original CastVoteService to get a voterToken and cast our vote.
     try {
     	auditorAware.setMockAuditor(voter);
-			String voterToken = castVoteService.createVoterToken(voter, pollInVoting.getArea(), voter.getPasswordHash());
+			String voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, pollInVoting.getArea(), voter.getPasswordHash(), true);
 			auditorAware.setMockAuditor(null);
 			CastVoteRequest castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
 			castVoteService.castVote(castVoteRequest);
