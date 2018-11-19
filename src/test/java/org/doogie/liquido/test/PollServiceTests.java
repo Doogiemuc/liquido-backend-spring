@@ -6,14 +6,14 @@ import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.TokenChecksumRepo;
 import org.doogie.liquido.model.*;
-import org.doogie.liquido.services.voting.RankedPairVoting;
-import org.doogie.liquido.services.voting.SchulzeMethod;
-import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
+import org.doogie.liquido.services.voting.RankedPairVoting;
+import org.doogie.liquido.services.voting.SchulzeMethod;
 import org.doogie.liquido.testdata.TestDataCreator;
+import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Matrix;
 import org.junit.Before;
 import org.junit.Test;
@@ -187,7 +187,7 @@ public class PollServiceTests {
 				count++;
 				auditor.setMockAuditor(voter);
 
-				//String voterToken = castVoteService.createVoterToken(voter, poll.getArea(), "dummyPasswordHash");
+				//String voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, poll.getArea(), "dummyPasswordHash");
 				//auditor.setMockAuditor(null);
 				//CastVoteRequest castVoteRequest = new CastVoteRequest(basePath+"/polls/"+poll.getId(), voteOrderURIs, voterToken);
 				//castVoteService.castVote(castVoteRequest);

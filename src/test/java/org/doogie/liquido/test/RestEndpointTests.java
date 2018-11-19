@@ -17,7 +17,6 @@ import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.testUtils.JwtAuthInterceptor;
-import org.doogie.liquido.test.testUtils.LiquidoBasicAuthInterceptor;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
@@ -537,7 +536,7 @@ public class RestEndpointTests {
   @Test
   //TODO: How to send requests with that user? @WithUserDetails("testuser1@liquido.de")
   public void testGetProxyMap() {
-    log.trace("TEST getProxyMap");
+    log.trace("TEST getDirectProxies");
     String uri = "/my/proxyMap";
 		String delegeeEMail = TestFixtures.delegations.get(0)[0];
 		String proxyEMail   = TestFixtures.delegations.get(0)[1];
@@ -570,28 +569,15 @@ public class RestEndpointTests {
     AreaModel area     = this.areas.get(0);
     String toProxyUri  = basePath + "/users/" + toProxy.getId();
     String areaUri     = basePath + "/areas/" + area.getId();
-    String voterToken  = castVoteService.createVoterToken(fromUser, area, fromUser.getPasswordHash());
+    String voterToken  = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, fromUser.getPasswordHash(), true);
 
     //TODO: delete delegation if it exists:  proxyServcie.removeProxy(...)
 
-		String newDelegationJSON = new Lson()
+		HttpEntity entity = new Lson()
 				.put("toProxy",  toProxyUri)
 				.put("area",     areaUri)
 				.put("voterToken", voterToken)
-				.toString();
-
-		/*
-    JSONObject newDelegationJSON = new JSONObject()
-      //.put("fromUser", fromUserUri)    fromUser is implicitly the currently logged in user!
-      .put("toProxy",  toProxyUri)
-      .put("area",     areaUri)
-      .put("voterToken", voterToken);
-    */
-    log.trace("posting JSON Object:\n"+newDelegationJSON);
-
-    HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<String> entity = new HttpEntity<>(newDelegationJSON.toString(), headers);
+				.toHttpEntity();
 
     // send PUT that will assign the new proxy
     ResponseEntity<String> response = client.exchange(url, PUT, entity, String.class);
@@ -651,7 +637,7 @@ public class RestEndpointTests {
 		log.trace("casting vote in poll.id="+pollURI);
 
 		//----- get voterToken
-		//Mock: String voterToken  = castVoteService.createVoterToken(fromUser, area, fromUser.getPasswordHash());
+		//Mock: String voterToken  = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, fromUser.getPasswordHash());
 		String voterTokenJson = client.getForObject("/my/voterToken?area="+areaId, String.class);
 		assertNotNull(voterTokenJson);
 		String voterToken = JsonPath.read(voterTokenJson, "voterToken");

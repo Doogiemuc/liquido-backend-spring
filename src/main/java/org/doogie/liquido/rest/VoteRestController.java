@@ -37,22 +37,24 @@ public class VoteRestController {
 	 * User requests a token that allows him to vote.
 	 * This request MUST be authenticated!
 	 * @param area Area for the token
+	 * @param publicProxy (optional) boolean if user immideately wants to become a public proxy. Can also do so later.
 	 * @return JSON with voterToken
 	 * @throws LiquidoException when request parameter is missing
 	 */
 	@RequestMapping(value = "/my/voterToken", method = RequestMethod.GET)
 	public @ResponseBody Map getVoterToken(
 			@RequestParam("area")AreaModel area,
-			Authentication auth   //  <==== works
+			@RequestParam("publicProxy") String publicProxy,
+			Authentication auth   //TODO: TEST injection Auth in combination with JWT
 			//@AuthenticationPrincipal(expression = "liquidoUserModel") UserModel liquidoUserModel    // <==== DOES NOT WORK
 			// injecting the AuthenticationPrincipal did not work for me. I do not know why.   But liquidoAuditorAware works, and is also great for testing:
 			// see https://docs.spring.io/spring-security/site/docs/current/reference/htmlsingle/#tech-userdetailsservice
 	) throws LiquidoException {
 		UserModel user = liquidoAuditorAware.getCurrentAuditor()
-				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Need login to get voterToken!"));			// [SECURITY]  This check is extremely important!
+				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Need login to get voterToken!"));			// [SECURITY]  This check is extremely important! Only valid users are allowed to get a voterToken
 		log.info(user+" requests his voterToken for area "+area);
 
-		String voterToken = castVoteService.createVoterToken(user, area, user.getPasswordHash());   // preconditions are checked inside castVoteService
+		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(user, area, user.getPasswordHash(), "true".equalsIgnoreCase(publicProxy));   // preconditions are checked inside castVoteService
 
 		Map<String, String> result = new HashMap<>();
 		result.put("voterToken", voterToken);

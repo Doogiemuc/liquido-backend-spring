@@ -3,6 +3,7 @@ package org.doogie.liquido.model;
 import lombok.*;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 
 /**
  * When a voter requests a voterToken for an area , then the server calculates two values:
@@ -22,7 +23,9 @@ import javax.persistence.*;
 @EqualsAndHashCode(of = "checksum")
 @ToString(of = "checksum")
 @Entity
-@Table(name = "checksums")
+@Table(name = "checksums", uniqueConstraints= {
+	@UniqueConstraint(columnNames = {"area_id", "public_proxy_id"})  // A proxy cannot be public proxy more than once in one area.
+})
 public class TokenChecksumModel {
 
 	/** checksumModel = hash(voterToken) */
@@ -39,7 +42,7 @@ public class TokenChecksumModel {
 	AreaModel area;
 
 	/** TODO: Checksums are only valid for a given time */
-	//Date expiresAt;
+	LocalDateTime expiresAt;
 
 	/**
 	 * A voter can delegate his right to vote to a proxy.
@@ -50,6 +53,14 @@ public class TokenChecksumModel {
 	//@JoinColumn(name = "delegatedToProxy")
 	TokenChecksumModel delegatedTo;
 
+	/**
+	 * A voter can delegate his vote to a proxy.
+	 * But maybe the voter does not want that his proxy in turn delegates the vote again.
+	 * Then the delegation is marked as nonTransitive.
+	 * By default delegations can be transitive, so that a tree of delegations can be formed.
+ 	 */
+	boolean transitive = true;
+
 	/* List of checksums that are delegated to this as a proxy. Inverse of bidirectional delegatedToProxy association
 	@OneToMany(mappedBy = "proxyFor", fetch = FetchType.EAGER)
 	List<TokenChecksumModel> proxyFor;
@@ -58,10 +69,21 @@ public class TokenChecksumModel {
 	/**
 	 * If a user want's to be a public proxy, then he CAN store his user together with his checksum.
 	 * Then voters can automatically delegate their vote to this proxy.
-	 *
+	 */
 	@OneToOne
 	UserModel publicProxy = null;		// by default no username is stored together with a checksum!!!
-  */
+
+	/**
+	 * When a voter wants to delegate his vote to a proxy, but that proxy is not a public proxy,
+	 * then the delegated is requested until the proxy accepts it.
+	 */
+  @OneToOne
+	UserModel requestedDelegationTo;
+
+  /** When was the delegation to that proxy requested */
+  LocalDateTime requestedDelegationAt;
+
+
 
 	//MAYBE: mark a checksum as no proxy, when that user opts-out to note become a proxy at all.
 
