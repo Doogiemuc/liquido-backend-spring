@@ -39,13 +39,13 @@ public class ProxyServiceTests {
 	AreaRepo areaRepo;
 
 	@Autowired
-	DelegationRepo delegationRepo;
-
-	@Autowired
 	CastVoteService castVoteService;
 
 	@Autowired
 	ProxyService proxyService;
+
+	@Autowired
+	DelegationRepo delegationRepo;
 
 	@Autowired
 	TokenChecksumRepo checksumRepo;
