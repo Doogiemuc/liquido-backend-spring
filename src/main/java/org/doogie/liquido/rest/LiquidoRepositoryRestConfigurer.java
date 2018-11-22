@@ -62,7 +62,6 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
     config.exposeIdsFor(UserModel.class);
     config.exposeIdsFor(AreaModel.class);
     config.exposeIdsFor(BallotModel.class);
-    config.exposeIdsFor(DelegationModel.class);
     config.exposeIdsFor(LawModel.class);          // actually LawModel has its own LawProjection which exposes IDs.
     config.exposeIdsFor(PollModel.class);
 

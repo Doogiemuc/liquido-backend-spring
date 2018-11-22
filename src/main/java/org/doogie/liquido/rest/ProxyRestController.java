@@ -5,7 +5,6 @@ import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.TokenChecksumModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.AssignProxyRequest;
-import org.doogie.liquido.rest.dto.ProxyMapResponseElem;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
@@ -17,7 +16,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import static org.springframework.web.bind.annotation.RequestMethod.*;
@@ -44,6 +42,10 @@ public class ProxyRestController {
 	Map getProxyMap() throws LiquidoException {
 		UserModel user = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "You must be logged in to get your proxy map!"));
+
+		return proxyService.getDirectProxies(user);
+
+		/*
 		Map<AreaModel, UserModel> proxyMap = proxyService.getDirectProxies(user);
 		HashMap<String, Object> result = new HashMap<>();
 		for(AreaModel area: proxyMap.keySet()) {
@@ -53,6 +55,7 @@ public class ProxyRestController {
 			result.put(area.getTitle(), elem);
 		}
 		return result;
+		*/
 	}
 
 	/**
