@@ -82,9 +82,6 @@ public class TestDataCreator implements CommandLineRunner {
 	CommentRepo commentRepo;
 
   @Autowired
-  DelegationRepo delegationRepo;
-
-  @Autowired
   BallotRepo ballotRepo;
 
   @Autowired

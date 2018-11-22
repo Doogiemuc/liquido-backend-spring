@@ -1,7 +1,10 @@
 package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.datarepos.*;
+import org.doogie.liquido.datarepos.BallotRepo;
+import org.doogie.liquido.datarepos.LawRepo;
+import org.doogie.liquido.datarepos.PollRepo;
+import org.doogie.liquido.datarepos.TokenChecksumRepo;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.util.DoogiesUtil;
@@ -38,9 +41,6 @@ public class CastVoteService {
 	TokenChecksumRepo checksumRepo;
 
 	@Autowired
-	DelegationRepo delegationRepo;
-
-	@Autowired
 	LiquidoRestUtils restUtils;
 
 	@Value("${liquido.bcrypt.salt}")
@@ -68,22 +68,22 @@ public class CastVoteService {
 	 * @param user the currently logged in and correctly authenticated user
 	 * @param area an area that the user's want's to vote in
 	 * @param passwordHash  user's hashed password
-	 * @param publicProxy true if voter immediately wants to become a public proxy. Voter can also decide later with {@link ProxyService#becomePublicProxy(UserModel, AreaModel, String)}
+	 * @param becomePublicProxy true if voter immediately wants to become a public proxy. Voter can also decide later with {@link ProxyService#becomePublicProxy
 	 * @return user's voterToken, that only the user must know, and that will hash to the stored checksumModel.
 	 */
-	public String createVoterTokenAndStoreChecksum(UserModel user, AreaModel area, String passwordHash, boolean publicProxy) throws LiquidoException {
+	public String createVoterTokenAndStoreChecksum(UserModel user, AreaModel area, String passwordHash, boolean becomePublicProxy) throws LiquidoException {
 		log.debug("createVoterTokenAndStoreChecksum: for "+user+" in "+area);
-		if (user == null || DoogiesUtil.isEmpty(user.getEmail()) || area == null ||passwordHash == null)
+		if (user == null || DoogiesUtil.isEmpty(user.getEmail()) || area == null || passwordHash == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need user, area and passwordHash to builder a voterToken!");
 		// Create a new voterToken for this user in that area with the BCRYPT hashing algorithm
 		// Remark: Bcrypt prepends the salt into the returned token value!!!
-		String voterToken = BCrypt.hashpw(user.getId()+passwordHash+area.getId()+serverSecret, bcryptSalt);  // voterToken that only this user must know
-		String tokenChecksum = calcChecksumFromVoterToken(voterToken);                            		   // checksum of voterToken that can only be generated from the users voterToken and only by the server.
+		String voterToken =    calcVoterToken(user.getId(), passwordHash, area.getId());    // voterToken that only this user must know
+		String tokenChecksum = calcChecksumFromVoterToken(voterToken);                                // checksum of voterToken that can only be generated from the users voterToken and only by the server.
 		TokenChecksumModel checksumModel = checksumRepo.findByChecksum(tokenChecksum);
 		if (checksumModel == null) {
 			checksumModel = new TokenChecksumModel(tokenChecksum, area);
 		}
-		checksumModel.setPublicProxy(publicProxy ? user : null);
+		if (becomePublicProxy) checksumModel.setPublicProxy(user);   // if voter wants to become a public proxy, otherwiese do nothing. (User may already be a public proxy!)
 		checksumModel.setExpiresAt(LocalDateTime.now().plusHours(checksumExpirationHours));
 		TokenChecksumModel savedChecksumModel1 = checksumRepo.save(checksumModel);
 
@@ -102,10 +102,23 @@ public class CastVoteService {
 		if (voterToken == null || !voterToken.startsWith("$2") || voterToken.length() < 10)
 			throw new LiquidoException(LiquidoException.Errors.INVALID_VOTER_TOKEN, "Voter token has wrong format");  // BCRYPT hashes start with $2$ or $2
 		String tokenChecksum = calcChecksumFromVoterToken(voterToken);
-		TokenChecksumModel existingTokenModel = checksumRepo.findByChecksum(tokenChecksum);
-		if (existingTokenModel == null)
+		TokenChecksumModel existingChecksum = checksumRepo.findByChecksum(tokenChecksum);
+		if (existingChecksum == null)
 			throw new LiquidoException(LiquidoException.Errors.INVALID_VOTER_TOKEN, "Voter token is invalid. It's checksum is not known as valid.");
-		return existingTokenModel;
+		return existingChecksum;
+	}
+
+	/**
+	 * Get the already existing checksum of this user in that area.
+	 * This method will not create a new voterToken or store any checksum.
+	 * @param user a voter
+	 * @param area an area
+	 * @return the existing checksum of that user in that area
+	 * @throws LiquidoException when user does not yet have a voterToken or checksum in that area
+	 */
+	public TokenChecksumModel getExistingChecksum(UserModel user, String passwordHash, AreaModel area) throws LiquidoException {
+		String voterToken = calcVoterToken(user.getId(), passwordHash, area.getId());
+		return isVoterTokenValidAndGetChecksum(voterToken);
 	}
 
 	//TODO: When user changes his passwords, then invalidate all his tokens!!!
@@ -255,6 +268,10 @@ public class CastVoteService {
 		if (existingChecksum == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Ballot's checksum is invalid. (It cannot be found in TokenChecksumModel.)");
 
+	}
+
+	private String calcVoterToken(Long userId, String passwordHash, Long areaId) {
+		return BCrypt.hashpw(userId + passwordHash + areaId + serverSecret, bcryptSalt);
 	}
 
 	/**
