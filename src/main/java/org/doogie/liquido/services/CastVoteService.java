@@ -87,7 +87,7 @@ public class CastVoteService {
 		checksumModel.setExpiresAt(LocalDateTime.now().plusHours(checksumExpirationHours));
 		TokenChecksumModel savedChecksumModel1 = checksumRepo.save(checksumModel);
 
-		//TODO: createVoterTokenAndStoreChecksum  should return both voterToken and ChecksumModel
+		//TODO: create really secure voterTokens like this: U2F  https://blog.trezor.io/why-you-should-never-use-google-authenticator-again-e166d09d4324
 
 		return voterToken;
 	}

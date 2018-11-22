@@ -54,7 +54,7 @@ public class ProxyService {
 		log.trace("ENTER assignProxy("+area+", fromUser="+fromUser+", toProxy="+proxy+" transitive="+transitive+")");
 
 		/*
-		  There are two data models for proxy assignments that we need to keep in sync.
+		  There are two data models for proxy assignments that we need to keep in sync here.
 
 		    1) The DelegationModel tracks the delegation from a voter to a proxy in one area.
 		       This is used when showing the proxy map of a user. When a voter wants to see who is his direct, effective or transitive proxy.
@@ -91,23 +91,24 @@ public class ProxyService {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ASSIGN_CIRCULAR_PROXY, "Cannot assign proxy. This would lead to a circular delegation of the checksum which cannot be allowed.");
 
 
-		/* ----- upsert delegation from user to proxy in that area */
-		// implementation note: some more interesting views un upsert in JPA: http://dkublik.github.io/persisting-natural-key-entities-with-spring-data-jpa/
-		DelegationModel existingDelegation = delegationRepo.findByAreaAndFromUser(area, fromUser);
-		DelegationModel savedDelegation;
-		if (existingDelegation == null) {
-			DelegationModel delegation = new DelegationModel(area, fromUser, proxy);
-			savedDelegation = delegationRepo.save(delegation);
-		} else {
-			existingDelegation.setToProxy(proxy);													// this may overwrite any previous assignment
-			savedDelegation = delegationRepo.save(existingDelegation);
-		}
-
 		//----- IF proxy has a public checksum THEN immediately delegate our checksum to proxies checksum
-		//      AND add the DelegationModel
 		if (proxyChecksumModel != null) {
 			if (voterChecksumModel.equals(proxyChecksumModel))
 				throw new LiquidoException(LiquidoException.Errors.CANNOT_SAVE_PROXY, "Must not delegate checksum to itself!");
+
+			// ----- upsert delegation from user to proxy in that area
+			// implementation note: some more interesting views on upsert in JPA: http://dkublik.github.io/persisting-natural-key-entities-with-spring-data-jpa/
+			DelegationModel existingDelegation = delegationRepo.findByAreaAndFromUser(area, fromUser);
+			DelegationModel savedDelegation;
+			if (existingDelegation == null) {
+				DelegationModel delegation = new DelegationModel(area, fromUser, proxy);
+				savedDelegation = delegationRepo.save(delegation);
+			} else {
+				existingDelegation.setToProxy(proxy);													// this may overwrite any previous assignment
+				savedDelegation = delegationRepo.save(existingDelegation);
+			}
+
+			//----- store delegation of checksum
 			voterChecksumModel.setTransitive(transitive);
 			voterChecksumModel.setDelegatedTo(proxyChecksumModel);
 			voterChecksumModel.setRequestedDelegationTo(null);    // MUST delete existing request, if any
@@ -116,9 +117,6 @@ public class ProxyService {
 			log.info("Delegation from "+fromUser.getEmail()+" to "+proxy.getEmail()+" stored successfully: "+voterChecksumModel.getChecksum()+" -> "+proxyChecksumModel.getChecksum());
 		} else {
 			// ELSE only add a delegation request to our checksum
-
-
-
 			voterChecksumModel.setTransitive(transitive);
 			voterChecksumModel.setDelegatedTo(null);  // MUST delete existing delegation if any
 			voterChecksumModel.setRequestedDelegationTo(proxy);
