@@ -36,7 +36,6 @@ import static org.junit.Assert.assertEquals;
 @Slf4j
 @RunWith(SpringRunner.class)
 @SpringBootTest
-@EnableJpaAuditing(auditorAwareRef = "liquidoAuditorAware")
 @ActiveProfiles("test")  // this will also load the settings  from  application-test.properties
 public class PollServiceTests {
 
@@ -74,7 +73,7 @@ public class PollServiceTests {
 	public static final String mailPrefix = "pollTestUser";
 	public static Map<String, UserModel> users;
 
-	public String basePath ;
+	public String basePath;
 
 	@Before
 	public void seedUsersForThisTest() {
@@ -142,7 +141,7 @@ public class PollServiceTests {
 
 
 	/**
-	 * Quick and dirty hack to QUICKLY cast a vote.  NO CHECKS are perfomed at all.
+	 * Quick and dirty hack to QUICKLY cast a vote.  NO CHECKS are performed at all.
 	 * For example the voterToken will always be valid: A TokenChecksumModel will be created.
 	 * @param voterToken
 	 * @param poll

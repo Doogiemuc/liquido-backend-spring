@@ -21,6 +21,7 @@ import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import javax.annotation.PostConstruct;
 import java.util.List;
 import java.util.Map;
 
@@ -50,6 +51,15 @@ public class ProxyServiceTests {
 	@Autowired
 	TokenChecksumRepo checksumRepo;
 
+	@PostConstruct
+	public void beforeClass() throws LiquidoException {
+		log.info("=========== PROXY TREE ========");
+		UserModel proxy = userRepo.findByEmail(USER1_EMAIL);
+		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
+		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, proxy.getPasswordHash(), true);
+		TokenChecksumModel proxyChecksumModel = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
+		printProxyTree(proxyChecksumModel, "");
+	}
 
 	/**
 	 * GIVEN a public proxy P
@@ -73,14 +83,16 @@ public class ProxyServiceTests {
 
 		//WHEN
 		String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, fromUser.getPasswordHash(), true);
-		TokenChecksumModel assignedChecksumModel = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, true);
+		TokenChecksumModel votersChecksum = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, true);
 
 		//THEN
-		assertNotNull("proxies checksum must not be null", assignedChecksumModel);
-		assertEquals("Assigned checksum must be the same as public proxies checksum", publicProxyChecksum, assignedChecksumModel);
+		assertNotNull("Voter's checksum must not be null", votersChecksum);
+		assertEquals("Voter's checksum must be delegated to proxies checksum", publicProxyChecksum, votersChecksum.getDelegatedTo());
 
-		TokenChecksumModel userCheckumModel = castVoteService.isVoterTokenValidAndGetChecksum(userVoterToken);
-		assertEquals("Users checksum must be delegated to the proxy's checksum.", userCheckumModel.getDelegatedTo(), publicProxyChecksum);
+		DelegationModel delegation = delegationRepo.findByAreaAndFromUser(area, fromUser);
+		assertNotNull("DelegationModel from user in that area must exist", delegation);
+		assertEquals("Delegation must point from voter ", fromUser, delegation.getFromUser());
+		assertEquals("Delegation must point to proxy", toProxy, delegation.getToProxy());
 
 		Map<AreaModel, UserModel> proxyMap = proxyService.getDirectProxies(fromUser);
 		log.info(proxyMap.toString());
