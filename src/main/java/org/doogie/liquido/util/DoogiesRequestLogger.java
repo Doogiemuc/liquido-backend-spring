@@ -124,7 +124,7 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
 		// Log response
     long duration = System.currentTimeMillis() - startTime;
     this.logger.debug("<= " + reqInfo + " returned " + response.getStatus() + " in "+duration + "ms.");
-    if (includeResponsePayload && logger.isDebugEnabled() && wrappedResponse.getContentSize() > 0) {
+    if (includeResponsePayload && wrappedResponse.getContentSize() > 0) {
       byte[] buf = wrappedResponse.getContentAsByteArray();
       String responseStr = getContentAsString(buf, this.maxPayloadLength, response.getCharacterEncoding());
       if (responseStr.indexOf("\n") > 0) {

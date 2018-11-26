@@ -14,5 +14,5 @@ public class UserProfileModel {
   String website;
   String picture;
   /** Users mobile phone number. Needed for login via SMS code */
-  String phonenumber;
+  String mobilePhone;
 }

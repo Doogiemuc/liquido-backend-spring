@@ -9,7 +9,7 @@ import org.springframework.http.MediaType;
 import java.util.HashMap;
 
 /**
- * Yet another JSON builder. With fluid API.
+ * Liquido json builder "LSON". Yet another JSON builder with a very nice fluid API.
  */
 public class Lson extends HashMap<String, Object> {
 
@@ -24,6 +24,7 @@ public class Lson extends HashMap<String, Object> {
 		return new Lson();
 	}
 
+	/** Factory method - shortcut for very simple JSON:  Lson.builder("key", "value") */
 	public static Lson builder(String key, Object value) {
 		Lson lson = Lson.builder();
 		return lson.put(key, value);
