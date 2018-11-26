@@ -269,7 +269,7 @@ public class RestEndpointTests {
 		HttpEntity<String> entity = Lson.builder()
 				.put("email", "userFromTest-" + System.currentTimeMillis())
 				.put("passwordHash", "dummyPasswordHashFromTest")
-				.put("profile", Lson.builder("phonenumber", phonenumber))
+				.put("profile", Lson.builder("mobilePhone", phonenumber))
 				.toHttpEntity();
 
 		// register
@@ -297,7 +297,7 @@ public class RestEndpointTests {
 
 		try {
 			UserModel receivedUser = jsonMapper.readValue(userJson, UserModel.class);
-			assertEquals("Logged in user should have the phone number that we registered with", phonenumber, receivedUser.getProfile().getPhonenumber());
+			assertEquals("Logged in user should have the phone number that we registered with", phonenumber, receivedUser.getProfile().getMobilePhone());
 		} catch (IOException e) {
 			String errMsg = "Cannot read read JSON returned from GET /my/user: "+e;
 			log.error(errMsg);

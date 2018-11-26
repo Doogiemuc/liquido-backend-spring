@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
  */
 @Data
 public class CastVoteRequest {
+	//TODO: link to PollModel and use PollModelDeserializer  => test
+
 	/** URI of a poll */
 	@NonNull
 	String poll;

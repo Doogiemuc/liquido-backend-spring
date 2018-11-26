@@ -92,7 +92,7 @@ public class UserModel extends BaseModel {
 		buf.append("id=" + id);
 		buf.append(", email='" + email + '\'');
 		if (this.getProfile() != null)
-			buf.append(", profile.phonenumber="+this.getProfile().getPhonenumber());
+			buf.append(", profile.mobilePhone="+this.getProfile().getMobilePhone());
 		buf.append(']');
 		return buf.toString();
   }

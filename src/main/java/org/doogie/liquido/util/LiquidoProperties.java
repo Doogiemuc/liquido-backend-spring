@@ -91,7 +91,7 @@ public class LiquidoProperties /*implements CommandLineRunner*/ {
     log.info("Loading properties from DB");
     this.props = new HashMap<>();
     for(KEY key : KEY.values()) {
-      KeyValueModel kv = keyValueRepo.findByKey(key.toString());
+      KeyValueModel kv = null; //keyValueRepo.findByKey(key.toString());
 
       //If there is no value in the DB, then we load initial values from property file.
       if (kv == null)  {

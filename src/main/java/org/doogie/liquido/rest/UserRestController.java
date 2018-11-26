@@ -15,10 +15,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.Random;
@@ -63,20 +60,20 @@ public class UserRestController {
 
 	/**
 	 * Register as a new user
-	 * @param newUser UserModel with at least username and password.   Profile.phonenumber can also be filled.
-	 * @return HTTP OK(200)
+	 * @param newUser UserModel with at least email and profile.mobilePhone.
+	 * @return HTTP OK(200)   or error 400 when data is missing or user already exists
 	 * @throws LiquidoException when newUser is not ok.
 	 */
-	@RequestMapping("/auth/register")
+	@RequestMapping(path = "/auth/register", method = RequestMethod.POST)
 	public ResponseEntity registerNewUser(@RequestBody UserModel newUser) throws LiquidoException {
 		log.info("register new user "+newUser);
 		//----- sanity checks
-		if (newUser == null || DoogiesUtil.isEmpty(newUser.getEmail()) || DoogiesUtil.isEmpty(newUser.getPasswordHash()) ||
-		    newUser.getPasswordHash().length() < MIN_PASSWORD_LENGTH)
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need data for new user");
+		if (newUser == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need data for new user");
+		if (DoogiesUtil.isEmpty(newUser.getEmail())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need email for new user");
+		if (DoogiesUtil.isEmpty(newUser.getProfile().getMobilePhone())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need mobile phone for new user");
 		UserModel existingUser = userRepo.findByEmail(newUser.getEmail());
-		if (existingUser != null)
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "User already exists");
+		if (existingUser != null)	throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "User already exists");
+		//TODO: check email format
 
 		//----- save new user
 		userRepo.save(newUser);
@@ -92,8 +89,8 @@ public class UserRestController {
   @RequestMapping(value = "/auth/requestSmsCode", produces = MediaType.TEXT_PLAIN_VALUE)
   public String requestSmsCode(@RequestParam("mobile") String mobile) throws LiquidoException {
   	log.info("request SMS login code for mobile="+mobile);
-	  UserModel user = userRepo.findByProfilePhonenumber(mobile);
-	  if (user == null) throw new LiquidoException(LiquidoException.Errors.MUST_REGISTER,  "No user found with mobile "+mobile+". You must register first.");  //TODO: return 404
+	  UserModel user = userRepo.findByProfileMobilePhone(mobile);
+	  if (user == null) throw new LiquidoException(LiquidoException.Errors.NO_LOGIN,  "No user found with mobile "+mobile+". You must register first.");  //TODO: return 404
 
 	  // Create new SMS token: four random digits between [1000...9999]
 	  String smsCode = String.valueOf(new Random().nextInt(9000)+ 1000);
@@ -123,7 +120,7 @@ public class UserRestController {
 	  OneTimeToken oneTimeToken = tokenRepo.findByToken(code);
 	  if (oneTimeToken == null)
 	  	throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN, "Invalid/Unknown sms login code.");
-	  if (!mobile.equals(oneTimeToken.getUser().getProfile().getPhonenumber()))
+	  if (!mobile.equals(oneTimeToken.getUser().getProfile().getMobilePhone()))
 		  throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN, "Invalid/Unknown sms login code.");
 	  if (!oneTimeToken.getToken_type().equals(OneTimeToken.TOKEN_TYPE.SMS))
 		  throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN, "This is not an SMS login token.");

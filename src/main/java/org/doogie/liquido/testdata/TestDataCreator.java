@@ -12,17 +12,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
+import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.Table;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -30,12 +33,25 @@ import java.util.*;
 import static org.doogie.liquido.model.LawModel.LawStatus;
 
 /**
- * Seed the database with test data. This script will upsert entities, ie. it will only insert new rows
- * for entities that do not exist yet.
+ * <h1>TestDataCreator</h1>
  *
- * For checking whether an entity already exists, the functional primary key is used, not the ID field!
+ * This Spring Command Line Runner can init the database in two ways:
  *
- * This is executed right after SpringApplication.run(...) when the command line parameter "--seedDB" is passed.
+ * (1) Create sample data from scratch with JPA
+ *
+ * In application.properties  set  spring.jpa.hibernate.ddl-auto=create   to let Spring-JPA init the DB schema.
+ * Then run this app with --createSampleData=true
+ * TestDataCreator will create test data from scratch via spring data and JPA.  This takes around a minute.
+ *
+ * (2) Load testdata from an SQL script that contains schema <b>and</b> data
+ *
+ * In application.properties  set  spring.jpa.hibernate.ddl-auto=none (Then a data.sql is not loaded!)
+ * Then we load our own sample-data.sql manually. This is quick!
+ *
+ * You can create a sample-data.sql from the embedded H2 console with the SQL command
+ * <pre>SCRIPT TO 'sample-DB.sql'</pre>
+ *
+ * This is executed right after SpringApplication.run(...)
  * See http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/htmlsingle/#boot-features-command-line-runner
  *
  * Other possibilities for initializing a DB with Spring and Hibernate:
@@ -45,7 +61,7 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * http://www.generatedata.com/
  */
 @Component
-//TODO: @Profile("dev")    // run test data creator only during development
+//@Profile("dev")    // run test data creator only during development
 @Order(Ordered.HIGHEST_PRECEDENCE)   // seed DB first, then run the other CommandLineRunners
 public class TestDataCreator implements CommandLineRunner {
   private Logger log = LoggerFactory.getLogger(this.getClass());
@@ -58,6 +74,10 @@ public class TestDataCreator implements CommandLineRunner {
   public int NUM_ALTERNATIVE_PROPOSALS = 5;   // proposals in poll
 
   public int NUM_LAWS = 2;
+
+  public static final String SEED_DB_PARAM = "createSampleData";
+  public static final String LOAD_SAMPLE_DB_PARAM = "loadSampleDB";
+  public static final String SAMPLE_DATA_RESOURCE = "classpath:sample-DB.sql";
 
 	//@Value("${spring.data.rest.base-path}")   // value from application.properties file
 	//String restBasePath;
@@ -116,6 +136,8 @@ public class TestDataCreator implements CommandLineRunner {
   @Autowired
   Environment springEnv;   // load settings from application-test.properties
 
+	@Autowired
+	ApplicationContext appContext;
 
   // very simple random number generator
   Random rand;
@@ -132,13 +154,14 @@ public class TestDataCreator implements CommandLineRunner {
    * @param args command line args
    */
   public void run(String... args) {
-    boolean seedDB = springEnv.acceptsProfiles(Profiles.of("dev", "test")) || "true".equalsIgnoreCase(springEnv.getProperty("seedDB"));
+    boolean seedDB = "true".equalsIgnoreCase(springEnv.getProperty(SEED_DB_PARAM));
     for(String arg : args) {
-      if ("--seedDB".equalsIgnoreCase(arg)) { seedDB = true; }
+      if (("--"+ SEED_DB_PARAM).equalsIgnoreCase(arg)) { seedDB = true; }
     }
+		//seedDB = seedDB ||springEnv.acceptsProfiles(Profiles.of("dev", "test"));   // run TestDataCreator automatically for TEST and DEV
     if (seedDB) {
 			log.info("===== START TestDataCreator");
-      log.debug("Populate test DB: "+ jdbcTemplate.getDataSource().toString());
+      log.debug("Create test data from scratch via spring-data for DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
       seedUsers(NUM_USERS, TestFixtures.MAIL_PREFIX, TestFixtures.TESTUSER_PASSWORD);
       auditorAware.setMockAuditor(this.users.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
@@ -152,11 +175,21 @@ public class TestDataCreator implements CommandLineRunner {
 			seedPollFinished(NUM_ALTERNATIVE_PROPOSALS);
       seedLaws();
       seedVotes();
-
       auditorAware.setMockAuditor(null);
-
       log.info("===== TestDataCreator FINISHED");
     }
+
+    boolean loadSampleDataFromSqlScript = "true".equalsIgnoreCase(springEnv.getProperty(LOAD_SAMPLE_DB_PARAM));;
+    if (loadSampleDataFromSqlScript) {
+			try {
+				log.info("TestDataCreator: Loading schema and sample data from "+ SAMPLE_DATA_RESOURCE);
+				Resource resource = appContext.getResource(SAMPLE_DATA_RESOURCE);
+				ScriptUtils.executeSqlScript(jdbcTemplate.getDataSource().getConnection(), resource);
+				log.info("TestDataCreator: Loading schema and sample data from "+ SAMPLE_DATA_RESOURCE+" => DONE");
+			} catch (SQLException e) {
+				log.error("ERROR: Cannot load schema and sample data from "+ SAMPLE_DATA_RESOURCE +": "+e);
+			}
+		}
   }
 
   /*   Global properties are automatically initialized from application.properties file
@@ -196,8 +229,8 @@ public class TestDataCreator implements CommandLineRunner {
       profile.setName("Test User" + (i+1));
       profile.setPicture("/static/img/photos/"+((i%3)+1)+".png");
       profile.setWebsite("http://www.liquido.de");
-      profile.setPhonenumber(DoogiesUtil.randomDigits(10));
-      if (i==0) profile.setPhonenumber("1234567890");  // make sure that there is one user with that phonenumber
+      profile.setMobilePhone(DoogiesUtil.randomDigits(10));
+      if (i==0) profile.setMobilePhone("1234567890");  // make sure that there is one user with that mobilePhone
       newUser.setProfile(profile);
 
       UserModel existingUser = userRepo.findByEmail(email);
