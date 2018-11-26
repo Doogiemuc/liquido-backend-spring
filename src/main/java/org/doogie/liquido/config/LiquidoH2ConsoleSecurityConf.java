@@ -17,7 +17,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 public class LiquidoH2ConsoleSecurityConf extends WebSecurityConfigurerAdapter {
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
-		log.trace("Configuring security for H2 DB console");
+		log.debug("Configuring security for H2 DB console");
 		http
 			.antMatcher("/h2-console/**")   // everything below this path:
 				.authorizeRequests().anyRequest().permitAll()

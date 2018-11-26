@@ -58,11 +58,12 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
    */
   @Override
   protected void configure(HttpSecurity http) throws Exception {
-    log.trace("Configuring HttpSecurity for "+ basePath);
+    log.debug("Configuring HttpSecurity for "+ basePath);
 	  http
 			//.antMatcher(basePath).authenticationProvider(new LiquidoTokenAuthProvider()) // can I add my token auth that way?
 			.authorizeRequests()
 			  .antMatchers(basePath+"/_ping").permitAll()        // allow is alive
+				.antMatchers(basePath+"/globalProperties").permitAll()        // allow is alive
 			  .antMatchers(basePath+"/auth/**").permitAll()      // allow login via one time token
 			  .anyRequest().authenticated()
 			.and()
@@ -70,7 +71,7 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
 			.and()
 			  .csrf().disable();   //TODO: reenable CSRF
 
-		log.trace("Adding JwtAuthenticationFilter before UsernamePasswordAuthenticationFilter");
+		log.debug("Adding JwtAuthenticationFilter before UsernamePasswordAuthenticationFilter");
 		http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
   }
 

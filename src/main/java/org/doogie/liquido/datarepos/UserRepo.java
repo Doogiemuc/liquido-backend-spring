@@ -26,7 +26,7 @@ public interface UserRepo extends CrudRepository<UserModel, Long> {
    */
   UserModel findByEmail(@Param("email") String email);   // This magically creates a query just from the method name!
 
-  /** find a user by his phone number */
-  UserModel findByProfilePhonenumber(String phonenumber);
+  /** find a user by his mobile phone number */
+  UserModel findByProfileMobilePhone(String mobilePhone);
 
 }

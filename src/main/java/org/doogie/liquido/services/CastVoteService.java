@@ -20,9 +20,8 @@ import java.util.HashSet;
 import java.util.List;
 
 /**
- * This spring component implements the business logic for {@link org.doogie.liquido.model.BallotModel}
- * I am trying to keep the Models as dumb as possible.
- * All business rules and security checks are implemented here.
+ * This service contains all the voting logic for casting a vote.
+ * Here we implement all the security around voterTokens and their checksums.
  */
 @Service
 @Slf4j
@@ -43,14 +42,25 @@ public class CastVoteService {
 	@Autowired
 	LiquidoRestUtils restUtils;
 
+	/**
+	 * This salt is initialized from application.properties
+	 * and then stored into the DB by {@link org.doogie.liquido.util.LiquidoProperties}.
+	 * We must use the same salt for re-generating tokens and checksums
+	 */
 	@Value("${liquido.bcrypt.salt}")
 	String bcryptSalt;
 
+	/**
+	 * This secret is only known to the liquido server. That way we ensure
+	 * that only this class can create voterTokens and checksums.
+	 */
 	@Value("${liquido.bcrypt.secret}")
 	String serverSecret;
 
 	@Value("${liquido.checksum.expiration.hours}")
 	int checksumExpirationHours;
+
+	//TODO:  RSA Tokens  https://stackoverflow.com/questions/37722090/java-jwt-with-public-private-keys
 
 	/**
 	 * A user wants to vote and therefore requests a voter token for this area. Each user has one token per area.
@@ -125,7 +135,7 @@ public class CastVoteService {
 
 
 	/**
-	 * User casts own vote.
+	 * User casts own vote. Keep in mind, that this method is called anonymously. No UserModel involved.
 	 * If that user is a proxy for other voters, then their ballots will also be added automatically.
 	 * @param castVoteRequest which contains the poll that we want to vote for and
 	 *                        a list of voterTokens. The first token is the voter's own one.
