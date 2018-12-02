@@ -10,6 +10,13 @@ import java.util.List;
  */
 public class TestFixtures {
 
+	public static final int NUM_USERS = 20;
+	public static final  int NUM_AREAS = 10;
+	public static final int NUM_IDEAS = 111;
+	public static final  int NUM_PROPOSALS = 50;
+	public static final  int NUM_ALTERNATIVE_PROPOSALS = 5;   // proposals in poll
+	public static final  int NUM_LAWS = 2;
+
 	public static final String MAIL_PREFIX = "testuser";
 	
   public static final String USER1_EMAIL = MAIL_PREFIX+"1@liquido.de";      // testuser1 has  ID 1 in the DB !

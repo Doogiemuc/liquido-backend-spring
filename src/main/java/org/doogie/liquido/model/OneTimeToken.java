@@ -32,7 +32,7 @@ public class OneTimeToken extends BaseModel {
 	}
 	@NonNull
 	@NotNull
-	TOKEN_TYPE token_type;
+	TOKEN_TYPE tokenType;
 
 	@NonNull
 	@NotNull

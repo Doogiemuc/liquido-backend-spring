@@ -25,8 +25,8 @@ public class UserModel extends BaseModel {
   @Column(unique = true)
   public String email;
 
-  @NotNull
-  @NonNull
+  //@NotNull
+  //@NonNull
   //JsonIgnore                      // tell jackson to not serialize this field  => needs more  CHI
   //@Getter(AccessLevel.PRIVATE)    // Getter cannot be private because I need access to the password in LiquidoUserDetailsService.java
   @RestResource(exported = false)   // private: never exposed via REST!
@@ -91,8 +91,10 @@ public class UserModel extends BaseModel {
     buf.append("UserModel[");
 		buf.append("id=" + id);
 		buf.append(", email='" + email + '\'');
-		if (this.getProfile() != null)
-			buf.append(", profile.mobilePhone="+this.getProfile().getMobilePhone());
+		if (this.getProfile() != null) {
+			buf.append(", profile.mobilephone=" + this.getProfile().getMobilephone());
+			buf.append(", profile.picture=" + this.getProfile().getPicture());
+		}
 		buf.append(']');
 		return buf.toString();
   }

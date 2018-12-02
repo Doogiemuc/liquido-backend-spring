@@ -21,10 +21,9 @@ import java.util.Map;
  * Sprint REST controller for voting
  */
 @Slf4j
-@BasePathAwareController
-//@RepositoryRestController   and    @RequestMapping("postBallot")    Both do not really work
+@BasePathAwareController				// This is a spring-data-jpa controller with all its HATEOAS magic.  (But it cannot return a plain string as HTTP response)
 //@EnableHypermediaSupport(type = EnableHypermediaSupport.HypermediaType.HAL)      //not necessary?
-//TODO: @PreAuthorize("isAuthenticated()")    or is my security configuration already enough?
+//@PreAuthorize("isAuthenticated()")    => possible but not necessary. Auth is already checked in JwtAuthenticationFilter
 public class VoteRestController {
 
 	@Autowired
@@ -51,7 +50,7 @@ public class VoteRestController {
 			// see https://docs.spring.io/spring-security/site/docs/current/reference/htmlsingle/#tech-userdetailsservice
 	) throws LiquidoException {
 		UserModel user = liquidoAuditorAware.getCurrentAuditor()
-				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Need login to get voterToken!"));			// [SECURITY]  This check is extremely important! Only valid users are allowed to get a voterToken
+				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get voterToken!"));			// [SECURITY]  This check is extremely important! Only valid users are allowed to get a voterToken
 		log.info(user+" requests his voterToken for area "+area);
 
 		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(user, area, user.getPasswordHash(), "true".equalsIgnoreCase(publicProxy));   // preconditions are checked inside castVoteService

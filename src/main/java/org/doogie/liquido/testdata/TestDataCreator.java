@@ -11,12 +11,15 @@ import org.doogie.liquido.util.LiquidoProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
@@ -40,12 +43,13 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * (1) Create sample data from scratch with JPA
  *
  * In application.properties  set  spring.jpa.hibernate.ddl-auto=create   to let Spring-JPA init the DB schema.
- * Then run this app with --createSampleData=true
+ * Then run this app with createSampleData=true
  * TestDataCreator will create test data from scratch via spring data and JPA.  This takes around a minute.
  *
  * (2) Load testdata from an SQL script that contains schema <b>and</b> data
  *
  * In application.properties  set  spring.jpa.hibernate.ddl-auto=none (Then a data.sql is not loaded!)
+ * Env loadSampleDB=true
  * Then we load our own sample-data.sql manually. This is quick!
  *
  * You can create a sample-data.sql from the embedded H2 console with the SQL command
@@ -66,21 +70,13 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
 public class TestDataCreator implements CommandLineRunner {
   private Logger log = LoggerFactory.getLogger(this.getClass());
 
-  public int NUM_USERS = 20;
-  public int NUM_AREAS = 10;
-  public int NUM_IDEAS = 111;
-  public int NUM_PROPOSALS = 50;
-
-  public int NUM_ALTERNATIVE_PROPOSALS = 5;   // proposals in poll
-
-  public int NUM_LAWS = 2;
-
   public static final String SEED_DB_PARAM = "createSampleData";
   public static final String LOAD_SAMPLE_DB_PARAM = "loadSampleDB";
-  public static final String SAMPLE_DATA_RESOURCE = "classpath:sample-DB.sql";
+	public static final String SAMPLE_DATA_FILENAME = "sample-DB.sql";
+	public static final String SAMPLE_DATA_PATH     = "src/main/resources/";
 
-	//@Value("${spring.data.rest.base-path}")   // value from application.properties file
-	//String restBasePath;
+	@Value("${spring.data.rest.base-path}")   // value from application.properties file
+	String basePath;
 
   @Autowired
   UserRepo userRepo;
@@ -158,36 +154,41 @@ public class TestDataCreator implements CommandLineRunner {
     for(String arg : args) {
       if (("--"+ SEED_DB_PARAM).equalsIgnoreCase(arg)) { seedDB = true; }
     }
-		//seedDB = seedDB ||springEnv.acceptsProfiles(Profiles.of("dev", "test"));   // run TestDataCreator automatically for TEST and DEV
+		seedDB = seedDB ||springEnv.acceptsProfiles(Profiles.of("test"));   // run seedDB for TEST profile
     if (seedDB) {
 			log.info("===== START TestDataCreator");
       log.debug("Create test data from scratch via spring-data for DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
-      seedUsers(NUM_USERS, TestFixtures.MAIL_PREFIX, TestFixtures.TESTUSER_PASSWORD);
+      seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX, TestFixtures.TESTUSER_PASSWORD);
       auditorAware.setMockAuditor(this.users.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
       //seedGlobalProperties();
       seedAreas();
       seedProxies(TestFixtures.delegations);
       seedIdeas();
       seedProposals();
-      seedPollInElaborationPhase(NUM_ALTERNATIVE_PROPOSALS);
-      seedPollInVotingPhase(NUM_ALTERNATIVE_PROPOSALS);
-			seedPollFinished(NUM_ALTERNATIVE_PROPOSALS);
+      seedPollInElaborationPhase(TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
+      seedPollInVotingPhase(TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
+			seedPollFinished(TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
       seedLaws();
       seedVotes();
       auditorAware.setMockAuditor(null);
+
+			log.info("===== TestDataCreator: Store sample data in file: "+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME);
+
+			jdbcTemplate.execute("SCRIPT TO '"+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME+"'");
+
       log.info("===== TestDataCreator FINISHED");
     }
 
     boolean loadSampleDataFromSqlScript = "true".equalsIgnoreCase(springEnv.getProperty(LOAD_SAMPLE_DB_PARAM));;
     if (loadSampleDataFromSqlScript) {
 			try {
-				log.info("TestDataCreator: Loading schema and sample data from "+ SAMPLE_DATA_RESOURCE);
-				Resource resource = appContext.getResource(SAMPLE_DATA_RESOURCE);
+				log.info("TestDataCreator: Loading schema and sample data from "+ SAMPLE_DATA_FILENAME);
+				Resource resource = appContext.getResource(ResourceLoader.CLASSPATH_URL_PREFIX + SAMPLE_DATA_FILENAME);
 				ScriptUtils.executeSqlScript(jdbcTemplate.getDataSource().getConnection(), resource);
-				log.info("TestDataCreator: Loading schema and sample data from "+ SAMPLE_DATA_RESOURCE+" => DONE");
+				log.info("TestDataCreator: Loading schema and sample data from "+ SAMPLE_DATA_FILENAME +" => DONE");
 			} catch (SQLException e) {
-				log.error("ERROR: Cannot load schema and sample data from "+ SAMPLE_DATA_RESOURCE +": "+e);
+				log.error("ERROR: Cannot load schema and sample data from "+ SAMPLE_DATA_FILENAME +": "+e);
 			}
 		}
   }
@@ -203,16 +204,6 @@ public class TestDataCreator implements CommandLineRunner {
   }
   */
 
-
-  private String getGlobalProperty(LiquidoProperties.KEY key) {
-    return props.get(key);
-
-    /*
-    KeyValueModel kv = keyValueRepo.findByKey(key.toString());
-    return kv.getValue();
-    */
-  }
-
   public Map<String, UserModel> seedUsers(int numUsers, String mailPrefix, String password) {
     log.info("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
     this.users = new HashMap<>();
@@ -223,14 +214,14 @@ public class TestDataCreator implements CommandLineRunner {
 
     for (int i = 0; i < numUsers; i++) {
       String email = mailPrefix + (i+1) + "@liquido.de";    // Remember that DB IDs start at 1. Testuser1 has ID=1 in DB. And there is no testuser0
-      UserModel newUser = new UserModel(email, hashedPassword);
+      UserModel newUser = new UserModel(email);
 
       UserProfileModel profile = new UserProfileModel();
       profile.setName("Test User" + (i+1));
       profile.setPicture("/static/img/photos/"+((i%3)+1)+".png");
       profile.setWebsite("http://www.liquido.de");
-      profile.setMobilePhone(DoogiesUtil.randomDigits(10));
-      if (i==0) profile.setMobilePhone("1234567890");  // make sure that there is one user with that mobilePhone
+      profile.setMobilephone("+49"+DoogiesUtil.randomDigits(10));
+      if (i==0) profile.setMobilephone("+4912345");  // make sure that there is one user with that mobilePhone
       newUser.setProfile(profile);
 
       UserModel existingUser = userRepo.findByEmail(email);
@@ -257,7 +248,7 @@ public class TestDataCreator implements CommandLineRunner {
 
     UserModel createdBy = this.users.get(TestFixtures.USER1_EMAIL);
 
-    for (int i = 0; i < NUM_AREAS; i++) {
+    for (int i = 0; i < TestFixtures.NUM_AREAS; i++) {
       String areaTitle = "Area " + i;
       AreaModel newArea = new AreaModel(areaTitle, "Nice description for test area #"+i, createdBy);
 
@@ -307,7 +298,7 @@ public class TestDataCreator implements CommandLineRunner {
 
   private void seedIdeas() {
     log.info("Seeding Ideas ...");
-    for (int i = 0; i < NUM_IDEAS; i++) {
+    for (int i = 0; i < TestFixtures.NUM_IDEAS; i++) {
       String ideaTitle = "Idea " + i + " that suggest that we definitely need a longer title for ideas";
       StringBuffer ideaDescr = new StringBuffer();
       ideaDescr.append(DoogiesUtil.randString(8));    // prepend with some random chars to test sorting
@@ -353,7 +344,7 @@ public class TestDataCreator implements CommandLineRunner {
     description.append(" ");
     description.append(getLoremIpsum(0,400));
     UserModel createdBy = this.randUser();
-    AreaModel area = this.areas.get(rand.nextInt(NUM_AREAS));
+    AreaModel area = this.areas.get(rand.nextInt(TestFixtures.NUM_AREAS));
     LawModel proposal = createProposal(title, description.toString(), area, createdBy, rand.nextInt(10));
     return proposal;
 
@@ -362,7 +353,7 @@ public class TestDataCreator implements CommandLineRunner {
   /** seed proposals, ie. ideas that have already reached their quorum */
   private void seedProposals() {
     log.info("Seeding Proposals ...");
-    for (int i = 0; i < NUM_PROPOSALS; i++) {
+    for (int i = 0; i < TestFixtures.NUM_PROPOSALS; i++) {
       String title = "Proposal " + i + " that reached its quorum";
       LawModel proposal = createRandomProposal(title);
       log.debug("Created proposal "+proposal);
@@ -372,7 +363,7 @@ public class TestDataCreator implements CommandLineRunner {
 			UserModel createdBy = this.users.get(TestFixtures.USER1_EMAIL);
     	String title = "Proposal " + i + " for user "+createdBy.getEmail();
       String description = getLoremIpsum(100,400);
-      AreaModel area = this.areas.get(rand.nextInt(NUM_AREAS));
+      AreaModel area = this.areas.get(rand.nextInt(TestFixtures.NUM_AREAS));
       int ageInDays = rand.nextInt(10);
       LawModel proposal = createProposal(title, description, area, createdBy, ageInDays);
       log.debug("Created proposal for user "+createdBy.getEmail());
@@ -445,7 +436,7 @@ public class TestDataCreator implements CommandLineRunner {
   private PollModel seedPollInElaborationPhase(int numProposals) {
     log.info("Seeding one poll in elaboration phase ...");
     if (numProposals > this.users.size())
-    	throw new RuntimeException("Cannot seedPollInElaborationPhase. Need at least "+NUM_ALTERNATIVE_PROPOSALS+" distinct users");
+    	throw new RuntimeException("Cannot seedPollInElaborationPhase. Need at least "+TestFixtures.NUM_ALTERNATIVE_PROPOSALS+" distinct users");
 
     try {
       AreaModel area = this.areas.get(0);
@@ -549,7 +540,7 @@ public class TestDataCreator implements CommandLineRunner {
     //PollModel poll = new PollModel();
     //pollRepo.save(poll);
 
-    for (int i = 0; i < NUM_LAWS; i++) {
+    for (int i = 0; i < TestFixtures.NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
       LawModel realLaw = createProposal(lawTitle, getLoremIpsum(100,400), area, createdBy, 12);
       addSupportersToIdea(realLaw, props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)+5);
@@ -625,7 +616,6 @@ public class TestDataCreator implements CommandLineRunner {
 
     log.debug(pollInVoting.toString());
 
-		String basePath = springEnv.getProperty("spring.data.rest.base-path");
     UserModel voter = users.get(TestFixtures.USER1_EMAIL);
 		String pollURI = basePath+"/polls/"+pollInVoting.getId();
 		Iterator<LawModel> proposals = pollInVoting.getProposals().iterator();

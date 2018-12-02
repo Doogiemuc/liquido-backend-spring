@@ -52,7 +52,7 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
 		// 1. I put one in there   in LiquidoUserDetailsService.java  AND
 		// 2. I configured the Oauth AuthorizationServerConfig.java to use the LiquidoUSerDetailsService.java
     LiquidoAuthUser authUser = (LiquidoAuthUser)authentication.getPrincipal();
-    log.trace("Returning authUser" + authUser);
+    log.trace("Returning current auditor " + authUser);
 
     return Optional.of(authUser.getLiquidoUserModel());
 

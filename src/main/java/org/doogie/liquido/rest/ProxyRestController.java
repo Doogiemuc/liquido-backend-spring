@@ -10,6 +10,7 @@ import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
+import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -34,17 +35,28 @@ public class ProxyRestController {
 	LiquidoAuditorAware liquidoAuditorAware;
 
 	/**
+	 * Get own user information as HATEOAS
+	 * @return Full info about the currently logged in user
+	 * @throws LiquidoException when no JWT was sent in header
+	 */
+	@RequestMapping(value = "/my/user", method = GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public @ResponseBody PersistentEntityResource getMyUser(PersistentEntityResourceAssembler resourceAssembler) throws LiquidoException {
+		log.trace("GET /my/user");
+		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your own user info."));
+		log.trace("GET /my/user returns "+currentUser);
+		return resourceAssembler.toResource(currentUser);
+	}
+
+	/**
 	 * get all proxies that this user currently has assigned (per area)
 	 * @return a Map with directProxy and topProxy per area
 	 */
 	@RequestMapping(value = "/my/proxyMap", method = GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public @ResponseBody
-	Map getProxyMap() throws LiquidoException {
+	public @ResponseBody Map getProxyMap() throws LiquidoException {
 		UserModel user = liquidoAuditorAware.getCurrentAuditor()
-				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "You must be logged in to get your proxy map!"));
-
+				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your proxy map!"));
 		return proxyService.getDirectProxies(user);
-
 		/*
 		Map<AreaModel, UserModel> proxyMap = proxyService.getDirectProxies(user);
 		HashMap<String, Object> result = new HashMap<>();
@@ -72,13 +84,13 @@ public class ProxyRestController {
 	//PersistentEntityResource 						// Return HAL representation of Model
 	//HttpEntity<DelegationProjection>    // This way one could return the DelegationProjection  (with inlined referenced objects)  but that cannot be used by the client for further updates
 	assignProxy(
-			@RequestBody AssignProxyRequest assignProxyRequest,
-			PersistentEntityResourceAssembler resourceAssembler
+			@RequestBody AssignProxyRequest assignProxyRequest
+			//PersistentEntityResourceAssembler resourceAssembler
 			//Authentication auth  // not needed anymore - spring-security authentication object could be injected like this
 	) throws LiquidoException {
 		log.info("assignProxy("+assignProxyRequest+")");
 		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
-				.orElseThrow(()-> new  LiquidoException(LiquidoException.Errors.NO_LOGIN, "Cannot save Proxy. Need an authenticated user."));
+				.orElseThrow(()-> new  LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Cannot save Proxy. Need an authenticated user."));
 
 		TokenChecksumModel proxiesChecksumModel = proxyService.assignProxy(assignProxyRequest.getArea(), currentUser, assignProxyRequest.getToProxy(), assignProxyRequest.getVoterToken(), assignProxyRequest.isTransitive());
 		if (proxiesChecksumModel == null) {
@@ -109,7 +121,7 @@ public class ProxyRestController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void deleteProxy(@PathVariable(name="areaId") AreaModel area) throws LiquidoException {
 		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
-				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_LOGIN, "Need login to delete proxy!"));
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to delete proxy!"));
 		log.info("deleteProxy(voter="+currentUser+", area="+area+")");
 		proxyService.removeProxy(area, currentUser, currentUser.getPasswordHash());
 	}
