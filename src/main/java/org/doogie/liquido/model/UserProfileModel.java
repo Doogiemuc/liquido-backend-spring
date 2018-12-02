@@ -14,5 +14,17 @@ public class UserProfileModel {
   String website;
   String picture;
   /** Users mobile phone number. Needed for login via SMS code */
-  String mobilePhone;
+  String mobilephone;
+
+  /**
+   *  Always store mobilephone with '+' and numbers only
+   * @param mobile
+   */
+  public void setMobilephone(String mobile) {
+    if (mobile == null) {
+      this.mobilephone = "";
+    } else {
+      this.mobilephone = mobile.replaceAll("[^0-9\\+]", "");
+    }
+  }
 }
