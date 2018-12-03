@@ -1,5 +1,6 @@
 package org.doogie.liquido.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.*;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -68,6 +69,25 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
   @ManyToOne(optional = false)
   public AreaModel area;
 
+	/** enumeration for law status */
+	public enum LawStatus {
+		IDEA(0),            // An idea is a newly created proposal for a law that did not reach its quorum yet.
+		PROPOSAL(1),        // When an idea reaches its quorum, then it becomes a proposal and can join a poll.
+		ELABORATION(2),     // Proposal is part of a poll and can be discussed. Voting has not yet started.
+		VOTING(3),          // When the voting phase starts, the description of a proposals cannot be changed anymore.
+		LAW(4),             // The winning proposal becomes a law.
+		DROPPED(5),         // All non winning proposals in a finished poll are dropped.
+		RETENTION(6),       // When a law looses support, it is in the retention phase
+		RETRACTED(7);       // When a law looses support for too long, it will be retracted.
+		int statusId;
+		LawStatus(int id) { this.statusId = id; }
+	}
+
+	/** current status of this law */
+	@NotNull
+	@NonNull
+	public LawStatus status =  LawStatus.IDEA;
+
   /** All users that support this proposal. */
   //This cannot  just be a counter, because we must prevent that a user supports this more than once.
   @ManyToMany(fetch = FetchType.EAGER)
@@ -83,29 +103,13 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
    */
   @ManyToOne(optional = true)
   //@JoinColumn(name="poll_id")  this column name is already the default
+  @JsonBackReference  // necessary to prevent endless cycle when (de)serializing to/from JSON: http://stackoverflow.com/questions/20218568/direct-self-reference-leading-to-cycle-exception
   public PollModel poll = null;
 
   /** Comments and suggestions for improvement for this proposal*/
 	@OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)  // fetch all comments when loading a an idea or proposal.  Prevents "LazyInitializationException, could not initialize proxy - no Session" but at the cost of performance.
 	//@Cascade(org.hibernate.annotations.CascadeType.ALL)   // https://vladmihalcea.com/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
   public Set<CommentModel> comments;
-
-  /*   DEPRECATED
-   * Reference to initial proposal. The initial proposal references itself.
-   * This field must not be null and must point to a valid law ID in the DB.
-   *
-   * This is a reference to the same Entity. Not easy with hibernate!!! Here are some refs:
-   * http://stackoverflow.com/questions/20278222/hibernate-self-reference-entity-as-non-null-column
-   * https://vladmihalcea.com/2015/03/05/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
-   * http://stackoverflow.com/questions/27414922/unable-to-post-new-entity-with-relationship-using-resttemplate-and-spring-data-r?rq=1
-
-  @ManyToOne(optional = false)
-  @NotNull
-  @NonNull
-  //@JoinColumn(name="initialLawId", referencedColumnName="id", nullable = false)
-  @JsonBackReference  // necessary to prevent endless cycle when (de)serializing to/from JSON: http://stackoverflow.com/questions/20218568/direct-self-reference-leading-to-cycle-exception
-  LawModel initialLaw;
-  */
 
   /**
    * Date when this proposal reached its quorum.
@@ -124,24 +128,6 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
     return law.getId().compareTo(this.getId());
   }
 
-  /** enumeration of law status */
-  public enum LawStatus {
-    IDEA(0),            // An idea is a newly created proposal for a law that did not reach its quorum yet.
-    PROPOSAL(1),        // When an idea reaches its quorum, then it becomes a proposal and can join a poll.
-    ELABORATION(2),     // Proposal is part of a poll and can be discussed. Voting has not yet started.
-    VOTING(3),          // When the voting phase starts, the description of a proposals cannot be changed anymore.
-    LAW(4),             // The winning proposal becomes a law.
-    DROPPED(5),         // All other porposals in the poll are dropped.
-    RETENTION(6),       // When a law looses support, it is in the retention phase
-    RETRACTED(7);       // When a law looses support for too long, it will be retracted.
-    int statusId;
-    LawStatus(int id) { this.statusId = id; }
-  }
-
-  /** current status of this law */
-  @NotNull
-  @NonNull
-  public LawStatus status =  LawStatus.IDEA;
 
   /** The user that initially created the idea */
   @CreatedBy  // automatically handled by spring data jpa auditing

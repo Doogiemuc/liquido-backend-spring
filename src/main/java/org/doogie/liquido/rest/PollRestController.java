@@ -4,21 +4,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.BallotRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
-import org.doogie.liquido.model.BallotModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.rest.dto.JoinPollRequest;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.util.LiquidoRestUtils;
+import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.hateoas.Resource;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.*;
 
 /**
  * REST controller for working with Polls.
@@ -109,13 +108,18 @@ public class PollRestController {
 		return resourceAssembler.toResource(updatedPoll);
 	}
 
-	@RequestMapping("/polls/{id}/result")
-	public List getPollResult(@PathVariable PollModel poll) throws LiquidoException {
+	@RequestMapping(value = "/polls/{pollId}/result", produces = MediaType.APPLICATION_JSON_VALUE)
+	public @ResponseBody Lson getPollResult(@PathVariable(name="pollId") PollModel poll) throws LiquidoException {
   	if (poll == null)
   		throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "Cannot find poll with that id");
   	if (!PollModel.PollStatus.FINISHED.equals(poll.getStatus()))
 			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Poll.id="+poll.getId()+" is not in status FINISHED");
 
+		Lson pollResultsJson = pollService.calcPollResults(poll);
+
+		return pollResultsJson;
+
+		/*
 		List<BallotModel> ballots = ballotRepo.findByPoll(poll);
 
 		// For each place (1st, 2nd, ,3rd, ...) this list contains a mapping from the proposal.id to the
@@ -133,6 +137,8 @@ public class PollRestController {
 		}
 
 		return counts;
+
+		*/
 	}
 
 }
