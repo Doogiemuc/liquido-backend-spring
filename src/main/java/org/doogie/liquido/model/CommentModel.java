@@ -1,5 +1,6 @@
 package org.doogie.liquido.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -43,6 +44,7 @@ public class CommentModel extends BaseModel {
 	/** Parent comment that we reply to */
 	@ManyToOne
 	@JoinColumn(name = "parentId")
+	@JsonBackReference
 	public CommentModel parent;
 
 	/** list of replies to this comment */
