@@ -2,8 +2,10 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.OneTimeTokenRepo;
+import org.doogie.liquido.datarepos.TokenChecksumRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.jwt.JwtTokenProvider;
+import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.OneTimeToken;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
@@ -13,8 +15,6 @@ import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
-import org.springframework.data.rest.webmvc.PersistentEntityResource;
-import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -55,7 +55,7 @@ public class UserRestController {
 	ProxyService proxyService;
 
   @Autowired
-  OneTimeTokenRepo tokenRepo;
+  OneTimeTokenRepo ottRepo;
 
   @Autowired
 	JwtTokenProvider jwtTokenProvider;
@@ -99,7 +99,7 @@ public class UserRestController {
 	  String smsCode = String.valueOf(new Random().nextInt(9000)+ 1000);
 	  LocalDateTime validUntil = LocalDateTime.now().plusHours(1);  // login token via SMS is valid for one hour. That should be enough!
 		OneTimeToken oneTimeToken = new OneTimeToken(smsCode, user, OneTimeToken.TOKEN_TYPE.SMS, validUntil);
-		tokenRepo.save(oneTimeToken);
+		ottRepo.save(oneTimeToken);
 		log.debug("User "+user.getEmail()+" may login. Sending code via SMS.");
 	  if (springEnv.acceptsProfiles(Profiles.of("dev", "test"))) {
 		  return ResponseEntity.ok().header("code", smsCode).build();  // when debugging, return the code in the header
@@ -129,7 +129,7 @@ public class UserRestController {
 			return jwtTokenProvider.generateToken(user.getEmail());
 		}
 
-	  OneTimeToken oneTimeToken = tokenRepo.findByToken(code);
+	  OneTimeToken oneTimeToken = ottRepo.findByToken(code);
 	  if (oneTimeToken == null || mobile == null ||
         !mobile.equals(oneTimeToken.getUser().getProfile().getMobilephone()) ||
 	      !OneTimeToken.TOKEN_TYPE.SMS.equals(oneTimeToken.getTokenType())  )
@@ -139,12 +139,12 @@ public class UserRestController {
 		}
 
 	  if (LocalDateTime.now().isAfter(oneTimeToken.getValidUntil())) {
-	  	tokenRepo.delete(oneTimeToken);
+	  	ottRepo.delete(oneTimeToken);
 		  throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN, "This sms login code is expired.");
 	  }
 
 	  //---- delete used one time token
-		tokenRepo.delete(oneTimeToken);
+		ottRepo.delete(oneTimeToken);
 
     // return JWT token for this email
 		log.info("User "+oneTimeToken.getUser()+ "logged in with valid SMS code.");
@@ -168,7 +168,6 @@ public class UserRestController {
 		log.trace("<= GET numVotes(proxy=" + proxy +") = "+numVotes);
 		return numVotes;
 	}
-
 
 	//TODO: change a user's password => delete all tokens and checksums
 

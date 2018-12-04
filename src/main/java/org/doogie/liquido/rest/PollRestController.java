@@ -94,7 +94,7 @@ public class PollRestController {
 		// Now we would need to map the Spring Data Rest HATEOAS Uri to the actual entities.  But the clean solution is a bigger effort
 		// https://stackoverflow.com/questions/37186417/resolving-entity-uri-in-custom-controller-spring-hateoas
 		// https://stackoverflow.com/questions/49458567/mapping-hal-uri-in-requestbody-to-a-spring-data-rest-managed-entity
-	  // TODO: use the new Deserializes in JoinPollRequest.java
+	  // TODO: use the new Deserializers as in JoinPollRequest.java or the @JsonComponent
 
 		Long pollId = restUtils.getIdFromURI("polls", joinPollRequest.poll);
 		PollModel poll = pollRepo.findById(pollId)
