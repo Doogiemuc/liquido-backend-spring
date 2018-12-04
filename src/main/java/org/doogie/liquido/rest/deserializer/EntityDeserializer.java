@@ -3,6 +3,7 @@ package org.doogie.liquido.rest.deserializer;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
@@ -29,6 +30,7 @@ import java.io.IOException;
  *
  * @param <T> your JPA entity class
  */
+@Slf4j
 public class EntityDeserializer<T> extends StdDeserializer<T> {
 	//@Autowired
 	//private WebApplicationContext appContext;
@@ -55,8 +57,8 @@ public class EntityDeserializer<T> extends StdDeserializer<T> {
 				.orElseThrow(() -> new RuntimeException("Cannot find repo for "));
 		CrudRepository<T, Long> repo = (CrudRepository)obj;
 		*/
-
 		String uri = p.getValueAsString();
+		log.trace("Trying to deserialize a "+this.pathSegment+" from uri="+uri);
 		Long id = LiquidoRestUtils.getIdFromURI(this.pathSegment, uri);
 		T entity = repo.findById(id)
 			.orElseThrow(() -> new RuntimeException("Cannot find entity at uri="+uri));

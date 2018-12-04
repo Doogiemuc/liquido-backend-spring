@@ -1,6 +1,7 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.datarepos.TokenChecksumRepo;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.TokenChecksumModel;
 import org.doogie.liquido.model.UserModel;
@@ -30,6 +31,10 @@ public class ProxyRestController {
 
 	@Autowired
 	ProxyService proxyService;
+
+	@Autowired
+	TokenChecksumRepo checksumRepo;
+
 
 	@Autowired
 	LiquidoAuditorAware liquidoAuditorAware;
@@ -124,6 +129,19 @@ public class ProxyRestController {
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to delete proxy!"));
 		log.info("deleteProxy(voter="+currentUser+", area="+area+")");
 		proxyService.removeProxy(area, currentUser, currentUser.getPasswordHash());
+	}
+
+	@RequestMapping("/checksumOfPublicProxy")
+	public ResponseEntity getChecksumOfPublicProxy(@RequestParam("area") AreaModel area, @RequestParam("proxy") UserModel proxy) throws LiquidoException {
+		if (area == null) return ResponseEntity.badRequest().body("Need area");
+		if (proxy == null) return ResponseEntity.badRequest().body("Need proxy");
+		log.trace("=> GET /checksumOfPublicProxy?area="+area+"&proxy="+proxy);
+
+		TokenChecksumModel checksum = checksumRepo.findByAreaAndPublicProxy(area, proxy);
+		if (checksum == null) ResponseEntity.notFound();  // user is not a public proxy in that area
+
+		log.trace("<= GET GET /checksumOfPublicProxy?area="+area.getId()+"&proxy="+proxy.getId()+ " returns checksum="+checksum.getChecksum());
+		return ResponseEntity.ok(checksum);
 	}
 
 }

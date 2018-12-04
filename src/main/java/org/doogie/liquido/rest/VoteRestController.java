@@ -42,8 +42,8 @@ public class VoteRestController {
 	 */
 	@RequestMapping(value = "/my/voterToken", method = RequestMethod.GET)
 	public @ResponseBody Map getVoterToken(
-			@RequestParam("area")AreaModel area,
-			@RequestParam("publicProxy") String publicProxy,
+			@RequestParam("area") AreaModel area,
+			@RequestParam("publicProxy") Boolean publicProxy,
 			Authentication auth   //TODO: TEST injection Auth in combination with JWT
 			//@AuthenticationPrincipal(expression = "liquidoUserModel") UserModel liquidoUserModel    // <==== DOES NOT WORK
 			// injecting the AuthenticationPrincipal did not work for me. I do not know why.   But liquidoAuditorAware works, and is also great for testing:
@@ -53,7 +53,8 @@ public class VoteRestController {
 				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get voterToken!"));			// [SECURITY]  This check is extremely important! Only valid users are allowed to get a voterToken
 		log.info(user+" requests his voterToken for area "+area);
 
-		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(user, area, user.getPasswordHash(), "true".equalsIgnoreCase(publicProxy));   // preconditions are checked inside castVoteService
+		//TODO: no more passwords!   Or maybe in this case the user could send a (hashed) password just for this voterToken
+		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(user, area, user.getPasswordHash(), publicProxy);   // preconditions are checked inside castVoteService
 
 		Map<String, String> result = new HashMap<>();
 		result.put("voterToken", voterToken);
@@ -61,40 +62,39 @@ public class VoteRestController {
 	}
 
 
-
-		/**
-		 * Post a ballot, called when a User casts his vote.
-		 * Each ballot is signed with a voter's token. When a user is proxy for some other users, then this method
-		 * will builder one ballot for each ballotToken that has been assigned to this proxy.
-		 *
-		 * This endpoint must be used instead of the default HATEOAS POST endpoint for /ballots!
-		 * http://docs.spring.io/spring-data/rest/docs/current/reference/html/#customizing-sdr.overriding-sdr-response-handlers
-		 *
-		 * Example JSON payload:
-		 * <pre>
-		 *  {
-		 *    "poll": "/liquido/v2/polls/4711",
-		 *    "voterTokens": [
-		 *      "asdfv532sasdfsf...",    // users own voterToken
-		 *      "aasf341sdvvdaaa...",    // one token per delegee if user is a proxy
-		 *      [...]
-		 *    ],
-		 *    "voteOrder": [
-		 *      "/liquido/v2/laws/42",
-		 *      "/liquido/v2/laws/43"
-		 *    ]
-		 *  }
-		 * </pre>
-		 *
-		 * @param castVoteRequest the posted ballot as a REST resource
-		 * @return on success JSON:
-		 *   {
-		 *     "msg": "OK, your ballot was counted.",
-		 *     "delegees": "0",
-		 *     "checksumModel": "$2a$10$1IdrGrRAN2Wp3U7QI.JIzueBtPrEreWk1ktFJ3l61Tyv4TC6ICLp2",
-		 *     "poll": "/polls/253"
-		 *   }
-		 */
+	/**
+	 * Post a ballot, called when a User casts his vote.
+	 * Each ballot is signed with a voter's token. When a user is proxy for some other users, then this method
+	 * will builder one ballot for each ballotToken that has been assigned to this proxy.
+	 *
+	 * This endpoint must be used instead of the default HATEOAS POST endpoint for /ballots!
+	 * http://docs.spring.io/spring-data/rest/docs/current/reference/html/#customizing-sdr.overriding-sdr-response-handlers
+	 *
+	 * Example JSON payload:
+	 * <pre>
+	 *  {
+	 *    "poll": "/liquido/v2/polls/4711",
+	 *    "voterTokens": [
+	 *      "asdfv532sasdfsf...",    // users own voterToken
+	 *      "aasf341sdvvdaaa...",    // one token per delegee if user is a proxy
+	 *      [...]
+	 *    ],
+	 *    "voteOrder": [
+	 *      "/liquido/v2/laws/42",
+	 *      "/liquido/v2/laws/43"
+	 *    ]
+	 *  }
+	 * </pre>
+	 *
+	 * @param castVoteRequest the posted ballot as a REST resource
+	 * @return on success JSON:
+	 *   {
+	 *     "msg": "OK, your ballot was counted.",
+	 *     "delegees": "0",
+	 *     "checksumModel": "$2a$10$1IdrGrRAN2Wp3U7QI.JIzueBtPrEreWk1ktFJ3l61Tyv4TC6ICLp2",
+	 *     "poll": "/polls/253"
+	 *   }
+	 */
   @RequestMapping(value = "/castVote", method = RequestMethod.POST)   // @RequestMapping(value = "somePath") here on type/method level does not work with @RepositoryRestController. But it seems to work with BasePathAwareController
   @ResponseStatus(HttpStatus.CREATED)
   public @ResponseBody Map castVote(@RequestBody CastVoteRequest castVoteRequest) throws LiquidoException {
