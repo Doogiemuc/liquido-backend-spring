@@ -22,8 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Date;
+import java.util.List;
 
 import static org.quartz.JobBuilder.newJob;
 import static org.quartz.TriggerBuilder.newTrigger;
@@ -208,13 +208,14 @@ public class PollService {
     return winningProposal;
   }
 
+
   public Lson calcPollResults(PollModel poll) {
 		List<BallotModel> ballots = ballotRepo.findByPoll(poll);
 		Matrix duelMatrix = RankedPairVoting.calcDuelMatrix(poll, ballots);
 		Lson lson = Lson.builder()
 				.put("winner", poll.getWinner())
 				.put("numBallots", ballots.size())
-				.put("duelMatrix", duelMatrix)
+				.put("duelMatrix", duelMatrix.getRawData())
 				;
 		return lson;
 	}
