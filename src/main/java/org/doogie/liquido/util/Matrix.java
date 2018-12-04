@@ -24,6 +24,8 @@ public class Matrix {
 		return this.data[i][j];
 	}
 
+	public int[][] getRawData() { return this.data; }
+
 	public void set(int i, int j, int val) {
 		this.data[i][j] = val;
 	}
