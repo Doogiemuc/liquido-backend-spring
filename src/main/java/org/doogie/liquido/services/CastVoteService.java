@@ -1,10 +1,7 @@
 package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.datarepos.BallotRepo;
-import org.doogie.liquido.datarepos.LawRepo;
-import org.doogie.liquido.datarepos.PollRepo;
-import org.doogie.liquido.datarepos.TokenChecksumRepo;
+import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.util.DoogiesUtil;
@@ -13,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -29,6 +27,9 @@ public class CastVoteService {
 
 	@Autowired
 	PollRepo pollRepo;
+
+	@Autowired
+	DelegationRepo delegationRepo;
 
 	@Autowired
 	LawRepo lawRepo;
@@ -68,32 +69,66 @@ public class CastVoteService {
 	 *
 	 * <h3>Implementation notes</h3>
 	 * <pre>
-	 *   voterToken = hash(user.id + passwordHash + area.id + serverSecret)
+	 *   voterToken = hash(user.id + voterTokenSecret + area.id + serverSecret)
 	 *   checksum   = hash(voterToken + serverSecret)
 	 * </pre>
 	 *
 	 * When creating new voterTokens, then we do not calculate a new BCrypt salt. Because a voter might request his voterToken
 	 * multiple times. And we have to return the same voterToken every time.
 	 *
-	 * @param user the currently logged in and correctly authenticated user
+	 * @param voter the currently logged in and correctly authenticated user
 	 * @param area an area that the user's want's to vote in
-	 * @param passwordHash  user's hashed password
-	 * @param becomePublicProxy true if voter immediately wants to become a public proxy. Voter can also decide later with {@link ProxyService#becomePublicProxy
+	 * @param voterTokenSecret  a secret that only the user knows. So no one else can create this voterToken. May be emtpy string, but then with less security.
+	 * @param publicProxy true if voter wants to become (or stay) a public proxy. Voter can also decide later with {@link ProxyService#becomePublicProxy
 	 * @return user's voterToken, that only the user must know, and that will hash to the stored checksumModel.
 	 */
-	public String createVoterTokenAndStoreChecksum(UserModel user, AreaModel area, String passwordHash, boolean becomePublicProxy) throws LiquidoException {
-		log.debug("createVoterTokenAndStoreChecksum: for "+user+" in "+area);
-		if (user == null || DoogiesUtil.isEmpty(user.getEmail()) || area == null || passwordHash == null)
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need user, area and passwordHash to builder a voterToken!");
+	@Transactional
+	public String createVoterTokenAndStoreChecksum(UserModel voter, AreaModel area, String voterTokenSecret, boolean publicProxy) throws LiquidoException {
+		log.debug("createVoterTokenAndStoreChecksum: for "+voter+" in "+area);
+		if (voter == null || DoogiesUtil.isEmpty(voter.getEmail()) || voterTokenSecret == null || area == null)
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need user, area and voterTokenSecret to builder a voterToken!");
 		// Create a new voterToken for this user in that area with the BCRYPT hashing algorithm
 		// Remark: Bcrypt prepends the salt into the returned token value!!!
-		String voterToken =    calcVoterToken(user.getId(), passwordHash, area.getId());    // voterToken that only this user must know
-		String tokenChecksum = calcChecksumFromVoterToken(voterToken);                                // checksum of voterToken that can only be generated from the users voterToken and only by the server.
-		TokenChecksumModel checksumModel = checksumRepo.findByChecksum(tokenChecksum);
-		if (checksumModel == null) {
-			checksumModel = new TokenChecksumModel(tokenChecksum, area);
+		String voterToken =    calcVoterToken(voter.getId(), voterTokenSecret, area.getId());   // voterToken that only this user must know
+		String tokenChecksum = calcChecksumFromVoterToken(voterToken);                          // checksum of voterToken that can only be generated from the users voterToken and only by the server.
+		TokenChecksumModel checksumModel = checksumRepo.findByChecksum(tokenChecksum);					// may return NULL
+
+		//   IF there is a an already existing checksum for that voter as public proxy
+		//  AND the calculated checksum does not match it,
+		// THEN the user has changed his voterTokenSecret
+		//  AND we must invalidate (delete) the old checksum.
+		//  AND we must delete all delegations.
+		TokenChecksumModel existingChecksumOfPublicProxy = checksumRepo.findByAreaAndPublicProxy(area, voter);
+		if (existingChecksumOfPublicProxy != null && !existingChecksumOfPublicProxy.equals(checksumModel)) {
+			log.trace("Voter changed his voterTokenSecret. Replacing old checksum of former public proxy with new one.");
+
+			throw new RuntimeException("Change of Voter token is NOT YET IMPLEMENTED!");
+			/*
+			List<DelegationModel> delegations = delegationRepo.findByAreaAndToProxy(area, voter);
+			List<TokenChecksumModel> delegees = checksumRepo.findByDelegatedTo(existingChecksumOfPublicProxy);
+			if (publicProxy) {
+				for(TokenChecksumModel delegatedChecksum : delegees) {
+					delegatedChecksum.setDelegatedTo(checksumModel);
+					checksumRepo.save(delegatedChecksum);
+				}
+			} else {
+				for(TokenChecksumModel delegatedChecksum : delegees) {
+					delegatedChecksum.setDelegatedTo(null);
+					checksumRepo.save(delegatedChecksum);
+				}
+				delegationRepo.deleteAll(delegations);
+			}
+			checksumRepo.delete(existingChecksumOfPublicProxy);
+			*/
 		}
-		if (becomePublicProxy) checksumModel.setPublicProxy(user);   // if voter wants to become a public proxy, otherwiese do nothing. (User may already be a public proxy!)
+
+		if (checksumModel == null) {
+			log.trace("  Create a new checksum");
+			checksumModel = new TokenChecksumModel(tokenChecksum, area);
+		} else {
+			log.trace("  Updating existing "+checksumModel);
+		}
+		if (publicProxy) checksumModel.setPublicProxy(voter);   // if voter wants to become a public proxy, otherwiese do nothing. (User may already be a public proxy!)
 		checksumModel.setExpiresAt(LocalDateTime.now().plusHours(checksumExpirationHours));
 		TokenChecksumModel savedChecksumModel1 = checksumRepo.save(checksumModel);
 
@@ -126,12 +161,10 @@ public class CastVoteService {
 	 * @return the existing checksum of that user in that area
 	 * @throws LiquidoException when user does not yet have a voterToken or checksum in that area
 	 */
-	public TokenChecksumModel getExistingChecksum(UserModel user, String passwordHash, AreaModel area) throws LiquidoException {
-		String voterToken = calcVoterToken(user.getId(), passwordHash, area.getId());
+	public TokenChecksumModel getExistingChecksum(UserModel user, String userTokenSecret, AreaModel area) throws LiquidoException {
+		String voterToken = calcVoterToken(user.getId(), userTokenSecret, area.getId());
 		return isVoterTokenValidAndGetChecksum(voterToken);
 	}
-
-	//TODO: When user changes his passwords, then invalidate all his tokens!!!
 
 
 	/**
@@ -145,12 +178,14 @@ public class CastVoteService {
 	 */
 	public BallotModel castVote(CastVoteRequest castVoteRequest) throws LiquidoException {
 		log.debug("castVote: "+ castVoteRequest);
+		if (castVoteRequest.getVoteOrder() == null || castVoteRequest.getVoteOrder().size() == 0)
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Empty voteOrder");
 
 		TokenChecksumModel checksumModel = isVoterTokenValidAndGetChecksum(castVoteRequest.getVoterToken());
 		if (checksumModel == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Your voter token seems to be invalid!");
 
 		// load models for URIs in castVoteRequst
-		//TODO: !!! Should I move loading of models up into the REST controller? As I did it for PollRestController? Should a REST controller directly handle repos? Or should only the service handle repos?  See: RestUtils.class
+		//TODO: use *Deserializers as in AssignProxyRequest
 		Long pollId = restUtils.getIdFromURI("polls", castVoteRequest.getPoll());
 		PollModel poll = pollRepo.findById(pollId)
 				.orElseThrow(()->new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot find poll with poll.id="+pollId));
@@ -201,7 +236,7 @@ public class CastVoteService {
 		//----- If there is no existing ballot yet with that checksum, then builder a completely new one.
 		BallotModel existingBallot = ballotRepo.findByPollAndChecksum(newBallot.getPoll(), newBallot.getChecksum());
 		if (existingBallot == null) {
-			log.trace("  Inserting new ballot");
+			log.trace("  Insert new ballot");
 			existingBallot = ballotRepo.save(newBallot);
 		} else {
 			//----- Proxy must not overwrite a voter's own vote  OR  a vote from a proxy below
@@ -210,7 +245,7 @@ public class CastVoteService {
 				return null;
 			}
 
-			log.trace("  Updating existing ballot");
+			log.trace("  Update existing ballot "+existingBallot.getId());
 			existingBallot.setVoteOrder(newBallot.getVoteOrder());
 			existingBallot.setLevel(newBallot.getLevel());
 			if (!existingBallot.getChecksum().equals(newBallot.getChecksum()))
@@ -280,8 +315,8 @@ public class CastVoteService {
 
 	}
 
-	private String calcVoterToken(Long userId, String passwordHash, Long areaId) {
-		return BCrypt.hashpw(userId + passwordHash + areaId + serverSecret, bcryptSalt);
+	private String calcVoterToken(Long userId, String userTokenSecret, Long areaId) {
+		return BCrypt.hashpw(userId + userTokenSecret + areaId + serverSecret, bcryptSalt);
 	}
 
 	/**

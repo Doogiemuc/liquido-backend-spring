@@ -43,6 +43,7 @@ public class VoteRestController {
 	@RequestMapping(value = "/my/voterToken", method = RequestMethod.GET)
 	public @ResponseBody Map getVoterToken(
 			@RequestParam("area") AreaModel area,
+			@RequestParam("tokenSecret") String tokenSecret,
 			@RequestParam("publicProxy") Boolean publicProxy,
 			Authentication auth   //TODO: TEST injection Auth in combination with JWT
 			//@AuthenticationPrincipal(expression = "liquidoUserModel") UserModel liquidoUserModel    // <==== DOES NOT WORK
@@ -53,8 +54,7 @@ public class VoteRestController {
 				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get voterToken!"));			// [SECURITY]  This check is extremely important! Only valid users are allowed to get a voterToken
 		log.info(user+" requests his voterToken for area "+area);
 
-		//TODO: no more passwords!   Or maybe in this case the user could send a (hashed) password just for this voterToken
-		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(user, area, user.getPasswordHash(), publicProxy);   // preconditions are checked inside castVoteService
+		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(user, area, tokenSecret, publicProxy);   // preconditions are checked inside castVoteService
 
 		Map<String, String> result = new HashMap<>();
 		result.put("voterToken", voterToken);

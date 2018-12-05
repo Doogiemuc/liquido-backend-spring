@@ -14,8 +14,15 @@ import java.util.Collection;
 public class LiquidoAuthUser extends User {  // org.springframework.security.core.userdetails.User implements UserDetails, CredentialsContainer
   private UserModel liquidoUserModel;
 
-  public LiquidoAuthUser(String username, String password, Collection<? extends GrantedAuthority> authorities, @NonNull UserModel liquidoUserModel) {
-    super(username, password, authorities);
+  /**
+   * Create a new Liquido authentication user that contains a custom liquidoUserModel.
+   * No password here!
+   * @param username
+   * @param authorities
+   * @param liquidoUserModel
+   */
+  public LiquidoAuthUser(String username, Collection<? extends GrantedAuthority> authorities, @NonNull UserModel liquidoUserModel) {
+    super(username, "", authorities);
     this.liquidoUserModel = liquidoUserModel;
   }
 

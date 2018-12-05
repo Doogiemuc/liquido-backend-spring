@@ -22,8 +22,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
-import org.springframework.security.crypto.factory.PasswordEncoderFactories;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +30,7 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.doogie.liquido.model.LawModel.LawStatus;
 
@@ -80,7 +79,7 @@ public class TestDataCreator implements CommandLineRunner {
 
   @Autowired
   UserRepo userRepo;
-  Map<String, UserModel> users = new HashMap<>();  // users by their email adress
+  Map<String, UserModel> usersMap = new HashMap<>();  // usersMap by their email adress
 
   @Autowired
   AreaRepo areaRepo;
@@ -154,23 +153,23 @@ public class TestDataCreator implements CommandLineRunner {
     for(String arg : args) {
       if (("--"+ SEED_DB_PARAM).equalsIgnoreCase(arg)) { seedDB = true; }
     }
-		seedDB = seedDB ||springEnv.acceptsProfiles(Profiles.of("test"));   // run seedDB for TEST profile
     if (seedDB) {
 			log.info("===== START TestDataCreator");
       log.debug("Create test data from scratch via spring-data for DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
-      seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX, TestFixtures.TESTUSER_PASSWORD);
-      auditorAware.setMockAuditor(this.users.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
+      seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX);
+      auditorAware.setMockAuditor(this.usersMap.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
       //seedGlobalProperties();
       seedAreas();
+      AreaModel area = this.areas.get(0);
       seedProxies(TestFixtures.delegations);
       seedIdeas();
       seedProposals();
-      seedPollInElaborationPhase(TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
-      seedPollInVotingPhase(TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
-			seedPollFinished(TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
+			seedPollInElaborationPhase(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
+			seedPollInVotingPhase(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
+			seedPollFinished(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
       seedLaws();
-      seedVotes();
+
       auditorAware.setMockAuditor(null);
 
 			log.info("===== TestDataCreator: Store sample data in file: "+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME);
@@ -180,7 +179,7 @@ public class TestDataCreator implements CommandLineRunner {
       log.info("===== TestDataCreator FINISHED");
     }
 
-    boolean loadSampleDataFromSqlScript = "true".equalsIgnoreCase(springEnv.getProperty(LOAD_SAMPLE_DB_PARAM));;
+    boolean loadSampleDataFromSqlScript = Boolean.parseBoolean(springEnv.getProperty(LOAD_SAMPLE_DB_PARAM));
     if (loadSampleDataFromSqlScript) {
 			try {
 				log.info("TestDataCreator: Loading schema and sample data from "+ SAMPLE_DATA_FILENAME);
@@ -204,13 +203,13 @@ public class TestDataCreator implements CommandLineRunner {
   }
   */
 
-  public Map<String, UserModel> seedUsers(int numUsers, String mailPrefix, String password) {
+  public Map<String, UserModel> seedUsers(int numUsers, String mailPrefix) {
     log.info("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
-    this.users = new HashMap<>();
+    this.usersMap = new HashMap<>();
 
-    /** Hashing a password takes time. So all test users have the same password to speed TestDataCreator up alot. */
-	  PasswordEncoder passwordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();   // Springs default password encoder uses "bcrypt"
-		String hashedPassword = passwordEncoder.encode(password);           // Password encoding takes a second! And it should take a second, for security reasons!
+    /** Hashing a password takes time. So all test usersMap have the same password to speed TestDataCreator up alot. */
+	  //PasswordEncoder passwordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();   // Springs default password encoder uses "bcrypt"
+		//String hashedPassword = passwordEncoder.encode(password);           // Password encoding takes a second! And it should take a second, for security reasons!
 
     for (int i = 0; i < numUsers; i++) {
       String email = mailPrefix + (i+1) + "@liquido.de";    // Remember that DB IDs start at 1. Testuser1 has ID=1 in DB. And there is no testuser0
@@ -233,10 +232,10 @@ public class TestDataCreator implements CommandLineRunner {
       }
 
       UserModel savedUser = userRepo.save(newUser);
-      this.users.put(savedUser.getEmail(), savedUser);
+      this.usersMap.put(savedUser.getEmail(), savedUser);
       if (i==0) auditorAware.setMockAuditor(savedUser);   // prevent some warnings
     }
-    return this.users;
+    return this.usersMap;
   }
 
   /**
@@ -246,7 +245,7 @@ public class TestDataCreator implements CommandLineRunner {
     log.info("Seeding Areas ...");
     this.areas = new ArrayList<>();
 
-    UserModel createdBy = this.users.get(TestFixtures.USER1_EMAIL);
+    UserModel createdBy = this.usersMap.get(TestFixtures.USER1_EMAIL);
 
     for (int i = 0; i < TestFixtures.NUM_AREAS; i++) {
       String areaTitle = "Area " + i;
@@ -276,14 +275,14 @@ public class TestDataCreator implements CommandLineRunner {
 
 		AreaModel area = areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
     for(String[] delegationData: delegations) {
-      UserModel fromUser   = users.get(delegationData[0]);
-      UserModel toProxy    = users.get(delegationData[1]);
+      UserModel fromUser   = usersMap.get(delegationData[0]);
+      UserModel toProxy    = usersMap.get(delegationData[1]);
       boolean   transitive = "true".equalsIgnoreCase(delegationData[2]);
       try {
 
 	      if (!isPublicProxy(area, toProxy))
-		      castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, toProxy.getPasswordHash(), true);
-				String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, fromUser.getPasswordHash(), true);
+		      castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, TestFixtures.USER_TOKEN_SECRET, true);
+				String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, TestFixtures.USER_TOKEN_SECRET, true);
 	      TokenChecksumModel voterChecksumModel = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, transitive);
 	      log.debug("Created delegation from "+fromUser+ "(checksum="+voterChecksumModel.getChecksum()+") -> to proxy " + toProxy + " (checksum="+voterChecksumModel.getDelegatedTo().getChecksum()+")");
       } catch (LiquidoException e) {
@@ -360,7 +359,7 @@ public class TestDataCreator implements CommandLineRunner {
     }
     // make sure, that testuser0 has at least 5 proposals
     for (int i = 0; i < 5; i++) {
-			UserModel createdBy = this.users.get(TestFixtures.USER1_EMAIL);
+			UserModel createdBy = this.usersMap.get(TestFixtures.USER1_EMAIL);
     	String title = "Proposal " + i + " for user "+createdBy.getEmail();
       String description = getLoremIpsum(100,400);
       AreaModel area = this.areas.get(rand.nextInt(TestFixtures.NUM_AREAS));
@@ -380,10 +379,10 @@ public class TestDataCreator implements CommandLineRunner {
    * @return the idea with the added supporters. The idea might have reached its quorum and now be a proposal
    */
   private LawModel addSupportersToIdea(@NonNull LawModel idea, int num) {
-    if (num >= users.size()-1) throw new RuntimeException("Cannot at "+num+" supporters to idea. There are not enough users.");
+    if (num >= usersMap.size()-1) throw new RuntimeException("Cannot at "+num+" supporters to idea. There are not enough usersMap.");
     // https://stackoverflow.com/questions/8378752/pick-multiple-random-elements-from-a-list-in-java
     LinkedList<UserModel> otherUsers = new LinkedList<>();
-    for (UserModel user: this.users.values()) {
+    for (UserModel user: this.usersMap.values()) {
       if (!user.equals(idea.getCreatedBy()))   otherUsers.add(user);
     }
     Collections.shuffle(otherUsers);
@@ -433,13 +432,12 @@ public class TestDataCreator implements CommandLineRunner {
    * @return the poll in elaboration as it has been stored into the DB.
    */
   @Transactional
-  private PollModel seedPollInElaborationPhase(int numProposals) {
+  private PollModel seedPollInElaborationPhase(AreaModel area, int numProposals) {
     log.info("Seeding one poll in elaboration phase ...");
-    if (numProposals > this.users.size())
-    	throw new RuntimeException("Cannot seedPollInElaborationPhase. Need at least "+TestFixtures.NUM_ALTERNATIVE_PROPOSALS+" distinct users");
+    if (numProposals > this.usersMap.size())
+    	throw new RuntimeException("Cannot seedPollInElaborationPhase. Need at least "+TestFixtures.NUM_ALTERNATIVE_PROPOSALS+" distinct usersMap");
 
     try {
-      AreaModel area = this.areas.get(0);
       String title, desc;
       UserModel createdBy;
 
@@ -476,10 +474,10 @@ public class TestDataCreator implements CommandLineRunner {
    * Seed a poll that already is in its voting phase.
    *   Will build upon a seedPollInElaborationPhase and then start the voting phase via pollService.
    */ 
-  public PollModel seedPollInVotingPhase(int numProposals) {
+  public PollModel seedPollInVotingPhase(AreaModel area, int numProposals) {
     log.info("Seeding one poll in voting phase ...");
     try {
-      PollModel poll = seedPollInElaborationPhase(numProposals);
+      PollModel poll = seedPollInElaborationPhase(area, numProposals);
       int i = 1;
       for(LawModel proposal: poll.getProposals()) {
         proposal.setTitle("Proposal "+i+" in voting phase "+System.currentTimeMillis());
@@ -494,18 +492,21 @@ public class TestDataCreator implements CommandLineRunner {
       LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
       savedPoll.setVotingStartAt(yesterday);
 			savedPoll.setVotingEndAt(yesterday.truncatedTo(ChronoUnit.DAYS).plusDays(props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE)));     //voting ends in n days at midnight
-      PollModel finalPoll = pollRepo.save(savedPoll);
-      return finalPoll;
+      savedPoll = pollRepo.save(savedPoll);
+
+			seedVotes(savedPoll, TestFixtures.NUM_VOTES);
+
+      return savedPoll;
     } catch (Exception e) {
       log.error("Cannot seed Poll in voting phase: " + e);
       throw new RuntimeException("Cannot seed Poll in voting phase", e);
     }
   }
 
-  public void seedPollFinished(int numProposals) {
+  public void seedPollFinished(AreaModel area, int numProposals) {
 		log.info("Seeding one finished poll  ...");
 		try {
-			PollModel poll = seedPollInVotingPhase(numProposals);
+			PollModel poll = seedPollInVotingPhase(area, numProposals);
 
 			//---- fake some dates to be in the past
 			int daysFinished = 5;  // poll was finished 5 days ago
@@ -533,7 +534,7 @@ public class TestDataCreator implements CommandLineRunner {
   public void seedLaws() {
     log.info("Seeding laws");
     AreaModel area = this.areas.get(0);
-    UserModel createdBy = this.users.get(TestFixtures.USER1_EMAIL);
+    UserModel createdBy = this.usersMap.get(TestFixtures.USER1_EMAIL);
     auditorAware.setMockAuditor(createdBy);
 
     // These laws are not linked to a poll.      At the moment I do not need that yet...
@@ -606,33 +607,40 @@ public class TestDataCreator implements CommandLineRunner {
     model.setUpdatedAt(daysAgo);
   }
 
-  public void seedVotes() {
-    log.info("Seeding votes ...");
+  public void seedVotes(PollModel pollInVoting, int numVotes) {
+    log.info("Seeding votes for "+pollInVoting);
+    if (TestFixtures.NUM_USERS < numVotes)
+    	throw new RuntimeException("Cannot seed "+numVotes+" votes, because there are only "+TestFixtures.NUM_USERS+" test usersMap.");
+    if (!PollModel.PollStatus.VOTING.equals(pollInVoting.getStatus()))
+			throw new RuntimeException("Cannot seed votes. Poll must be in status "+ PollModel.PollStatus.VOTING);
+  	if (pollInVoting.getNumCompetingProposals() < 2) throw new RuntimeException("Cannot seed votes. Poll in voting must have at least two proposals.");
 
-    List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
-    if (polls.size() == 0) throw new RuntimeException("cannot seed votes. There is no poll in voting phase.");
-    PollModel pollInVoting = polls.get(0);
-    if (pollInVoting.getNumCompetingProposals() < 2) throw new RuntimeException("Cannot seed votes. Poll in voting must have at least two proposals.");
-
-    log.debug(pollInVoting.toString());
-
-    UserModel voter = users.get(TestFixtures.USER1_EMAIL);
 		String pollURI = basePath+"/polls/"+pollInVoting.getId();
-		Iterator<LawModel> proposals = pollInVoting.getProposals().iterator();
-    List<String> voteOrder = new ArrayList<>();
-    voteOrder.add(basePath+"/laws/"+proposals.next().getId());		// CastVoteRequest contains URIs not full LawModels
-    voteOrder.add(basePath+"/laws/"+proposals.next().getId());
+		Long firstId = pollInVoting.getProposals().first().getId();
 
-    // Now we use the original CastVoteService to get a voterToken and cast our vote.
-    try {
-    	auditorAware.setMockAuditor(voter);
-			String voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, pollInVoting.getArea(), voter.getPasswordHash(), true);
-			auditorAware.setMockAuditor(null);
-			CastVoteRequest castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
-			castVoteService.castVote(castVoteRequest);
-		} catch (LiquidoException e) {
-    	log.error("Cannot seedVotes: "+e);
-		}
+		this.usersMap.values().stream().limit(numVotes).forEach(voter -> {
+			// Create a random voteOrder. Get some proposal URIs in random order
+			List<String> voteOrder = pollInVoting.getProposals().stream()
+					.filter(p -> rand.nextInt(10) > 0)					// keep 90% of the candidates
+					.sorted((p1, p2) -> rand.nextInt(2) - 1)
+					.map(p -> basePath+"/laws/"+p.getId() )
+					.collect(Collectors.toList());
+
+			// voteOrder MUST at least contain one proposal!
+			if (voteOrder.size() == 0) voteOrder.add(basePath+"/laws"+firstId);
+
+			// Now we use the original CastVoteService to get a voterToken and cast our vote.
+			try {
+				auditorAware.setMockAuditor(voter);
+				String voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, pollInVoting.getArea(), TestFixtures.USER_TOKEN_SECRET, true);
+				auditorAware.setMockAuditor(null); // MUST cast vote anonymously!
+				CastVoteRequest castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
+				BallotModel ballotModel = castVoteService.castVote(castVoteRequest);
+				log.trace("Vote casted "+ballotModel);
+			} catch (LiquidoException e) {
+				log.error("Cannot seed a vote: " + e);
+			}
+  	});
   }
 
 
@@ -648,18 +656,14 @@ public class TestDataCreator implements CommandLineRunner {
 	 * get one random UserModel
 	 * @return a random user
 	 */
-	public UserModel randUser() {
-		Object[] entries = users.values().toArray();
+	private UserModel randUser() {
+		Object[] entries = usersMap.values().toArray();
 		return (UserModel)entries[rand.nextInt(entries.length)];
 	}
 
-	public UserModel getUser(int i) {
-		Object[] entries = users.values().toArray();
+	private UserModel getUser(int i) {
+		Object[] entries = usersMap.values().toArray();
 		return (UserModel)entries[i];
-	}
-
-	public AreaModel getArea(int i) {
-		return areas.get(i);
 	}
 
   private static final String loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, nam urna. Vitae aenean velit, voluptate velit rutrum. Elementum integer rhoncus rutrum morbi aliquam metus, morbi nulla, nec est phasellus dolor eros in libero. Volutpat dui feugiat, non magna, parturient dignissim lacus ipsum in adipiscing ut. Et quis adipiscing perferendis et, id consequat ac, dictum dui fermentum ornare rhoncus lobortis amet. Eveniet nulla sollicitudin, dolore nullam massa tortor ullamcorper mauris. Lectus ipsum lacus.\n" +

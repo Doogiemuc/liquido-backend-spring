@@ -11,14 +11,17 @@ import java.util.List;
 public class TestFixtures {
 
 	public static final int NUM_USERS = 20;
+	public static final int NUM_VOTES = 15;			// number of casted votes.  Must be smaller than NUM_USERS!
 	public static final  int NUM_AREAS = 10;
 	public static final int NUM_IDEAS = 111;
 	public static final  int NUM_PROPOSALS = 50;
 	public static final  int NUM_ALTERNATIVE_PROPOSALS = 5;   // proposals in poll
 	public static final  int NUM_LAWS = 2;
 
+	public static final String AREA0_TITLE = "Area 0";
+	public static final String AREA1_TITLE = "Area 1";
+
 	public static final String MAIL_PREFIX = "testuser";
-	
   public static final String USER1_EMAIL = MAIL_PREFIX+"1@liquido.de";      // testuser1 has  ID 1 in the DB !
   public static final String USER2_EMAIL = MAIL_PREFIX+"2@liquido.de";
   public static final String USER3_EMAIL = MAIL_PREFIX+"3@liquido.de";
@@ -26,19 +29,23 @@ public class TestFixtures {
   public static final String USER5_EMAIL = MAIL_PREFIX+"5@liquido.de";
 	public static final String USER6_EMAIL = MAIL_PREFIX+"6@liquido.de";
 
-	/* password for all created users. This password will be sent as BasicAuth. It will be hashed when stored in the DB. */
-  public static final String TESTUSER_PASSWORD = "dummyPassword";
+	/* password for all created usersMap. This password will be sent as BasicAuth. It will be hashed when stored in the DB. */
+  //public static final String TESTUSER_PASSWORD = "dummyPassword";
 
-	public static final String AREA0_TITLE = "Area 0";
-  public static final String AREA1_TITLE = "Area 1";
+  /** this secret is used when user requests a voter token */
+	public static final String USER_TOKEN_SECRET = "userTokenSecret";
 
-  /* Example data for delegations:
 
-	          user1
-	        /   |   \
-	   user2  user3  user4
-	                 /  (\)   <---- 6->4  non-transitive
-	             user5  user6
+
+
+
+	/* Example data for delegations:
+
+						user1
+					/   |   \
+		 user2  user3  user4
+									 /  (\)   <---- 6->4  non-transitive
+							 user5  user6
 	 */
   // This test data must match RestEndpointTests.testGetProxyMap()  and ProxyServiceTests.testGetNumVotes !!!
   public static List<String[]> delegations = new ArrayList<>();
