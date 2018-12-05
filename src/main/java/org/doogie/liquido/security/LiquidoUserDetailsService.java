@@ -61,10 +61,11 @@ public class LiquidoUserDetailsService implements UserDetailsService {
 
     UserModel userModel = userRepo.findByEmail(email);
     if (userModel == null) throw new UsernameNotFoundException("Could not find user '"+email+"'");
-    if (DoogiesUtil.isEmpty(userModel.getEmail()) || DoogiesUtil.isEmpty(userModel.getPasswordHash()))
-    	throw new UsernameNotFoundException("User's eMail or PasswordHash is emtpy.");
+    if (DoogiesUtil.isEmpty(userModel.getEmail()))
+    	throw new UsernameNotFoundException("User's eMail is emtpy.");
 
-    return new LiquidoAuthUser(userModel.getEmail(), userModel.getPasswordHash(), getGrantedAuthorities(userModel), userModel);
+    // NO PASSWORD!   We authenticate voters with voterTokens! Yeah!
+    return new LiquidoAuthUser(userModel.getEmail(), getGrantedAuthorities(userModel), userModel);
   }
 
   private Collection<GrantedAuthority> getGrantedAuthorities(UserModel userModel) {

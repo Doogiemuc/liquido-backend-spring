@@ -56,7 +56,7 @@ public class ProxyServiceTests {
 		log.info("=========== PROXY TREE ========");
 		UserModel proxy = userRepo.findByEmail(USER1_EMAIL);
 		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
-		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, proxy.getPasswordHash(), true);
+		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, USER_TOKEN_SECRET, true);
 		TokenChecksumModel proxyChecksumModel = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
 		printProxyTree(proxyChecksumModel, "");
 	}
@@ -78,11 +78,11 @@ public class ProxyServiceTests {
 		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
 
 		//Make sure that toProxy is a public proxy
-		String proxyVoterToken = castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, toProxy.getPasswordHash(), true);
+		String proxyVoterToken = castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, USER_TOKEN_SECRET, true);
 		TokenChecksumModel publicProxyChecksum = proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
 
 		//WHEN
-		String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, fromUser.getPasswordHash(), true);
+		String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, USER_TOKEN_SECRET, true);
 		TokenChecksumModel votersChecksum = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, true);
 
 		//THEN
@@ -106,14 +106,14 @@ public class ProxyServiceTests {
 		AreaModel area  = areaRepo.findByTitle(AREA0_TITLE);
 
 		UserModel proxy = userRepo.findByEmail(USER1_EMAIL);
-		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, proxy.getPasswordHash(), true);
+		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, USER_TOKEN_SECRET, true);
 		TokenChecksumModel proxyChecksumModel = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
 		printProxyTree(proxyChecksumModel, "");
 		long numVotes = proxyService.getNumVotes(voterToken);
 		assertEquals(USER1_EMAIL+" should have "+TestFixtures.USER1_NUM_VOTES+" votes", TestFixtures.USER1_NUM_VOTES, numVotes);
 
 		proxy = userRepo.findByEmail(USER4_EMAIL);
-		voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, proxy.getPasswordHash(), true);
+		voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, USER_TOKEN_SECRET, true);
 		proxyChecksumModel = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
 		printProxyTree(proxyChecksumModel, "");
 		numVotes = proxyService.getNumVotes(voterToken);
@@ -180,7 +180,7 @@ public class ProxyServiceTests {
 		//String proxyVoterToken = castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, toProxy.getPasswordHash(), true);
 
 		//WHEN
-		String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, fromUser.getPasswordHash(), true);
+		String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, USER_TOKEN_SECRET, true);
 		proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, true);
 
 		//THEN
@@ -203,7 +203,7 @@ public class ProxyServiceTests {
 		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
 
 		//WHEN
-		String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, fromUser.getPasswordHash(), true);
+		String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, USER_TOKEN_SECRET, true);
 		proxyService.removeProxy(area, fromUser, userVoterToken);
 
 		//THEN

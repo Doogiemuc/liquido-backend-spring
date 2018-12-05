@@ -124,11 +124,15 @@ public class ProxyRestController {
 	 */
 	@RequestMapping(value = "/my/proxy/{areaId}", method = DELETE)
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void deleteProxy(@PathVariable(name="areaId") AreaModel area) throws LiquidoException {
+	public void deleteProxy(
+			@PathVariable("areaId") AreaModel area,
+			@RequestParam("voterToken") String voterToken)
+			throws LiquidoException
+	{
 		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to delete proxy!"));
 		log.info("deleteProxy(voter="+currentUser+", area="+area+")");
-		proxyService.removeProxy(area, currentUser, currentUser.getPasswordHash());
+		proxyService.removeProxy(area, currentUser, voterToken);
 	}
 
 	@RequestMapping("/checksumOfPublicProxy")

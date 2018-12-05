@@ -84,10 +84,6 @@ public class TokenChecksumModel {
   LocalDateTime requestedDelegationAt;
 
 
-
-	//MAYBE: mark a checksum as no proxy, when that user opts-out to note become a proxy at all.
-
-
 	//There is deliberately no createdBy in this class
 	//For the same reason there is also no createdAt or updatedAt. They might lead to timing attacks.
 

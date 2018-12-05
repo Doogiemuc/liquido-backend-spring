@@ -1,10 +1,7 @@
 package org.doogie.liquido.test;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.datarepos.BallotRepo;
-import org.doogie.liquido.datarepos.LawRepo;
-import org.doogie.liquido.datarepos.PollRepo;
-import org.doogie.liquido.datarepos.TokenChecksumRepo;
+import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.CastVoteService;
@@ -13,6 +10,7 @@ import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.services.voting.RankedPairVoting;
 import org.doogie.liquido.services.voting.SchulzeMethod;
 import org.doogie.liquido.testdata.TestDataCreator;
+import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Matrix;
 import org.junit.Before;
@@ -21,7 +19,6 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -55,6 +52,9 @@ public class PollServiceTests {
 	TestDataCreator testDataCreator;
 
 	@Autowired
+	AreaRepo areaRepo;
+
+	@Autowired
 	LawRepo lawRepo;
 
 	@Autowired
@@ -79,7 +79,7 @@ public class PollServiceTests {
 	public void seedUsersForThisTest() {
 		if (users == null) {
 			log.debug("Seeding " + NUM_USERS + " users");
-			PollServiceTests.users = testDataCreator.seedUsers(NUM_USERS, mailPrefix, "pollServcieTestPassword");
+			PollServiceTests.users = testDataCreator.seedUsers(NUM_USERS, mailPrefix);
 		} else {
 			log.debug("Using existing "+users.size()+" users ");
 		}
@@ -91,7 +91,8 @@ public class PollServiceTests {
 		log.info("=========== testSchulzeMethode");
 
 		// We need 45 voters
-		PollModel poll = testDataCreator.seedPollInVotingPhase(5);
+		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 5);
 
 		// These numbers are from the example on wikipedia https://de.wikipedia.org/wiki/Schulze-Methode
 		// The last proposal (ID = 5) will win the election as the sole winner.
@@ -108,7 +109,7 @@ public class PollServiceTests {
 		int[] numBallots = new int[] { 5, 5, 8, 3, 7, 2, 7, 8 };
 
 		LawModel[] propsArray = poll.getProposals().stream().toArray(LawModel[]::new);
-		List<BallotModel> ballots = seedBallots(poll, voteOrderIndexes, numBallots);
+		List<BallotModel> ballots = seedBallotsQuickly(poll, voteOrderIndexes, numBallots);
 
 		Matrix duel = RankedPairVoting.calcDuelMatrix(poll, ballots);
 		log.info("Duel matrix:\n"+duel.toFormattedString());
@@ -153,7 +154,7 @@ public class PollServiceTests {
 		String proposalIds = voteOrder.stream().map(law->law.getId().toString()).collect(Collectors.joining(","));
 		log.debug("quickNDirtyCastVote(voterToken="+voterToken+", poll.id="+poll.getId()+" voteOrder(proposal.ids)=["+proposalIds+"]");
 		String tokenChecksum = "dummyChecksumFor "+voterToken;   //castVoteService.calcChecksumFromVoterToken(voterToken);
-  	AreaModel area = testDataCreator.getArea(0);
+  	AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
 		TokenChecksumModel checksumModel = new TokenChecksumModel(tokenChecksum, area);
 		checksumRepo.save(checksumModel);   // must save
 
@@ -171,7 +172,7 @@ public class PollServiceTests {
 	 * @return the list of casted ballots
 	 * @throws LiquidoException
 	 */
-	List<BallotModel> seedBallots(PollModel poll, int[][] voteOrderIndexes, int[] numBallots) throws LiquidoException {
+	List<BallotModel> seedBallotsQuickly(PollModel poll, int[][] voteOrderIndexes, int[] numBallots) throws LiquidoException {
 		LawModel[] propsArray = poll.getProposals().stream().toArray(LawModel[]::new);
 		List<BallotModel> ballots = new ArrayList<>();
 		int count = 1;
@@ -206,8 +207,8 @@ public class PollServiceTests {
 
 		// These cities and numbers are from the example on wikipedia https://en.wikipedia.org/wiki/Ranked_pairs
 		String[] cities = new String[] {"Memphis", "Nashville", "Knoxville", "Chattanooga"};
-
-		PollModel poll = testDataCreator.seedPollInVotingPhase(cities.length);
+		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+		PollModel poll = testDataCreator.seedPollInVotingPhase(area, cities.length);
 
 		int ll = 0;
 		for(LawModel prop : poll.getProposals()) {
@@ -223,7 +224,7 @@ public class PollServiceTests {
 		voteOrderIndexes[3] = new int[]{3, 4, 2, 1};
 		int[] numBallots = new int[] { 42, 26, 15, 17 };   // 100 ballots == 100%
 
-		List<BallotModel> ballots = seedBallots(poll, voteOrderIndexes, numBallots);
+		List<BallotModel> ballots = seedBallotsQuickly(poll, voteOrderIndexes, numBallots);
 
 		List<LawModel> winners = RankedPairVoting.calcRankedPairsWinners(poll, ballots);
 
