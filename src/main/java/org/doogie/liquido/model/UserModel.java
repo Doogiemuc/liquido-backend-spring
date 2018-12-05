@@ -29,30 +29,31 @@ public class UserModel extends BaseModel {
   //@NonNull
   //JsonIgnore                      // tell jackson to not serialize this field  => needs more  CHI
   //@Getter(AccessLevel.PRIVATE)    // Getter cannot be private because I need access to the password in LiquidoUserDetailsService.java
-  @RestResource(exported = false)   // private: never exposed via REST!
-  private String passwordHash;
+  //@RestResource(exported = false)   // private: never exposed via REST!
+  //private String passwordHash;
 
 
 	@Embedded
 	public UserProfileModel profile;
 
-	/**
+	/*
 	 * get the Password.  Do not serialize this field with jackson
 	 * @return
-	 */
+
 	@JsonIgnore
 	public String getPasswordHash() {
 		return passwordHash;
 	}
 
-	/**
+	/*
 	 * set passwordHash. This can be deserialized from JSON
 	 * @param passwordHash
-	 */
+
 	@JsonProperty
 	public void setPasswordHash(String passwordHash) {
 		this.passwordHash = passwordHash;
 	}
+  */
 
 
   /* DEPRECATED: replaced by DelegationModel

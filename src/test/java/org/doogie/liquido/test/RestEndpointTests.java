@@ -569,7 +569,7 @@ public class RestEndpointTests {
     AreaModel area     = this.areas.get(0);
     String toProxyUri  = basePath + "/users/" + toProxy.getId();
     String areaUri     = basePath + "/areas/" + area.getId();
-    String voterToken  = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, fromUser.getPasswordHash(), true);
+    String voterToken  = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, TestFixtures.USER_TOKEN_SECRET, true);
 
     //TODO: delete delegation if it exists:  proxyServcie.removeProxy(...)
 
