@@ -1,7 +1,6 @@
 package org.doogie.liquido.services;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
 
 /**
  * General purpose exception for functional ("business") Exceptions.
@@ -28,18 +27,21 @@ public class LiquidoException extends Exception {
     CANNOT_GET_TOKEN(13, HttpStatus.BAD_REQUEST),
 		CANNOT_FINISH_POLL(14, HttpStatus.BAD_REQUEST),
 		NO_DELEGATION(15, HttpStatus.BAD_REQUEST),
-		CANNOT_FIND_ENTITY(16, HttpStatus.BAD_REQUEST),   					// cannot find entity when deserializing
+		CANNOT_FIND_ENTITY(16, HttpStatus.UNPROCESSABLE_ENTITY),   		// 422: cannot find entity: e.g. from PathParam or when Deserializing
 		INVALID_POLL_STATUS(17, HttpStatus.BAD_REQUEST),
 		INVALID_JWT_TOKEN(18, HttpStatus.UNAUTHORIZED);
-		int errorCode;
-		HttpStatus responseStatus;
+		int liquidoErrorCode;
+		HttpStatus httpResponseStatus;
 
-    Errors(int code, HttpStatus responseStatus) {
-    	this.errorCode = code;
-    	this.responseStatus = responseStatus;
+    Errors(int code, HttpStatus httpResponseStatus) {
+    	this.liquidoErrorCode = code;
+    	this.httpResponseStatus = httpResponseStatus;
     }
   }
 
+	/**
+	 * A Liquido exception must always have an error code and a human readable error message
+	 */
   public LiquidoException(Errors errCode, String msg) {
     super(msg);
     this.error = errCode;
@@ -55,7 +57,7 @@ public class LiquidoException extends Exception {
 	}
 
   public int getErrorCodeAsInt() {
-    return this.error.errorCode;
+    return this.error.liquidoErrorCode;
   }
 
   public String getErrorName() {
@@ -63,10 +65,10 @@ public class LiquidoException extends Exception {
   }
 
 	public HttpStatus getHttpResponseStatus() {
-		return this.error.responseStatus;
+		return this.error.httpResponseStatus;
 	}
 
   public String toString() {
-  	return "LiquidoException[errorCode="+this.getErrorCodeAsInt()+", errorName="+this.getErrorName()+", msg='"+this.getMessage()+"']";
+  	return "LiquidoException[liquidoErrorCode="+this.getErrorCodeAsInt()+", errorName="+this.getErrorName()+", msg='"+this.getMessage()+"']";
 	}
 }

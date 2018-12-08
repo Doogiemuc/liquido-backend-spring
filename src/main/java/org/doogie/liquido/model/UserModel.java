@@ -75,7 +75,7 @@ public class UserModel extends BaseModel {
 
 
   /* all the delegees that this proxy may vote for
-  //DEPRECATED:   replaced by TokenChecksumModel     but nice example how to map a java.util.List in JPA
+  //DEPRECATED:   replaced by ChecksumModel     but nice example how to map a java.util.List in JPA
   @ElementCollection(fetch = FetchType.EAGER)  //BUGFIX: needed to prevent LazyInitializationException   http://stackoverflow.com/questions/22821695/lazyinitializationexception-failed-to-lazily-initialize-a-collection-of-roles
   @CollectionTable(name = "USERS_VOTER_TOKENS")
   @JsonIgnore  // do not expose externally

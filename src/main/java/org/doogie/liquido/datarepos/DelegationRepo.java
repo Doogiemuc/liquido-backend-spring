@@ -4,9 +4,9 @@ import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
 import org.springframework.data.repository.CrudRepository;
-import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Database abstraction for delegations from a voter to a proxy.
@@ -28,7 +28,7 @@ public interface DelegationRepo extends CrudRepository<DelegationModel, Long> {
    * @param fromUser the delegee
    * @return a list of proxies of this delegee
    */
-  List<DelegationModel> findByFromUser(@Param("fromUser") UserModel fromUser);
+  List<DelegationModel> findByFromUser(UserModel fromUser);
 
   /**
    * find all delegations to a given proxy in the given area
@@ -36,7 +36,7 @@ public interface DelegationRepo extends CrudRepository<DelegationModel, Long> {
    * @param area ID of an area
    * @return all <b>direct</b> delegations to this proxy in that area as a List of DelegationModels (may be empty list)
    */
-  List<DelegationModel> findByAreaAndToProxy(@Param("areaId") AreaModel area, @Param("toProxyId") UserModel toProxy);
+  List<DelegationModel> findByAreaAndToProxy(AreaModel area, UserModel toProxy);
 
   /**
    * find the delegation of a given user in one area
@@ -44,7 +44,10 @@ public interface DelegationRepo extends CrudRepository<DelegationModel, Long> {
    * @param fromUser the delegee that delegated his vote to a proxy
    * @return the one delegation in that area or null if that user has no proxy in that area
    */
-  DelegationModel findByAreaAndFromUser(AreaModel area, UserModel fromUser);
+  Optional<DelegationModel> findByAreaAndFromUser(AreaModel area, UserModel fromUser);
+
+
+  List<DelegationModel> findByAreaAndRequestedDelegationTo(AreaModel area, UserModel proxy);
 
   /*
   //same as  @Query("select d from delegation_model where d.area_id = ?1 and d.from_user_id = ?2 and d.to_proxy_id = ?3")

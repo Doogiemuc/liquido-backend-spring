@@ -1,9 +1,9 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.datarepos.TokenChecksumRepo;
+import org.doogie.liquido.datarepos.ChecksumRepo;
 import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.TokenChecksumModel;
+import org.doogie.liquido.model.ChecksumModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.AssignProxyRequest;
 import org.doogie.liquido.security.LiquidoAuditorAware;
@@ -33,8 +33,7 @@ public class ProxyRestController {
 	ProxyService proxyService;
 
 	@Autowired
-	TokenChecksumRepo checksumRepo;
-
+	ChecksumRepo checksumRepo;
 
 	@Autowired
 	LiquidoAuditorAware liquidoAuditorAware;
@@ -97,7 +96,7 @@ public class ProxyRestController {
 		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(()-> new  LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Cannot save Proxy. Need an authenticated user."));
 
-		TokenChecksumModel proxiesChecksumModel = proxyService.assignProxy(assignProxyRequest.getArea(), currentUser, assignProxyRequest.getToProxy(), assignProxyRequest.getVoterToken(), assignProxyRequest.isTransitive());
+		ChecksumModel proxiesChecksumModel = proxyService.assignProxy(assignProxyRequest.getArea(), currentUser, assignProxyRequest.getToProxy(), assignProxyRequest.getVoterToken(), assignProxyRequest.isTransitive());
 		if (proxiesChecksumModel == null) {
 			log.info("Proxy is not yet assigned. Proxy must still confirm.");
 			return new ResponseEntity(HttpStatus.ACCEPTED);  // 202
@@ -135,16 +134,14 @@ public class ProxyRestController {
 		proxyService.removeProxy(area, currentUser, voterToken);
 	}
 
-	@RequestMapping("/checksumOfPublicProxy")
-	public ResponseEntity getChecksumOfPublicProxy(@RequestParam("area") AreaModel area, @RequestParam("proxy") UserModel proxy) throws LiquidoException {
-		if (area == null) return ResponseEntity.badRequest().body("Need area");
-		if (proxy == null) return ResponseEntity.badRequest().body("Need proxy");
+	@RequestMapping("/users/{userId}/publicChecksum")
+	public ResponseEntity getPublicChecksum(@RequestParam("area") AreaModel area, @PathVariable("userId") UserModel proxy) throws LiquidoException {
+		if (proxy == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "User with that id not found.");
+		if (area == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "Area with that id not found.");
 		log.trace("=> GET /checksumOfPublicProxy?area="+area+"&proxy="+proxy);
-
-		TokenChecksumModel checksum = checksumRepo.findByAreaAndPublicProxy(area, proxy);
-		if (checksum == null) ResponseEntity.notFound();  // user is not a public proxy in that area
-
-		log.trace("<= GET GET /checksumOfPublicProxy?area="+area.getId()+"&proxy="+proxy.getId()+ " returns checksum="+checksum.getChecksum());
+		ChecksumModel checksum = checksumRepo.findByAreaAndPublicProxy(area, proxy);
+		//if (checksum == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "User "+proxy.getId()+ " not found.");
+		//log.trace("<= GET GET /checksumOfPublicProxy?area="+area.getId()+"&proxy="+proxy.getId()+ " returns checksum="+ checksum == null ? "<null> : checksum.getChecksum());
 		return ResponseEntity.ok(checksum);
 	}
 

@@ -4,6 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.Lson;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,10 +29,13 @@ import java.util.Arrays;
 @ControllerAdvice
 public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler {
 
+	@Autowired
+	Environment springEnv;
+
 	@ExceptionHandler(value = {LiquidoException.class})
 	ResponseEntity<Object> handleLiquidoException(LiquidoException lex, WebRequest request) {
 		//log.info(lex.toString());
-		Lson bodyOfResponse = getMessageAsJson(lex, (ServletWebRequest) request);
+		Lson bodyOfResponse = getMessageAsJson(lex, request);
 		return handleExceptionInternal(lex, bodyOfResponse.toString(), new HttpHeaders(), lex.getHttpResponseStatus(), request);
 	}
 
@@ -57,6 +63,10 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 				.put("exception", ex.getClass().toString())
 				.put("message", ex.getMessage());
 
+		if (ex.getCause() != null || ex.getCause().getMessage() != null) {
+			bodyOfResponse.put("cause", ex.getCause().getMessage());
+		}
+
 		if (ex instanceof LiquidoException) {
 			LiquidoException lex = (LiquidoException)ex;
 			bodyOfResponse
@@ -65,19 +75,23 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 					.put("httpStatus", lex.getHttpResponseStatus().value());
 		}
 
-		// Let's try to add some more valuable info
+		// Let's try to add some more valuable info if request is a ServletWebRequest
 		try {
-			// request URL with query parameters
 			String requestURL  = ((ServletWebRequest)request).getRequest().getRequestURL().toString();
 			String queryString = ((ServletWebRequest)request).getRequest().getQueryString();
 			if (!DoogiesUtil.isEmpty(queryString)) requestURL += "?" + queryString;
 			if (!DoogiesUtil.isEmpty(requestURL)) bodyOfResponse.put("requestURL", requestURL);
+			bodyOfResponse.put("remoteUser", request.getRemoteUser());
 		} catch (Throwable ignore) { }
-		try {
-			// first fiveElems of stack trace
-			StackTraceElement[] firstElems = Arrays.copyOfRange(ex.getStackTrace(), 0, Math.min(5, ex.getStackTrace().length));
-			bodyOfResponse.put("stacktrace", firstElems);    // this will be nicely serialized as JSON by my Lson utility
-		} catch (Throwable ignore) { }
+
+		// add first fiveElems of stack trace   (when DEV or TEST env)
+		if (springEnv.acceptsProfiles(Profiles.of("DEV", "TEST"))) {
+			try {
+				StackTraceElement[] firstElems = Arrays.copyOfRange(ex.getStackTrace(), 0, Math.min(5, ex.getStackTrace().length));
+				bodyOfResponse.put("stacktrace", firstElems);    // this will be nicely serialized as JSON by my Lson utility
+			} catch (Throwable ignore) {
+			}
+		}
 
 		return bodyOfResponse;
 	}
