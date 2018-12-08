@@ -43,7 +43,7 @@ public class PollServiceTests {
 	PollRepo pollRepo;
 
 	@Autowired
-	TokenChecksumRepo checksumRepo;
+	ChecksumRepo checksumRepo;
 
 	@Autowired
 	CastVoteService castVoteService;
@@ -143,7 +143,7 @@ public class PollServiceTests {
 
 	/**
 	 * Quick and dirty hack to QUICKLY cast a vote.  NO CHECKS are performed at all.
-	 * For example the voterToken will always be valid: A TokenChecksumModel will be created.
+	 * For example the voterToken will always be valid: A ChecksumModel will be created.
 	 * @param voterToken
 	 * @param poll
 	 * @param voteOrder
@@ -155,7 +155,7 @@ public class PollServiceTests {
 		log.debug("quickNDirtyCastVote(voterToken="+voterToken+", poll.id="+poll.getId()+" voteOrder(proposal.ids)=["+proposalIds+"]");
 		String tokenChecksum = "dummyChecksumFor "+voterToken;   //castVoteService.calcChecksumFromVoterToken(voterToken);
   	AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-		TokenChecksumModel checksumModel = new TokenChecksumModel(tokenChecksum, area);
+		ChecksumModel checksumModel = new ChecksumModel(tokenChecksum, area);
 		checksumRepo.save(checksumModel);   // must save
 
 		int level = 0;

@@ -3,11 +3,11 @@ package org.doogie.liquido.test;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
-import org.doogie.liquido.datarepos.TokenChecksumRepo;
+import org.doogie.liquido.datarepos.ChecksumRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
+import org.doogie.liquido.model.ChecksumModel;
 import org.doogie.liquido.model.DelegationModel;
-import org.doogie.liquido.model.TokenChecksumModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
@@ -24,6 +24,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import javax.annotation.PostConstruct;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.doogie.liquido.testdata.TestFixtures.*;
 import static org.junit.Assert.*;
@@ -49,7 +50,7 @@ public class ProxyServiceTests {
 	DelegationRepo delegationRepo;
 
 	@Autowired
-	TokenChecksumRepo checksumRepo;
+	ChecksumRepo checksumRepo;
 
 	@PostConstruct
 	public void beforeClass() throws LiquidoException {
@@ -57,7 +58,7 @@ public class ProxyServiceTests {
 		UserModel proxy = userRepo.findByEmail(USER1_EMAIL);
 		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
 		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, USER_TOKEN_SECRET, true);
-		TokenChecksumModel proxyChecksumModel = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
+		ChecksumModel proxyChecksumModel = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
 		printProxyTree(proxyChecksumModel, "");
 	}
 
@@ -79,20 +80,20 @@ public class ProxyServiceTests {
 
 		//Make sure that toProxy is a public proxy
 		String proxyVoterToken = castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, USER_TOKEN_SECRET, true);
-		TokenChecksumModel publicProxyChecksum = proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
+		ChecksumModel publicProxyChecksum = proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
 
 		//WHEN
 		String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, USER_TOKEN_SECRET, true);
-		TokenChecksumModel votersChecksum = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, true);
+		ChecksumModel votersChecksum = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, true);
 
 		//THEN
 		assertNotNull("Voter's checksum must not be null", votersChecksum);
 		assertEquals("Voter's checksum must be delegated to proxies checksum", publicProxyChecksum, votersChecksum.getDelegatedTo());
 
-		DelegationModel delegation = delegationRepo.findByAreaAndFromUser(area, fromUser);
-		assertNotNull("DelegationModel from user in that area must exist", delegation);
-		assertEquals("Delegation must point from voter ", fromUser, delegation.getFromUser());
-		assertEquals("Delegation must point to proxy", toProxy, delegation.getToProxy());
+		Optional<DelegationModel> delegation = delegationRepo.findByAreaAndFromUser(area, fromUser);
+		assertTrue("DelegationModel from user in that area must exist", delegation.isPresent());
+		assertEquals("Delegation must point from voter ", fromUser, delegation.get().getFromUser());
+		assertEquals("Delegation must point to proxy", toProxy, delegation.get().getToProxy());
 
 		Map<AreaModel, UserModel> proxyMap = proxyService.getDirectProxies(fromUser);
 		log.info(proxyMap.toString());
@@ -107,7 +108,7 @@ public class ProxyServiceTests {
 
 		UserModel proxy = userRepo.findByEmail(USER1_EMAIL);
 		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, USER_TOKEN_SECRET, true);
-		TokenChecksumModel proxyChecksumModel = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
+		ChecksumModel proxyChecksumModel = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
 		printProxyTree(proxyChecksumModel, "");
 		long numVotes = proxyService.getNumVotes(voterToken);
 		assertEquals(USER1_EMAIL+" should have "+TestFixtures.USER1_NUM_VOTES+" votes", TestFixtures.USER1_NUM_VOTES, numVotes);
@@ -122,14 +123,14 @@ public class ProxyServiceTests {
 		log.trace("SUCCESS: testGetNumVotes");
 	}
 
-	private void printProxyTree(TokenChecksumModel proxyChecksum, String indent) {
+	private void printProxyTree(ChecksumModel proxyChecksum, String indent) {
 		String publicProxyStr = proxyChecksum.getPublicProxy() != null ? "==public proxy: " + proxyChecksum.getPublicProxy().getEmail() : "";
-		List<TokenChecksumModel> delegees = checksumRepo.findByDelegatedTo(proxyChecksum);
+		List<ChecksumModel> delegees = checksumRepo.findByDelegatedTo(proxyChecksum);
 		if (delegees == null) {
 			log.trace(indent+"Voter: " + proxyChecksum + publicProxyStr);
 		} else {
 			//log.trace(indent+"Proxy: " + proxyChecksum + publicProxyStr);
-			for (TokenChecksumModel delegee : delegees) {
+			for (ChecksumModel delegee : delegees) {
 				log.trace(indent + delegee.getPublicProxy().getEmail() + " -" + (delegee.isTransitive() ? "transitive" : "") + "-> " + proxyChecksum.getPublicProxy().getEmail()+"    " + delegee.getChecksum() + " -> " + proxyChecksum);
 				printProxyTree(delegee, indent + "  ");
 			}
@@ -207,8 +208,8 @@ public class ProxyServiceTests {
 		proxyService.removeProxy(area, fromUser, userVoterToken);
 
 		//THEN
-		DelegationModel delegation  = delegationRepo.findByAreaAndFromUser(area, fromUser);
-		assertNull("Delegation to proxy should not exist anymore", delegation);
+		Optional<DelegationModel> delegation  = delegationRepo.findByAreaAndFromUser(area, fromUser);
+		assertFalse("Delegation to proxy should not exist anymore", delegation.isPresent());
 
 		//Cleanup
 		proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, true);

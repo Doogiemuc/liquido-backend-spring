@@ -2,10 +2,8 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.OneTimeTokenRepo;
-import org.doogie.liquido.datarepos.TokenChecksumRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.jwt.JwtTokenProvider;
-import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.OneTimeToken;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;

@@ -1,5 +1,4 @@
 package org.doogie.liquido.model;
-
 import lombok.*;
 
 import javax.persistence.Entity;
@@ -7,6 +6,7 @@ import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 
 /**
  * Delegation from a user to a proxy in a given area.
@@ -44,7 +44,57 @@ public class DelegationModel extends BaseModel {
   @OneToOne
   public UserModel toProxy;
 
-  // Implementation notes:
+	/**
+	 * A voter can delegate his vote to a proxy.
+	 * But maybe the voter does not want that his proxy in turn delegates the vote again.
+	 * Then the delegation is marked as nonTransitive.
+	 * By default delegations can be transitive, so that a tree of delegations can be formed.
+	 */
+	public boolean transitive = true;
+
+	/**
+	 * When a voter wants to delegate his vote to a proxy, but that proxy is not a public proxy,
+	 * then the delegation is requested until the proxy accepts it.
+  */
+  @OneToOne
+	UserModel requestedDelegationTo = null;
+
+	/**
+	 * We need to store the voters checksum for a delegation request, so that later when the proxy accepts
+	 * the delegation request, the voters checksum can also be delegated to the proxies checksum.
+	 */
+	@OneToOne
+  ChecksumModel requestedDelegationFromChecksum = null;
+
+  /** When was the delegation to that proxy requested */
+  LocalDateTime requestedDelegationAt = null;
+
+  public boolean isDelegationRequest() {
+  	return this.requestedDelegationTo != null;
+	}
+
+	/**
+	 * Build a delegation request
+	 * @param area
+	 * @param fromUser
+	 * @param proxy
+	 * @param transitive
+	 * @param voterChecksumModel
+	 * @return
+	 */
+	public static DelegationModel buildDelegationRequest(AreaModel area, UserModel fromUser, UserModel proxy, boolean transitive, ChecksumModel voterChecksumModel) {
+		//Implementation note: This is my first try for builders. Inside the model class itself. Let's see how that works out.
+		//PRO: Easy, local.   CON(?)  Should models only be data models without any business logic.   But why?  This is just java code?
+		//Separation of concerns: More complicated business logic should be inside a Service class.
+		//A "builder" only creates a new object and sets some additional values, that the default RequiredArgs constructor does not set.
+		DelegationModel delegationRequest = new DelegationModel(area, fromUser, proxy);
+		delegationRequest.setTransitive(transitive);
+		delegationRequest.setRequestedDelegationTo(proxy);
+		delegationRequest.setRequestedDelegationAt(LocalDateTime.now());
+		return delegationRequest;
+	}
+
+	// Implementation notes:
   // - A delegation is always implicitly created by "fromUser"
 
 }
