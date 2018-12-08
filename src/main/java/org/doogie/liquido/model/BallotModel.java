@@ -83,7 +83,7 @@ public class BallotModel {
   @NotNull
   @NonNull
 	@OneToOne
-  public TokenChecksumModel checksum;   //TODO: or just save the checksum as string?  had it like that but refactored it
+  public ChecksumModel checksum;   //TODO: or just save the checksum as string?  had it like that but refactored it
 
 	@Override
 	public String toString() {
