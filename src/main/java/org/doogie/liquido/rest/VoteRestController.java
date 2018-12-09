@@ -1,21 +1,24 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.BallotModel;
-import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
+import org.doogie.liquido.services.ProxyService;
+import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Sprint REST controller for voting
@@ -30,34 +33,49 @@ public class VoteRestController {
 	CastVoteService castVoteService;
 
 	@Autowired
+	ProxyService proxyService;
+
+	@Autowired
 	LiquidoAuditorAware liquidoAuditorAware;
 
 	/**
 	 * User requests a token that allows him to vote.
 	 * This request MUST be authenticated!
 	 * @param area Area for the token
-	 * @param publicProxy (optional) boolean if user immideately wants to become a public proxy. Can also do so later.
-	 * @return JSON with voterToken
+	 * @param becomePublicProxy (optional) boolean if user immediately wants to become a public proxy. Can also do so later.
+	 *                          User may already be a public proxy. Even when you pass "false" he then will stay a public proxy.
+	 * @return JSON with voterToken, numVotes
+	 *         and also an array of delegationRequests if there are any pending ones.
 	 * @throws LiquidoException when request parameter is missing
 	 */
 	@RequestMapping(value = "/my/voterToken", method = RequestMethod.GET)
-	public @ResponseBody Map getVoterToken(
+	//TODO: @PreAuthorize("")
+	public @ResponseBody Lson getVoterToken(
 			@RequestParam("area") AreaModel area,
 			@RequestParam("tokenSecret") String tokenSecret,
-			@RequestParam("publicProxy") Boolean publicProxy,
+			@RequestParam(name = "becomePublicProxy", defaultValue = "false", required = false) Boolean becomePublicProxy,
 			Authentication auth   //TODO: TEST injection Auth in combination with JWT
 			//@AuthenticationPrincipal(expression = "liquidoUserModel") UserModel liquidoUserModel    // <==== DOES NOT WORK
 			// injecting the AuthenticationPrincipal did not work for me. I do not know why.   But liquidoAuditorAware works, and is also great for testing:
 			// see https://docs.spring.io/spring-security/site/docs/current/reference/htmlsingle/#tech-userdetailsservice
 	) throws LiquidoException {
-		UserModel user = liquidoAuditorAware.getCurrentAuditor()
+		UserModel voter = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get voterToken!"));			// [SECURITY]  This check is extremely important! Only valid users are allowed to get a voterToken
-		log.info(user+" requests his voterToken for area "+area);
+		log.trace(voter+" requests his voterToken for area "+area);
 
-		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(user, area, tokenSecret, publicProxy);   // preconditions are checked inside castVoteService
-
-		Map<String, String> result = new HashMap<>();
-		result.put("voterToken", voterToken);
+		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, area, tokenSecret, becomePublicProxy);   // preconditions are checked inside castVoteService
+		long numVotes = proxyService.getNumVotes(voterToken);
+		Optional<ChecksumModel> checksumOfPublicProxy = proxyService.getChecksumOfPublicProxy(area, voter);
+		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, voter);
+		Optional<UserModel> directProxy = proxyService.getDirectProxy(area, voter);
+		Optional<UserModel> topProxy = proxyService.findTopProxy(area, voter);
+		Lson result = Lson.builder()
+		    .put("voterToken", voterToken)
+				.put("numVotes", numVotes)
+				.put("isPublicProxy", checksumOfPublicProxy.isPresent())
+		    .put("delegationRequests", delegationRequests)
+				.put("directProxy", directProxy.orElse(null))
+				.put("topProxy", topProxy.orElse(null));
 		return result;
 	}
 
@@ -99,12 +117,10 @@ public class VoteRestController {
   @ResponseStatus(HttpStatus.CREATED)
   public @ResponseBody Map castVote(@RequestBody CastVoteRequest castVoteRequest) throws LiquidoException {
     log.trace("=> POST /castVote");
-    UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
-				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast Vote. You should cast your vote anonymously. Do not send a SESSIONID."));
+    Optional<UserModel> currentUser = liquidoAuditorAware.getCurrentAuditor();
+    if (currentUser.isPresent()) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast Vote. You should cast your vote anonymously. Do not send a SESSIONID.");
 
     BallotModel ballot = castVoteService.castVote(castVoteRequest);   					// all validity checks are done inside ballotService.
-
-		//throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "TEST EXCEPTION");
 
 		HashMap<String, String> result = new HashMap<>();
 		result.put("msg", "OK, your vote was counted successfully.");

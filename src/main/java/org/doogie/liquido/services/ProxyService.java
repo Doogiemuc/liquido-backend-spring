@@ -3,15 +3,14 @@ package org.doogie.liquido.services;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
+import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
 	There are two data models for proxy assignments that we need to keep in sync here.
@@ -68,11 +67,18 @@ public class ProxyService {
 	@Transactional
 	public ChecksumModel assignProxy(AreaModel area, UserModel fromUser, UserModel proxy, String userVoterToken, boolean transitive) throws LiquidoException {
 		log.info("assignProxy(" + area + ", fromUser=" + fromUser + ", toProxy=" + proxy + " transitive=" + transitive + ")");
-		ChecksumModel voterChecksumModel = castVoteService.isVoterTokenValidAndGetChecksum(userVoterToken);
-		return assignProxy(area, fromUser, proxy, voterChecksumModel, transitive);
+		ChecksumModel voterChecksum = castVoteService.isVoterTokenValidAndGetChecksum(userVoterToken);
+		castVoteService.refreshChecksum(voterChecksum);
+		Optional<ChecksumModel> proxyChecksum = getChecksumOfPublicProxy(area, proxy);   // get checksumModel of public proxy (may be null!)
+		return assignProxy(area, fromUser, proxy, voterChecksum, proxyChecksum, transitive);
 	}
 
-	private ChecksumModel assignProxy(AreaModel area, UserModel fromUser, UserModel proxy, ChecksumModel voterChecksumModel, boolean transitive) throws LiquidoException {
+	/**
+	 * This part of assigning a proxy was refactored into its own (private) method, because
+	 * when a proxy accepts pending delegations, we already have the checksum of the delegee, but not his voter token which is confidential.
+	 * @return the voter's checksum that is then eiter delegated or requested the delegation to proxy
+	 */
+	private ChecksumModel assignProxy(AreaModel area, UserModel fromUser, UserModel proxy, ChecksumModel voterChecksumModel, Optional<ChecksumModel> proxyChecksum, boolean transitive) throws LiquidoException {
 		//----- sanity checks
 		if (area == null || fromUser == null || proxy == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_SAVE_PROXY, "Cannot assign proxy. Need area, fromUser and toProxy!");
@@ -81,36 +87,39 @@ public class ProxyService {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ASSIGN_CIRCULAR_PROXY, "Cannot assign proxy. This would be a circular delegation which cannot be allowed.");
 		//----- validate voterToken and get voters checksumModel, so that we can delegate it to the proxies checksum anonymously.
 
-		//----- get checksumModel of public proxy (may be null!)
-		ChecksumModel proxyChecksumModel = checksumRepo.findByAreaAndPublicProxy(area, proxy);
+		// ----- upsert delegation from user to proxy in that area
+		// implementation note: some more interesting views on upsert in JPA: http://dkublik.github.io/persisting-natural-key-entities-with-spring-data-jpa/
+		DelegationModel delegation = delegationRepo.findByAreaAndFromUser(area, fromUser)
+				.orElse(new DelegationModel(area, fromUser, proxy));
 
 		//----- IF proxy has a public checksum THEN immediately delegate our checksum to proxies checksum
-		if (proxyChecksumModel != null) {
-			//----- Check for circular delegation in checksums
-			if (thisWouldBeCircularDelegation(voterChecksumModel, proxyChecksumModel))
+		if (proxyChecksum.isPresent()) {
+			//----- Check for circular delegation in tree of checksums
+			if (thisWouldBeCircularDelegation(voterChecksumModel, proxyChecksum.get()))
 				throw new LiquidoException(LiquidoException.Errors.CANNOT_ASSIGN_CIRCULAR_PROXY, "Cannot assign proxy. This would lead to a circular delegation of the checksum which cannot be allowed.");
 
-			// ----- upsert delegation from user to proxy in that area
-			// implementation note: some more interesting views on upsert in JPA: http://dkublik.github.io/persisting-natural-key-entities-with-spring-data-jpa/
-			DelegationModel delegation = delegationRepo.findByAreaAndFromUser(area, fromUser)
-					.orElse(new DelegationModel(area, fromUser, proxy));
 			delegation.setToProxy(proxy);								// this may overwrite any previous assignment
-			delegationRepo.save(delegation);						// Spring's #save method will automatically detect wether delegation is new, depending on wether it has an ID field with value
-
-			//----- store delegation of checksum
+			delegation.setRequestedDelegationFromChecksum(null);
+			delegation.setRequestedDelegationAt(null);
 			voterChecksumModel.setTransitive(transitive);
-			voterChecksumModel.setDelegatedTo(proxyChecksumModel);
-			checksumRepo.save(voterChecksumModel);
-			log.info("Delegation from "+fromUser.getEmail()+" to "+proxy.getEmail()+" stored successfully: "+voterChecksumModel.getChecksum()+" -> "+proxyChecksumModel.getChecksum());
+			voterChecksumModel.setDelegatedTo(proxyChecksum.get());
+			log.info("Delegation stored from "+fromUser.getEmail()+" to "+proxy.getEmail()+": "+voterChecksumModel.getChecksum()+" -> "+proxyChecksum.get().getChecksum());
 		}
 		else
 		{
 			//----- ELSE only store a delegation request
-			DelegationModel delegationRequest = DelegationModel.buildDelegationRequest(area, fromUser, proxy, transitive, voterChecksumModel);
+			delegation.setToProxy(proxy);
+			delegation.setRequestedDelegationFromChecksum(voterChecksumModel);
+			delegation.setRequestedDelegationAt(LocalDateTime.now());
 			voterChecksumModel.setTransitive(transitive);
 			voterChecksumModel.setDelegatedTo(null);  // MUST delete existing delegation if any
-			log.info("Delegation from "+fromUser.getEmail()+" to "+proxy.getEmail()+" requested.");
+			delegationRepo.save(delegation);
+			log.info("Delegation requested from "+fromUser.getEmail()+" to "+proxy.getEmail());
 		}
+
+		//----- save delegation and checksum
+		delegationRepo.save(delegation);						// Spring's #save method will automatically detect if delegation is new, depending on its ID field.
+		checksumRepo.save(voterChecksumModel);
 		return voterChecksumModel;
 
 	}
@@ -135,6 +144,7 @@ public class ProxyService {
 	public boolean thisWouldBeCircularDelegation(AreaModel area, UserModel user, UserModel proxyToCheck) {
 		if (user.equals(proxyToCheck)) return true;
 		List<DelegationModel> delegations = delegationRepo.findByAreaAndToProxy(area, user);   // find delegations to fromUser where fromUser is the proxy.
+		//TODO: What about delegation requests?
 		for(DelegationModel delegation : delegations) {
 			if (delegation.getFromUser().equals(proxyToCheck)) return true;
 			if (thisWouldBeCircularDelegation(area, delegation.getFromUser(), proxyToCheck)) return true;
@@ -156,66 +166,78 @@ public class ProxyService {
 	public ChecksumModel becomePublicProxy(UserModel publicProxy, AreaModel area, String proxyVoterToken) throws LiquidoException {
 		log.trace("ENTER becomePublicProxy("+publicProxy+", "+area+")");
 		ChecksumModel publicProxyChecksum = castVoteService.isVoterTokenValidAndGetChecksum(proxyVoterToken);
-		if (publicProxyChecksum == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_SAVE_PROXY, "Cannot become public proxy. Voter token seems to be invalid!");
 		publicProxyChecksum.setPublicProxy(publicProxy);
 		log.trace("becomePublicProxy: "+publicProxy+ " is now a public proxy");
 		return checksumRepo.save(publicProxyChecksum);
 	}
 
-	/**
-	 * When a proxy accepts all the delegation requests to him,
-	 * then we
-	 * @param area
-	 * @param proxy
-	 * @throws LiquidoException
-	 */
-	@Transactional
-	public void acceptDelegationRequests(AreaModel area, UserModel proxy) throws LiquidoException {
-		List<DelegationModel> delegationRequests = delegationRepo.findByAreaAndRequestedDelegationTo(area, proxy);
-		for(DelegationModel delegation: delegationRequests) {
+	//TODO: delete (public) proxy: remove all delegations
 
-			this.assignProxy(area, delegation.getFromUser(), proxy, delegation.getRequestedDelegationFromChecksum(), delegation.isTransitive());
-			delegation.setRequestedDelegationFromChecksum(null);
-			delegation.setRequestedDelegationTo(null);
-			delegation.setRequestedDelegationAt(null);
-		}
+	/**
+	 * Get the checksum of a public proxy, so that a voter can delegate to it.
+	 * This can also be used to check if a user alreayd is a public proxy.
+	 * @param area Area
+	 * @param proxy proxy to check
+	 * @return (optionally) the checksum of a public proxy
+	 */
+	public Optional<ChecksumModel> getChecksumOfPublicProxy(AreaModel area, UserModel proxy) {
+		return checksumRepo.findByAreaAndPublicProxy(area, proxy);
+	}
+
+	public List<DelegationModel> findDelegationRequests(AreaModel area, UserModel proxy) {
+		return delegationRepo.findDelegationRequests(area, proxy);
 	}
 
 	/**
-	 * Get all direct proxies that a voter has delegated his vote to. And also return the top proxy at the end of the transitive delegation chain
-	 * if the delegation is transitive.
-	 * @return a map with one entry per area where a direct proxy is assigned
+	 * GIVEN a proxy that has pending delegation requests
+	 *  WHEN this proxy accepts all the delegation requests to him,
+	 *  THEN all delegations are assigned (DelegationModel and Checksum delegation)
+	 *   AND the requests are cleared.
+	 * @param area area for delegation
+	 * @param proxy the proxy that accepts all pending delegation requests to him
+	 * @return the newly counted number of votes that his proxy now may cast.
+	 * @throws LiquidoException when one of the delegations cannot be assigned
 	 */
-	public Map getDirectProxies(UserModel voter) throws LiquidoException {
-		log.debug("ENTER: getDirectProxies(voter="+voter+")");
+	@Transactional
+	public long acceptDelegationRequests(AreaModel area, UserModel proxy, String proxyVoterToken) throws LiquidoException {
+		log.debug("=> accept delegation requests for proxy "+proxy+" in area.id="+area.getId());
+		List<DelegationModel> delegationRequests = delegationRepo.findDelegationRequests(area, proxy);
+		Optional<ChecksumModel> proxyChecksum = Optional.of(castVoteService.isVoterTokenValidAndGetChecksum(proxyVoterToken));
+		for(DelegationModel delegation: delegationRequests) {
+			log.info("Accepting delegation request from "+delegation.getFromUser()+" to proxy "+delegation.getToProxy());
 
-		/*
+			//TODO: assignProxy has all the sanity checks in it.  But maybe it would be easier to just update the already existing delegation request here.
+			this.assignProxy(area, delegation.getFromUser(), proxy,
+					delegation.getRequestedDelegationFromChecksum(), proxyChecksum, delegation.isTransitive());
+		}
+		long numVotes = getNumVotes(proxyVoterToken);
+		log.debug("<= accepted delegation requests for proxy "+proxy+" in area.id="+area.getId()+ ", new numVotes="+numVotes);
+		return numVotes;
+	}
 
-   		//
-			//   THIS IS NOT NICE      Without delegationModel its getting hard to collect all assigned proxies of a user.
-			//
-
+	/**
+	 * When a voter delegates his vote to a proxy, then this is his direct proxy.
+	 * When the proxy in turn delegates his vote this is a transitive proxy.
+	 * At the end of this chain is the user's top proxy for that area.
+	 *
+	 * @return a map with one entry per area. Each entry contains the direct proxy(if any) and the top proxy(if any) of voter in that area.
+	 */
+	public Lson getProxyMap(UserModel voter, String voterToken) throws LiquidoException {
+		log.debug("ENTER: getProyMap("+voter+")");
 		Lson result = Lson.builder();
-		for (AreaModel area: areaRepo.findAll()) {
-			ChecksumModel checksumModel = castVoteService.getExistingChecksum(voter, voter.getPasswordHash(), area);
-			Lson proxyInArea = Lson.builder()
-				.put("directProxy", checksumModel.getDelegatedTo() != null ? checksumModel.getDelegatedTo().getChecksum() : "")
-				.put("topProxy",    checksumModel.getDelegatedTo() != null ? findTopChecksum(checksumModel).getChecksum() : "");
-			result.put(area.getTitle(), proxyInArea);
+		Iterable<AreaModel> areas = areaRepo.findAll();
+		for(AreaModel area: areas) {
+			Lson areaData = Lson.builder();
+			Optional<DelegationModel> directProxy = delegationRepo.findByAreaAndFromUser(area, voter);
+			Optional<UserModel> topProxy = findTopProxy(area, voter);
+			areaData.put("directProxy", directProxy.orElse(null));
+			areaData.put("topProxy", topProxy.orElse(null));
+			areaData.put("numVotes", getNumVotes(voterToken));
+			areaData.put("delegationRequests", findDelegationRequests(area, voter));
+
+			result.put(String.valueOf(area.getId()), areaData);
 		}
 		return result;
-    */
-
-		return delegationRepo.findByFromUser(voter).stream().collect(Collectors.toMap(delegation -> delegation.getArea(), delegation -> delegation.getToProxy()));
-
-		/* This one liner was formerly known as this ... beginning to like Java8 streams :-)
-		List<DelegationModel> delegations = delegationRepo.findByFromUser(fromUser);
-		Map<AreaModel, UserModel> proxyMap = new HashMap<>();
-		for (DelegationModel delegation : delegations) {
-			proxyMap.put(delegation.getArea(), delegation.getToProxy());
-		}
-		return proxyMap;
-    */
 	}
 
 	/**
@@ -246,18 +268,33 @@ public class ProxyService {
 	}
 
 	/**
+	 * get the directly assigned proxy of this voter.
+	 * @param area an area
+	 * @param voter a voter that may have a proxy assigned in area
+	 * @return the direct proxy of this voter if he has any proxy assigned in this area
+	 */
+	public Optional<UserModel> getDirectProxy(AreaModel area, UserModel voter) {
+		Optional<DelegationModel> delegation = delegationRepo.findByAreaAndFromUser(area, voter);
+		if (delegation.isPresent()) return Optional.of(delegation.get().getToProxy());
+		return Optional.empty();
+	}
+
+	/**
 	 * Recursively find the "transitive" top proxy at the top of the delegation chain for this voter
 	 * @param area the area of the delegation
 	 * @param voter a voter that may have delegated his right to vote to a proxy
-	 * @return the proxy at the top of the delegation chain starting at voter
-	 *         or the voter himself if he didn't delegate to a proxy in this area.
+	 * @return (optionally) the proxy at the top of the delegation chain starting at voter
+	 *         or Optional.empty() if voter has no proxy in that area.
 	 */
-	public UserModel findTopProxy(AreaModel area, UserModel voter) {
+	public Optional<UserModel> findTopProxy(AreaModel area, UserModel voter) {
 		Optional<DelegationModel> delegation = delegationRepo.findByAreaAndFromUser(area, voter);
-		if (!delegation.isPresent()) return voter;
-		return findTopProxy(area, delegation.get().getToProxy());
+		if (!delegation.isPresent()) {
+			return Optional.empty();
+		} else {
+			Optional<UserModel> proxy = findTopProxy(area, delegation.get().getToProxy());
+			return proxy.isPresent() ? Optional.of(voter) : proxy;
+		}
 	}
-
 
 
 	/**
@@ -284,9 +321,7 @@ public class ProxyService {
 		if (delegation.isPresent()) {
 			delegationRepo.delete(delegation.get());
 		}
-
 	}
-
 
 	/**
 	 * Get the number of votes a proxy may cast because of (transitive) delegations to him. Including his own vote.
@@ -295,6 +330,12 @@ public class ProxyService {
 	 */
 	public long getNumVotes(String voterToken) throws LiquidoException {
 		ChecksumModel proxyChecksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
+		return getNumVotes(proxyChecksum);
+	}
+
+	private long getNumVotes(ChecksumModel proxyChecksum) throws LiquidoException {
+		if (!checksumRepo.findByChecksum(proxyChecksum.getChecksum()).isPresent())
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "getNumVotes: proxyChecksum is invalid");
 		return countNumVotesRecursive(proxyChecksum, true, 0);
 	}
 

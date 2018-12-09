@@ -6,6 +6,7 @@ import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoRestUtils;
+import org.hibernate.annotations.Check;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCrypt;
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * This service contains all the voting logic for casting a vote.
@@ -41,6 +43,9 @@ public class CastVoteService {
 	ChecksumRepo checksumRepo;
 
 	@Autowired
+	ProxyService proxyService;
+
+	@Autowired
 	LiquidoRestUtils restUtils;
 
 	/**
@@ -62,6 +67,7 @@ public class CastVoteService {
 	int checksumExpirationHours;
 
 	//TODO:  RSA Tokens  https://stackoverflow.com/questions/37722090/java-jwt-with-public-private-keys
+	//TODO: create really secure voterTokens like this: U2F  https://blog.trezor.io/why-you-should-never-use-google-authenticator-again-e166d09d4324
 
 	/**
 	 * A user wants to vote and therefore requests a voter token for this area. Each user has one token per area.
@@ -79,14 +85,18 @@ public class CastVoteService {
 	 * @param voter the currently logged in and correctly authenticated user
 	 * @param area an area that the user's want's to vote in
 	 * @param voterTokenSecret  a secret that only the user knows. So no one else can create this voterToken. May be emtpy string, but then with less security.
-	 * @param publicProxy true if voter wants to become (or stay) a public proxy. Voter can also decide later with {@link ProxyService#becomePublicProxy
+	 * @param becomePublicProxy true if voter wants to become (or stay) a public proxy. Voter can also decide later with {@link ProxyService#becomePublicProxy
 	 * @return user's voterToken, that only the user must know, and that will hash to the stored checksumModel.
 	 */
 	@Transactional
-	public String createVoterTokenAndStoreChecksum(UserModel voter, AreaModel area, String voterTokenSecret, boolean publicProxy) throws LiquidoException {
-		log.debug("createVoterTokenAndStoreChecksum: for "+voter+" in "+area);
-		if (voter == null || DoogiesUtil.isEmpty(voter.getEmail()) || voterTokenSecret == null || area == null)
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need user, area and voterTokenSecret to builder a voterToken!");
+	public String createVoterTokenAndStoreChecksum(UserModel voter, AreaModel area, String voterTokenSecret, boolean becomePublicProxy) throws LiquidoException {
+		log.debug("createVoterTokenAndStoreChecksum: for "+voter+" in "+area + ", becomePublicProxy="+becomePublicProxy);
+ 		if (voter == null || DoogiesUtil.isEmpty(voter.getEmail()))
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need voter to build a voterToken!");
+		if (area == null)
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Cannot build a voterToken. Could not find area.");
+		if (DoogiesUtil.isEmpty(voterTokenSecret))
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need your tokenSecret to build a voterToken!");
 
 		// Create a new voterToken for this user in that area with the BCRYPT hashing algorithm
 		// Remark: Bcrypt prepends the salt into the returned token value!!!
@@ -94,20 +104,21 @@ public class CastVoteService {
 		String tokenChecksum = calcChecksumFromVoterToken(voterToken);                          // checksum of voterToken that can only be generated from the users voterToken and only by the server.
 
 		//   IF there is a an already existing checksum for that voter as public proxy
-		//  AND the calculated checksum does not match it,
+		//  AND there is NO existing checksum for that voterToken OR one that does not match the public proxies checksum,
 		// THEN the user has changed his voterTokenSecret
 		//  AND we must invalidate (delete) the old checksum.
-		//  AND we must delete all delegations.
-		ChecksumModel checksumModel = checksumRepo.findByChecksum(tokenChecksum);					// may return NULL
-		ChecksumModel existingChecksumOfPublicProxy = checksumRepo.findByAreaAndPublicProxy(area, voter);
-		if (existingChecksumOfPublicProxy != null && !existingChecksumOfPublicProxy.equals(checksumModel)) {
+		 //  AND we must delete all delegations.
+		Optional<ChecksumModel> checksumModel = checksumRepo.findByChecksum(tokenChecksum);
+		Optional<ChecksumModel> existingChecksumOfPublicProxy = checksumRepo.findByAreaAndPublicProxy(area, voter);
+		if (existingChecksumOfPublicProxy.isPresent() &&
+				!existingChecksumOfPublicProxy.equals(checksumModel)) {
 			log.trace("Voter changed his voterTokenSecret. Replacing old checksum of former public proxy with new one.");
 
 			throw new RuntimeException("Change of voterTokenSecret is NOT YET IMPLEMENTED!");
 			/*
 			List<DelegationModel> delegations = delegationRepo.findByAreaAndToProxy(area, voter);
 			List<ChecksumModel> delegees = checksumRepo.findByDelegatedTo(existingChecksumOfPublicProxy);
-			if (publicProxy) {
+			if (becomePublicProxy) {
 				for(ChecksumModel delegatedChecksum : delegees) {
 					delegatedChecksum.setDelegatedTo(checksumModel);
 					checksumRepo.save(delegatedChecksum);
@@ -123,41 +134,43 @@ public class CastVoteService {
 			*/
 		}
 
-		if (checksumModel == null) {
-			log.trace("  Create new checksum");
-			checksumModel = new ChecksumModel(tokenChecksum, area);
-		} else {
-			log.trace("  Update existing "+checksumModel);
-		}
+		if (checksumModel.isPresent()) { log.trace("  Update existing checksum");	}
+		ChecksumModel checksum = checksumModel.orElse(new ChecksumModel(tokenChecksum, area));
 
 		//   IF user wants to become (or stay) a public proxy
 		// THEN stores his username with his checksum
 		//  AND automatically accept all pending delegations
-		if (publicProxy) {
-			checksumModel.setPublicProxy(voter);
-			//TODO: accept all pending delegations
+		if (becomePublicProxy) {
+			checksum.setPublicProxy(voter);
+			proxyService.acceptDelegationRequests(area, voter, voterToken);
 		}
-		checksumModel.setExpiresAt(LocalDateTime.now().plusHours(checksumExpirationHours));
-		ChecksumModel savedChecksumModel1 = checksumRepo.save(checksumModel);
+		refreshChecksum(checksum);
+		checksumRepo.save(checksum);
 
-		//TODO: create really secure voterTokens like this: U2F  https://blog.trezor.io/why-you-should-never-use-google-authenticator-again-e166d09d4324
-
-		return voterToken;
+		return voterToken;		// IMPORTANT! return the voterToken and store the checksum.
 	}
 
 	/**
-	 * Very thoroughly check if the passed voterToken is valid, ie. its checksum=hash(voterToken) is already known
+	 * refresh the expiration time of this valid checksum. You must save the update yourself!
+	 * @param checksum
+	 */
+	public void refreshChecksum(ChecksumModel checksum) {
+		checksum.setExpiresAt(LocalDateTime.now().plusHours(checksumExpirationHours));
+	}
+
+	/**
+	 * Very thoroughly check if the passed voterToken is valid, ie. its checksum=hash(voterToken) is already known.
+	 * This method will not create a checksum.
 	 * @param voterToken the token to check
 	 * @return the existing ChecksumModel
-	 * @throws LiquidoException when voterToken is invalid
+	 * @throws LiquidoException when voterToken is invalid itself or its checksum is not known.
 	 */
 	public ChecksumModel isVoterTokenValidAndGetChecksum(String voterToken) throws LiquidoException {
 		if (voterToken == null || !voterToken.startsWith("$2") || voterToken.length() < 10)
 			throw new LiquidoException(LiquidoException.Errors.INVALID_VOTER_TOKEN, "Voter token is empty or has wrong format");  // BCRYPT hashes start with $2$ or $2
 		String tokenChecksum = calcChecksumFromVoterToken(voterToken);
-		ChecksumModel existingChecksum = checksumRepo.findByChecksum(tokenChecksum);
-		if (existingChecksum == null)
-			throw new LiquidoException(LiquidoException.Errors.INVALID_VOTER_TOKEN, "Voter token is invalid. It's checksum is not known as valid.");
+		ChecksumModel existingChecksum = checksumRepo.findByChecksum(tokenChecksum)
+				.orElseThrow(() -> (new LiquidoException(LiquidoException.Errors.INVALID_VOTER_TOKEN, "Voter token is invalid. It's checksum is not known as valid.")));
 		return existingChecksum;
 	}
 
@@ -167,9 +180,9 @@ public class CastVoteService {
 	 * @param user a voter
 	 * @param area an area
 	 * @return the existing checksum of that user in that area
-	 * @throws LiquidoException when user does not yet have a voterToken or checksum in that area
+	 * @throws LiquidoException when user does not yet have checksum in that area
 	 */
-	public ChecksumModel getExistingChecksum(UserModel user, String userTokenSecret, AreaModel area) throws LiquidoException {
+	private ChecksumModel getExistingChecksum(UserModel user, String userTokenSecret, AreaModel area) throws LiquidoException {
 		String voterToken = calcVoterToken(user.getId(), userTokenSecret, area.getId());
 		return isVoterTokenValidAndGetChecksum(voterToken);
 	}
@@ -179,8 +192,7 @@ public class CastVoteService {
 	 * User casts own vote. Keep in mind, that this method is called anonymously. No UserModel involved.
 	 * If that user is a proxy for other voters, then their ballots will also be added automatically.
 	 * @param castVoteRequest which contains the poll that we want to vote for and
-	 *                        a list of voterTokens. The first token is the voter's own one.
-	 *                        Then there might be more tokens from delegees if that user is a proxy.
+	 *                        the anonymous voterToken and the preferred voteOrder
 	 * @return BallotModel the casted ballot
 	 * @throws LiquidoException when something is wrong with the ballot
 	 */
@@ -317,9 +329,8 @@ public class CastVoteService {
 		}
 
 		// Passed checksumModel in ballot MUST already exists in ChecksumRepo to be valid
-		ChecksumModel existingChecksum = checksumRepo.findByChecksum(ballot.getChecksum().getChecksum());
-		if (existingChecksum == null)
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Ballot's checksum is invalid. (It cannot be found in ChecksumModel.)");
+		ChecksumModel existingChecksum = checksumRepo.findByChecksum(ballot.getChecksum().getChecksum())
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Ballot's checksum is invalid. (It cannot be found in ChecksumModel.)"));
 
 	}
 

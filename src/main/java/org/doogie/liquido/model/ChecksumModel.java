@@ -1,5 +1,6 @@
 package org.doogie.liquido.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 import javax.persistence.*;
@@ -55,6 +56,7 @@ public class ChecksumModel {
 	 */
 	@ManyToOne
 	//@JoinColumn(name = "delegatedToProxy")
+	@JsonIgnore    // do not reveal if a checksum is delegated
 	ChecksumModel delegatedTo;
 
 	/* List of checksums that are delegated to this as a proxy. Inverse of bidirectional delegatedToProxy association

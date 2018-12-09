@@ -1,4 +1,5 @@
 package org.doogie.liquido.model;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 import javax.persistence.Entity;
@@ -54,23 +55,19 @@ public class DelegationModel extends BaseModel {
 
 	/**
 	 * When a voter wants to delegate his vote to a proxy, but that proxy is not a public proxy,
-	 * then the delegation is requested until the proxy accepts it.
-  */
-  @OneToOne
-	UserModel requestedDelegationTo = null;
-
-	/**
+	 * then the delegation can only be requested until the proxy accepts it.
 	 * We need to store the voters checksum for a delegation request, so that later when the proxy accepts
 	 * the delegation request, the voters checksum can also be delegated to the proxies checksum.
 	 */
 	@OneToOne
+	@JsonIgnore  // do not include this field in REST responses. Checksums are confidential
   ChecksumModel requestedDelegationFromChecksum = null;
 
   /** When was the delegation to that proxy requested */
   LocalDateTime requestedDelegationAt = null;
 
   public boolean isDelegationRequest() {
-  	return this.requestedDelegationTo != null;
+  	return this.requestedDelegationFromChecksum != null;
 	}
 
 	/**
@@ -89,7 +86,7 @@ public class DelegationModel extends BaseModel {
 		//A "builder" only creates a new object and sets some additional values, that the default RequiredArgs constructor does not set.
 		DelegationModel delegationRequest = new DelegationModel(area, fromUser, proxy);
 		delegationRequest.setTransitive(transitive);
-		delegationRequest.setRequestedDelegationTo(proxy);
+		delegationRequest.setRequestedDelegationFromChecksum(voterChecksumModel);
 		delegationRequest.setRequestedDelegationAt(LocalDateTime.now());
 		return delegationRequest;
 	}

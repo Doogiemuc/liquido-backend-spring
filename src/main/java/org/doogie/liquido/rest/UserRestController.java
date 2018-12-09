@@ -145,31 +145,12 @@ public class UserRestController {
 		ottRepo.delete(oneTimeToken);
 
     // return JWT token for this email
+		String jwt = jwtTokenProvider.generateToken(oneTimeToken.getUser().getEmail());
 		log.info("User "+oneTimeToken.getUser()+ "logged in with valid SMS code.");
-		return jwtTokenProvider.generateToken(oneTimeToken.getUser().getEmail());
+		return jwt;
   }
 
-	/**
-	 * Calculate the number of votes a voter may cast. If this is a normal voter without any delegations this method will return 1.
-	 * If this voter is a proxy, because other checksums were delegated to him, then this method will return
-	 * the recursive count of those delegations plus the one vote of the proxy himself.
-	 *
-	 * @param voterToken voterToken of a voter
-	 * @return the number of votes this user may cast with this voterToken in an area.
-	 */
-	@RequestMapping(value = "/my/numVotes", method = GET)
-	public long getNumVotes(@RequestParam("voterToken")String voterToken) throws LiquidoException {
-		log.trace("=> GET /my/numVotes");
-		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
-				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your numVotes!"));
-		long numVotes = proxyService.getNumVotes(voterToken);
-		log.trace("<= GET numVotes(proxy=" + proxy +") = "+numVotes);
-		return numVotes;
-	}
-
 	//TODO: change a user's password => delete all tokens and checksums
-
-	//TODO: @ExceptionHandler(LiquidoRestException.class)  => handle liquido exception. Return JSON with Error Code
 
 }
 
