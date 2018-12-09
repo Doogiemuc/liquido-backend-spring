@@ -47,6 +47,21 @@ This is a more technical guide for developers
  - Add a suggestion to a law
  - Up/Down-vote a suggestion.
  - Sort competing proposals into vote order (XXL)
+ 
+ ### Voter Token
+ 
+ A voter token is the digital representation of your right to vote.
+ You can request a voter token for every area.
+ 
+ ### Token Checksum
+ 
+ The token checksum is the hashed value of your voter token. And a server secret, so that only the
+ server is able to create valid checksums.
+ 
+ 
+ 
+ 
+     Voter =request=> Voter Token =hashed=> Voter's Checksum =delegatedTo=> Proxies Checksum <= ProxyToken <= Proxy 
 
 
 # Build pipeline

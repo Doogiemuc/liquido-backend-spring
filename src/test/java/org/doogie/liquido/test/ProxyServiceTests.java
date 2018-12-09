@@ -95,9 +95,8 @@ public class ProxyServiceTests {
 		assertEquals("Delegation must point from voter ", fromUser, delegation.get().getFromUser());
 		assertEquals("Delegation must point to proxy", toProxy, delegation.get().getToProxy());
 
-		Map<AreaModel, UserModel> proxyMap = proxyService.getDirectProxies(fromUser);
-		log.info(proxyMap.toString());
-		assertEquals(toProxy+"is proxy of "+fromUser+" in area "+area, toProxy, proxyMap.get(area));
+		Optional<UserModel> directProxy = proxyService.getDirectProxy(area, fromUser);
+		assertEquals(toProxy+"is direct proxy of "+fromUser+" in area "+area, toProxy, directProxy.get());
 	}
 
 	@Test
@@ -154,10 +153,11 @@ public class ProxyServiceTests {
 		AreaModel area      			  = areaRepo.findByTitle(AREA0_TITLE);
 
 		//WHEN
-		UserModel topmostProxy = proxyService.findTopProxy(area, voter);
+		Optional<UserModel> topProxy = proxyService.findTopProxy(area, voter);
 
 		//THEN
-		assertEquals(expectedTopProxy, topmostProxy);
+		assertTrue(topProxy.isPresent());
+		assertEquals(expectedTopProxy, topProxy.get());
 		log.trace("SUCCESS: topmost proxy was found correctly.");
 	}
 

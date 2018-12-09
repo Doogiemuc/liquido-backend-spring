@@ -1,8 +1,10 @@
 package org.doogie.liquido.datarepos;
 
 import org.doogie.liquido.model.AreaModel;
+import org.doogie.liquido.model.ChecksumModel;
 import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.List;
@@ -47,7 +49,8 @@ public interface DelegationRepo extends CrudRepository<DelegationModel, Long> {
   Optional<DelegationModel> findByAreaAndFromUser(AreaModel area, UserModel fromUser);
 
 
-  List<DelegationModel> findByAreaAndRequestedDelegationTo(AreaModel area, UserModel proxy);
+  @Query("select d from DelegationModel d where d.area = ?1 and d.toProxy = ?2 and d.requestedDelegationFromChecksum != null")
+  List<DelegationModel> findDelegationRequests(AreaModel area, UserModel proxy);
 
   /*
   //same as  @Query("select d from delegation_model where d.area_id = ?1 and d.from_user_id = ?2 and d.to_proxy_id = ?3")

@@ -7,6 +7,7 @@ import org.doogie.liquido.services.CastVoteService;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository for valid voterTokens. Here the checksumModel = hash(voterToken) for all valid voter Tokens is stored.
@@ -21,7 +22,7 @@ public interface ChecksumRepo extends CrudRepository<ChecksumModel, Long> {
 	 * @param checksum a hashed voterToken
 	 * @return the model, or null if not found
 	 */
-	ChecksumModel findByChecksum(String checksum);
+	Optional<ChecksumModel> findByChecksum(String checksum);
 
 	/**
 	 * Find all checksums that are delegated to this proxy.
@@ -44,7 +45,7 @@ public interface ChecksumRepo extends CrudRepository<ChecksumModel, Long> {
 	 * @param proxy a public proxy that added his username to his stored checksum   {@link org.doogie.liquido.services.ProxyService#becomePublicProxy(UserModel, AreaModel, String)}
 	 * @return the checksum of the public proxy  or null if none was found
 	 */
-	ChecksumModel findByAreaAndPublicProxy(AreaModel area, UserModel proxy);
+	Optional<ChecksumModel> findByAreaAndPublicProxy(AreaModel area, UserModel proxy);
 
 
 }
