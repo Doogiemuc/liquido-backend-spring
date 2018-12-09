@@ -1,14 +1,15 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.datarepos.ChecksumRepo;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.ChecksumModel;
+import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.AssignProxyRequest;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
+import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
@@ -18,7 +19,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.springframework.web.bind.annotation.RequestMethod.*;
 
@@ -31,9 +34,6 @@ public class ProxyRestController {
 
 	@Autowired
 	ProxyService proxyService;
-
-	@Autowired
-	ChecksumRepo checksumRepo;
 
 	@Autowired
 	LiquidoAuditorAware liquidoAuditorAware;
@@ -53,25 +53,39 @@ public class ProxyRestController {
 	}
 
 	/**
-	 * get all proxies that this user currently has assigned (per area)
-	 * @return a Map with directProxy and topProxy per area
+	 * Calculate the number of votes a voter may cast. If this is a normal voter without any delegations this method will return 1.
+	 * If this voter is a proxy, because other checksums were delegated to him, then this method will return
+	 * the recursive count of those delegations plus the one vote of the proxy himself.
+	 * @param area the area. needed to check for delegation requests.
+	 * @param voterToken voterToken of a voter. Number of votes are calculated from real checksum delegations. Therefore we need the voterToken
+	 * @return the number of votes this user may cast with this voterToken in an area.
+	 *         And also an array of delegationRequests if there are any pending ones.
+	 */
+	@RequestMapping(value = "/my/numVotes", method = GET)
+	public @ResponseBody Lson getNumVotes(@RequestParam("area") AreaModel area, @RequestParam("voterToken")String voterToken) throws LiquidoException {
+		log.trace("=> GET /my/numVotes");
+		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your numVotes!"));
+		long numVotes = proxyService.getNumVotes(voterToken);
+		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, proxy);
+  	Lson response = Lson.builder("numVotes", numVotes);
+		if (delegationRequests.size() > 0) response.put("delegationRequests", delegationRequests);
+		log.trace("<= GET /my/numVotes(proxy=" + proxy +") returns "+numVotes + " votes and "+delegationRequests.size()+" delegation requests");
+		return response;
+	}
+
+	/**
+	 * When a voter delegates his vote to a proxy, then this is his direct proxy.
+	 * When the proxy in turn delegates his vote this is a transitive proxy.
+	 * At the end of this chain is the user's top proxy for that area.
+	 *
+	 * @return a map with one entry per area. Each entry contains the direct proxy(if any) and the top proxy(if any) of voter in that area.
 	 */
 	@RequestMapping(value = "/my/proxyMap", method = GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public @ResponseBody Map getProxyMap() throws LiquidoException {
-		UserModel user = liquidoAuditorAware.getCurrentAuditor()
+	public @ResponseBody Lson getProxyMap(@RequestParam(value="voterToken") String voterToken) throws LiquidoException {
+		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your proxy map!"));
-		return proxyService.getDirectProxies(user);
-		/*
-		Map<AreaModel, UserModel> proxyMap = proxyService.getDirectProxies(user);
-		HashMap<String, Object> result = new HashMap<>();
-		for(AreaModel area: proxyMap.keySet()) {
-			UserModel directProxy = proxyMap.get(area);
-			UserModel topProxy = proxyService.findTopProxy(area, user);
-			ProxyMapResponseElem elem = new ProxyMapResponseElem(directProxy, topProxy);
-			result.put(area.getTitle(), elem);
-		}
-		return result;
-		*/
+		return proxyService.getProxyMap(proxy, voterToken);
 	}
 
 	/**
@@ -134,15 +148,33 @@ public class ProxyRestController {
 		proxyService.removeProxy(area, currentUser, voterToken);
 	}
 
+	@RequestMapping(value = "/my/delegationRequests/{area}", method = GET)
+	public ResponseEntity getDelegationRequests(@PathVariable("area") AreaModel area) throws LiquidoException {
+		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get delegation requests"));
+		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, proxy);
+		return new ResponseEntity(delegationRequests, HttpStatus.OK);
+	}
+
+	@RequestMapping(value = "/my/delegationRequests/{areaId}", method = PUT)
+	public @ResponseBody Lson acceptDelegationRequests(@PathVariable("areaId") AreaModel area, @RequestParam("voterToken")String voterToken) throws LiquidoException {
+		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to accept delegation requests."));
+		long numVotes = proxyService.acceptDelegationRequests(area, proxy, voterToken);
+		return Lson.builder("numVotes", numVotes);
+	}
+
+	/**
+	 * Get the checksum of a public proxy, so that we can delegate to it.
+	 * With this request a client can also check if a user already is a public proxy.
+	 */
 	@RequestMapping("/users/{userId}/publicChecksum")
 	public ResponseEntity getPublicChecksum(@RequestParam("area") AreaModel area, @PathVariable("userId") UserModel proxy) throws LiquidoException {
 		if (proxy == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "User with that id not found.");
 		if (area == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "Area with that id not found.");
-		log.trace("=> GET /checksumOfPublicProxy?area="+area+"&proxy="+proxy);
-		ChecksumModel checksum = checksumRepo.findByAreaAndPublicProxy(area, proxy);
-		//if (checksum == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "User "+proxy.getId()+ " not found.");
-		//log.trace("<= GET GET /checksumOfPublicProxy?area="+area.getId()+"&proxy="+proxy.getId()+ " returns checksum="+ checksum == null ? "<null> : checksum.getChecksum());
-		return ResponseEntity.ok(checksum);
+		log.trace("=> /users/{userId}/publicChecksum?area="+area+"&proxy="+proxy);
+		Optional<ChecksumModel> checksumOfPublicProxy = proxyService.getChecksumOfPublicProxy(area, proxy);
+		return ResponseEntity.of(checksumOfPublicProxy);  // returns 404 when publicChecksum is not found
 	}
 
 }

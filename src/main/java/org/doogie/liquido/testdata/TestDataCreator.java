@@ -8,6 +8,7 @@ import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.*;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoProperties;
+import org.doogie.liquido.util.Lson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.Table;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -111,6 +116,9 @@ public class TestDataCreator implements CommandLineRunner {
   CastVoteService castVoteService;
 
   @Autowired
+	DelegationRepo delegationRepo;
+
+  @Autowired
 	ProxyService proxyService;
 
   @Autowired
@@ -172,9 +180,8 @@ public class TestDataCreator implements CommandLineRunner {
       auditorAware.setMockAuditor(null);
 
 			log.info("===== TestDataCreator: Store sample data in file: "+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME);
-
 			jdbcTemplate.execute("SCRIPT TO '"+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME+"'");
-
+			removeQartzSchema();
       log.info("===== TestDataCreator FINISHED");
     }
 
@@ -191,6 +198,60 @@ public class TestDataCreator implements CommandLineRunner {
 		}
   }
 
+	/**
+	 * Crude hack for nasty race condition.
+	 * My nice SQL script contains the schema (CREATE TABLE ...) and data (INSERT INTO...) That way I can
+	 * very quickly init a DB from scratch.  But TestDataCreator runs after my SpringApp has started.
+	 * Our Quartz scheduler is started earlier. It can be configured to create or not create its own
+	 * schema. But when I tell it to not create its own schema TestDataCreator runs too late.
+	 * So I let Quartz create its own stuff and remove any Quarts related lines from my DB script
+	 *
+	 * The alternative would be do copy the Quartz lines into schema.sql and data.sql
+	 * Then I could also recreate Quartz sample data such as jobs.
+	 */
+	private void removeQartzSchema() {
+		try {
+			File sqlScript = new File(SAMPLE_DATA_PATH + SAMPLE_DATA_FILENAME);
+			BufferedReader reader = new BufferedReader(new FileReader(sqlScript));
+			List<String> lines = new ArrayList<>();
+			String currentLine;
+			Boolean removeBlock = false;
+			while ((currentLine = reader.readLine()) != null) {
+				currentLine = currentLine.trim();
+				//log.trace("Checking line "+currentLine);
+				if (currentLine.matches("(ALTER|CREATE).*TABLE PUBLIC\\.QRTZ.*\\(")) removeBlock = true;
+				if (currentLine.matches("INSERT INTO PUBLIC\\.QRTZ.*VALUES")) removeBlock = true;
+				if (removeBlock && currentLine.matches(".*\\); *")) {
+					log.trace("Remove end of block      );");
+					removeBlock = false;
+					continue;
+				}
+				if (removeBlock) {
+					log.trace("Removing line from block "+currentLine);
+					continue;
+				}
+				if (currentLine.matches("(ALTER|CREATE).*TABLE PUBLIC\\.QRTZ.*;")) {
+					log.trace("Removing single line:    "+currentLine);
+					continue;
+				}
+				lines.add(currentLine);
+			}
+			reader.close();
+
+			BufferedWriter writer = new BufferedWriter(new FileWriter(sqlScript));
+			for(String line : lines) {
+				writer.write(line);
+				writer.newLine();		//  + System.getProperty("line.separator")
+			}
+			writer.close();
+			log.trace("Updated SQL script "+sqlScript.getAbsolutePath());
+
+		} catch (Exception e) {
+			log.error("Could not remove Quarts statements from Schema: "+e.getMessage());
+  		throw new RuntimeException("Could not remove Quarts statements from Schema: "+e.getMessage(), e);
+		}
+	}
+
   /*   Global properties are automatically initialized from application.properties file
   private void seedGlobalProperties() {
     log.trace("Seeding global properties ...");
@@ -206,7 +267,7 @@ public class TestDataCreator implements CommandLineRunner {
     log.info("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
     this.usersMap = new HashMap<>();
 
-    /** Hashing a password takes time. So all test usersMap have the same password to speed TestDataCreator up alot. */
+    /* DEPRECATED. No more passwords. Hashing a password takes time. So all test usersMap have the same password to speed TestDataCreator up alot. */
 	  //PasswordEncoder passwordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();   // Springs default password encoder uses "bcrypt"
 		//String hashedPassword = passwordEncoder.encode(password);           // Password encoding takes a second! And it should take a second, for security reasons!
 
@@ -218,8 +279,7 @@ public class TestDataCreator implements CommandLineRunner {
       profile.setName("Test User" + (i+1));
       profile.setPicture("/static/img/photos/"+((i%3)+1)+".png");
       profile.setWebsite("http://www.liquido.de");
-      profile.setMobilephone("+49"+DoogiesUtil.randomDigits(10));
-      if (i==0) profile.setMobilephone("+4912345");  // make sure that there is one user with that mobilePhone
+      profile.setMobilephone("+4912345"+(i+1));  // deterministic phone numbers
       newUser.setProfile(profile);
 
       UserModel existingUser = userRepo.findByEmail(email);
@@ -278,20 +338,45 @@ public class TestDataCreator implements CommandLineRunner {
       UserModel toProxy    = usersMap.get(delegationData[1]);
       boolean   transitive = "true".equalsIgnoreCase(delegationData[2]);
       try {
-	      if (!isPublicProxy(area, toProxy))
+	      if (TestFixtures.shouldBePublicProxy(area, toProxy))
 		      castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, TestFixtures.USER_TOKEN_SECRET, true);
-				String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, TestFixtures.USER_TOKEN_SECRET, true);
+				String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, TestFixtures.USER_TOKEN_SECRET, TestFixtures.shouldBePublicProxy(area, fromUser));
 	      ChecksumModel voterChecksumModel = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, transitive);
 	      //log.debug("Created delegation from "+fromUser.getEmail()+ "(checksum="+voterChecksumModel.getChecksum()+") -> to proxy " + toProxy.getEmail() + " (checksum="+voterChecksumModel.getDelegatedTo().getChecksum()+") + transitive="+transitive);
       } catch (LiquidoException e) {
         log.error("Cannot seedProxies: error Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId()+": "+e);
       }
     }
+
+    UserModel topProxy = usersMap.get(TestFixtures.TOP_PROXY_EMAIL);
+    printTreeNode("", area, topProxy, false);
   }
 
-  private boolean isPublicProxy(AreaModel area, UserModel proxy) {
-  	return checksumRepo.findByAreaAndPublicProxy(area, proxy) != null;
-  }
+  /**
+	 * Pretty print the tree of proxies.  I LOVE stackoverflow :-)
+	 * https://stackoverflow.com/questions/4965335/how-to-print-binary-tree-diagram
+	 */
+	private void printTreeNode(String prefix, AreaModel area, UserModel proxy, boolean isTail) {
+  	String nodeName = proxy.getEmail();
+		log.debug(prefix + (isTail ? "└── " : "├── ") + nodeName);
+
+		List<DelegationModel> delegations = delegationRepo.findByAreaAndToProxy(area, proxy);  // this also finds delegation requests
+
+		for (int i = 0; i < delegations.size() - 1; i++) {
+			String newPrefix = prefix;
+			newPrefix += isTail ? " " : "│" ;
+			newPrefix += delegations.get(i).isDelegationRequest() ? "Req": "   ";
+			printTreeNode(newPrefix, area, delegations.get(i).getFromUser(), false);
+		}
+		if (delegations.size() > 0) {
+			DelegationModel last = delegations.get(delegations.size()-1);
+			String newPrefix = prefix;
+			newPrefix += isTail ? " " : "│" ;
+			newPrefix += last.isDelegationRequest() ? "Req": "   ";
+			printTreeNode(newPrefix, area, last.getFromUser(),true);
+		}
+	}
+
 
   private void seedIdeas() {
     log.info("Seeding Ideas ...");
@@ -630,7 +715,7 @@ public class TestDataCreator implements CommandLineRunner {
 			// Now we use the original CastVoteService to get a voterToken and cast our vote.
 			try {
 				auditorAware.setMockAuditor(voter);
-				String voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, pollInVoting.getArea(), TestFixtures.USER_TOKEN_SECRET, true);
+				String voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, pollInVoting.getArea(), TestFixtures.USER_TOKEN_SECRET, TestFixtures.shouldBePublicProxy(pollInVoting.getArea(), voter));
 				auditorAware.setMockAuditor(null); // MUST cast vote anonymously!
 				CastVoteRequest castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
 				BallotModel ballotModel = castVoteService.castVote(castVoteRequest);

@@ -63,7 +63,7 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 				.put("exception", ex.getClass().toString())
 				.put("message", ex.getMessage());
 
-		if (ex.getCause() != null || ex.getCause().getMessage() != null) {
+		if (ex.getCause() != null && ex.getCause().getMessage() != null) {
 			bodyOfResponse.put("cause", ex.getCause().getMessage());
 		}
 
