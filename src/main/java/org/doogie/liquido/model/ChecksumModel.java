@@ -22,7 +22,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor  				// Lombok Data does NOT include a NoArgsConstructor!
 @RequiredArgsConstructor		// And RequiredArgsConstructor does not work when not mentioned explicitly
 @EqualsAndHashCode(of = "checksum")
-@ToString(of = "checksum")
 @Entity
 @Table(name = "checksums", uniqueConstraints= {
 	@UniqueConstraint(columnNames = {"area_id", "public_proxy_id"})  // A proxy cannot be public proxy more than once in one area.
@@ -79,6 +78,19 @@ public class ChecksumModel {
 	@OneToOne
 	UserModel publicProxy = null;		// by default no username is stored together with a checksum!!!
 
+
+	public String toString() {
+		StringBuffer buf = new StringBuffer();
+		buf.append("Checksum[");
+		buf.append("checksum="+this.getChecksum());
+		buf.append(", transitive="+this.isTransitive());
+		if (this.getPublicProxy() != null)
+			buf.append(", publicProxy="+this.getPublicProxy().toStringShort()+")");
+		if (this.getDelegatedTo() != null)
+			buf.append(", delegatedTo="+this.getDelegatedTo().getChecksum());
+		buf.append("]");
+		return buf.toString();
+	}
 
 	//REFACTORED: I decided to store delegation requests in the DelegationModel
 	/*

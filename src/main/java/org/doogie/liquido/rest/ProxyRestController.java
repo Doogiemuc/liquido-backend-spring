@@ -148,8 +148,8 @@ public class ProxyRestController {
 		proxyService.removeProxy(area, currentUser, voterToken);
 	}
 
-	@RequestMapping(value = "/my/delegationRequests/{area}", method = GET)
-	public ResponseEntity getDelegationRequests(@PathVariable("area") AreaModel area) throws LiquidoException {
+	@RequestMapping(value = "/my/delegationRequests/{areaId}", method = GET)
+	public ResponseEntity getDelegationRequests(@PathVariable("areaId") AreaModel area) throws LiquidoException {
 		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get delegation requests"));
 		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, proxy);

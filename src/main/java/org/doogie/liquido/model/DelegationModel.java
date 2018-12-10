@@ -94,4 +94,19 @@ public class DelegationModel extends BaseModel {
 	// Implementation notes:
   // - A delegation is always implicitly created by "fromUser"
 
+
+	@Override
+	public String toString() {
+		final StringBuffer sb = new StringBuffer("DelegationModel[");
+		sb.append("id=").append(id);
+		sb.append(", area=").append(area.getTitle());
+		sb.append("(id=").append(area.getId()).append(")");
+		sb.append(", fromUser=").append(fromUser.toStringShort());
+		sb.append(", toProxy=").append(toProxy.toStringShort());
+		sb.append(", transitive=").append(transitive);
+		sb.append(", requestedDelegationFromChecksum=").append(requestedDelegationFromChecksum);
+		sb.append(", requestedDelegationAt=").append(requestedDelegationAt);
+		sb.append(']');
+		return sb.toString();
+	}
 }
