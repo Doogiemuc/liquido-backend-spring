@@ -49,7 +49,7 @@ public class TestFixtures {
 	                     					user1          <---- top Proxy
 					                    /   |   \
      no public proxy ---> user2  user3  user4
-	delegation request ->  /R/      |      (\)   <---- 6->4  non-transitive        7-2: requested because user2 is not a public proxy
+	delegation request ->  /R/      |      (\)   <---- 6->4  non-transitive        7->2: requested because user2 is not a public proxy
 		                   user7		user5    user6
 	 */
   // This test data must match RestEndpointTests.testGetProxyMap()  and ProxyServiceTests.testGetNumVotes !!!
@@ -64,8 +64,8 @@ public class TestFixtures {
 		delegations.add(new String[]{TestFixtures.USER3_EMAIL, TestFixtures.USER1_EMAIL, "true"});
 		delegations.add(new String[]{TestFixtures.USER4_EMAIL, TestFixtures.USER1_EMAIL, "true"});
 		delegations.add(new String[]{TestFixtures.USER5_EMAIL, TestFixtures.USER4_EMAIL, "true"});
-		delegations.add(new String[]{TestFixtures.USER6_EMAIL, TestFixtures.USER4_EMAIL, "false"});  // delegation from user6 to user4 is non-transitive
-		delegations.add(new String[]{TestFixtures.USER7_EMAIL, TestFixtures.USER2_EMAIL, "false"});  // requested delegation
+		delegations.add(new String[]{TestFixtures.USER6_EMAIL, TestFixtures.USER4_EMAIL, "false"});  // 6 -> 4  is non-transitive
+		delegations.add(new String[]{TestFixtures.USER7_EMAIL, TestFixtures.USER2_EMAIL, "false"});  // 7 -> 2  requested delegation
 	}
 
 

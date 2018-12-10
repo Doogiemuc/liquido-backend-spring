@@ -8,7 +8,6 @@ import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.*;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoProperties;
-import org.doogie.liquido.util.Lson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,9 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.Table;
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -141,6 +137,9 @@ public class TestDataCreator implements CommandLineRunner {
 	@Autowired
 	ApplicationContext appContext;
 
+	@Autowired
+	TestUtils utils;
+
   // very simple random number generator
   Random rand;
 
@@ -182,7 +181,7 @@ public class TestDataCreator implements CommandLineRunner {
 			log.info("===== TestDataCreator: Store sample data in file: "+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME);
 			jdbcTemplate.execute("SCRIPT TO '"+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME+"'");
 			removeQartzSchema();
-      log.info("===== TestDataCreator FINISHED");
+			log.info("===== TestDataCreator: Sample data stored successfully in file: "+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME);
     }
 
     boolean loadSampleDataFromSqlScript = Boolean.parseBoolean(springEnv.getProperty(LOAD_SAMPLE_DB_PARAM));
@@ -196,6 +195,13 @@ public class TestDataCreator implements CommandLineRunner {
 				log.error("ERROR: Cannot load schema and sample data from "+ SAMPLE_DATA_FILENAME +": "+e);
 			}
 		}
+
+    log.debug("====== TestDataCreator: Proxy tree (delegations) =====");
+		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA_FOR_DELEGATIONS);
+		UserModel topProxy = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
+		utils.printDelegationTree(area, topProxy);
+
+		log.info("===== TestDataCreator FINISHED");
   }
 
 	/**
@@ -342,41 +348,13 @@ public class TestDataCreator implements CommandLineRunner {
 		      castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, TestFixtures.USER_TOKEN_SECRET, true);
 				String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, TestFixtures.USER_TOKEN_SECRET, TestFixtures.shouldBePublicProxy(area, fromUser));
 	      ChecksumModel voterChecksumModel = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, transitive);
-	      //log.debug("Created delegation from "+fromUser.getEmail()+ "(checksum="+voterChecksumModel.getChecksum()+") -> to proxy " + toProxy.getEmail() + " (checksum="+voterChecksumModel.getDelegatedTo().getChecksum()+") + transitive="+transitive);
       } catch (LiquidoException e) {
         log.error("Cannot seedProxies: error Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId()+": "+e);
       }
     }
-
     UserModel topProxy = usersMap.get(TestFixtures.TOP_PROXY_EMAIL);
-    printTreeNode("", area, topProxy, false);
+    utils.printDelegationTree(area, topProxy);
   }
-
-  /**
-	 * Pretty print the tree of proxies.  I LOVE stackoverflow :-)
-	 * https://stackoverflow.com/questions/4965335/how-to-print-binary-tree-diagram
-	 */
-	private void printTreeNode(String prefix, AreaModel area, UserModel proxy, boolean isTail) {
-  	String nodeName = proxy.getEmail();
-		log.debug(prefix + (isTail ? "└── " : "├── ") + nodeName);
-
-		List<DelegationModel> delegations = delegationRepo.findByAreaAndToProxy(area, proxy);  // this also finds delegation requests
-
-		for (int i = 0; i < delegations.size() - 1; i++) {
-			String newPrefix = prefix;
-			newPrefix += isTail ? " " : "│" ;
-			newPrefix += delegations.get(i).isDelegationRequest() ? "Req": "   ";
-			printTreeNode(newPrefix, area, delegations.get(i).getFromUser(), false);
-		}
-		if (delegations.size() > 0) {
-			DelegationModel last = delegations.get(delegations.size()-1);
-			String newPrefix = prefix;
-			newPrefix += isTail ? " " : "│" ;
-			newPrefix += last.isDelegationRequest() ? "Req": "   ";
-			printTreeNode(newPrefix, area, last.getFromUser(),true);
-		}
-	}
-
 
   private void seedIdeas() {
     log.info("Seeding Ideas ...");

@@ -83,9 +83,6 @@ public class UserModel extends BaseModel {
   public List<String> voterTokens;
   */
 
-
-
-	// This is extremely important! Do not expose password in toString() !!!
   @Override
   public String toString() {
   	StringBuffer buf = new StringBuffer();
@@ -99,5 +96,14 @@ public class UserModel extends BaseModel {
 		buf.append(']');
 		return buf.toString();
   }
+
+  public String toStringShort() {
+		StringBuffer buf = new StringBuffer();
+		buf.append("UserModel[");
+		buf.append("id=" + id);
+		buf.append(", email='" + email + '\'');
+		buf.append(']');
+		return buf.toString();
+	}
 
 }

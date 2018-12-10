@@ -108,10 +108,10 @@ public class CastVoteService {
 		// THEN the user has changed his voterTokenSecret
 		//  AND we must invalidate (delete) the old checksum.
 		 //  AND we must delete all delegations.
-		Optional<ChecksumModel> checksumModel = checksumRepo.findByChecksum(tokenChecksum);
-		Optional<ChecksumModel> existingChecksumOfPublicProxy = checksumRepo.findByAreaAndPublicProxy(area, voter);
-		if (existingChecksumOfPublicProxy.isPresent() &&
-				!existingChecksumOfPublicProxy.equals(checksumModel)) {
+		Optional<ChecksumModel> checksumOpt = checksumRepo.findByChecksum(tokenChecksum);
+		Optional<ChecksumModel> existingChecksumOfPublicProxyOpt = checksumRepo.findByAreaAndPublicProxy(area, voter);
+		if (existingChecksumOfPublicProxyOpt.isPresent() &&
+				!existingChecksumOfPublicProxyOpt.equals(checksumOpt)) {
 			log.trace("Voter changed his voterTokenSecret. Replacing old checksum of former public proxy with new one.");
 
 			throw new RuntimeException("Change of voterTokenSecret is NOT YET IMPLEMENTED!");
@@ -134,14 +134,16 @@ public class CastVoteService {
 			*/
 		}
 
-		if (checksumModel.isPresent()) { log.trace("  Update existing checksum");	}
-		ChecksumModel checksum = checksumModel.orElse(new ChecksumModel(tokenChecksum, area));
+		if (checksumOpt.isPresent()) { log.trace("  Update existing checksum");	}
+		ChecksumModel checksum = checksumOpt.orElse(new ChecksumModel(tokenChecksum, area));
 
-		//   IF user wants to become (or stay) a public proxy
+		//   IF voter is not yet a public proxy
+		//  AND wants to become a public proxy
 		// THEN stores his username with his checksum
 		//  AND automatically accept all pending delegations
-		if (becomePublicProxy) {
+		if (checksum.getPublicProxy() != null && becomePublicProxy) {
 			checksum.setPublicProxy(voter);
+			checksumRepo.save(checksum);		//BUGFIX: Must save checksum in transactin before I cann accept delegation requests with it.
 			proxyService.acceptDelegationRequests(area, voter, voterToken);
 		}
 		refreshChecksum(checksum);
@@ -182,7 +184,7 @@ public class CastVoteService {
 	 * @return the existing checksum of that user in that area
 	 * @throws LiquidoException when user does not yet have checksum in that area
 	 */
-	private ChecksumModel getExistingChecksum(UserModel user, String userTokenSecret, AreaModel area) throws LiquidoException {
+	public ChecksumModel getExistingChecksum(UserModel user, String userTokenSecret, AreaModel area) throws LiquidoException {
 		String voterToken = calcVoterToken(user.getId(), userTokenSecret, area.getId());
 		return isVoterTokenValidAndGetChecksum(voterToken);
 	}
