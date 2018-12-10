@@ -33,7 +33,7 @@ import static org.junit.Assert.*;
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest
-@EnableJpaAuditing(auditorAwareRef = "liquidoAuditorAware")
+//@EnableJpaAuditing(auditorAwareRef = "liquidoAuditorAware")  => fails becasue of famous Mr. Drotbohm https://jira.spring.io/browse/DATAJPA-367
 @ActiveProfiles("test")  // this will also load the settings  from  application-test.properties
 public class RepoTests {
   private Logger log = LoggerFactory.getLogger(this.getClass());
@@ -42,13 +42,7 @@ public class RepoTests {
   LiquidoAuditorAware auditorAware;
 
   @Autowired
-  TestDataCreator testDataCreator;
-
-  @Autowired
   UserRepo userRepo;
-
-  @Autowired
-  DelegationRepo delegationRepo;
 
   @Autowired
   LawRepo lawRepo;
@@ -89,7 +83,7 @@ public class RepoTests {
     log.trace("TEST CreateIdeaWithMockAuditor SUCCESSFULL");
   }
 
-   @Test
+  @Test
   @WithUserDetails("testuser1@liquido.de")
   public void testUpdate() {
     log.trace("TEST update");

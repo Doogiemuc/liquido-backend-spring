@@ -13,6 +13,7 @@ import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
 import org.doogie.liquido.testdata.TestFixtures;
+import org.doogie.liquido.testdata.TestUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,8 +23,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import javax.annotation.PostConstruct;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.doogie.liquido.testdata.TestFixtures.*;
@@ -52,14 +51,20 @@ public class ProxyServiceTests {
 	@Autowired
 	ChecksumRepo checksumRepo;
 
+	@Autowired
+	TestUtils utils;
+
 	@PostConstruct
 	public void beforeClass() throws LiquidoException {
-		log.info("=========== PROXY TREE ========");
-		UserModel proxy = userRepo.findByEmail(USER1_EMAIL);
-		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
-		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, USER_TOKEN_SECRET, true);
-		ChecksumModel proxyChecksumModel = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
-		printProxyTree(proxyChecksumModel, "");
+		log.info("=========== ProxyServiceTest.postConstruct (once beforeClass) ========");
+		UserModel topProxy = userRepo.findByEmail(USER1_EMAIL);
+		AreaModel area     = areaRepo.findByTitle(AREA_FOR_DELEGATIONS);
+		ChecksumModel proxyChecksum = castVoteService.getExistingChecksum(topProxy, USER_TOKEN_SECRET, area);
+		log.info("=========== PROXY TREE (checksums) ========");
+		utils.printChecksumTree(proxyChecksum);
+		log.info("=========== PROXY TREE (delegations) ========");
+		utils.printDelegationTree(area, topProxy);
+		log.info("============================================");
 	}
 
 	/**
@@ -102,40 +107,25 @@ public class ProxyServiceTests {
 	@Test
 	@WithUserDetails(USER1_EMAIL)
 	public void testGetNumVotes() throws LiquidoException {
-		log.trace("testGetNumVotes");
+		log.trace("ENTER: testGetNumVotes");
 		AreaModel area  = areaRepo.findByTitle(AREA0_TITLE);
 
 		UserModel proxy = userRepo.findByEmail(USER1_EMAIL);
 		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, USER_TOKEN_SECRET, true);
-		ChecksumModel proxyChecksumModel = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
-		printProxyTree(proxyChecksumModel, "");
+		ChecksumModel proxyChecksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
+		utils.printChecksumTree(proxyChecksum);
 		long numVotes = proxyService.getNumVotes(voterToken);
 		assertEquals(USER1_EMAIL+" should have "+TestFixtures.USER1_NUM_VOTES+" votes", TestFixtures.USER1_NUM_VOTES, numVotes);
 
 		proxy = userRepo.findByEmail(USER4_EMAIL);
 		voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, USER_TOKEN_SECRET, true);
-		proxyChecksumModel = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
-		printProxyTree(proxyChecksumModel, "");
+		proxyChecksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
+		utils.printChecksumTree(proxyChecksum);
 		numVotes = proxyService.getNumVotes(voterToken);
 		assertEquals(USER4_EMAIL+" should have "+TestFixtures.USER4_NUM_VOTES+" votes", TestFixtures.USER4_NUM_VOTES, numVotes);
 
 		log.trace("SUCCESS: testGetNumVotes");
 	}
-
-	private void printProxyTree(ChecksumModel proxyChecksum, String indent) {
-		String publicProxyStr = proxyChecksum.getPublicProxy() != null ? "==public proxy: " + proxyChecksum.getPublicProxy().getEmail() : "";
-		List<ChecksumModel> delegees = checksumRepo.findByDelegatedTo(proxyChecksum);
-		if (delegees == null) {
-			log.trace(indent+"Voter: " + proxyChecksum + publicProxyStr);
-		} else {
-			//log.trace(indent+"Proxy: " + proxyChecksum + publicProxyStr);
-			for (ChecksumModel delegee : delegees) {
-				log.trace(indent + delegee.getPublicProxy().getEmail() + " -" + (delegee.isTransitive() ? "transitive" : "") + "-> " + proxyChecksum.getPublicProxy().getEmail()+"    " + delegee.getChecksum() + " -> " + proxyChecksum);
-				printProxyTree(delegee, indent + "  ");
-			}
-		}
-	}
-
 
 	/**
 	 * GIVEN a voter that delegated to a proxy
@@ -147,17 +137,36 @@ public class ProxyServiceTests {
 	@WithUserDetails(USER5_EMAIL)
 	public void findTopProxy() {
 		log.trace("testGetTopmostProxy");
-		//GIVEN
-		UserModel voter             = userRepo.findByEmail(USER5_EMAIL);
-		UserModel expectedTopProxy  = userRepo.findByEmail(USER1_EMAIL);
 		AreaModel area      			  = areaRepo.findByTitle(AREA0_TITLE);
+		UserModel voter;
+		UserModel expectedTopProxy;
+		Optional<UserModel> topProxy;
 
+		//GIVEN   - proxy 5 -> 3 -> 1    see TestFixtures.java
+		voter             = userRepo.findByEmail(USER5_EMAIL);
+		expectedTopProxy  = userRepo.findByEmail(USER1_EMAIL);
 		//WHEN
-		Optional<UserModel> topProxy = proxyService.findTopProxy(area, voter);
-
+		topProxy = proxyService.findTopProxy(area, voter);
 		//THEN
 		assertTrue(topProxy.isPresent());
 		assertEquals(expectedTopProxy, topProxy.get());
+
+		//GIVEN   - proxy 6 -> 4 because delegation is non transitive
+		voter             = userRepo.findByEmail(USER6_EMAIL);
+		expectedTopProxy  = userRepo.findByEmail(USER4_EMAIL);
+		//WHEN
+		topProxy = proxyService.findTopProxy(area, voter);
+		//THEN
+		assertTrue(topProxy.isPresent());
+		assertEquals(expectedTopProxy, topProxy.get());
+
+		//GIVEN   - voter 7 -> no proxy, because delegation is only requested
+		voter             = userRepo.findByEmail(USER7_EMAIL);
+		//WHEN
+		topProxy = proxyService.findTopProxy(area, voter);
+		//THEN
+		assertFalse(topProxy.isPresent());
+
 		log.trace("SUCCESS: topmost proxy was found correctly.");
 	}
 
