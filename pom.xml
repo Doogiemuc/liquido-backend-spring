@@ -65,6 +65,7 @@
 			<version>${spring-boot.version}</version>
 		</dependency>
 
+
 		<!-- ================ OAuth 2.0 with spring security  TRY V3       FAILED AGAIN :-( ==================================
 		<dependency>
 			<groupId>org.springframework.security</groupId>

@@ -137,13 +137,14 @@ public class ProxyServiceTests {
 	@WithUserDetails(USER5_EMAIL)
 	public void findTopProxy() {
 		log.trace("testGetTopmostProxy");
+		// all this data must match TestFixtures.java !!!
 		AreaModel area      			  = areaRepo.findByTitle(AREA0_TITLE);
 		UserModel voter;
 		UserModel expectedTopProxy;
 		Optional<UserModel> topProxy;
 
 		//GIVEN   - proxy 5 -> 3 -> 1    see TestFixtures.java
-		voter             = userRepo.findByEmail(USER5_EMAIL);
+		voter             = userRepo.findByEmail(USER10_EMAIL);
 		expectedTopProxy  = userRepo.findByEmail(USER1_EMAIL);
 		//WHEN
 		topProxy = proxyService.findTopProxy(area, voter);
@@ -151,17 +152,17 @@ public class ProxyServiceTests {
 		assertTrue(topProxy.isPresent());
 		assertEquals(expectedTopProxy, topProxy.get());
 
-		//GIVEN   - proxy 6 -> 4 because delegation is non transitive
-		voter             = userRepo.findByEmail(USER6_EMAIL);
-		expectedTopProxy  = userRepo.findByEmail(USER4_EMAIL);
+		//GIVEN   - proxy 12 -> 7 because delegation is non transitive
+		voter             = userRepo.findByEmail(USER12_EMAIL);
+		expectedTopProxy  = userRepo.findByEmail(USER7_EMAIL);
 		//WHEN
 		topProxy = proxyService.findTopProxy(area, voter);
 		//THEN
 		assertTrue(topProxy.isPresent());
 		assertEquals(expectedTopProxy, topProxy.get());
 
-		//GIVEN   - voter 7 -> no proxy, because delegation is only requested
-		voter             = userRepo.findByEmail(USER7_EMAIL);
+		//GIVEN   - voter 5 -> no proxy, because delegation is only requested
+		voter             = userRepo.findByEmail(USER5_EMAIL);
 		//WHEN
 		topProxy = proxyService.findTopProxy(area, voter);
 		//THEN
