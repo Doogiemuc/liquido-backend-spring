@@ -120,11 +120,6 @@ public class TestDataCreator implements CommandLineRunner {
   @Autowired
   LiquidoProperties props;
 
-  /*
-  @Autowired
-  KeyValueRepo keyValueRepo;
-  */
-
   @Autowired
   JdbcTemplate jdbcTemplate;
 
@@ -132,7 +127,7 @@ public class TestDataCreator implements CommandLineRunner {
   LiquidoAuditorAware auditorAware;
 
   @Autowired
-  Environment springEnv;   // load settings from application-test.properties
+  Environment springEnv;   		// load settings from application-test.properties
 
 	@Autowired
 	ApplicationContext appContext;
@@ -201,6 +196,14 @@ public class TestDataCreator implements CommandLineRunner {
 		UserModel topProxy = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
 		utils.printDelegationTree(area, topProxy);
 
+		try {
+			log.debug("====== TestDataCreator: Proxy tree (checksums) =====");
+			ChecksumModel checksum = castVoteService.getExistingChecksum(topProxy, TestFixtures.USER_TOKEN_SECRET, area);
+			utils.printChecksumTree(checksum);
+		} catch (LiquidoException e) {
+			log.error("Cannot get checksum of "+topProxy+": "+e.getMessage());
+		}
+
 		log.info("===== TestDataCreator FINISHED");
   }
 
@@ -216,6 +219,7 @@ public class TestDataCreator implements CommandLineRunner {
 	 * Then I could also recreate Quartz sample data such as jobs.
 	 */
 	private void removeQartzSchema() {
+		log.trace("removeQartzSchema from SQL script: start");
 		try {
 			File sqlScript = new File(SAMPLE_DATA_PATH + SAMPLE_DATA_FILENAME);
 			BufferedReader reader = new BufferedReader(new FileReader(sqlScript));
@@ -233,11 +237,11 @@ public class TestDataCreator implements CommandLineRunner {
 					continue;
 				}
 				if (removeBlock) {
-					log.trace("Removing line from block "+currentLine);
+					//log.trace("Removing line from block "+currentLine);
 					continue;
 				}
 				if (currentLine.matches("(ALTER|CREATE).*TABLE PUBLIC\\.QRTZ.*;")) {
-					log.trace("Removing single line:    "+currentLine);
+					//log.trace("Removing single line:    "+currentLine);
 					continue;
 				}
 				lines.add(currentLine);
@@ -250,7 +254,7 @@ public class TestDataCreator implements CommandLineRunner {
 				writer.newLine();		//  + System.getProperty("line.separator")
 			}
 			writer.close();
-			log.trace("Updated SQL script "+sqlScript.getAbsolutePath());
+			log.trace("removeQartzSchema from SQL script successfull: "+sqlScript.getAbsolutePath());
 
 		} catch (Exception e) {
 			log.error("Could not remove Quarts statements from Schema: "+e.getMessage());
@@ -344,8 +348,11 @@ public class TestDataCreator implements CommandLineRunner {
       UserModel toProxy    = usersMap.get(delegationData[1]);
       boolean   transitive = "true".equalsIgnoreCase(delegationData[2]);
       try {
-	      if (TestFixtures.shouldBePublicProxy(area, toProxy))
-		      castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, TestFixtures.USER_TOKEN_SECRET, true);
+	      if (TestFixtures.shouldBePublicProxy(area, toProxy)) {
+					castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, TestFixtures.USER_TOKEN_SECRET, true);
+					log.debug("publicProxyChecksum = ", proxyService.getChecksumOfPublicProxy(area, toProxy));
+				}
+
 				String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, TestFixtures.USER_TOKEN_SECRET, TestFixtures.shouldBePublicProxy(area, fromUser));
 	      ChecksumModel voterChecksumModel = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, transitive);
       } catch (LiquidoException e) {
@@ -368,7 +375,7 @@ public class TestDataCreator implements CommandLineRunner {
       UserModel createdBy = this.randUser();
       auditorAware.setMockAuditor(createdBy);
       AreaModel area = this.areas.get(i % this.areas.size());
-      LawModel newIdea = new LawModel(ideaTitle, ideaDescr.toString(), area, createdBy);
+      LawModel newIdea = new LawModel(ideaTitle, ideaDescr.toString(), area);
       lawRepo.save(newIdea);
 
 	    // add some supporters, but not enough to become a proposal
@@ -387,7 +394,7 @@ public class TestDataCreator implements CommandLineRunner {
 
   private LawModel createProposal(String title, String description, AreaModel area, UserModel createdBy, int ageInDays) {
     auditorAware.setMockAuditor(createdBy);
-    LawModel proposal = new LawModel(title, description, area, createdBy);
+    LawModel proposal = new LawModel(title, description, area);
     lawRepo.save(proposal);
     proposal = addSupportersToIdea(proposal, props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
     //proposal.setStatus(LawStatus.PROPOSAL);

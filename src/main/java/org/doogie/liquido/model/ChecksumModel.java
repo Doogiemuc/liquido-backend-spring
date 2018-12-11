@@ -84,10 +84,8 @@ public class ChecksumModel {
 		buf.append("Checksum[");
 		buf.append("checksum="+this.getChecksum());
 		buf.append(", transitive="+this.isTransitive());
-		if (this.getPublicProxy() != null)
-			buf.append(", publicProxy="+this.getPublicProxy().toStringShort()+")");
-		if (this.getDelegatedTo() != null)
-			buf.append(", delegatedTo="+this.getDelegatedTo().getChecksum());
+		buf.append(", publicProxy="+ (this.getPublicProxy() != null ? this.getPublicProxy().toStringShort() : "<null>"));
+		buf.append(", delegatedTo="+ (this.getDelegatedTo() != null ? this.getDelegatedTo().getChecksum() : "<null>"));
 		buf.append("]");
 		return buf.toString();
 	}
