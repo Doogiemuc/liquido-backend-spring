@@ -131,8 +131,8 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 
   /** The user that initially created the idea */
   @CreatedBy  // automatically handled by spring data jpa auditing
-  @NonNull
-  @NotNull
+  //@NonNull
+  //@NotNull
   @ManyToOne
   public UserModel createdBy;
 

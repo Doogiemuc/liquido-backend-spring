@@ -32,6 +32,11 @@ public class TestFixtures {
   public static final String USER5_EMAIL = MAIL_PREFIX+"5@liquido.de";
 	public static final String USER6_EMAIL = MAIL_PREFIX+"6@liquido.de";
 	public static final String USER7_EMAIL = MAIL_PREFIX+"7@liquido.de";
+	public static final String USER8_EMAIL = MAIL_PREFIX+"7@liquido.de";
+	public static final String USER9_EMAIL = MAIL_PREFIX+"9@liquido.de";
+	public static final String USER10_EMAIL = MAIL_PREFIX+"10@liquido.de";
+	public static final String USER11_EMAIL = MAIL_PREFIX+"11@liquido.de";
+	public static final String USER12_EMAIL = MAIL_PREFIX+"12@liquido.de";
 
 	/* p
   /** this secret is used when user requests a voter token */
@@ -46,28 +51,47 @@ public class TestFixtures {
 
 	/* Example data for delegations:
 
-	                     					user1          <---- top Proxy
-					                    /   |   \
-     no public proxy ---> user2  user3  user4
-	delegation request ->  /R/      |      (\)   <---- 6->4  non-transitive        7->2: requested because user2 is not a public proxy
-		                   user7		user5    user6
+	                            				    user1          <---- top Proxy
+        					                     /    |    \
+  user2 is not a public proxy --> (user2) user3  user4
+	          delegation request ->  /R/      |       \
+      		                       user5    user6    user7
+      		                      /    \           /   |  (\)    <---- 12->7  non-transitive!
+      		                 user8    user9  user10 user11 user12
+
+ └── UserModel[id=1, email='testuser1@liquido.de', profile.mobilephone=+49123451, profile.picture=/static/img/photos/1.png]
+     ├── UserModel[id=2, email='testuser2@liquido.de', profile.mobilephone=+49123452, profile.picture=/static/img/photos/2.png]
+     │   └── UserModel[id=5, email='testuser5@liquido.de', profile.mobilephone=+49123455, profile.picture=/static/img/photos/2.png]
+     ├── UserModel[id=3, email='testuser3@liquido.de', profile.mobilephone=+49123453, profile.picture=/static/img/photos/3.png]
+     │   └── UserModel[id=6, email='testuser6@liquido.de', profile.mobilephone=+49123456, profile.picture=/static/img/photos/3.png]
+     └── UserModel[id=4, email='testuser4@liquido.de', profile.mobilephone=+49123454, profile.picture=/static/img/photos/1.png]
+         └── UserModel[id=7, email='testuser7@liquido.de', profile.mobilephone=+49123457, profile.picture=/static/img/photos/1.png]
+             ├── UserModel[id=10, email='testuser10@liquido.de', profile.mobilephone=+491234510, profile.picture=/static/img/photos/1.png]
+             ├── UserModel[id=11, email='testuser11@liquido.de', profile.mobilephone=+491234511, profile.picture=/static/img/photos/2.png]
+             └── UserModel[id=12, email='testuser12@liquido.de', profile.mobilephone=+491234512, profile.picture=/static/img/photos/3.png]
+
+
+
 	 */
   // This test data must match RestEndpointTests.testGetProxyMap()  and ProxyServiceTests.testGetNumVotes !!!
   public static List<String[]> delegations = new ArrayList<>();
 	public static final String AREA_FOR_DELEGATIONS = AREA0_TITLE;
 	public static final String TOP_PROXY_EMAIL = USER1_EMAIL;
-	public static final long   USER1_NUM_VOTES = 5;     // testuser1@liquido.de  has 5 votes (including his own) due to (transitive) delegations
-	public static final long   USER4_NUM_VOTES = 3;     // testuser4@liquido.de  has 3 votes (including his own) due to direct delegations
+	public static final long   USER1_NUM_VOTES = 8;     // testuser1@liquido.de  has 5 votes (including his own) due to (transitive) delegations
+	public static final long   USER4_NUM_VOTES = 4;     // testuser4@liquido.de  has 3 votes (including his own) due to direct delegations
 	static {
 		// fromUser, toProxy, transitive?
 		delegations.add(new String[]{TestFixtures.USER2_EMAIL, TestFixtures.USER1_EMAIL, "true"});   // testuser2 delegates to proxy testuser1
 		delegations.add(new String[]{TestFixtures.USER3_EMAIL, TestFixtures.USER1_EMAIL, "true"});
 		delegations.add(new String[]{TestFixtures.USER4_EMAIL, TestFixtures.USER1_EMAIL, "true"});
-		delegations.add(new String[]{TestFixtures.USER5_EMAIL, TestFixtures.USER4_EMAIL, "true"});
-		delegations.add(new String[]{TestFixtures.USER6_EMAIL, TestFixtures.USER4_EMAIL, "false"});  // 6 -> 4  is non-transitive
-		delegations.add(new String[]{TestFixtures.USER7_EMAIL, TestFixtures.USER2_EMAIL, "false"});  // 7 -> 2  requested delegation
+		delegations.add(new String[]{TestFixtures.USER5_EMAIL, TestFixtures.USER2_EMAIL, "true"});  // 5 -> 2 requested, because user2 is not a public proxy
+		delegations.add(new String[]{TestFixtures.USER6_EMAIL, TestFixtures.USER3_EMAIL, "true"});
+		delegations.add(new String[]{TestFixtures.USER7_EMAIL, TestFixtures.USER4_EMAIL, "true"});
+		delegations.add(new String[]{TestFixtures.USER10_EMAIL, TestFixtures.USER7_EMAIL, "true"});
+		delegations.add(new String[]{TestFixtures.USER11_EMAIL, TestFixtures.USER7_EMAIL, "true"});
+		delegations.add(new String[]{TestFixtures.USER12_EMAIL, TestFixtures.USER7_EMAIL, "false"});  // 12 -> 7  non transitive
 	}
 
 
-  //TODO: REST URLs should also be part of these TestFixtures. When an URL changes in the backend this should break a test.
+  //TODO: REST URLs should also be part of these TestFixtures. When an URL changes in the backend this SHOULD break a test.
 }

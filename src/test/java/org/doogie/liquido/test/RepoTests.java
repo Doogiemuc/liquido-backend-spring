@@ -23,6 +23,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.doogie.liquido.test.matchers.UserMatcher.userWithEMail;
 import static org.hamcrest.CoreMatchers.hasItem;
@@ -33,7 +34,7 @@ import static org.junit.Assert.*;
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest
-//@EnableJpaAuditing(auditorAwareRef = "liquidoAuditorAware")  => fails becasue of famous Mr. Drotbohm https://jira.spring.io/browse/DATAJPA-367
+//@EnableJpaAuditing  // => fails because of famous Mr. Drotbohm https://jira.spring.io/browse/DATAJPA-367
 @ActiveProfiles("test")  // this will also load the settings  from  application-test.properties
 public class RepoTests {
   private Logger log = LoggerFactory.getLogger(this.getClass());
@@ -67,19 +68,26 @@ public class RepoTests {
   }
 
   @Test
-  @WithUserDetails(TestFixtures.USER1_EMAIL)  // http://docs.spring.io/spring-security/site/docs/4.2.1.RELEASE/reference/htmlsingle/#test-method-withuserdetails
+  @WithUserDetails(TestFixtures.USER2_EMAIL)  // http://docs.spring.io/spring-security/site/docs/4.2.1.RELEASE/reference/htmlsingle/#test-method-withuserdetails
   public void testCreateIdeaWithMockAuditor() {
     log.trace("TEST CreateIdeaWithMockAuditor");
-    UserModel user1 = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
+    auditorAware.setMockAuditor(null);    // BUGFIX: Must remove any previously set mock auditor
+
+    UserModel user2 = userRepo.findByEmail(TestFixtures.USER2_EMAIL);
     AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-    LawModel newIdea = new LawModel("Idea from test"+System.currentTimeMillis(), "Very nice description from test", area1, user1);
+
+    Optional<UserModel> currentAuditor = auditorAware.getCurrentAuditor();
+    assertTrue(currentAuditor.isPresent());
+    assertEquals(user2, currentAuditor.get());
+
+    LawModel newIdea = new LawModel("Idea from test"+System.currentTimeMillis(), "Very nice description from test", area1);
 
     //auditorAware.setMockAuditor(user1);     //not necessary anymore. Replaced by @WithUserDetails annotation.     // have to mock the currently logged in user for the @CreatedBy annotation in LawModel to work
     LawModel insertedIdea = lawRepo.save(newIdea);
     //auditorAware.setMockAuditor(null);
     log.trace("saved Idea "+insertedIdea);
 
-    Assert.assertEquals("Expected idea to be created by "+TestFixtures.USER1_EMAIL, TestFixtures.USER1_EMAIL, insertedIdea.getCreatedBy().getEmail());
+    Assert.assertEquals("Expected idea to be created by "+user2, user2, insertedIdea.getCreatedBy());
     log.trace("TEST CreateIdeaWithMockAuditor SUCCESSFULL");
   }
 

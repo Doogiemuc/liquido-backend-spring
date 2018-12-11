@@ -86,7 +86,7 @@ public class CastVoteService {
 	 * @param area an area that the user's want's to vote in
 	 * @param voterTokenSecret  a secret that only the user knows. So no one else can create this voterToken. May be emtpy string, but then with less security.
 	 * @param becomePublicProxy true if voter wants to become (or stay) a public proxy. Voter can also decide later with {@link ProxyService#becomePublicProxy
-	 * @return user's voterToken, that only the user must know, and that will hash to the stored checksumModel.
+	 * @return  users voterToken, that only the user must know, and that will hash to the stored checksumModel.
 	 */
 	@Transactional
 	public String createVoterTokenAndStoreChecksum(UserModel voter, AreaModel area, String voterTokenSecret, boolean becomePublicProxy) throws LiquidoException {
@@ -137,13 +137,13 @@ public class CastVoteService {
 		if (checksumOpt.isPresent()) { log.trace("  Update existing checksum");	}
 		ChecksumModel checksum = checksumOpt.orElse(new ChecksumModel(tokenChecksum, area));
 
-		//   IF voter is not yet a public proxy
-		//  AND wants to become a public proxy
+		//   IF wants to become a public proxy
+		//  AND voter is not yet the public proxy of his checksum
 		// THEN stores his username with his checksum
 		//  AND automatically accept all pending delegations
-		if (checksum.getPublicProxy() != null && becomePublicProxy) {
+		if (becomePublicProxy && !voter.equals(checksum.getPublicProxy())) {
 			checksum.setPublicProxy(voter);
-			checksumRepo.save(checksum);		//BUGFIX: Must save checksum in transactin before I cann accept delegation requests with it.
+			checksumRepo.save(checksum);		//BUGFIX: Must save checksum in transaction before I can accept delegation requests with it.
 			proxyService.acceptDelegationRequests(area, voter, voterToken);
 		}
 		refreshChecksum(checksum);
