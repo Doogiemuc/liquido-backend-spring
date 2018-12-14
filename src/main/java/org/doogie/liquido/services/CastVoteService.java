@@ -234,7 +234,7 @@ public class CastVoteService {
 	 *
 	 * 2) IF there is NO existing ballot for this poll with that checksum yet,
 	 *    THEN save a new ballot
-	 *    ELSE // ballot with that checksum already exists
+	 *    ELSE // a ballot with that checksum already exists
 	 *      IF the level of the existing ballot is SMALLER then the passed newBallot.level
 	 *      THEN do NOT update the existing ballot, because it was casted by a lower proxy or the user himself
 	 *      ELSE update the existing ballot's level and vote order
@@ -242,13 +242,14 @@ public class CastVoteService {
 	 *  3) FOR EACH directly delegated ChecksumModel
 	 *              builder a childBallot and recursively try to store this childBallot.
 	 *
-	 *  Remark: The child ballot might not be stored when there alrady is one with a smaller level. This is
+	 *  Remark: The child ballot might not be stored when there already is one with a smaller level. This is
 	 *          our recursion limit.
 	 *
 	 * @param newBallot the ballot that shall be stored. The ballot will be checked very thoroughly. Especially if the ballot's checksum is valid.
 	 * @return the newly created or updated existing ballot  OR
 	 *         null if the ballot wasn't stored due to an already existing ballot with a smaller level.
 	 */
+	@Transactional
 	public BallotModel storeBallot(BallotModel newBallot) throws LiquidoException {
 		log.debug("storeBallot("+newBallot+") checksum="+newBallot.getChecksum().getChecksum());
 
@@ -256,12 +257,14 @@ public class CastVoteService {
 		checkBallot(newBallot);
 
 		//----- If there is no existing ballot yet with that checksum, then builder a completely new one.
-		BallotModel existingBallot = ballotRepo.findByPollAndChecksum(newBallot.getPoll(), newBallot.getChecksum());
-		if (existingBallot == null) {
+		Optional<BallotModel> existingBallotOpt = ballotRepo.findByPollAndChecksum(newBallot.getPoll(), newBallot.getChecksum());
+		BallotModel existingBallot;
+		if (!existingBallotOpt.isPresent()) {
 			log.trace("  Insert new ballot");
 			existingBallot = ballotRepo.save(newBallot);
 		} else {
 			//----- Proxy must not overwrite a voter's own vote  OR  a vote from a proxy below
+			existingBallot = existingBallotOpt.get();
 			if (existingBallot.getLevel() < newBallot.getLevel()) {
 				log.trace("  Will not overwrite existing ballot with smaller level " + existingBallot);
 				return null;
@@ -335,6 +338,8 @@ public class CastVoteService {
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Ballot's checksum is invalid. (It cannot be found in ChecksumModel.)"));
 
 	}
+
+	//====================== private methods ========================
 
 	private String calcVoterToken(Long userId, String userTokenSecret, Long areaId) {
 		return BCrypt.hashpw(userId + userTokenSecret + areaId + serverSecret, bcryptSalt);

@@ -3,11 +3,10 @@ package org.doogie.liquido.services;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.BallotRepo;
+import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
-import org.doogie.liquido.model.BallotModel;
-import org.doogie.liquido.model.LawModel;
-import org.doogie.liquido.model.PollModel;
+import org.doogie.liquido.model.*;
 import org.doogie.liquido.services.scheduler.FinishPollJob;
 import org.doogie.liquido.services.voting.RankedPairVoting;
 import org.doogie.liquido.util.LiquidoProperties;
@@ -18,12 +17,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import static org.quartz.JobBuilder.newJob;
 import static org.quartz.TriggerBuilder.newTrigger;
@@ -44,10 +45,16 @@ public class PollService {
   PollRepo pollRepo;
 
   @Autowired
+	DelegationRepo delegationRepo;
+
+  @Autowired
   LawRepo lawRepo;
 
   @Autowired
 	BallotRepo ballotRepo;
+
+  @Autowired
+	ProxyService proxyService;
 
   //@Autowired
 	//TaskScheduler scheduler;
@@ -220,9 +227,99 @@ public class PollService {
 		return lson;
 	}
 
-  
+	//TODO: Should this be private?  Should it only be possible to get own ballot from voterToken?
+	/**
+	 * Find the ballot of an anonymous voter identified by his checksum
+	 * @param poll a poll at least in voting
+	 * @param checksum an existing valid checksum
+	 * @return (optionally) the ballot of that checksum if found
+	 * @thows LiquidoException when poll is in status elaboration
+	 */
+  public Optional<BallotModel> getBallotForChecksum(PollModel poll, ChecksumModel checksum) throws LiquidoException {
+  	if (PollModel.PollStatus.ELABORATION.equals(poll.getStatus()))
+  		throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Cannot get ballot of poll in ELABORATION");
+		return ballotRepo.findByPollAndChecksum(poll, checksum);
+	}
+
+	/**
+	 * When a user wants to check how his direct proxy has  voted for him.
+	 * @param poll a poll
+	 * @param voterChecksum the voter's checksum
+	 * @return (optionally) the ballot of the vote's direct proxy in this poll, if voter has a direct proxy
+	 * @throws LiquidoException when this voter did not delegate his checksum to any proxy in this area
+	 */
+	public Optional<BallotModel> getBallotOfDirectProxy(PollModel poll, ChecksumModel voterChecksum) throws LiquidoException {
+		if (PollModel.PollStatus.ELABORATION.equals(poll.getStatus()))
+			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Cannot get ballot of poll in ELABORATION");
+		return ballotRepo.findByPollAndChecksum(poll, voterChecksum.getDelegatedTo());
+	}
+
+	//TODO: actually I need getBallotOfEfectiveProxy
+	public Optional<BallotModel> getBallotOfTopProxy(PollModel poll, ChecksumModel voterChecksum) throws LiquidoException {
+		if (PollModel.PollStatus.ELABORATION.equals(poll.getStatus()))
+			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Cannot get ballot of poll in ELABORATION");
+		if (voterChecksum.getDelegatedTo() == null) return Optional.empty();
+		ChecksumModel topChecksum = findTopChecksumRec(voterChecksum);
+		return ballotRepo.findByPollAndChecksum(poll, topChecksum);
+	}
 
 
+	private ChecksumModel findTopChecksumRec(ChecksumModel checksum) {
+		if (checksum.getDelegatedTo() == null) return checksum;
+		return findTopChecksumRec(checksum.getDelegatedTo());
+	}
+
+	/**
+	 * Find the proxy that casted the vote in this poll.
+	 * This recursive method walks up the tree of DelegationModels and Checksum delegations in parallel
+	 * until it reaches a ballot with level == 0. That is the ballot casted by the effective proxy.
+	 *
+	 * This may be the voter himself, if he voted himself.
+	 * This may be the voters direct proxy.
+	 * Or this may be any other proxy up in the tree, not necessarily the top proxy.
+	 * Or this may also be no one, if not the voter nor his proxies voted yet in this poll.
+	 * *
+	 * @param poll a poll in voting or finished
+	 * @param voter The voter to check who may have delegated his right to vote to a proxy.
+	 * @param voterChecksum This voters checksum. Must exist and match voter!
+	 * @return Optional.empty() IF there is no ballot for this checksum, ie. user has not voted yet at all.
+	 *         Optional.of(voter) IF voter has not delegated his checksum to any proxy. (Or maybe only requested a delegation)
+	 *				 Optional.of(effectiveProxy) where effective proxy is the one who actually voted (ballot.level == 0) for the voter
+	 * @throws LiquidoException When poll is in status ELABORATION or
+	 */
+	public Optional<UserModel> findEffectiveProxy(PollModel poll, UserModel voter, ChecksumModel voterChecksum) throws LiquidoException {
+		if (PollModel.PollStatus.ELABORATION.equals(poll.getStatus()))
+			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Cannot find effective proxy, because poll is not in voting phase or finished");
+		if (voterChecksum.getPublicProxy() != null &&	!voterChecksum.getPublicProxy().equals(voter))
+			throw new RuntimeException("Data inconsistency: " + voterChecksum + " is not the checksum of public proxy="+voter);
+
+		//----- Check if there is a ballot for this checksum. If not this voter did not vote yet.
+		Optional<BallotModel> ballotForChecksum = getBallotForChecksum(poll, voterChecksum);
+		if (!ballotForChecksum.isPresent()) return Optional.empty();
+
+		//----- If ballot has level 0, then this voter voted for himself. He is the effective proxy.
+		if (ballotForChecksum.get().getLevel() == 0) return Optional.of(voter);
+
+		//----- If voter's checksum is not delegated, (although he has a ballot that has level >0 then he is his own effective proxy.
+		// This may happen when the voter removed his proxy, after his proxy voted for him.
+		if (voterChecksum.getDelegatedTo() == null) return Optional.of(voter);
+
+		//----- Get voters direct proxy, which must exist because the voters checksum is delegated
+		DelegationModel delegation = delegationRepo.findByAreaAndFromUser(poll.getArea(), voter)
+				.orElseThrow(() -> new RuntimeException("Data inconsistency: Voter has a delegated checksum but no direct proxy! "+voter+", "+voterChecksum));
+
+		//----- if delegation is non-transitive, and the direct proxy has voted for himself, then he is the effective proxy
+		if (delegation.isTransitive() == false) {
+			Optional<BallotModel> ballotOfNonTransitiveProxy = getBallotForChecksum(poll, voterChecksum.getDelegatedTo());
+			if (ballotOfNonTransitiveProxy.isPresent() && ballotOfNonTransitiveProxy.get().getLevel() == 0) return Optional.of(delegation.getToProxy());
+			return Optional.empty();
+		}
+
+		//----- at last recursively check for that proxy up in the tree.
+		return findEffectiveProxy(poll, delegation.getToProxy(), voterChecksum.getDelegatedTo());
+
+		//of course the order of all the IF statements in this method is extremely important. Managed to do it without any "else" !! :-)
+	}
 
 }
 

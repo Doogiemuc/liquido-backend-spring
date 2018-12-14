@@ -51,6 +51,8 @@ public class DelegationModel extends BaseModel {
 	 * Then the delegation is marked as nonTransitive.
 	 * By default delegations can be transitive, so that a tree of delegations can be formed.
 	 */
+	//TODO: This is a big one:  Delegations are always transitive, because if my direct proxy forwards his right to vote
+	//		and then his proxy votes, this is just as the direct proxy voted for himself.
 	public boolean transitive = true;
 
 	/**

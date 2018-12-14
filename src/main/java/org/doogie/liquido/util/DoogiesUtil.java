@@ -9,6 +9,10 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Random;
 
+/**
+ * Handy little utility functions.
+ * See also spring.core.util.*
+ */
 public class DoogiesUtil {
 
   public static boolean isEmpty(String s) {

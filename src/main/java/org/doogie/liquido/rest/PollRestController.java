@@ -2,11 +2,15 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.BallotRepo;
+import org.doogie.liquido.datarepos.ChecksumRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
+import org.doogie.liquido.model.BallotModel;
+import org.doogie.liquido.model.ChecksumModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.rest.dto.JoinPollRequest;
+import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.util.LiquidoRestUtils;
@@ -32,6 +36,9 @@ public class PollRestController {
 	@Autowired
   PollService pollService;
 
+	@Autowired
+	CastVoteService castVoteService;
+
   @Autowired
   LawRepo lawRepo;
 
@@ -40,6 +47,9 @@ public class PollRestController {
 
   @Autowired
 	BallotRepo ballotRepo;
+
+  @Autowired
+	ChecksumRepo checksumRepo;
 
   @Autowired
 	LiquidoRestUtils restUtils;
@@ -84,7 +94,7 @@ public class PollRestController {
 	 * @param joinPollRequest with poll and proposal uri
 	 * @throws LiquidoException if poll is not in its ELABORATION phase or proposal did not reach its quorum yet
 	 */
-  @RequestMapping(value = "/joinPoll",
+  @RequestMapping(value = "/joinPoll",   //TODO: refactor to POST /polls/{pollId}/join?proposal=proposalURI
       method = RequestMethod.POST,
       consumes = "application/json")
   public @ResponseBody Resource joinPoll(@RequestBody JoinPollRequest joinPollRequest, PersistentEntityResourceAssembler resourceAssembler) throws LiquidoException {
@@ -139,6 +149,29 @@ public class PollRestController {
 		return counts;
 
 		*/
+	}
+
+	/**
+	 * Get the ballot of the user himself, his direct proxy and the top proxy (if present)
+	 * @param poll
+	 * @param checksumId ID of the voter's checksum (that must exist)
+	 * @return ownBallot, ballotOf DirectProxy and ballotOfTopProxy
+	 * @throws LiquidoException when checksum with that ID does not exist
+	 */
+	@RequestMapping(value = "/polls/{pollId}/ballot/my")
+	public @ResponseBody
+	PersistentEntityResource getOwnBallot(
+			@PathVariable(name="pollId") PollModel poll,
+			@RequestParam("checksum") String checksumId,
+			PersistentEntityResourceAssembler resourceAssembler
+	) throws LiquidoException {
+		//TODO: Make it possible to get ballots anonymously
+		//TODO: Should it ONLY be possible to get ballots from voterToken? ChecksumModel checksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
+		//      Or should everyone be able to see every ballot? Checksums are public! =>  But then I'd need a get ballot of direct/effective Proxy
+		ChecksumModel checksum = checksumRepo.findByChecksum(checksumId)
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "Cannot find checksum "+checksumId));
+		BallotModel ownBallot = pollService.getBallotForChecksum(poll, checksum).orElse(null);
+		return resourceAssembler.toFullResource(ownBallot);  // will return 404 when not found
 	}
 
 }

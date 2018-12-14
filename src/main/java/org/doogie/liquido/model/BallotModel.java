@@ -25,11 +25,9 @@ import java.util.stream.Collectors;
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor  //BUGFIX: https://jira.spring.io/browse/DATAREST-884
-/*
 @Table(name = "ballots", uniqueConstraints= {
   @UniqueConstraint(columnNames = {"POLL_ID", "CHECKSUM"} )   // a voter is only allowed to vote once per poll with his checksum!
 })
-*/
 public class BallotModel {
 	//BallotModel deliberately does not extend BaseModel!
 	//No @CreatedDate, @LastModifiedDate or @CreatedBy here.
@@ -39,7 +37,10 @@ public class BallotModel {
 	@GeneratedValue(strategy= GenerationType.AUTO)
 	public Long id;
 
-  /** reference to poll */
+  /**
+	 * Reference to poll
+	 * The poll would actually already be coded into the checksum. But we also store the reference for simlicity.
+	 */
   @NotNull
   @NonNull
   @ManyToOne
@@ -79,11 +80,13 @@ public class BallotModel {
    * Encrypted and anonymous information about the voter that casted this vote into the ballot.
 	 * Only the voter knows the voterToken that this checksumModel was created from as
 	 *   checksum = hash(voterToken)
+	 * If a vote was casted by a proxy, this is still the voters (delegated) checksum.
    */
   @NotNull
   @NonNull
 	@OneToOne
-  public ChecksumModel checksum;   //TODO: or just save the checksum as string?  had it like that but refactored it
+	@JoinColumn(name = "CHECKSUM")		// The @Id of a ChecksumModel is the checksum String itself
+  public ChecksumModel checksum;
 
 	@Override
 	public String toString() {

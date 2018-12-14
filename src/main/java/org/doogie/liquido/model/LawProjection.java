@@ -10,8 +10,8 @@ import java.util.Date;
  * inlines the creatdBy user information into the returned JSON for every law
  * and adds some more date fields relevant for a proposal or law.
  *
- * Keep in mind that projections are only used, when a LawModel is returned inside a list. When exactly one LawModel is returned e.g. GET /laws/4711 then
- * Spring Data REST will always show the original LawModel as JSON. Because only then can the client send PUT requests with this data.
+ * Keep in mind that projections are only used, when a LawModel is returned inside a list, e.g. in "_embedded" array.
+ * When exactly one LawModel is returned e.g. GET /laws/4711 then  * Spring Data REST will always show the original LawModel as JSON. Because only then can the client send PUT requests with this data.
  */
 @Projection(name = "lawProjection", types = { LawModel.class })
 public interface LawProjection {
@@ -26,9 +26,9 @@ public interface LawProjection {
 
   LawModel.LawStatus getStatus();
 
-  AreaModel getArea();  // inline information about the area
+  AreaModel getArea();  // always inline information about the area  directly into the JSON
 
-  PollModel getPoll();
+  PollModel getPoll();  // always inline information poll
 
   Date getReachedQuorumAt();
 
