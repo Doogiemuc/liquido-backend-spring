@@ -41,7 +41,7 @@ public interface DelegationRepo extends CrudRepository<DelegationModel, Long> {
   List<DelegationModel> findByAreaAndToProxy(AreaModel area, UserModel toProxy);
 
   /**
-   * find the delegation of a given user in one area
+   * Find the delegation of a given user in one area. This might be an accepted or requested delegation.
    * @param area the area of the delegation
    * @param fromUser the delegee that delegated his vote to a proxy
    * @return the one delegation in that area or null if that user has no proxy in that area

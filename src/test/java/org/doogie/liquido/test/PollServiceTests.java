@@ -3,10 +3,12 @@ package org.doogie.liquido.test;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
+import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
+import org.doogie.liquido.services.ProxyService;
 import org.doogie.liquido.services.voting.RankedPairVoting;
 import org.doogie.liquido.services.voting.SchulzeMethod;
 import org.doogie.liquido.testdata.TestDataCreator;
@@ -17,18 +19,19 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.util.Assert;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 @Slf4j
 @RunWith(SpringRunner.class)
@@ -36,14 +39,12 @@ import static org.junit.Assert.assertEquals;
 @ActiveProfiles("test")  // this will also load the settings  from  application-test.properties
 public class PollServiceTests {
 
+
 	@Autowired
 	PollService pollService;
 
 	@Autowired
-	PollRepo pollRepo;
-
-	@Autowired
-	ChecksumRepo checksumRepo;
+	ProxyService proxyService;
 
 	@Autowired
 	CastVoteService castVoteService;
@@ -58,9 +59,16 @@ public class PollServiceTests {
 	LawRepo lawRepo;
 
 	@Autowired
+	PollRepo pollRepo;
+
+	@Autowired
 	BallotRepo ballotRepo;
 
-  @Autowired
+	@Autowired
+	ChecksumRepo checksumRepo;
+
+
+	@Autowired
 	LiquidoRestUtils restUtils;
 
 	@Autowired
@@ -69,23 +77,28 @@ public class PollServiceTests {
 	@Autowired
 	LiquidoAuditorAware auditor;
 
-	public static final int NUM_USERS = 100;
-	public static final String mailPrefix = "pollTestUser";
-	public static Map<String, UserModel> users;
-
+	@Value("spring.data.rest.base-path")
 	public String basePath;
+
+	/*   DEPRECATED: USers are loaded by TestDataCreator
+	 * Lazily create users for each test
 
 	@Before
 	public void seedUsersForThisTest() {
 		if (users == null) {
+			//TODO:  try to load users from the DB
 			log.debug("Seeding " + NUM_USERS + " users");
 			PollServiceTests.users = testDataCreator.seedUsers(NUM_USERS, mailPrefix);
 		} else {
 			log.debug("Using existing "+users.size()+" users ");
 		}
-		basePath = springEnv.getProperty("spring.data.rest.base-path");
 	}
+	*/
 
+	/**
+	 * This test creates a new poll. This makes it a bit slow, but we need a given combination of ballots.
+	 * @throws LiquidoException
+	 */
 	@Test
 	public void testSchulzeMethode() throws LiquidoException {
 		log.info("=========== testSchulzeMethode");
@@ -143,7 +156,11 @@ public class PollServiceTests {
 
 	/**
 	 * Quick and dirty hack to QUICKLY cast a vote.  NO CHECKS are performed at all.
-	 * For example the voterToken will always be valid: A ChecksumModel will be created.
+	 * VoterToken and Checksum will not be real BCRYPT values but static dummies.
+	 * Because PCRYPT hashing is the slow part of casting a vote.
+	 *
+	 * The correct call for all this would be:   castVoteService.castVote(castVoteRequest);
+	 *
 	 * @param voterToken
 	 * @param poll
 	 * @param voteOrder
@@ -157,15 +174,16 @@ public class PollServiceTests {
   	AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
 		ChecksumModel checksumModel = new ChecksumModel(tokenChecksum, area);
 		checksumRepo.save(checksumModel);   // must save
-
 		int level = 0;
 		BallotModel ballot = new BallotModel(poll, level, voteOrder, checksumModel);
 		return ballotRepo.save(ballot);
-		//the real correct call would be:   return castVoteService.castVote(castVoteRequest);
+		//
 	}
 
 	/**
-	 * Quickly create many ballots. This is only used for testing. It does not check any voterTokens
+	 * Quickly create many ballots. This is only used for testing. It does not check or validate any voterTokens.
+	 * We simply create dummy voter tokens
+	 *
 	 * @param poll a new poll in voting phase
 	 * @param voteOrderIndexes list of voteOrders (inner index is index of proposal in poll.getProposals() )
 	 * @param numBallots How many times each voteOrder should be casted
@@ -173,9 +191,19 @@ public class PollServiceTests {
 	 * @throws LiquidoException
 	 */
 	List<BallotModel> seedBallotsQuickly(PollModel poll, int[][] voteOrderIndexes, int[] numBallots) throws LiquidoException {
+		int countBallots = Arrays.stream(numBallots).sum();
+		long numMissingUsers = countBallots - testDataCreator.countUsers();
+		if (numMissingUsers > 0) {
+			log.debug("Seeding "+numMissingUsers + " more users to seed ballots quickly");
+			testDataCreator.seedUsers(numMissingUsers, "poll"+poll.getId()+"TestUser");   // we need seperate users for each poll
+		}
+
+		if (testDataCreator.countUsers() < countBallots)
+			throw new RuntimeException("Cannot seed " + countBallots + " ballots because we only have "+testDataCreator.countUsers()+ " users");
+
 		LawModel[] propsArray = poll.getProposals().stream().toArray(LawModel[]::new);
 		List<BallotModel> ballots = new ArrayList<>();
-		int count = 1;
+		int count = 0;
 		for (int i = 0; i < voteOrderIndexes.length; i++) {
 			List<LawModel> voteOrder = new ArrayList<>();
 			for (int j = 0; j < voteOrderIndexes[i].length; j++) {
@@ -183,10 +211,10 @@ public class PollServiceTests {
 			}
 			log.debug("----- seeding "+numBallots[i]+" ballots with voteOrder "+voteOrderIndexes[i]);
 			for (int k = 0; k < numBallots[i]; k++) {
-				UserModel voter = users.get(mailPrefix+count+"@liquido.de");
-				count++;
+				UserModel voter = testDataCreator.getUser(count);
 				auditor.setMockAuditor(voter);
 
+				// correct but slow:
 				//String voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, poll.getArea(), "dummyPasswordHash");
 				//auditor.setMockAuditor(null);
 				//CastVoteRequest castVoteRequest = new CastVoteRequest(basePath+"/polls/"+poll.getId(), voteOrderURIs, voterToken);
@@ -195,6 +223,7 @@ public class PollServiceTests {
 				//crude quick'n'dirty hack to make it QUICK!
 				BallotModel ballot = quickNdirtyCastVote("$2dummyVoterToken" + count, poll, voteOrder);// voterTokens must start with $2 !!!
 				ballots.add(ballot);
+				count++;
 			}
 
 		}
@@ -244,7 +273,71 @@ public class PollServiceTests {
 		assertEquals("Nashville should have won the poll", cities[1], winners.get(0).getTitle());
 
 		log.info("Winner is "+winners.get(0).getTitle());
-
 		log.info("testRankedPairs SUCCESSFUL.");
 	}
+
+
+	@Test
+	public void testFindEffectiveProxy() throws LiquidoException {
+		// GIVEN a poll in voting
+		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA_FOR_DELEGATIONS);
+		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 3);
+		String pollURI = basePath + "/polls/" + poll.getId();
+		String voterToken;
+		CastVoteRequest castVoteRequest;
+		UserModel voter;
+		ChecksumModel voterChecksum;
+		Optional<UserModel> effectiveProxy;
+		UserModel expectedProxy;
+
+		List<String> voteOrder = new ArrayList<>();
+		voteOrder.add(basePath + "/laws/" + poll.getProposals().first().getId());
+		voteOrder.add(basePath + "/laws/" + poll.getProposals().last().getId());
+
+		// WHEN the topProxy USER1_EMAIL casts his vote with a dummy voteOrder
+		UserModel topProxy = testDataCreator.getUser(TestFixtures.USER1_EMAIL);
+		voterToken = castVoteService.createVoterTokenAndStoreChecksum(topProxy, area, TestFixtures.USER_TOKEN_SECRET, false);
+		castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
+		castVoteService.castVote(castVoteRequest);
+
+		//  AND a proxy in the middle USER4_EMAIL casts his vote with a dummy voteOrder
+		UserModel proxyInTheMiddle = testDataCreator.getUser(TestFixtures.USER4_EMAIL);
+		voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxyInTheMiddle, area, TestFixtures.USER_TOKEN_SECRET, false);
+		castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
+		castVoteService.castVote(castVoteRequest);
+
+		// THEN the effective proxy of USER10_EMAIL should be USER4_EMAIL (ie. the proxy in the middle)
+		expectedProxy = testDataCreator.getUser(TestFixtures.USER4_EMAIL);
+		voter = testDataCreator.getUser(TestFixtures.USER10_EMAIL);
+		voterChecksum = castVoteService.getExistingChecksum(voter, TestFixtures.USER_TOKEN_SECRET, area);
+		effectiveProxy = pollService.findEffectiveProxy(poll, voter, voterChecksum);
+		assertTrue(voter + " should have an effective proxy", effectiveProxy.isPresent());
+		assertEquals(expectedProxy.toStringShort() + "should be the effective proxy of "+voter.toStringShort(), expectedProxy, effectiveProxy.get());
+		log.info("SUCCESS: " + expectedProxy.toStringShort() + " is the effective proxy of "+ voter.toStringShort()  + " in poll.id="+poll.getId());
+
+		// AND for the non-transitive delegation from USER12_EMAIL should now not have an effective proxy
+		voter = testDataCreator.getUser(TestFixtures.USER12_EMAIL);
+		voterChecksum = castVoteService.getExistingChecksum(voter, TestFixtures.USER_TOKEN_SECRET, area);
+		effectiveProxy = pollService.findEffectiveProxy(poll, voter, voterChecksum);
+		assertFalse(voter + " should not have an effective proxy", effectiveProxy.isPresent());
+		log.info("SUCCESS: " + voter  + " should not yet have an effective proxy, because his non-transitive direct proxy did not vote yet in poll.id="+poll.getId());
+
+
+
+		// WHEN VOTER7_EMAIL casts his vote with a dummy voteOrder
+		voter = testDataCreator.getUser(TestFixtures.USER7_EMAIL);
+		voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
+		castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
+		castVoteService.castVote(castVoteRequest);
+
+		// THEN the effective proxy of USER12_EMAIL should be USER7_EMAIL
+		expectedProxy = testDataCreator.getUser(TestFixtures.USER7_EMAIL);
+		voterChecksum = castVoteService.getExistingChecksum(voter, TestFixtures.USER_TOKEN_SECRET, area);
+		effectiveProxy = pollService.findEffectiveProxy(poll, voter, voterChecksum);
+		assertTrue(voter + " should now have an effective proxy", effectiveProxy.isPresent());
+		assertEquals(expectedProxy.toStringShort() + "should be the effective proxy of "+voter.toStringShort(), expectedProxy, effectiveProxy.get());
+		log.info("SUCCESS: " + expectedProxy.toStringShort() + " now is the effective proxy of "+ voter.toStringShort()  + " in poll.id="+poll.getId());
+		log.info("===== testFindEffectiveProxy SUCCESS");
+	}
+
 }

@@ -29,7 +29,8 @@ public class LiquidoException extends Exception {
 		NO_DELEGATION(15, HttpStatus.BAD_REQUEST),
 		CANNOT_FIND_ENTITY(16, HttpStatus.UNPROCESSABLE_ENTITY),   		// 422: cannot find entity: e.g. from PathParam or when Deserializing
 		INVALID_POLL_STATUS(17, HttpStatus.BAD_REQUEST),
-		INVALID_JWT_TOKEN(18, HttpStatus.UNAUTHORIZED);
+		INVALID_JWT_TOKEN(18, HttpStatus.UNAUTHORIZED),
+		PUBLIC_CHECKSUM_NOT_FOUND(10, HttpStatus.NOT_FOUND);
 		int liquidoErrorCode;
 		HttpStatus httpResponseStatus;
 

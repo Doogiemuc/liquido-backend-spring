@@ -7,6 +7,7 @@ import org.doogie.liquido.rest.VoteRestController;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Database abstraction for "ballots".
@@ -54,5 +55,5 @@ public interface BallotRepo extends CrudRepository<BallotModel, Long> {
    * @param checksum a valid and stored checksum
    * @return the ballot for this (still anonymous) checksum
    */
-  BallotModel findByPollAndChecksum(PollModel poll, ChecksumModel checksum);
+  Optional<BallotModel> findByPollAndChecksum(PollModel poll, ChecksumModel checksum);
 }
