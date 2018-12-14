@@ -57,6 +57,13 @@ public class ProxyService {
 	 * If toProxy is a public proxy, then we can directly delegate user's checksum to the public proxie's checksum.
 	 * Otherwise we store a delegation request, so that the proxy needs to accept the delegation.
 	 *
+	 * The checksum of the voter that wants to delegate his right to vote to the proxy is stored in the delegation request.
+	 * When the proxy accepts the delegation, then the voter's checksum.delegatedTo can be set to the proxies checksum.
+	 *
+	 * The DelegationModel of the delegation request already has `toProxy` set. You must consider {@link DelegationModel#isDelegationRequest()}
+	 * when looking at the tree of delegations. The ChecksumModel only have their delegatedTo set, after the delegation
+	 * is accepted by the proxy.
+	 *
 	 * @param area area in which to assign the proxy
 	 * @param fromUser voter that forwards his right to vote
 	 * @param proxy proxy that receives the right and thus can vote in place of fromUser
@@ -117,7 +124,10 @@ public class ProxyService {
 		}
 		else
 		{
-			//----- ELSE only store a delegation request
+			//----- ELSE only store a delegation request AND do not store any delegation at the checksum
+			// Requested DelegationModels already contain their toProxy
+			// But the ChecksumModel has delegatedTo set to null
+			//
 			delegation.setToProxy(proxy);										// a requested delegation already contains the toProxy!
 			delegation.setRequestedDelegationFromChecksum(voterChecksumModel);
 			delegation.setRequestedDelegationAt(LocalDateTime.now());
@@ -251,46 +261,21 @@ public class ProxyService {
 	}
 
 	/**
-	 * When a user wants to check how his direct proxy has  voted for him.
-	 * @param poll a poll
-	 * @param voterChecksum the voter's checksum
-	 * @return the ballot of the vote's direct proxy in this poll.
-	 * @throws LiquidoException when this voter did not delegate his checksum to any proxy in this area
-	 */
-	public BallotModel getBallotOfDirectProxy(PollModel poll, ChecksumModel voterChecksum) throws LiquidoException {
-		if (voterChecksum.getDelegatedTo() == null)
-			throw new LiquidoException(LiquidoException.Errors.NO_DELEGATION, "You did not delegate your vote");
-		BallotModel proxyBallot = ballotRepo.findByPollAndChecksum(poll, voterChecksum.getDelegatedTo());
-		return proxyBallot;
-	}
-
-	public BallotModel getBallotOfTopProxy(PollModel poll, ChecksumModel voterChecksum) throws LiquidoException {
-		if (voterChecksum.getDelegatedTo() == null)
-			throw new LiquidoException(LiquidoException.Errors.NO_DELEGATION, "You did not delegate your vote");
-		ChecksumModel topChecksum = findTopChecksum(voterChecksum);
-		BallotModel proxyBallot = ballotRepo.findByPollAndChecksum(poll, topChecksum);
-		return proxyBallot;
-	}
-
-	ChecksumModel findTopChecksum(ChecksumModel checksum) {
-		if (checksum.getDelegatedTo() == null) return checksum;
-		return findTopChecksum(checksum.getDelegatedTo());
-	}
-
-	/**
-	 * get the directly assigned proxy of this voter.
+	 * Get the directly assigned proxy of this voter.
+	 * If there only is a delegation request this method will return Optional.empty()
 	 * @param area an area
 	 * @param voter a voter that may have a proxy assigned in area
-	 * @return the direct proxy of this voter if he has any proxy assigned in this area
+	 * @return the direct proxy of this voter if he has an accepted delegation to a proxy in this area
 	 */
 	public Optional<UserModel> getDirectProxy(AreaModel area, UserModel voter) {
 		Optional<DelegationModel> delegation = delegationRepo.findByAreaAndFromUser(area, voter);
-		if (delegation.isPresent()) return Optional.of(delegation.get().getToProxy());
+		if (delegation.isPresent() && !delegation.get().isDelegationRequest()) return Optional.of(delegation.get().getToProxy());
 		return Optional.empty();
 	}
 
 	/**
-	 * Recursively find the "transitive" top proxy at the top of the delegation chain for this voter
+	 * Recursively find the "transitive" top proxy at the top of the delegation chain for this voter.
+	 * This only considers accepted delegations not requested delegations.
 	 * @param area the area of the delegation
 	 * @param voter a voter that may have delegated his right to vote to a proxy
 	 * @return (optionally) the proxy at the top of the delegation chain starting at voter

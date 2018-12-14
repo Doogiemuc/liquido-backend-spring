@@ -56,7 +56,7 @@ public class TestFixtures {
   user2 is not a public proxy --> (user2) user3  user4
 	          delegation request ->  /R/      |       \
       		                       user5    user6    user7
-      		                      /    \           /   |  (\)    <---- 12->7  non-transitive!
+      		                      /    \           /   |  (\)    <---- 12->7  non-transitive delegation
       		                 user8    user9  user10 user11 user12
 
  └── UserModel[id=1, email='testuser1@liquido.de', profile.mobilephone=+49123451, profile.picture=/static/img/photos/1.png]

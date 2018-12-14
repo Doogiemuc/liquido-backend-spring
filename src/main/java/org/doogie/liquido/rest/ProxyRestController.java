@@ -174,7 +174,9 @@ public class ProxyRestController {
 		if (area == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "Area with that id not found.");
 		log.trace("=> /users/{userId}/publicChecksum?area="+area+"&proxy="+proxy);
 		Optional<ChecksumModel> checksumOfPublicProxy = proxyService.getChecksumOfPublicProxy(area, proxy);
-		return ResponseEntity.of(checksumOfPublicProxy);  // returns 404 when publicChecksum is not found
+		if (!checksumOfPublicProxy.isPresent())
+			throw new LiquidoException(LiquidoException.Errors.PUBLIC_CHECKSUM_NOT_FOUND, "User is not yet a public proxy.");
+		return ResponseEntity.of(checksumOfPublicProxy);  // This would also return 404 when publicChecksum is not present.  But without any error message
 	}
 
 }

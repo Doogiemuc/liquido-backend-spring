@@ -79,12 +79,12 @@ public class TestDataCreator implements CommandLineRunner {
 
   @Autowired
   UserRepo userRepo;
-  Map<String, UserModel> usersMap = new HashMap<>();  // usersMap by their email adress
+  private Map<String, UserModel> usersMap = new HashMap<>();  // user by their email address
 
   @Autowired
   AreaRepo areaRepo;
-  List<AreaModel> areas = new ArrayList<>();
-  Map<String, AreaModel> areaMap = new HashMap<>();
+  private List<AreaModel> areas = new ArrayList<>();
+  private Map<String, AreaModel> areaMap = new HashMap<>();
 
   @Autowired
   LawRepo lawRepo;
@@ -167,7 +167,8 @@ public class TestDataCreator implements CommandLineRunner {
       seedIdeas();
       seedProposals();
 			seedPollInElaborationPhase(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
-			seedPollInVotingPhase(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
+			PollModel poll = seedPollInVotingPhase(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
+			seedVotes(poll, TestFixtures.NUM_VOTES);
 			seedPollFinished(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
       seedLaws();
 
@@ -182,9 +183,27 @@ public class TestDataCreator implements CommandLineRunner {
     boolean loadSampleDataFromSqlScript = Boolean.parseBoolean(springEnv.getProperty(LOAD_SAMPLE_DB_PARAM));
     if (loadSampleDataFromSqlScript) {
 			try {
-				log.info("TestDataCreator: Loading schema and sample data from "+ SAMPLE_DATA_FILENAME);
+				log.info("===== TestDataCreator: Loading schema and sample data from "+ SAMPLE_DATA_FILENAME);
 				Resource resource = appContext.getResource(ResourceLoader.CLASSPATH_URL_PREFIX + SAMPLE_DATA_FILENAME);
 				ScriptUtils.executeSqlScript(jdbcTemplate.getDataSource().getConnection(), resource);
+
+				// Fill userMap as cache
+				if (this.usersMap == null) this.usersMap = new HashMap<>();
+				for (UserModel user : userRepo.findAll()) {
+					this.usersMap.put(user.getEmail(), user);
+				}
+				if (this.areaMap == null) this.areaMap= new HashMap<>();
+				for (AreaModel area: areaRepo.findAll()) {
+					this.areaMap.put(area.getTitle(), area);
+				}
+				log.info("Loaded {} users from sample data script", userRepo.count());
+				log.info("Loaded {} areas.", areaRepo.count());
+				log.info("Loaded {} ideas, proposals and laws.", lawRepo.count());
+				log.info("Loaded {} polls.", pollRepo.count());
+				log.info("Loaded {} delegations.", delegationRepo.count());
+				log.info("Loaded {} checksums.", checksumRepo.count());
+				log.info("Loaded {} comments.", commentRepo.count());
+
 				log.info("TestDataCreator: Loading schema and sample data from "+ SAMPLE_DATA_FILENAME +" => DONE");
 			} catch (SQLException e) {
 				log.error("ERROR: Cannot load schema and sample data from "+ SAMPLE_DATA_FILENAME +": "+e);
@@ -273,9 +292,14 @@ public class TestDataCreator implements CommandLineRunner {
   }
   */
 
-  public Map<String, UserModel> seedUsers(int numUsers, String mailPrefix) {
+	/**
+	 * Seed some users. This can be called multiple times! Uses will be stored in this.userMap
+	 * @param numUsers
+	 * @param mailPrefix
+	 */
+  public void seedUsers(long numUsers, String mailPrefix) {
     log.info("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
-    this.usersMap = new HashMap<>();
+    if (this.usersMap == null) this.usersMap = new HashMap<>();
 
     /* DEPRECATED. No more passwords. Hashing a password takes time. So all test usersMap have the same password to speed TestDataCreator up alot. */
 	  //PasswordEncoder passwordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();   // Springs default password encoder uses "bcrypt"
@@ -304,7 +328,6 @@ public class TestDataCreator implements CommandLineRunner {
       this.usersMap.put(savedUser.getEmail(), savedUser);
       if (i==0) auditorAware.setMockAuditor(savedUser);   // prevent some warnings
     }
-    return this.usersMap;
   }
 
   /**
@@ -540,7 +563,8 @@ public class TestDataCreator implements CommandLineRunner {
 
   /**
    * Seed a poll that already is in its voting phase.
-   *   Will build upon a seedPollInElaborationPhase and then start the voting phase via pollService.
+   * Will build upon a seedPollInElaborationPhase and then start the voting phase via pollService.
+	 * This will NOT yet seedVotes(poll, numVotes);
    */ 
   public PollModel seedPollInVotingPhase(AreaModel area, int numProposals) {
     log.info("Seeding one poll in voting phase ...");
@@ -562,8 +586,6 @@ public class TestDataCreator implements CommandLineRunner {
 			savedPoll.setVotingEndAt(yesterday.truncatedTo(ChronoUnit.DAYS).plusDays(props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE)));     //voting ends in n days at midnight
       savedPoll = pollRepo.save(savedPoll);
 
-			seedVotes(savedPoll, TestFixtures.NUM_VOTES);
-
       return savedPoll;
     } catch (Exception e) {
       log.error("Cannot seed Poll in voting phase: " + e);
@@ -571,6 +593,12 @@ public class TestDataCreator implements CommandLineRunner {
     }
   }
 
+	/**
+	 * Seed one poll where the voting phase is already finished and we have a winner.
+	 * This WILL also seedVotes, so that we can finish the poll and calculate the winner via the normal service call.
+	 * @param area any area
+	 * @param numProposals the number of proposals that the poll should have.
+	 */
   public void seedPollFinished(AreaModel area, int numProposals) {
 		log.info("Seeding one finished poll  ...");
 		try {
@@ -588,6 +616,9 @@ public class TestDataCreator implements CommandLineRunner {
 			pollRepo.save(poll);
 			fakeCreateAt(poll, daysVotingStarts+durationVotingPhase+daysFinished);
 			fakeUpdatedAt(poll, 1);
+
+			//----- seed Votes
+			seedVotes(poll, TestFixtures.NUM_VOTES);
 
 			//----- end voting Phase
 			LawModel winner = pollService.finishVotingPhase(poll);
@@ -675,6 +706,12 @@ public class TestDataCreator implements CommandLineRunner {
     model.setUpdatedAt(daysAgo);
   }
 
+	/**
+	 * Randomly cast some votes in the given poll. This will use the normal getVoterToken and castVote calls
+	 * which are not that fast.
+	 * @param pollInVoting
+	 * @param numVotes
+	 */
   public void seedVotes(PollModel pollInVoting, int numVotes) {
     log.info("Seeding votes for "+pollInVoting);
     if (TestFixtures.NUM_USERS < numVotes)
@@ -724,14 +761,22 @@ public class TestDataCreator implements CommandLineRunner {
 	 * get one random UserModel
 	 * @return a random user
 	 */
-	private UserModel randUser() {
+	public UserModel randUser() {
 		Object[] entries = usersMap.values().toArray();
 		return (UserModel)entries[rand.nextInt(entries.length)];
 	}
 
-	private UserModel getUser(int i) {
+	public UserModel getUser(String email) {
+		return this.usersMap.get(email);
+	}
+
+	public UserModel getUser(int i) {
 		Object[] entries = usersMap.values().toArray();
 		return (UserModel)entries[i];
+	}
+
+	public long countUsers() {
+		return usersMap.size();
 	}
 
    private static final String loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, nam urna. Vitae aenean velit, voluptate velit rutrum. Elementum integer rhoncus rutrum morbi aliquam metus, morbi nulla, nec est phasellus dolor eros in libero. Volutpat dui feugiat, non magna, parturient dignissim lacus ipsum in adipiscing ut. Et quis adipiscing perferendis et, id consequat ac, dictum dui fermentum ornare rhoncus lobortis amet. Eveniet nulla sollicitudin, dolore nullam massa tortor ullamcorper mauris. Lectus ipsum lacus.\n" +

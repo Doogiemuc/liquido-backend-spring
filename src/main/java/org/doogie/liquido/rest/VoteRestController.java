@@ -68,6 +68,7 @@ public class VoteRestController {
 		Optional<ChecksumModel> checksumOfPublicProxy = proxyService.getChecksumOfPublicProxy(area, voter);
 		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, voter);
 		Optional<UserModel> directProxy = proxyService.getDirectProxy(area, voter);
+		//MAYBE: ChecksumModel directProxyChecksum = votersChecksum.getDelegatedTo();  // may be null
 		Optional<UserModel> topProxy = proxyService.findTopProxy(area, voter);
 		Lson result = Lson.builder()
 		    .put("voterToken", voterToken)
@@ -75,6 +76,7 @@ public class VoteRestController {
 				.put("isPublicProxy", checksumOfPublicProxy.isPresent())
 		    .put("delegationRequests", delegationRequests)
 				.put("directProxy", directProxy.orElse(null))
+		//MAYBE:		.put("directProxyChecksum", )
 				.put("topProxy", topProxy.orElse(null));
 		return result;
 	}
