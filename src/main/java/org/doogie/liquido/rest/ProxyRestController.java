@@ -79,13 +79,13 @@ public class ProxyRestController {
 	 * When the proxy in turn delegates his vote this is a transitive proxy.
 	 * At the end of this chain is the user's top proxy for that area.
 	 *
-	 * @return a map with one entry per area. Each entry contains the direct proxy(if any) and the top proxy(if any) of voter in that area.
+	 * @return all the information about the proxies of this user in that area. And delegation requests to that user.
 	 */
-	@RequestMapping(value = "/my/proxyMap", method = GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public @ResponseBody Lson getProxyMap(@RequestParam(value="voterToken") String voterToken) throws LiquidoException {
+	@RequestMapping(value = "/my/proxy/{areaId}", method = RequestMethod.GET)
+	public @ResponseBody Lson getProxyInfo(@PathVariable("areaId") AreaModel area, @RequestParam(value="voterToken") String voterToken) throws LiquidoException {
 		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your proxy map!"));
-		return proxyService.getProxyMap(proxy, voterToken);
+		return proxyService.getProxyInfo(area, proxy, voterToken);
 	}
 
 	/**
@@ -118,16 +118,6 @@ public class ProxyRestController {
 			log.info("Assigned new proxy");
 			return new ResponseEntity<>(proxiesChecksumModel, HttpStatus.CREATED);  // 201
 		}
-
-		//Implementation note  about different ways of returning data back to the client.
-
-		// Return HATEOS representation of Delegation => does not work correctly, cause delegationRepo is not exposed as spring-data-rest endpoint.
-		//return resourceAssembler.toResource(savedDelegation);
-
-		// You should not return a DelegationProjection here, as this code would:
-		//   return new ResponseEntity<>(savedDelegation, HttpStatus.OK);
-		// because that cannot be used for further updates by the client.
-		// http://stackoverflow.com/questions/30220333/why-is-an-excerpt-projection-not-applied-automatically-for-a-spring-data-rest-it
 	}
 
 	/**
@@ -178,5 +168,15 @@ public class ProxyRestController {
 			throw new LiquidoException(LiquidoException.Errors.PUBLIC_CHECKSUM_NOT_FOUND, "User is not yet a public proxy.");
 		return ResponseEntity.of(checksumOfPublicProxy);  // This would also return 404 when publicChecksum is not present.  But without any error message
 	}
+
+	//Implementation note  about different ways of returning data back to the client.
+
+	// Return HATEOS representation of Delegation => does not work correctly, cause delegationRepo is not exposed as spring-data-rest endpoint.
+	//return resourceAssembler.toResource(savedDelegation);
+
+	// You should not return a DelegationProjection here, as this code would:
+	//   return new ResponseEntity<>(savedDelegation, HttpStatus.OK);
+	// because that cannot be used for further updates by the client.
+	// http://stackoverflow.com/questions/30220333/why-is-an-excerpt-projection-not-applied-automatically-for-a-spring-data-rest-it
 
 }

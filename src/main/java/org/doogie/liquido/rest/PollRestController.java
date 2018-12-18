@@ -152,26 +152,24 @@ public class PollRestController {
 	}
 
 	/**
-	 * Get the ballot of the user himself, his direct proxy and the top proxy (if present)
-	 * @param poll
-	 * @param checksumId ID of the voter's checksum (that must exist)
-	 * @return ownBallot, ballotOf DirectProxy and ballotOfTopProxy
-	 * @throws LiquidoException when checksum with that ID does not exist
+	 * Get voter's own ballot. This ballot has a "level", where  the user can see if
+	 * a proxy n levels above him has already voted for him.
+	 *
+	 * @param poll a poll in status VOTING or FINISHED
+	 * @param voterToken the users own voterToken
+	 * @return voter's own ballot
+	 * @throws LiquidoException 404 when user has not ballot, ie did not vote in this poll yet
 	 */
 	@RequestMapping(value = "/polls/{pollId}/ballot/my")
 	public @ResponseBody
 	PersistentEntityResource getOwnBallot(
 			@PathVariable(name="pollId") PollModel poll,
-			@RequestParam("checksum") String checksumId,
+			@RequestParam("voterToken") String voterToken,
 			PersistentEntityResourceAssembler resourceAssembler
 	) throws LiquidoException {
-		//TODO: Make it possible to get ballots anonymously
-		//TODO: Should it ONLY be possible to get ballots from voterToken? ChecksumModel checksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
-		//      Or should everyone be able to see every ballot? Checksums are public! =>  But then I'd need a get ballot of direct/effective Proxy
-		ChecksumModel checksum = checksumRepo.findByChecksum(checksumId)
-				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "Cannot find checksum "+checksumId));
-		BallotModel ownBallot = pollService.getBallotForChecksum(poll, checksum).orElse(null);
-		return resourceAssembler.toFullResource(ownBallot);  // will return 404 when not found
+		BallotModel ownBallot = pollService.getBallotForVoterToken(poll, voterToken)
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "No ballot found. You did not vote in this poll yet."));
+		return resourceAssembler.toFullResource(ownBallot);
 	}
 
 }

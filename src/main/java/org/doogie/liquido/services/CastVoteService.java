@@ -142,9 +142,7 @@ public class CastVoteService {
 		// THEN stores his username with his checksum
 		//  AND automatically accept all pending delegations
 		if (becomePublicProxy && !voter.equals(checksum.getPublicProxy())) {
-			checksum.setPublicProxy(voter);
-			checksumRepo.save(checksum);		//BUGFIX: Must save checksum in transaction before I can accept delegation requests with it.
-			proxyService.acceptDelegationRequests(area, voter, voterToken);
+			proxyService.becomePublicProxy(voter, area, voterToken);
 		}
 		refreshChecksum(checksum);
 		checksumRepo.save(checksum);
@@ -179,6 +177,9 @@ public class CastVoteService {
 	/**
 	 * Get the already existing checksum of this user in that area.
 	 * This method will not create a new voterToken or store any checksum.
+	 *
+	 * This is mainly used for tests
+	 *
 	 * @param user a voter
 	 * @param area an area
 	 * @return the existing checksum of that user in that area
