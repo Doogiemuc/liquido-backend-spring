@@ -20,7 +20,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.springframework.web.bind.annotation.RequestMethod.*;
@@ -79,10 +78,11 @@ public class ProxyRestController {
 	 * When the proxy in turn delegates his vote this is a transitive proxy.
 	 * At the end of this chain is the user's top proxy for that area.
 	 *
+	 * @param area an area.id
 	 * @return all the information about the proxies of this user in that area. And delegation requests to that user.
 	 */
-	@RequestMapping(value = "/my/proxy/{areaId}", method = RequestMethod.GET)
-	public @ResponseBody Lson getProxyInfo(@PathVariable("areaId") AreaModel area, @RequestParam(value="voterToken") String voterToken) throws LiquidoException {
+	@RequestMapping(value = "/my/proxy", method = RequestMethod.GET)
+	public @ResponseBody Lson getProxyInfo(@RequestParam("area") AreaModel area, @RequestParam(value="voterToken") String voterToken) throws LiquidoException {
 		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your proxy map!"));
 		return proxyService.getProxyInfo(area, proxy, voterToken);
@@ -178,5 +178,10 @@ public class ProxyRestController {
 	//   return new ResponseEntity<>(savedDelegation, HttpStatus.OK);
 	// because that cannot be used for further updates by the client.
 	// http://stackoverflow.com/questions/30220333/why-is-an-excerpt-projection-not-applied-automatically-for-a-spring-data-rest-it
+
+  /*  *sic*
+	@PathVariable (Spring based)  --- equivalent ---  @PathParam (JAX-RS)
+	@RequestParam (Spring based)  --- equivalent ---  @QueryParam (JAX-RS)
+	*/
 
 }

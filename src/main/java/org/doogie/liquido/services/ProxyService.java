@@ -2,7 +2,10 @@ package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
-import org.doogie.liquido.model.*;
+import org.doogie.liquido.model.AreaModel;
+import org.doogie.liquido.model.ChecksumModel;
+import org.doogie.liquido.model.DelegationModel;
+import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -258,6 +261,7 @@ public class ProxyService {
 	 * </pre>
 	 */
 	public Lson getProxyInfo(AreaModel area, UserModel voter, String voterToken) throws LiquidoException {
+		//TODO: Is a service method allowed to return schemaless Lson. Or should it return a DTO? (overkill!)   The REST resource must return JSON.
 		log.debug("ENTER: getProxyMap("+voter+")");
 		Optional<DelegationModel> directProxy = delegationRepo.findByAreaAndFromUser(area, voter);
 		Optional<UserModel> topProxy = findTopProxy(area, voter);

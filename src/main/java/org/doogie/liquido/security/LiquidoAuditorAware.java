@@ -27,7 +27,7 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
   UserModel mockAuditor = null;
 
   /**
-   * Get the currently logged in user
+   * Get the currently logged in user.
    * @return (An Java optional that resolves to) the currently logged in user as a liquido UserModel
    */
   @Override
@@ -49,8 +49,8 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
 			return Optional.empty();
     }
 		// principal _IS_ a LiquidoAuthUser, because
-		// 1. I put one in there   in LiquidoUserDetailsService.java  AND
-		// 2. I configured the Oauth AuthorizationServerConfig.java to use the LiquidoUSerDetailsService.java
+		// 1. I load one in LiquidoUserDetailsService.java
+		// 2. and JwtAuthenticationFilter puts it into the security context
     LiquidoAuthUser authUser = (LiquidoAuthUser)authentication.getPrincipal();
     log.trace("Returning current auditor " + authUser);
 
@@ -59,7 +59,6 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
     //BUGFIX:  Must not do this, since this will lead to an endless loop StackOverflowException
     //https://stackoverflow.com/questions/14223649/how-to-implement-auditoraware-with-spring-data-jpa-and-spring-security
     //http://stackoverflow.com/questions/42315960/stackoverflowexception-in-spring-data-jpa-app-with-spring-security-auditoraware
-
     //UserModel currentlyLoggedInUser = userRepo.findByEmail(principal.getUsername()) ;
 
   }

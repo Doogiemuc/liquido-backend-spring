@@ -2,14 +2,13 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
-import org.doogie.liquido.datarepos.LawRepo;
-import org.doogie.liquido.datarepos.PollRepo;
-import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.*;
+import org.doogie.liquido.rest.converters.LiquidoUriToEntityConverter;
 import org.doogie.liquido.util.DoogiesRequestLogger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.support.ConfigurableConversionService;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.rest.core.config.RepositoryRestConfiguration;
 import org.springframework.data.rest.core.mapping.RepositoryDetectionStrategy;
@@ -70,17 +69,6 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 
   // see also LiquidoAuditorAware for handling @CreatedBy   https://jaxenter.com/rest-api-spring-java-8-112289.html
 
-	@Autowired
-	AreaRepo areaRepo;
-
-	@Autowired
-	UserRepo userRepo;
-
-	@Autowired
-	PollRepo pollRepo;
-
-	@Autowired
-	LawRepo lawRepo;
 
 	/* DEPRECATED.  This worked, but now I have my  org.doogie.liquido.rest.deserializer.*  @JsonComponent
 	 *
@@ -106,9 +94,22 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 	}
   */
 
+	@Autowired
+	AreaRepo areaRepo;
+
+	/**
+	 * add convertes for REST RequestParams that can deserialize from HATEOAS URIs to spring data entities.
+	 * @param conversionService
+	 */
+	@Override
+	public void configureConversionService(ConfigurableConversionService conversionService) {
+		//BUGFIX: must add source and target type when using generic parametrized converter
+		conversionService.addConverter(String.class, AreaModel.class, new LiquidoUriToEntityConverter(areaRepo, AreaModel.class));
+	}
 
 
-  /*
+
+	/*
   @Override
   public void configureHttpMessageConverters(List<HttpMessageConverter<?>> messageConverters) {
     log.debug("====== adding HttpMessageConverter in RepositoryRestConfigurer");
