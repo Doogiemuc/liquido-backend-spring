@@ -1,22 +1,24 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.model.*;
+import org.doogie.liquido.model.AreaModel;
+import org.doogie.liquido.model.BallotModel;
+import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
-import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -41,6 +43,7 @@ public class VoteRestController {
 	/**
 	 * User requests a token that allows him to vote.
 	 * This request MUST be authenticated!
+	 *
 	 * @param area Area for the token
 	 * @param becomePublicProxy (optional) boolean if user immediately wants to become a public proxy. Can also do so later.
 	 *                          User may already be a public proxy. Even when you pass "false" he then will stay a public proxy.
@@ -48,9 +51,9 @@ public class VoteRestController {
 	 *         and also an array of delegationRequests if there are any pending ones.
 	 * @throws LiquidoException when request parameter is missing
 	 */
-	@RequestMapping(value = "/my/voterToken", method = RequestMethod.GET)
+	@RequestMapping(value = "/my/voterToken", method = RequestMethod.GET, produces = MediaType.TEXT_PLAIN_VALUE)
 	//TODO: @PreAuthorize("")
-	public @ResponseBody Lson getVoterToken(
+	 public ResponseEntity getVoterToken(
 			@RequestParam("area") AreaModel area,
 			@RequestParam("tokenSecret") String tokenSecret,
 			@RequestParam(name = "becomePublicProxy", defaultValue = "false", required = false) Boolean becomePublicProxy,
@@ -61,25 +64,28 @@ public class VoteRestController {
 	) throws LiquidoException {
 		UserModel voter = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get voterToken!"));			// [SECURITY]  This check is extremely important! Only valid users are allowed to get a voterToken
-		log.trace(voter+" requests his voterToken for area "+area);
-
+		log.trace("Request voterToken for " + voter.toStringShort() + " in " + area);
 		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, area, tokenSecret, becomePublicProxy);   // preconditions are checked inside castVoteService
-		long numVotes = proxyService.getNumVotes(voterToken);
+		return ResponseEntity.ok().header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE).body(voterToken);
+	}
+
+	/* =========>> Already have this as /my/proxyMap   in ProxyRestController  :-)
+	@RequestMapping(value = "/area/{areaId}/myInfo", method = RequestMethod.GET)
+	public @ResponseBody Lson getAreaInfo(@RequestParam("area") AreaModel area) throws LiquidoException {
+		UserModel voter = liquidoAuditorAware.getCurrentAuditor()
+				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get voterToken!"));
 		Optional<ChecksumModel> checksumOfPublicProxy = proxyService.getChecksumOfPublicProxy(area, voter);
 		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, voter);
 		Optional<UserModel> directProxy = proxyService.getDirectProxy(area, voter);
-		//MAYBE: ChecksumModel directProxyChecksum = votersChecksum.getDelegatedTo();  // may be null
 		Optional<UserModel> topProxy = proxyService.findTopProxy(area, voter);
 		Lson result = Lson.builder()
-		    .put("voterToken", voterToken)
-				.put("numVotes", numVotes)
 				.put("isPublicProxy", checksumOfPublicProxy.isPresent())
-		    .put("delegationRequests", delegationRequests)
+				.put("delegationRequests", delegationRequests)
 				.put("directProxy", directProxy.orElse(null))
-		//MAYBE:		.put("directProxyChecksum", )
 				.put("topProxy", topProxy.orElse(null));
 		return result;
 	}
+	*/
 
 
 	/**

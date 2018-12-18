@@ -276,53 +276,55 @@ public class PollServiceTests {
 		log.info("testRankedPairs SUCCESSFUL.");
 	}
 
-
+	/**
+	 * Test effective proxy in combination with transitive and non-transitive delegations
+	 * @throws LiquidoException
+	 */
 	@Test
 	public void testFindEffectiveProxy() throws LiquidoException {
+		String voterToken;
+		CastVoteRequest castVoteRequest;
+		UserModel voter;
+		Optional<UserModel> effectiveProxy;
+		UserModel expectedProxy;
+
 		// GIVEN a poll in voting
 		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA_FOR_DELEGATIONS);
 		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 3);
 		String pollURI = basePath + "/polls/" + poll.getId();
-		String voterToken;
-		CastVoteRequest castVoteRequest;
-		UserModel voter;
-		ChecksumModel voterChecksum;
-		Optional<UserModel> effectiveProxy;
-		UserModel expectedProxy;
 
+    //  AND a dummy voteOrder
 		List<String> voteOrder = new ArrayList<>();
 		voteOrder.add(basePath + "/laws/" + poll.getProposals().first().getId());
 		voteOrder.add(basePath + "/laws/" + poll.getProposals().last().getId());
 
-		// WHEN the topProxy USER1_EMAIL casts his vote with a dummy voteOrder
-		UserModel topProxy = testDataCreator.getUser(TestFixtures.USER1_EMAIL);
-		voterToken = castVoteService.createVoterTokenAndStoreChecksum(topProxy, area, TestFixtures.USER_TOKEN_SECRET, false);
+		// WHEN USER1_EMAIL casts his vote with a dummy voteOrder (the topProxy)
+		voter = testDataCreator.getUser(TestFixtures.USER1_EMAIL);
+		voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
 		castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
 		castVoteService.castVote(castVoteRequest);
 
-		//  AND a proxy in the middle USER4_EMAIL casts his vote with a dummy voteOrder
-		UserModel proxyInTheMiddle = testDataCreator.getUser(TestFixtures.USER4_EMAIL);
-		voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxyInTheMiddle, area, TestFixtures.USER_TOKEN_SECRET, false);
+		//  AND a USER4_EMAIL casts his vote with a dummy voteOrder (a proxy in the middle)
+		voter = testDataCreator.getUser(TestFixtures.USER4_EMAIL);
+		voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
 		castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
 		castVoteService.castVote(castVoteRequest);
 
-		// THEN the effective proxy of USER10_EMAIL should be USER4_EMAIL (ie. the proxy in the middle)
-		expectedProxy = testDataCreator.getUser(TestFixtures.USER4_EMAIL);
+		// THEN the effective proxy of USER10_EMAIL should be USER4_EMAIL (this proxy in the middle)
 		voter = testDataCreator.getUser(TestFixtures.USER10_EMAIL);
-		voterChecksum = castVoteService.getExistingChecksum(voter, TestFixtures.USER_TOKEN_SECRET, area);
-		effectiveProxy = pollService.findEffectiveProxy(poll, voter, voterChecksum);
+		expectedProxy = testDataCreator.getUser(TestFixtures.USER4_EMAIL);
+		voterToken= castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
+		effectiveProxy = pollService.findEffectiveProxy(poll, voter, voterToken);
 		assertTrue(voter + " should have an effective proxy", effectiveProxy.isPresent());
 		assertEquals(expectedProxy.toStringShort() + "should be the effective proxy of "+voter.toStringShort(), expectedProxy, effectiveProxy.get());
 		log.info("SUCCESS: " + expectedProxy.toStringShort() + " is the effective proxy of "+ voter.toStringShort()  + " in poll.id="+poll.getId());
 
-		// AND for the non-transitive delegation from USER12_EMAIL should now not have an effective proxy
+		// AND USER12_EMAIL should NOT have an effective proxy (because his delegation is non-transitive)
 		voter = testDataCreator.getUser(TestFixtures.USER12_EMAIL);
-		voterChecksum = castVoteService.getExistingChecksum(voter, TestFixtures.USER_TOKEN_SECRET, area);
-		effectiveProxy = pollService.findEffectiveProxy(poll, voter, voterChecksum);
+		voterToken= castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
+		effectiveProxy = pollService.findEffectiveProxy(poll, voter, voterToken);
 		assertFalse(voter + " should not have an effective proxy", effectiveProxy.isPresent());
 		log.info("SUCCESS: " + voter  + " should not yet have an effective proxy, because his non-transitive direct proxy did not vote yet in poll.id="+poll.getId());
-
-
 
 		// WHEN VOTER7_EMAIL casts his vote with a dummy voteOrder
 		voter = testDataCreator.getUser(TestFixtures.USER7_EMAIL);
@@ -330,10 +332,11 @@ public class PollServiceTests {
 		castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
 		castVoteService.castVote(castVoteRequest);
 
-		// THEN the effective proxy of USER12_EMAIL should be USER7_EMAIL
+		// THEN the effective proxy of USER12_EMAIL should be USER7_EMAIL (his non-transitive direct proxy)
+		voter = testDataCreator.getUser(TestFixtures.USER12_EMAIL);
 		expectedProxy = testDataCreator.getUser(TestFixtures.USER7_EMAIL);
-		voterChecksum = castVoteService.getExistingChecksum(voter, TestFixtures.USER_TOKEN_SECRET, area);
-		effectiveProxy = pollService.findEffectiveProxy(poll, voter, voterChecksum);
+		voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
+		effectiveProxy = pollService.findEffectiveProxy(poll, voter, voterToken);
 		assertTrue(voter + " should now have an effective proxy", effectiveProxy.isPresent());
 		assertEquals(expectedProxy.toStringShort() + "should be the effective proxy of "+voter.toStringShort(), expectedProxy, effectiveProxy.get());
 		log.info("SUCCESS: " + expectedProxy.toStringShort() + " now is the effective proxy of "+ voter.toStringShort()  + " in poll.id="+poll.getId());
