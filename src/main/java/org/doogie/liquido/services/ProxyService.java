@@ -187,7 +187,9 @@ public class ProxyService {
 		log.trace("ENTER becomePublicProxy("+publicProxy+", "+area+")");
 		ChecksumModel publicProxyChecksum = castVoteService.isVoterTokenValidAndGetChecksum(proxyVoterToken);
 		publicProxyChecksum.setPublicProxy(publicProxy);
-		log.trace("becomePublicProxy: "+publicProxy+ " is now a public proxy");
+		checksumRepo.save(publicProxyChecksum);  // MUST save before I can accept delegation requests
+		acceptDelegationRequests(area, publicProxy, proxyVoterToken);
+		log.info("becomePublicProxy: "+publicProxy+ " is now a public proxy");
 		return checksumRepo.save(publicProxyChecksum);
 	}
 
@@ -220,7 +222,7 @@ public class ProxyService {
 	 */
 	@Transactional
 	public long acceptDelegationRequests(AreaModel area, UserModel proxy, String proxyVoterToken) throws LiquidoException {
-		log.debug("=> accept delegation requests for proxy "+proxy+" in area.id="+area.getId());
+		log.trace("=> accept delegation requests for proxy "+proxy+" in area.id="+area.getId());
 		List<DelegationModel> delegationRequests = delegationRepo.findDelegationRequests(area, proxy);
 		Optional<ChecksumModel> proxyChecksum = Optional.of(castVoteService.isVoterTokenValidAndGetChecksum(proxyVoterToken));
 		for(DelegationModel delegation: delegationRequests) {
@@ -231,33 +233,42 @@ public class ProxyService {
 					delegation.getRequestedDelegationFromChecksum(), proxyChecksum, delegation.isTransitive());
 		}
 		long numVotes = getNumVotes(proxyVoterToken);
-		log.debug("<= accepted "+delegationRequests.size()+" delegation requests for proxy "+proxy+" in area.id="+area.getId()+ ", new numVotes="+numVotes);
+		log.info("<= accepted "+delegationRequests.size()+" delegation requests for proxy "+proxy+" in area.id="+area.getId()+ ", new numVotes="+numVotes);
 		return numVotes;
 	}
 
 	/**
-	 * When a voter delegates his vote to a proxy, then this is his direct proxy.
-	 * When the proxy in turn delegates his vote this is a transitive proxy.
-	 * At the end of this chain is the user's top proxy for that area.
+	 * Collect all the proxy information for voter in that area.
+	 * Delegation to direct proxy,
+	 * The topmost proxy in the delegation chain starting at voter
+	 * If voter already is a public proxy
+	 * Pending delegation requests
+	 * Number of votes this user already has because of delegations (including his own vote)
 	 *
-	 * @return a map with one entry per area. Each entry contains the direct proxy(if any) and the top proxy(if any) of voter in that area.
+	 * @param voter who's info to fetch  //TODO: Do services know the currently logged in user?
+	 * @param voterToken need user's voterToken to get numVotes
+	 * @return <pre>
+	 *   {
+	 *     directProxyDelegation: { ... },
+	 *     topProxy: { ... },
+	 *     isPublicProxy: { ... },
+	 *     delegationRequests: { ... },
+	 *     numVotes: 42
+ 	 *   }
+	 * </pre>
 	 */
-	public Lson getProxyMap(UserModel voter, String voterToken) throws LiquidoException {
-		log.debug("ENTER: getProyMap("+voter+")");
-		Lson result = Lson.builder();
-		Iterable<AreaModel> areas = areaRepo.findAll();
-		for(AreaModel area: areas) {
-			Lson areaData = Lson.builder();
-			Optional<DelegationModel> directProxy = delegationRepo.findByAreaAndFromUser(area, voter);
-			Optional<UserModel> topProxy = findTopProxy(area, voter);
-			areaData.put("directProxy", directProxy.orElse(null));
-			areaData.put("topProxy", topProxy.orElse(null));
-			areaData.put("numVotes", getNumVotes(voterToken));
-			areaData.put("delegationRequests", findDelegationRequests(area, voter));
-
-			result.put(String.valueOf(area.getId()), areaData);
-		}
-		return result;
+	public Lson getProxyInfo(AreaModel area, UserModel voter, String voterToken) throws LiquidoException {
+		log.debug("ENTER: getProxyMap("+voter+")");
+		Optional<DelegationModel> directProxy = delegationRepo.findByAreaAndFromUser(area, voter);
+		Optional<UserModel> topProxy = findTopProxy(area, voter);
+		Optional<ChecksumModel> checksumOfPublicProxy = getChecksumOfPublicProxy(area, voter);
+		Lson proxyInfo = Lson.builder()
+			.put("directProxyDelegation", directProxy.orElse(null))			// may also be a requested delegation
+			.put("topProxy", topProxy.orElse(null))
+			.put("isPublicProxy", checksumOfPublicProxy.isPresent())
+			.put("numVotes", getNumVotes(voterToken))
+			.put("delegationRequests", findDelegationRequests(area, voter));
+		return proxyInfo;
 	}
 
 	/**
@@ -276,6 +287,9 @@ public class ProxyService {
 	/**
 	 * Recursively find the "transitive" top proxy at the top of the delegation chain for this voter.
 	 * This only considers accepted delegations not requested delegations.
+	 * Keep in mind that the topProxy is not necessarily the user that voted for the delegee in a specific poll.
+	 * It may be any proxy between voter and the topProxy in the chain of delegations.
+	 *
 	 * @param area the area of the delegation
 	 * @param voter a voter that may have delegated his right to vote to a proxy
 	 * @return (optionally) the proxy at the top of the delegation chain starting at voter
@@ -330,12 +344,6 @@ public class ProxyService {
 	 */
 	public long getNumVotes(String voterToken) throws LiquidoException {
 		ChecksumModel proxyChecksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
-		return getNumVotes(proxyChecksum);
-	}
-
-	private long getNumVotes(ChecksumModel proxyChecksum) throws LiquidoException {
-		if (!checksumRepo.findByChecksum(proxyChecksum.getChecksum()).isPresent())
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "getNumVotes: proxyChecksum is invalid");
 		return countNumVotesRecursive(proxyChecksum, true, 0);
 	}
 
@@ -349,7 +357,7 @@ public class ProxyService {
 	 * @param depth current recursion depth
 	 * @return the number of delegations to this proxy (without the proxy himself)
 	 */
-	public long countNumVotesRecursive(ChecksumModel checksum, boolean includeNonTransitiveDelegations, long depth) {
+	private long countNumVotesRecursive(ChecksumModel checksum, boolean includeNonTransitiveDelegations, long depth) {
 		if (checksum == null) return 0;
 		if (depth > Long.MAX_VALUE - 10) throw new RuntimeException("There seems to be a circular delegation with checksum: "+checksum.getChecksum());
 		long numVotes = 1;
