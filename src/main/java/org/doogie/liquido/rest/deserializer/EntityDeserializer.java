@@ -11,9 +11,11 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import java.io.IOException;
 
 /**
- * Generic class for deserializing from a String URI to
- * a JPA entity.  First we extract the ID from the URI
- * and then we load the entity via the given CrudRepository.
+ * Jackson deserializer for deserializing from a String URI to a JPA entity.
+ * This deserializer is for example used, when you POST URIs. These can then automatically be deserialized into
+ * the corresponding spring-data-jpa entities.
+ *
+ * First we extract the ID from the URI and then we load the entity via the given CrudRepository.
  *
  * Usage: Extend this class for your Entity, inject the repo in the constructor and annotate your class with @JsonComponent
  * Then spring will automatically detect it and use it when deserializing with Jackson.
@@ -60,8 +62,7 @@ public class EntityDeserializer<T> extends StdDeserializer<T> {
 		String uri = p.getValueAsString();
 		log.trace("Trying to deserialize a "+this.pathSegment+" from uri="+uri);
 		Long id = LiquidoRestUtils.getIdFromURI(this.pathSegment, uri);
-		T entity = repo.findById(id)
-			.orElseThrow(() -> new RuntimeException("Cannot find entity at uri="+uri));
+		T entity = repo.findById(id).orElseThrow(() -> new RuntimeException("Cannot find entity at uri="+uri));
 		return entity;
 	}
 

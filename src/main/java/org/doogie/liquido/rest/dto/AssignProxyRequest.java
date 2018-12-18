@@ -7,12 +7,12 @@ import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.deserializer.AreaModelDeserializer;
 import org.doogie.liquido.rest.deserializer.UserModelDeserializer;
-import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 
 /**
  * DTO for assigning a Proxy
- * POST /assignProxy
- * @see org.doogie.liquido.rest.ProxyRestController#assignProxy(AssignProxyRequest, PersistentEntityResourceAssembler)
+ * The POST /assignProxy request contains URI links to the entities. These are then deserialized into entity classes
+ * by my custom Jackson deserializers
+ * @see org.doogie.liquido.rest.ProxyRestController#assignProxy(AssignProxyRequest)
  */
 @Data
 public class AssignProxyRequest {
