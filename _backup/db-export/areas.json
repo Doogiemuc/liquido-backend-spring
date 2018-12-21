@@ -1,5 +1,0 @@
-{"_id":{"$oid":"57892d793d5b352b9b0134bd"},"title":"Area 0","description":"Department/Area of interest or ministry 0","createdAt":{"$date":"2016-10-16T20:53:49.717Z"},"updatedAt":{"$date":"2016-10-16T20:53:49.717Z"}}
-{"_id":{"$oid":"57892d793d5b352b9b0134be"},"title":"Area 1","description":"Department/Area of interest or ministry 1","createdAt":{"$date":"2016-10-16T20:53:49.717Z"},"updatedAt":{"$date":"2016-10-16T20:53:49.717Z"}}
-{"_id":{"$oid":"57892d793d5b352b9b0134bf"},"title":"Area 2","description":"Department/Area of interest or ministry 2","createdAt":{"$date":"2016-10-16T20:53:49.717Z"},"updatedAt":{"$date":"2016-10-16T20:53:49.717Z"}}
-{"_id":{"$oid":"57892d793d5b352b9b0134c0"},"title":"Area 3","description":"Department/Area of interest or ministry 3","createdAt":{"$date":"2016-10-16T20:53:49.717Z"},"updatedAt":{"$date":"2016-10-16T20:53:49.717Z"}}
-{"_id":{"$oid":"57892d793d5b352b9b0134c1"},"title":"Area 4","description":"Department/Area of interest or ministry 4","createdAt":{"$date":"2016-10-16T20:53:49.717Z"},"updatedAt":{"$date":"2016-10-16T20:53:49.717Z"}}

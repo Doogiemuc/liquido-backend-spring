@@ -8,6 +8,8 @@ import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.EntityLinks;
+import org.springframework.hateoas.Link;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,6 +54,9 @@ public class ProxyService {
 
 	@Autowired
 	BallotRepo ballotRepo;
+
+	@Autowired
+	EntityLinks entityLinks;
 
 	/**
 	 * User forwards his right to vote to a proxy in one area.
@@ -209,6 +214,10 @@ public class ProxyService {
 		return checksumRepo.findByAreaAndPublicProxy(area, proxy);
 	}
 
+	public List<DelegationModel> findAcceptedDelegations(AreaModel area, UserModel proxy) {
+		return delegationRepo.findAcceptedDelegations(area, proxy);
+	}
+
 	public List<DelegationModel> findDelegationRequests(AreaModel area, UserModel proxy) {
 		return delegationRepo.findDelegationRequests(area, proxy);
 	}
@@ -225,19 +234,16 @@ public class ProxyService {
 	 */
 	@Transactional
 	public long acceptDelegationRequests(AreaModel area, UserModel proxy, String proxyVoterToken) throws LiquidoException {
-		log.trace("=> accept delegation requests for proxy "+proxy+" in area.id="+area.getId());
+		log.debug("=> accept delegation requests for proxy "+proxy+" in area.id="+area.getId());
 		List<DelegationModel> delegationRequests = delegationRepo.findDelegationRequests(area, proxy);
 		Optional<ChecksumModel> proxyChecksum = Optional.of(castVoteService.isVoterTokenValidAndGetChecksum(proxyVoterToken));
 		for(DelegationModel delegation: delegationRequests) {
-			log.info("Accepting delegation request from "+delegation.getFromUser()+" to proxy "+delegation.getToProxy());
-
-			//TODO: assignProxy has all the sanity checks in it.  But maybe it would be easier to just update the already existing delegation request here.
-			this.assignProxy(area, delegation.getFromUser(), proxy,
-					delegation.getRequestedDelegationFromChecksum(), proxyChecksum, delegation.isTransitive());
+			log.trace("Accepting delegation request from "+delegation.getFromUser()+" to proxy "+delegation.getToProxy());
+			this.assignProxy(area, delegation.getFromUser(), proxy,	delegation.getRequestedDelegationFromChecksum(), proxyChecksum, delegation.isTransitive());
 		}
-		long numVotes = getNumVotes(proxyVoterToken);
-		log.info("<= accepted "+delegationRequests.size()+" delegation requests for proxy "+proxy+" in area.id="+area.getId()+ ", new numVotes="+numVotes);
-		return numVotes;
+		long delegationCount = getDelegationCount(proxyVoterToken);
+		log.info("<= accepted "+delegationRequests.size()+" delegation requests for proxy "+proxy+" in area.id="+area.getId()+ ", new delegationCount="+delegationCount);
+		return delegationCount;
 	}
 
 	/**
@@ -248,7 +254,7 @@ public class ProxyService {
 	 * Pending delegation requests
 	 * Number of votes this user already has because of delegations (including his own vote)
 	 *
-	 * @param voter who's info to fetch  //TODO: Do services know the currently logged in user?
+	 * @param voter who's info to fetch
 	 * @param voterToken need user's voterToken to get numVotes
 	 * @return <pre>
 	 *   {
@@ -261,18 +267,28 @@ public class ProxyService {
 	 * </pre>
 	 */
 	public Lson getProxyInfo(AreaModel area, UserModel voter, String voterToken) throws LiquidoException {
-		//TODO: Is a service method allowed to return schemaless Lson. Or should it return a DTO? (overkill!)   The REST resource must return JSON.
+		//TODO: Is a service method allowed to return schemaless Lson. Or should it return a DTO? (overkill!)   The REST resource must return JSON anyway.
 		log.debug("ENTER: getProxyMap("+voter+")");
+
+		Link areaLink = entityLinks.linkToSingleResource(area);
 		Optional<DelegationModel> directProxy = delegationRepo.findByAreaAndFromUser(area, voter);
 		Optional<UserModel> topProxy = findTopProxy(area, voter);
 		Optional<ChecksumModel> checksumOfPublicProxy = getChecksumOfPublicProxy(area, voter);
+
+		// manually build a JSON similar to the HATEOAS structure under _links
 		Lson proxyInfo = Lson.builder()
+			.put("area", area)				// also directly inline the full area JSON, because client needs it
 			.put("directProxyDelegation", directProxy.orElse(null))			// may also be a requested delegation
-			.put("topProxy", topProxy.orElse(null))
+			.put("topProxy", topProxy.orElse(null))   // this inlines the topProxy information, because client needs it
 			.put("isPublicProxy", checksumOfPublicProxy.isPresent())
-			.put("numVotes", getNumVotes(voterToken))
-			.put("delegationRequests", findDelegationRequests(area, voter));
+			.put("delegationCount", getDelegationCount(voterToken))
+			.put("delegationRequests", findDelegationRequests(area, voter))
+			.put("_links.area.href", areaLink.getHref())
+			.put("_links.area.templated", areaLink.isTemplated());
+  		//TODO: .put("_links.topProxy.href", topProxyLink.getHref())
+
 		return proxyInfo;
+
 	}
 
 	/**
@@ -342,35 +358,36 @@ public class ProxyService {
 	}
 
 	/**
-	 * Get the number of votes a proxy may cast because of (transitive) delegations to him. Including his own vote.
+	 * Get the number of accepted delegations that a proxy received.
+	 * The proxy may vote that many times plus his own vote.
 	 * @param voterToken the voterToken of a voter who might be a proxy.
-	 * @return the number of votes this proxy may cast, including his own one.
+	 * @return the number of delegations that this proxy has.
 	 */
-	public long getNumVotes(String voterToken) throws LiquidoException {
+	public long getDelegationCount(String voterToken) throws LiquidoException {
 		ChecksumModel proxyChecksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
-		return countNumVotesRecursive(proxyChecksum, true, 0);
+		return countDelegationsRec(proxyChecksum, true, 0);
 	}
 
 	/**
-	 * Recursively count the number of votes a proxy may cast, including his own vote.
+	 * Recursively count the number accepted delegations that a proxy has received.
 	 * This recursive method is meant to be called with includeNonTransitiveDelegations = true and depth = 0, because non transitive delegations
 	 * do count on depth == 0. They are direct delegations. On deeper levels, only transitive delegations are added up.
 	 *
 	 * @param checksum a checksum that may have delegations to it
 	 * @param includeNonTransitiveDelegations weather to include non transitive delegations in the count.
 	 * @param depth current recursion depth
-	 * @return the number of delegations to this proxy (without the proxy himself)
+	 * @return the number of delegations to this proxy (without the proxies own vote)
 	 */
-	private long countNumVotesRecursive(ChecksumModel checksum, boolean includeNonTransitiveDelegations, long depth) {
+	private long countDelegationsRec(ChecksumModel checksum, boolean includeNonTransitiveDelegations, long depth) {
 		if (checksum == null) return 0;
 		if (depth > Long.MAX_VALUE - 10) throw new RuntimeException("There seems to be a circular delegation with checksum: "+checksum.getChecksum());
-		long numVotes = 1;
+		long numVotes = 0;
 		List<ChecksumModel> delegations = checksumRepo.findByDelegatedToAndTransitive(checksum, true);
 		if (includeNonTransitiveDelegations) {
 			delegations.addAll(checksumRepo.findByDelegatedToAndTransitive(checksum, false));
 		}
 		for (ChecksumModel delegatedChecksum: delegations) {
-			numVotes += countNumVotesRecursive(delegatedChecksum, false, depth+1);
+			numVotes += 1 + countDelegationsRec(delegatedChecksum, false, depth+1);
 		}
 		return numVotes;
 	}

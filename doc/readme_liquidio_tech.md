@@ -89,6 +89,14 @@ Test data is automatically created by the `TestDataCreator.java`.
  * [H2 DB Web Console](http://localhost:8080/h2-console)   JDBC URL: `jdbc:h2:mem:testdb`   Username: `sa` - no pwd, Driver Class: `org.h2.Driver`    * https://springframework.guru/using-the-h2-database-console-in-spring-boot-with-spring-security/
 
 
+# Logging
+
+"I am a logging fanatic"
+
+ - REST requests are logged via DoogiesRequestLogger
+ - Services methods have entry and exit logging on TRACE level.
+ - All writing methods log an INFO
+
 # Software Architecture
 
 https://www.draw.io/#LLiquido%20Architecture
