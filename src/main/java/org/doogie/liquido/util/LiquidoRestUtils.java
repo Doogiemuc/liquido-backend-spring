@@ -13,11 +13,15 @@ public class LiquidoRestUtils {
 	 * There is no other clean way to load a HATEOAS entity from its URI.
 	 *
 	 * @param entityName the name of the entitry in the URI == the @RepositoryRestResource(path="...")
-	 * @param uri        a fully qualified uri of a spring data rest entity. (links.self.href)
+	 * @param uri        a relative or fully qualified uri of a spring data rest entity. (links.self.href or e.g. "/areas/21/"
 	 * @return the internal db ID of the entity, i.e. just simply the number at the end of the string.
 	 */
 	public static Long getIdFromURI(String entityName, String uri) {
-		Pattern regex = Pattern.compile("(\\/" + entityName + "\\/)?(\\d+)"); //  (optionally /entityName/ and then) a number at the end
+		// RegEx: non-greedy prefix when passing a fully qualified URI,
+		// then optionally the entityName enclosed with / and
+		// then a number at the end
+		// Java Patterns must match the whole string!
+		Pattern regex = Pattern.compile(".*?(\\/" + entityName + "\\/)?(\\d+)");
 		Matcher matcher = regex.matcher(uri);
 		if (!matcher.matches()) throw new IllegalArgumentException("This does not seem to be an URI for an '"+entityName+"': "+uri);
 		String entityId = matcher.group(2);  // the number at the end of the uri

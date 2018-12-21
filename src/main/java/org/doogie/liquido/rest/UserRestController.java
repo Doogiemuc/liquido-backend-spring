@@ -32,6 +32,7 @@ import static org.springframework.web.bind.annotation.RequestMethod.GET;
 // See
 // https://stackoverflow.com/questions/38607421/spring-data-rest-controllers-behaviour-and-usage-of-basepathawarecontroller
 // https://stackoverflow.com/questions/33687722/spring-data-rest-custom-method-return-string
+// https://jira.spring.io/browse/DATAREST-1323  (by me)
 // ******************************************************************************************
 // I want this to be a normal Spring Rest controller.   No spring-dta-jpa magic.
 // Since this a normal RestController, we do not need the @ResponseBody annotation on every method.

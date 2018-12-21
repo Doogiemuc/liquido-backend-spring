@@ -82,8 +82,8 @@ public class PollRestController {
 
     /*
     Map<String, String> result = new HashMap<>();
-    result.put("msg", "Created poll successfully");
-    result.put("", resourceAssembler.getSelfLinkFor(savedPoll).getHref());
+    result.putArray("msg", "Created poll successfully");
+    result.putArray("", resourceAssembler.getSelfLinkFor(savedPoll).getHref());
     */
 
     return persistentEntityResource;

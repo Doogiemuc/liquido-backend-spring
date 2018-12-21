@@ -22,10 +22,13 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Sprint REST controller for voting
+ * REST controller for voting
  */
 @Slf4j
-@BasePathAwareController				// This is a spring-data-jpa controller with all its HATEOAS magic.  (But it cannot return a plain string as HTTP response)
+// This is a spring-data-jpa controller with all its HATEOAS magic.
+// For example here you can inject the PersistentEntityResourceAssembler.
+// But these methods CANNOT return a plain string as HTTP response. You MUST at least return JSON.
+@BasePathAwareController
 //@EnableHypermediaSupport(type = EnableHypermediaSupport.HypermediaType.HAL)      //not necessary?
 //@PreAuthorize("isAuthenticated()")    => possible but not necessary. Auth is already checked in JwtAuthenticationFilter
 public class VoteRestController {
@@ -43,15 +46,13 @@ public class VoteRestController {
 	EntityLinks entityLinks;
 
 	/**
-	 * User requests a token that allows him to vote.
-	 * This request MUST be authenticated!
-	 *
-	 * We also return numVotes, because numVotes can only be fetched when the token is known.
+	 * User requests a token that allows him to vote. This request MUST be authenticated!
+	 * We also return delegationCount, because delegationCount can only be fetched when the token is known.
 	 *
 	 * @param area Area for the token
 	 * @param becomePublicProxy (optional) boolean if user immediately wants to become a public proxy. Can also do so later.
 	 *                          User may already be a public proxy. Even when you pass "false" he then will stay a public proxy.
-	 * @return JSON with voterToken and numVotes
+	 * @return JSON with voterToken and delegationCount
 	 * @throws LiquidoException when not logged in
 	 */
 	@RequestMapping(value = "/my/voterToken")  // when you add produces = MediaType.APPLICATION_JSON_VALUE  then client MUST send accept header. Without it Json is returned by default
@@ -66,13 +67,14 @@ public class VoteRestController {
 		//UserModel voter = ((LiquidoAuthUser) auth.getPrincipal()).getLiquidoUserModel();   // This also works. But I kinda like getCurrentAuditor(), because it support mock auditor so nicely
 		log.trace("Request voterToken for " + voter.toStringShort() + " in " + area);
 		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, area, tokenSecret, becomePublicProxy);   // preconditions are checked inside castVoteService
-		long numVotes = proxyService.getNumVotes(voterToken);
+		long delegationCount = proxyService.getDelegationCount(voterToken);
 
 		Link areaLink = entityLinks.linkToSingleResource(AreaModel.class, area.getId());      // Spring HATEOAS Link rel
 		return Lson.builder()
-				.put("area", areaLink.getTemplate().expand())   // return link to Area. Need to expand URITemplate ( replace optional param {?projection} with nothing)
+				.put("_links.area.href", areaLink.getHref())   		// return link to Area. Area Link has suffix {?projection} !
+				.put("_links.area.templated", areaLink.isTemplated())	// is true for areas
 				.put("voterToken", voterToken)
-				.put("numVotes", numVotes);
+				.put("delegationCount", delegationCount);
 	}
 
 
