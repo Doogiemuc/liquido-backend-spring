@@ -21,7 +21,7 @@ public class Lson extends HashMap<String, Object> {
 		mapper = new ObjectMapper();
 	}
 
-	/** Factory method.  Lson.builder().put("name", someValue).... */
+	/** Factory method.  Lson.builder().putArray("name", someValue).... */
 	public static Lson builder() {
 		return new Lson();
 	}
@@ -33,32 +33,28 @@ public class Lson extends HashMap<String, Object> {
 	}
 
 	/** Powerfull fluid api to add key=value pairs
-	 * <pre>myLson.put("name", someValue).put("key2", anotherValue).put("some.neested.attribute", "value")...</pre>
+	 * <pre>myLson.put("name", someValue).put("key2", anotherValue).put("key3.neested.child.key", valueObj)...</pre>
 	 *
 	 * Tip: value can also be <pre>Collections.singletonMap("attribute", "single value in map")</pre>
 	 *
-	 * @param key json key or may also be dot separated list of neested
-	 * @param value any java object that will be serialized with Jackson
+	 * @param path json key or dot separated json path
+	 * @param value any java object. Will be serialized with Jackson
 	 */
-	public Lson put(String key, Object value) {
-		/*
-		int idx = key.indexOf(".");
+	public Lson put(String path, Object value) {
+		int idx = path.indexOf(".");
 		if (idx > 0) {
-			String keyPart = key.substring(0, idx);
-			Object child = this.get(keyPart);
-			String rest = key.substring(idx+1, key.length());
-			if (chidlMap  != null) {
-				childMap.put(keyPart, value);
+			String key       = path.substring(0, idx);
+			String childPath = path.substring(idx+1);
+			Lson child = (Lson)this.get(key);
+			if (child != null) {
+				child.put(childPath, value);
+			} else {
+				this.put(key, Lson.builder(childPath, value));
 			}
-
-			Map childMap = new HashMap();
-
-			super.put(keyPart, rest);
-			return this;
+		} else {
+			super.put(path, value);
 		}
-		*/
-		super.put(key, value);
-		return this;
+		return this;  // return self instance for chaining
 	}
 
 	/**
@@ -76,7 +72,7 @@ public class Lson extends HashMap<String, Object> {
 	 *
 	 * @param key1 child key pointing to the Map
 	 * @param key2 map key inside this map
-	 * @param value value to put into the child Map
+	 * @param value value to putArray into the child Map
 	 * @throws ClassCastException when there is no Map under key1
 	 * @return the parent Lson for chaining
 	 */
@@ -93,12 +89,12 @@ public class Lson extends HashMap<String, Object> {
 	/**
 	 * Add a json attribute with an <b>array of strings</b> as value.
 	 * Not any JSON builder I know of has this obvious helper !! :-)
-	 * <pre>String validJson = Lson.builder().put("jsonArray", "arrayElemOne", "arrayElemTwo", "arrayElemThree").toString();</pre>
+	 * <pre>String validJson = Lson.builder().putArray("jsonArray", "arrayElemOne", "arrayElemTwo", "arrayElemThree").toString();</pre>
 	 * @param key attribute name
 	 * @param values a list of strings. Can have any length
 	 * @return this for chaining of further fluid calls
 	 */
-	public Lson put(String key, String... values) {
+	public Lson putArray(String key, String... values) {
 		super.put(key, values);
 		return this;
 	}

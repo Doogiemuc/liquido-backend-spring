@@ -114,15 +114,15 @@ public class ProxyServiceTests {
 		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, USER_TOKEN_SECRET, true);
 		ChecksumModel proxyChecksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
 		utils.printChecksumTree(proxyChecksum);
-		long numVotes = proxyService.getNumVotes(voterToken);
-		assertEquals(USER1_EMAIL+" should have "+TestFixtures.USER1_NUM_VOTES+" votes", TestFixtures.USER1_NUM_VOTES, numVotes);
+		long delegationCount = proxyService.getDelegationCount(voterToken);
+		assertEquals(USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegations", TestFixtures.USER1_DELEGATIONS, delegationCount);
 
 		proxy = userRepo.findByEmail(USER4_EMAIL);
 		voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, USER_TOKEN_SECRET, true);
 		proxyChecksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
 		utils.printChecksumTree(proxyChecksum);
-		numVotes = proxyService.getNumVotes(voterToken);
-		assertEquals(USER4_EMAIL+" should have "+TestFixtures.USER4_NUM_VOTES+" votes", TestFixtures.USER4_NUM_VOTES, numVotes);
+		delegationCount = proxyService.getDelegationCount(voterToken);
+		assertEquals(USER4_EMAIL+" should have "+TestFixtures.USER4_DELEGATIONS +" delegations", TestFixtures.USER4_DELEGATIONS, delegationCount);
 
 		log.trace("SUCCESS: testGetNumVotes");
 	}

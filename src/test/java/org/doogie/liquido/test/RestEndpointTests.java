@@ -395,7 +395,7 @@ public class RestEndpointTests {
     String newLawJson = new Lson()
       .put("title", newLawTitle)
       .put("description", "Dummy description from testPostProposalForLaw")
-      //.put("status", LawModel.LawStatus.IDEA)     //TODO: Actually the server should decide about the status.
+      //.putArray("status", LawModel.LawStatus.IDEA)     //TODO: Actually the server should decide about the status.
       .put("area", areaUri)
       .put("poll", pollUri)
 			.toString();
@@ -426,10 +426,10 @@ public class RestEndpointTests {
     String proposalUri = basePath + "/laws/" + this.laws.get(0).getId();
 
     JSONObject newBallotJson = new JSONObject()
-      .put("poll", pollUri)
-      .put("voteOrder", new JSONArray()
-        .put(proposalUri)
-        .put(proposalUri));    // <======== try to vote for them same proposal twice
+      .putArray("poll", pollUri)
+      .putArray("voteOrder", new JSONArray()
+        .putArray(proposalUri)
+        .putArray(proposalUri));    // <======== try to vote for them same proposal twice
     log.trace("posting JSON Object:\n"+newBallotJson.toString(2));
 
     HttpHeaders headers = new HttpHeaders();
@@ -520,14 +520,14 @@ public class RestEndpointTests {
    */
   @Test
   public void testGetNumVotes() {
-    log.trace("TEST getNumVotes");
+    log.trace("TEST getDelegationCount");
     AreaModel area = this.areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
     String uri = "/my/numVotes?area="+area.getId();
 
     long numVotes = client.getForObject(uri, Long.class);
 
-    assertEquals("User "+TestFixtures.USER1_EMAIL+" should have "+TestFixtures.USER1_NUM_VOTES+" delegated votes in area='"+TestFixtures.AREA_FOR_DELEGATIONS+"'", TestFixtures.USER1_NUM_VOTES, numVotes);
-    log.trace("TEST SUCCESS: found expected "+TestFixtures.USER1_NUM_VOTES+" delegations for "+TestFixtures.USER1_EMAIL + " in area "+TestFixtures.AREA_FOR_DELEGATIONS);
+    assertEquals("User "+TestFixtures.USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegated votes in area='"+TestFixtures.AREA_FOR_DELEGATIONS+"'", TestFixtures.USER1_DELEGATIONS, numVotes);
+    log.trace("TEST SUCCESS: found expected "+TestFixtures.USER1_DELEGATIONS +" delegations for "+TestFixtures.USER1_EMAIL + " in area "+TestFixtures.AREA_FOR_DELEGATIONS);
   }
 
   /**
@@ -649,7 +649,7 @@ public class RestEndpointTests {
 		String body = Lson.builder()
 		  .put("poll", pollURI)
 		  .put("voterToken", voterToken)
-		  .put("voteOrder",  proposal1_URI, proposal2_URI)
+		  .putArray("voteOrder",  proposal1_URI, proposal2_URI)
 			.toString();
 
 		HttpHeaders headers = new HttpHeaders();

@@ -52,33 +52,11 @@ public class ProxyRestController {
 	}
 
 	/**
-	 * Calculate the number of votes a voter may cast. If this is a normal voter without any delegations this method will return 1.
-	 * If this voter is a proxy, because other checksums were delegated to him, then this method will return
-	 * the recursive count of those delegations plus the one vote of the proxy himself.
-	 * @param area the area. needed to check for delegation requests.
-	 * @param voterToken voterToken of a voter. Number of votes are calculated from real checksum delegations. Therefore we need the voterToken
-	 * @return the number of votes this user may cast with this voterToken in an area.
-	 *         And also an array of delegationRequests if there are any pending ones.
-	 */
-	@RequestMapping(value = "/my/numVotes", method = GET)
-	public @ResponseBody Lson getNumVotes(@RequestParam("area") AreaModel area, @RequestParam("voterToken")String voterToken) throws LiquidoException {
-		log.trace("=> GET /my/numVotes");
-		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
-				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your numVotes!"));
-		long numVotes = proxyService.getNumVotes(voterToken);
-		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, proxy);
-  	Lson response = Lson.builder("numVotes", numVotes);
-		if (delegationRequests.size() > 0) response.put("delegationRequests", delegationRequests);
-		log.trace("<= GET /my/numVotes(proxy=" + proxy +") returns "+numVotes + " votes and "+delegationRequests.size()+" delegation requests");
-		return response;
-	}
-
-	/**
 	 * When a voter delegates his vote to a proxy, then this is his direct proxy.
 	 * When the proxy in turn delegates his vote this is a transitive proxy.
 	 * At the end of this chain is the user's top proxy for that area.
 	 *
-	 * @param area an area.id
+	 * @param area an area id or URI
 	 * @return all the information about the proxies of this user in that area. And delegation requests to that user.
 	 */
 	@RequestMapping(value = "/my/proxy", method = RequestMethod.GET)
@@ -127,31 +105,57 @@ public class ProxyRestController {
 	 */
 	@RequestMapping(value = "/my/proxy/{areaId}", method = DELETE)
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void deleteProxy(
-			@PathVariable("areaId") AreaModel area,
-			@RequestParam("voterToken") String voterToken)
-			throws LiquidoException
-	{
+	public void deleteProxy(@PathVariable("areaId") AreaModel area,	@RequestParam("voterToken") String voterToken) throws LiquidoException {
 		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to delete proxy!"));
 		log.info("deleteProxy(voter="+currentUser+", area="+area+")");
 		proxyService.removeProxy(area, currentUser, voterToken);
 	}
 
-	@RequestMapping(value = "/my/delegationRequests/{areaId}", method = GET)
-	public ResponseEntity getDelegationRequests(@PathVariable("areaId") AreaModel area) throws LiquidoException {
+
+	/**
+	 * Calculate the number of delegations to this proxy. If this voter is not yet a proxy, this method will return
+	 * a delegationCount of zero.
+	 *
+	 * We need the voterToken, because real delegations are calculated from the tree of checksums.
+	 *
+	 * @param area the area. needed to check for delegation requests.
+	 * @param voterToken voterToken of a voter. Number of votes are calculated from real checksum delegations. Therefore we need the voterToken.
+	 * @return the number of votes this user may cast with this voterToken in an area.
+	 *         And also an array of delegationRequests if there are any pending ones.
+	 */
+	@RequestMapping(value = "/my/delegationCount", method = GET)
+	public @ResponseBody Lson getDelegations(@RequestParam("area") AreaModel area, @RequestParam("voterToken")String voterToken) throws LiquidoException {
+		log.trace("=> GET /my/delegations");
+		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your numVotes!"));
+		long delegationCount = proxyService.getDelegationCount(voterToken);
+		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, proxy);
+		Lson response = Lson.builder()
+				.put("delegationCount", delegationCount)
+				.put("delegationRequests", delegationRequests.size());
+		log.info("<= GET /my/delegations?area="+area.getId()+" for proxy " + proxy.toStringShort() + " returns "+response);
+		return response;
+	}
+
+
+	@RequestMapping(value = "/my/delegations", method = GET)
+	public @ResponseBody Lson getDelegationRequests(@RequestParam("area") AreaModel area) throws LiquidoException {
 		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get delegation requests"));
+		List<DelegationModel> acceptedDelegations = proxyService.findAcceptedDelegations(area, proxy);
 		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, proxy);
-		return new ResponseEntity(delegationRequests, HttpStatus.OK);
+		return Lson.builder()
+				.put("acceptedDelegations", acceptedDelegations)
+				.put("delegationRequests", delegationRequests);
 	}
 
 	@RequestMapping(value = "/my/delegationRequests/{areaId}", method = PUT)
-	public @ResponseBody Lson acceptDelegationRequests(@PathVariable("areaId") AreaModel area, @RequestParam("voterToken")String voterToken) throws LiquidoException {
+	public @ResponseBody Lson acceptDelegationRequests(@PathVariable("area") AreaModel area, @RequestParam("voterToken")String voterToken) throws LiquidoException {
 		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to accept delegation requests."));
-		long numVotes = proxyService.acceptDelegationRequests(area, proxy, voterToken);
-		return Lson.builder("numVotes", numVotes);
+		long delegationCount = proxyService.acceptDelegationRequests(area, proxy, voterToken);
+		return Lson.builder("delegationCount", delegationCount);
 	}
 
 	/**
@@ -172,7 +176,9 @@ public class ProxyRestController {
 	//Implementation note  about different ways of returning data back to the client.
 
 	// Return HATEOS representation of Delegation => does not work correctly, cause delegationRepo is not exposed as spring-data-rest endpoint.
-	//return resourceAssembler.toResource(savedDelegation);
+	// with param (PersistentEntityResourceAssembler resourceAssembler)  and then
+	// return resourceAssembler.toResource(savedDelegation);
+	// https://stackoverflow.com/questions/31758862/enable-hal-serialization-in-spring-boot-for-custom-controller-method#31782016
 
 	// You should not return a DelegationProjection here, as this code would:
 	//   return new ResponseEntity<>(savedDelegation, HttpStatus.OK);

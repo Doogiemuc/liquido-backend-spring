@@ -66,7 +66,7 @@ public class BallotModel {
 
   /**
    * One vote puts some proposals of this poll into his personally preferred order.
-   * One voter may put some or all proposals of the poll into his (ordered) ballot. But of course he may only vote at maximum once for every proposal.
+   * One voter may putArray some or all proposals of the poll into his (ordered) ballot. But of course he may only vote at maximum once for every proposal.
    * And one proposal may be voted for by several voters => ManyToMany relationship
    */
   //BE CAREFULL: Lists are not easy to handle in hibernate: https://vladmihalcea.com/hibernate-facts-favoring-sets-vs-bags/
