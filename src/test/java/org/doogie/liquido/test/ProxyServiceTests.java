@@ -63,7 +63,7 @@ public class ProxyServiceTests {
 		log.info("=========== PROXY TREE (checksums) ========");
 		utils.printChecksumTree(proxyChecksum);
 		log.info("=========== PROXY TREE (delegations) ========");
-		utils.printDelegationTree(area, topProxy);
+		utils.printProxyTree(area, topProxy);
 		log.info("============================================");
 	}
 
@@ -85,23 +85,25 @@ public class ProxyServiceTests {
 
 		//Make sure that toProxy is a public proxy
 		String proxyVoterToken = castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, USER_TOKEN_SECRET, true);
+		ChecksumModel votersChecksum = castVoteService.getExistingChecksum(fromUser, USER_TOKEN_SECRET, area);
 		ChecksumModel publicProxyChecksum = proxyService.becomePublicProxy(toProxy, area, proxyVoterToken);
 
 		//WHEN
 		String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, USER_TOKEN_SECRET, true);
-		ChecksumModel votersChecksum = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, true);
+		DelegationModel delegation = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, true);
 
 		//THEN
-		assertNotNull("Voter's checksum must not be null", votersChecksum);
+		assertEquals(toProxy.toStringShort()+" should now be the proxy of "+fromUser, toProxy, delegation.getToProxy());
 		assertEquals("Voter's checksum must be delegated to proxies checksum", publicProxyChecksum, votersChecksum.getDelegatedTo());
 
-		Optional<DelegationModel> delegation = delegationRepo.findByAreaAndFromUser(area, fromUser);
-		assertTrue("DelegationModel from user in that area must exist", delegation.isPresent());
-		assertEquals("Delegation must point from voter ", fromUser, delegation.get().getFromUser());
-		assertEquals("Delegation must point to proxy", toProxy, delegation.get().getToProxy());
+		Optional<DelegationModel> delegationOpt = delegationRepo.findByAreaAndFromUser(area, fromUser);
+		assertTrue("DelegationModel from user in that area must exist", delegationOpt.isPresent());
+		assertEquals("Delegation must point from voter ", fromUser, delegationOpt.get().getFromUser());
+		assertEquals("Delegation must point to proxy", toProxy, delegationOpt.get().getToProxy());
 
-		Optional<UserModel> directProxy = proxyService.getDirectProxy(area, fromUser);
-		assertEquals(toProxy+"is direct proxy of "+fromUser+" in area "+area, toProxy, directProxy.get());
+		Optional<DelegationModel> directProxy = proxyService.getDirectProxyDelegation(area, fromUser);
+		assertTrue(fromUser.toStringShort()+" should have a delegation", directProxy.isPresent());
+		assertEquals(toProxy+"is direct proxy of "+fromUser+" in area "+area, toProxy, directProxy.get().getToProxy());
 	}
 
 	@Test
@@ -114,14 +116,14 @@ public class ProxyServiceTests {
 		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, USER_TOKEN_SECRET, true);
 		ChecksumModel proxyChecksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
 		utils.printChecksumTree(proxyChecksum);
-		long delegationCount = proxyService.getDelegationCount(voterToken);
+		long delegationCount = proxyService.getRealDelegationCount(voterToken);
 		assertEquals(USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegations", TestFixtures.USER1_DELEGATIONS, delegationCount);
 
 		proxy = userRepo.findByEmail(USER4_EMAIL);
 		voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, USER_TOKEN_SECRET, true);
 		proxyChecksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
 		utils.printChecksumTree(proxyChecksum);
-		delegationCount = proxyService.getDelegationCount(voterToken);
+		delegationCount = proxyService.getRealDelegationCount(voterToken);
 		assertEquals(USER4_EMAIL+" should have "+TestFixtures.USER4_DELEGATIONS +" delegations", TestFixtures.USER4_DELEGATIONS, delegationCount);
 
 		log.trace("SUCCESS: testGetNumVotes");

@@ -38,7 +38,6 @@ public class TestFixtures {
 	public static final String USER11_EMAIL = MAIL_PREFIX+"11@liquido.de";
 	public static final String USER12_EMAIL = MAIL_PREFIX+"12@liquido.de";
 
-	/* p
   /** this secret is used when user requests a voter token */
 	public static final String USER_TOKEN_SECRET = "userTokenSecret";
 

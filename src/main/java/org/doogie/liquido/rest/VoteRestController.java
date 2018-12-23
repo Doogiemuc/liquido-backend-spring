@@ -42,6 +42,7 @@ public class VoteRestController {
 	@Autowired
 	LiquidoAuditorAware liquidoAuditorAware;
 
+
 	@Autowired
 	EntityLinks entityLinks;
 
@@ -55,9 +56,9 @@ public class VoteRestController {
 	 * @return JSON with voterToken and delegationCount
 	 * @throws LiquidoException when not logged in
 	 */
-	@RequestMapping(value = "/my/voterToken")  // when you add produces = MediaType.APPLICATION_JSON_VALUE  then client MUST send accept header. Without it Json is returned by default
+	@RequestMapping(value = "/my/voterToken/{areaId}")  // when you add produces = MediaType.APPLICATION_JSON_VALUE  then client MUST send accept header. Without it Json is returned by default
 	public @ResponseBody Lson getVoterToken(
-			@RequestParam("area") AreaModel area,
+			@PathVariable("areaId") AreaModel area,
 			@RequestParam("tokenSecret") String tokenSecret,
 			@RequestParam(name = "becomePublicProxy", defaultValue = "false", required = false) Boolean becomePublicProxy
 			//  Authentication auth
@@ -67,7 +68,7 @@ public class VoteRestController {
 		//UserModel voter = ((LiquidoAuthUser) auth.getPrincipal()).getLiquidoUserModel();   // This also works. But I kinda like getCurrentAuditor(), because it support mock auditor so nicely
 		log.trace("Request voterToken for " + voter.toStringShort() + " in " + area);
 		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, area, tokenSecret, becomePublicProxy);   // preconditions are checked inside castVoteService
-		long delegationCount = proxyService.getDelegationCount(voterToken);
+		long delegationCount = proxyService.getRealDelegationCount(voterToken);
 
 		Link areaLink = entityLinks.linkToSingleResource(AreaModel.class, area.getId());      // Spring HATEOAS Link rel
 		return Lson.builder()
