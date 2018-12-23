@@ -134,8 +134,11 @@ public class CastVoteService {
 			*/
 		}
 
+		// ----- upsert checksum (BUGFIX: must be done BEFORE becomePublicProxy)
 		if (checksumOpt.isPresent()) { log.trace("  Update existing checksum");	}
 		ChecksumModel checksum = checksumOpt.orElse(new ChecksumModel(tokenChecksum, area));
+		refreshChecksum(checksum);
+		checksumRepo.save(checksum);
 
 		//   IF wants to become a public proxy
 		//  AND voter is not yet the public proxy of his checksum
@@ -144,10 +147,8 @@ public class CastVoteService {
 		if (becomePublicProxy && !voter.equals(checksum.getPublicProxy())) {
 			proxyService.becomePublicProxy(voter, area, voterToken);
 		}
-		refreshChecksum(checksum);
-		checksumRepo.save(checksum);
 
-		return voterToken;		// IMPORTANT! return the voterToken and store the checksum.
+		return voterToken;		// IMPORTANT! return the voterToken and not the checksum. The checksum is only stored on the server.
 	}
 
 	/**
@@ -156,6 +157,7 @@ public class CastVoteService {
 	 */
 	public void refreshChecksum(ChecksumModel checksum) {
 		checksum.setExpiresAt(LocalDateTime.now().plusHours(checksumExpirationHours));
+		checksumRepo.save(checksum);
 	}
 
 	/**
