@@ -210,9 +210,12 @@ public class TestDataCreator implements CommandLineRunner {
 			}
 		}
 
-    log.debug("====== TestDataCreator: Proxy tree (delegations) =====");
+		log.debug("====== TestDataCreator: Proxy tree =====");
 		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA_FOR_DELEGATIONS);
 		UserModel topProxy = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
+		utils.printProxyTree(area, topProxy);
+
+		log.debug("====== TestDataCreator: Tree of delegations =====");
 		utils.printDelegationTree(area, topProxy);
 
 		try {
@@ -251,7 +254,7 @@ public class TestDataCreator implements CommandLineRunner {
 				if (currentLine.matches("(ALTER|CREATE).*TABLE PUBLIC\\.QRTZ.*\\(")) removeBlock = true;
 				if (currentLine.matches("INSERT INTO PUBLIC\\.QRTZ.*VALUES")) removeBlock = true;
 				if (removeBlock && currentLine.matches(".*\\); *")) {
-					log.trace("Remove end of block      );");
+					//log.trace("Remove end of block      );");
 					removeBlock = false;
 					continue;
 				}
@@ -377,13 +380,13 @@ public class TestDataCreator implements CommandLineRunner {
 				}
 
 				String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, TestFixtures.USER_TOKEN_SECRET, TestFixtures.shouldBePublicProxy(area, fromUser));
-	      ChecksumModel voterChecksumModel = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, transitive);
+	      DelegationModel delegation = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, transitive);
       } catch (LiquidoException e) {
         log.error("Cannot seedProxies: error Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId()+": "+e);
       }
     }
     UserModel topProxy = usersMap.get(TestFixtures.TOP_PROXY_EMAIL);
-    utils.printDelegationTree(area, topProxy);
+    utils.printProxyTree(area, topProxy);
   }
 
   private void seedIdeas() {

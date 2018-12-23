@@ -5,6 +5,7 @@ import org.doogie.liquido.datarepos.ChecksumRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.ChecksumModel;
+import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -23,12 +24,19 @@ public class TestUtils {
 	@Autowired
 	ChecksumRepo checksumRepo;
 
-	public void printDelegationTree(AreaModel area, UserModel proxy) {
+	public void printProxyTree(AreaModel area, UserModel proxy) {
 		Function<UserModel, List<UserModel>> getChildrenFunc = toProxy -> delegationRepo.findByAreaAndToProxy(area, toProxy)
 				.stream().map(del -> del.getFromUser()).collect(Collectors.toList());
 		this.printTreeRec("", proxy, getChildrenFunc, true);
 	}
 
+	public void printDelegationTree(AreaModel area, UserModel proxy) {
+		UserModel dummyUser = new UserModel("aboveTopProxy@dummy.org");
+		DelegationModel dummyTopProxyDel = new DelegationModel(area, proxy, dummyUser);
+		Function<DelegationModel, List<DelegationModel>> getChildrenFunc = del -> delegationRepo.findByAreaAndToProxy(area, del.getFromUser())
+				.stream().collect(Collectors.toList());
+		this.printTreeRec("", dummyTopProxyDel, getChildrenFunc, true);
+	}
 
 	public void printChecksumTree(ChecksumModel checksum) {
 		Function<ChecksumModel, List<ChecksumModel>> getChildrenFunc = c -> checksumRepo.findByDelegatedTo(c);

@@ -520,7 +520,7 @@ public class RestEndpointTests {
    */
   @Test
   public void testGetNumVotes() {
-    log.trace("TEST getDelegationCount");
+    log.trace("TEST getRealDelegationCount");
     AreaModel area = this.areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
     String uri = "/my/numVotes?area="+area.getId();
 
