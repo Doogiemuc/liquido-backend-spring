@@ -27,7 +27,6 @@ public class AreaModel extends BaseModel {
 
   @CreatedBy
   @ManyToOne(fetch = FetchType.EAGER)
-  //@JoinColumn
   @NonNull
   @NotNull
   public UserModel createdBy;

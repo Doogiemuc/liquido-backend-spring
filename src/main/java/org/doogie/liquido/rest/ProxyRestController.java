@@ -14,14 +14,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
+import org.springframework.data.rest.webmvc.RepositoryRestController;
 import org.springframework.hateoas.EntityLinks;
 import org.springframework.hateoas.Link;
+import org.springframework.hateoas.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.springframework.web.bind.annotation.RequestMethod.*;
@@ -30,7 +33,10 @@ import static org.springframework.web.bind.annotation.RequestMethod.*;
  * Liquido REST endpoint for working with proxies.
  */
 @Slf4j
-@BasePathAwareController  //ProxyRestController MUST be a BasePathAwareController!!! Otherwise the deserialization of URIs does not work in POST /my/proxy
+//@BasePathAwareController   //ProxyRestController MUST be a spring data rest controller. Otherwise the deserialization of URIs does not work in POST /my/proxy  Either a BasePathAwareController or a RepositoryRestController work.
+@RepositoryRestController
+@RequestMapping("${spring.data.rest.base-path}")   // MUST have Request Mapping on class level https://stackoverflow.com/questions/38607421/spring-data-rest-controllers-behaviour-and-usage-of-basepathawarecontroller
+																									 //https://jira.spring.io/browse/DATAREST-1327
 public class ProxyRestController {
 
 	@Autowired
@@ -168,8 +174,8 @@ public class ProxyRestController {
 				.put("delegationRequests", delegationRequests);
 	}
 
-	@RequestMapping(value = "/my/delegations/{areaId}/accept", method = PUT)
-	public @ResponseBody Lson acceptDelegationRequests(@PathVariable("areaId") AreaModel area, @RequestParam("voterToken")String voterToken) throws LiquidoException {
+	@RequestMapping(value = "/my/delegations/{areaId}/accept", method = PUT)  // must send JSON
+	public @ResponseBody Lson acceptDelegationRequests(@PathVariable("areaId") AreaModel area, @RequestBody String voterToken) throws LiquidoException {
 		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to accept delegation requests."));
 		long delegationCount = proxyService.acceptDelegationRequests(area, proxy, voterToken);
@@ -178,17 +184,23 @@ public class ProxyRestController {
 
 	/**
 	 * Become a public proxy in this area. This will automatically accept any pending delegation requests
+	 *
 	 * @param area an area
-	 * @param voterToken need voterToken to become a public proxy
-	 * @return the checksum of the proxy in that area which is now public, ie. linked to this user.
-	 * @throws LiquidoException
+	 * @body  JSON with voterToken
+	 * @return the checksum of the proxy in that area which is now public, ie. linked to this user as a REST resource
+	 * @throws LiquidoException if voterToken is not valid
 	 */
-	@RequestMapping(value = "/my/delegations/{areaId}/becomePublicProxy", method = PUT)
-	public @ResponseBody Lson becomePublicProxy(@PathVariable("areaId") AreaModel area, @RequestParam("voterToken")String voterToken) throws LiquidoException {
+	@RequestMapping(value = "/my/delegations/{areaId}/becomePublicProxy", method = PUT)   // PUT is idempotent, so if you PUT an object twice, it has no effect.
+	// I have to use a JSON as body.  Just a plain string doesn't work with @BasePathAwareController. It requires JSON.
+	public ResponseEntity<?> becomePublicProxy(@PathVariable("areaId") AreaModel area, @RequestBody Map bodyMap) throws LiquidoException {
 		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to become a public proxy."));
-		ChecksumModel checksum = proxyService.becomePublicProxy(proxy, area, voterToken);
-		return Lson.builder("checksum", checksum);
+		String voterToken = (String)bodyMap.get("voterToken");
+		if (voterToken == null) throw new IllegalArgumentException("Need voter token to become a public proxy");
+		ChecksumModel checksumOfProxy = proxyService.becomePublicProxy(proxy, area, voterToken);
+		Resource checksumResource = new Resource(checksumOfProxy);
+		checksumResource.add(entityLinks.linkToSingleResource(area));
+		return ResponseEntity.ok(checksumResource);
 	}
 
 	/**

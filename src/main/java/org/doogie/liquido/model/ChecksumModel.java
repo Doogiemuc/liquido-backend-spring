@@ -35,7 +35,7 @@ public class ChecksumModel {
 	 */
 	@Id
 	@NonNull
-	String checksum;
+	public String checksum;
 
 	/**
 	 * The area is actually already encoded in the voterToken.
@@ -54,11 +54,15 @@ public class ChecksumModel {
 	 * There is no relation between a checksum and a voter (except for public proxies).
 	 */
 	@ManyToOne
-	//@JoinColumn(name = "delegatedToProxy")
-	@JsonIgnore    // do not reveal if a checksum is delegated
+	@JsonIgnore    // do not reveal to whom a checksum is delegated
 	ChecksumModel delegatedTo;
 
-	/* List of checksums that are delegated to this as a proxy. Inverse of bidirectional delegatedToProxy association
+	// only expose WHETHER a checksum is delegated or not
+	public boolean isDelegated() {
+		return delegatedTo != null;
+	}
+
+	 /* List of checksums that are delegated to this as a proxy. This would be the inverse link of bidirectional delegatedToProxy association
 	@OneToMany(mappedBy = "proxyFor", fetch = FetchType.EAGER)
 	List<ChecksumModel> proxyFor;
   */
@@ -78,14 +82,13 @@ public class ChecksumModel {
 	@OneToOne
 	UserModel publicProxy = null;		// by default no username is stored together with a checksum!!!
 
-
 	public String toString() {
 		StringBuffer buf = new StringBuffer();
 		buf.append("Checksum[");
 		buf.append("checksum="+this.getChecksum());
 		buf.append(", transitive="+this.isTransitive());
 		buf.append(", publicProxy="+ (this.getPublicProxy() != null ? this.getPublicProxy().toStringShort() : "<null>"));
-		buf.append(", delegatedTo="+ (this.getDelegatedTo() != null ? this.getDelegatedTo().getChecksum() : "<null>"));
+		buf.append(", delegatedTo.checksum="+ (this.getDelegatedTo() != null ? this.getDelegatedTo().getChecksum() : "<null>"));
 		buf.append("]");
 		return buf.toString();
 	}

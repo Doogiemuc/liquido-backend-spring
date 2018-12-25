@@ -160,7 +160,6 @@ public class TestDataCreator implements CommandLineRunner {
       // The order of these methods is very important here!
       seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX);
       auditorAware.setMockAuditor(this.usersMap.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
-      //seedGlobalProperties();
       seedAreas();
       AreaModel area = this.areas.get(0);
       seedProxies(TestFixtures.delegations);
@@ -283,17 +282,6 @@ public class TestDataCreator implements CommandLineRunner {
   		throw new RuntimeException("Could not remove Quarts statements from Schema: "+e.getMessage(), e);
 		}
 	}
-
-  /*   Global properties are automatically initialized from application.properties file
-  private void seedGlobalProperties() {
-    log.trace("Seeding global properties ...");
-    List<KeyValueModel> propKV = new ArrayList<>();
-    propKV.add(new KeyValueModel(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL.toString(), "5"));
-    propKV.add(new KeyValueModel(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS.toString(), "14"));
-    propKV.add(new KeyValueModel(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE.toString(), "14"));
-    keyValueRepo.save(propKV);
-  }
-  */
 
 	/**
 	 * Seed some users. This can be called multiple times! Uses will be stored in this.userMap
