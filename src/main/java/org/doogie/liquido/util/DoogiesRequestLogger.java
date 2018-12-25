@@ -92,7 +92,7 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
       while (hnames.hasMoreElements()) {
       	String name  = hnames.nextElement();
 				String value = request.getHeader(name);
-				this.logger.debug("     "+name+"="+value);
+				this.logger.debug("   - "+name+"="+value);
       }
     }
 
@@ -107,13 +107,18 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
 		BufferedRequestWrapper wrap = new BufferedRequestWrapper(request);
 
 		// Log request payload body
-		if (wrap.getBufferedContent().length > 0 && logger.isDebugEnabled()) {
-			String requestBody = this.getContentAsString(wrap.getBufferedContent(), this.maxPayloadLength, request.getCharacterEncoding());
-			String logStr = "   " +requestBody;
-			this.logger.debug(logStr);
-		} else {
-			if (HttpMethod.POST.matches(request.getMethod())) {
-				this.logger.debug("   "+reqInfo+" EMPTY request body POSTed");
+		if (logger.isDebugEnabled()) {
+			if (wrap.getBufferedContent().length > 0) {
+				String requestBody = this.getContentAsString(wrap.getBufferedContent(), this.maxPayloadLength, request.getCharacterEncoding());
+				if (requestBody.indexOf("\n") > 0) {
+					this.logger.debug("   Request body:\n" + requestBody);
+				} else {
+					this.logger.debug("   Request body: " + requestBody);
+				}
+			} else {
+				if (HttpMethod.POST.matches(request.getMethod()) || HttpMethod.PUT.matches(request.getMethod())) {
+					this.logger.debug("   " + reqInfo + " EMPTY body in "+request.getMethod());
+				}
 			}
 		}
 

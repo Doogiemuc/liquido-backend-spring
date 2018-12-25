@@ -5,7 +5,7 @@
 
 	<groupId>org.doogie.liquido</groupId>
 	<artifactId>liquido-backend-spring</artifactId>
-	<version>0.17.0</version>
+	<version>0.21.0</version>
 	<packaging>jar</packaging>
 
 	<name>liquido-backend-spring</name>
