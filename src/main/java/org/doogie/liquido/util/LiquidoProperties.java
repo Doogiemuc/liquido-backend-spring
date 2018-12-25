@@ -15,15 +15,21 @@ import java.util.Map;
 import static org.doogie.liquido.util.LiquidoProperties.KEY.BCRYPT_SALT;
 
 /**
- * Global properties that are read from the DB.
+ * Global properties that are persistet in the DB.
  * These properties can be changed at runtime
  * and new values <strong>can</strong> be persisted in the DB.
  */
 @Slf4j
 @Component
-public class LiquidoProperties /*implements CommandLineRunner*/ {
+public class LiquidoProperties extends HashMap<LiquidoProperties.KEY, String> /*implements CommandLineRunner*/ {
   //Implementation note: A CommandLine runner makes this run AFTER TestDataCreator.
   // But LiquidoProperties must be initialized BEFORE TestDataCreator. This is now possible with the @PostConstruct annotation below.
+
+  @Autowired
+  KeyValueRepo keyValueRepo;
+
+  @Autowired
+  Environment springEnv;   // load settings from application[-<env>].properties
 
   /**
    * List of KEYs. All values are mandatory! Each key must have a default value in application.properties!
@@ -33,6 +39,7 @@ public class LiquidoProperties /*implements CommandLineRunner*/ {
    *  - I can iterate over all KEYs.
    */
   public enum KEY {
+    LIQUIDO_VERSION("liquido.version"),
     SUPPORTERS_FOR_PROPOSAL("liquido.supporters.for.proposal"),
     DAYS_UNTIL_VOTING_STARTS("liquido.days.until.voting.starts"),
     DURATION_OF_VOTING_PHASE("liquido.duration.of.voting.phase"),
@@ -46,94 +53,69 @@ public class LiquidoProperties /*implements CommandLineRunner*/ {
     public String toString() {
       return this.keyName;
     }
-
   }
-
-  //TODO: Cache liquido properties  (same as in LiquidoUserDetailsService)
-  /*See:
-   @Cacheable("authenticedUsers")
-   https://spring.io/guides/gs/caching/
-   https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-caching.html
-   https://docs.spring.io/spring/docs/current/spring-framework-reference/html/cache.html#cache-store-configuration-caffeine
-
-   Do not forget to @CacheEvict the cache elem, when a user or its roles & rights change
-  */
-
-  private Map<KEY, String> props;
-
-  @Autowired
-  KeyValueRepo keyValueRepo;
-
-  @Autowired
-  Environment springEnv;   // load settings from application[-<env>].properties
 
 
   /**
-   * Load values for all KEYs.
-   * Sources are in this order:
-   * 1) load from the DB   if not found, then try
-   * 2) load from spring properties (application.properties or application-env.properties)
-   * 3) Use fixed default value.
-
-  @Override
-  public void run(String... args) throws Exception {
-    log.info("running LiquidoProperties command line runner");
-  }
-  */
-
-  /**
-   * Initialize properties. Currently all properties are mandatory.
+   * Initialize properties. All properties are mandatory. If there is no value in the DB
+   * we try to get an initial value from application.properties
    * This runs, after the bean has been constructed completely, ie. all Autowired attributes are injected and ready.
    * Keep in mind that this runs BEFORE the TestDataCreator!
-   */
+
   @PostConstruct
   public void postConstruct() {
     log.info("Loading properties from DB");
-    this.props = new HashMap<>();
     for(KEY key : KEY.values()) {
-      KeyValueModel kv = null; //keyValueRepo.findByKey(key.toString());
-
-      //If there is no value in the DB, then we load initial values from property file.
+      KeyValueModel kv = keyValueRepo.findByKey(key.toString());
       if (kv == null)  {
         String property = springEnv.getProperty(key.toString());
 				if (BCRYPT_SALT.equals(key) && property == null) {
 					String salt = BCrypt.gensalt();
 					throw new RuntimeException("Need BCRYPT_SALT in application.properties. You may for example use\nliquido.bcrypt.salt="+salt);
 				}
-				if (property == null) throw new RuntimeException("Need default value for "+key+" in application.properties");
+				if (property == null) throw new RuntimeException("Need initial value for "+key+" in application.properties");
         kv = new KeyValueModel(key.toString(), property);
+        this.put(key, kv.getValue());  // put and store
+      } else {
+        super.put(key, kv.getValue()); // only put, already stored
       }
-
-
-      props.put(key, kv.getValue());
       log.debug("   "+key+" = "+kv.getValue());
     }
   }
-
-
-  public String get(KEY key) {
-    return props.get(key);
-  }
-  public Integer getInt(KEY key) {
-    return Integer.valueOf(props.get(key));
-  }
+  */
 
   /**
-   * Set a value.  If you also want to persist that value in the DB, then use
-   * {@link #setAndStore(KEY, String)}
-   * @param key {@link KEY}
-   * @param value the new string value
+   * 1. return the locally cached value
+   * 2. return the value from the DB and cache it
+   * 3. try to load the initial value from application.properties
+   * 4. throw a RuntimeException
+   * @param key liquido key
+   * @return property value
    */
-  public void set(KEY key, String value) {
-    props.put(key, value);
+  @Override
+  public String get(Object key) {
+    if (super.containsKey(key)) return super.get(key);
+    KeyValueModel kv = keyValueRepo.findByKey(key.toString());
+    if (kv != null) return kv.getValue();
+    String springProp = springEnv.getProperty(key.toString());
+    if (springProp != null) {
+      super.put((KEY)key, springProp);
+      keyValueRepo.save(new KeyValueModel(key.toString(), springProp));
+      return springProp;
+    }
+    throw new RuntimeException("No property value for liqudio key="+key);
+  }
+
+  public Integer getInt(KEY key) {
+    return Integer.valueOf(this.get(key));
   }
 
   /**
    * set the value for this key and also persist the new value to the DB.
    */
-  public KeyValueModel setAndStore(KEY key, String value) {
-    this.set(key, value);
+  public String put(KEY key, String value) {
     KeyValueModel kv = new KeyValueModel(key.toString(), value);
-    return keyValueRepo.save(kv);
+    keyValueRepo.save(kv);
+    return super.put(key, value);
   }
 }

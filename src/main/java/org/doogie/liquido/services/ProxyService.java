@@ -195,6 +195,8 @@ public class ProxyService {
 	@Transactional
 	public ChecksumModel becomePublicProxy(UserModel publicProxy, AreaModel area, String proxyVoterToken) throws LiquidoException {
 		log.trace("ENTER becomePublicProxy("+publicProxy.toStringShort()+", "+area+")");
+		if (publicProxy == null) throw new IllegalArgumentException("need publixProxy to becomePublicProxy");
+		if (area == null) throw new IllegalArgumentException("need area to becomePublicProxy");
 		ChecksumModel publicProxyChecksum = castVoteService.isVoterTokenValidAndGetChecksum(proxyVoterToken);
 		publicProxyChecksum.setPublicProxy(publicProxy);
 		checksumRepo.save(publicProxyChecksum);  // MUST save before I can accept delegation requests
@@ -236,7 +238,7 @@ public class ProxyService {
 	 */
 	@Transactional
 	public long acceptDelegationRequests(AreaModel area, UserModel proxy, String proxyVoterToken) throws LiquidoException {
-		log.debug("=> accept delegation requests for proxy "+proxy+" in area.id="+area.getId());
+		log.debug("=> accept delegation requests for proxy "+proxy.toStringShort()+" in area.id="+area.getId());
 		List<DelegationModel> delegationRequests = delegationRepo.findDelegationRequests(area, proxy);
 		Optional<ChecksumModel> proxyChecksum = Optional.of(castVoteService.isVoterTokenValidAndGetChecksum(proxyVoterToken));
 		for(DelegationModel delegation: delegationRequests) {
@@ -244,7 +246,7 @@ public class ProxyService {
 			this.assignProxy(area, delegation.getFromUser(), proxy,	delegation.getRequestedDelegationFromChecksum(), proxyChecksum, delegation.isTransitive());
 		}
 		long delegationCount = getRealDelegationCount(proxyVoterToken);
-		log.info("<= accepted "+delegationRequests.size()+" delegation requests for proxy "+proxy+" in area.id="+area.getId()+ ", new delegationCount="+delegationCount);
+		log.info("<= accepted "+delegationRequests.size()+" delegation requests for proxy "+proxy.toStringShort()+" in area.id="+area.getId()+ ", new delegationCount="+delegationCount);
 		return delegationCount;
 	}
 
