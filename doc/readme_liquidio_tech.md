@@ -57,7 +57,11 @@ This is a more technical guide for developers
   - cast your vote
   - check for an existing ballot in a given poll
   - assign, edit or remove a proxy
+  - accept delegation requests
+  - become a public proxy
   - get number of real delegations to your checksum
+
+Get proxy info for an area is possible without a voterToken
     
  
  ### Token Checksum

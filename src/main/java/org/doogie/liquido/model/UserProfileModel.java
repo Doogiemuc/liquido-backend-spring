@@ -2,6 +2,7 @@ package org.doogie.liquido.model;
 
 import lombok.Data;
 
+import javax.persistence.Column;
 import javax.persistence.Embeddable;
 
 /**
@@ -14,6 +15,7 @@ public class UserProfileModel {
   String website;
   String picture;
   /** Users mobile phone number. Needed for login via SMS code */
+  @Column(unique = true)
   String mobilephone;
 
   /**
