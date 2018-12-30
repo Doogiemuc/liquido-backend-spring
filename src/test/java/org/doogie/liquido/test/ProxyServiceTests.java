@@ -101,7 +101,7 @@ public class ProxyServiceTests {
 		assertEquals("Delegation must point from voter ", fromUser, delegationOpt.get().getFromUser());
 		assertEquals("Delegation must point to proxy", toProxy, delegationOpt.get().getToProxy());
 
-		Optional<DelegationModel> directProxy = proxyService.getDirectProxyDelegation(area, fromUser);
+		Optional<DelegationModel> directProxy = proxyService.getDelegationToDirectProxy(area, fromUser);
 		assertTrue(fromUser.toStringShort()+" should have a delegation", directProxy.isPresent());
 		assertEquals(toProxy+"is direct proxy of "+fromUser+" in area "+area, toProxy, directProxy.get().getToProxy());
 	}

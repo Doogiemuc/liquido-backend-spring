@@ -6,10 +6,8 @@ import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.ChecksumModel;
 import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
-import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.EntityLinks;
-import org.springframework.hateoas.Link;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -218,7 +216,7 @@ public class ProxyService {
 		return checksumRepo.findByAreaAndPublicProxy(area, proxy);
 	}
 
-	public List<DelegationModel> findAcceptedDelegations(AreaModel area, UserModel proxy) {
+	public List<DelegationModel> findAcceptedDirectDelegations(AreaModel area, UserModel proxy) {
 		return delegationRepo.findAcceptedDelegations(area, proxy);
 	}
 
@@ -227,12 +225,24 @@ public class ProxyService {
 	}
 
 	/**
+	 * Get the delegation to this voter's proxy.
+	 * @param area an area
+	 * @param voter a voter that may have a proxy assigned in area
+	 * @return (optionally) the delegation to this voter's proxy. This MAY also be a requested delegation.
+	 */
+	public Optional<DelegationModel> getDelegationToDirectProxy(AreaModel area, UserModel voter) {
+		return delegationRepo.findByAreaAndFromUser(area, voter);
+	}
+
+
+	/**
 	 * GIVEN a proxy that has pending delegation requests
 	 *  WHEN this proxy accepts all the delegation requests to him,
 	 *  THEN all delegations are assigned (DelegationModel and Checksum delegation)
 	 *   AND the requests are cleared.
 	 * @param area area for delegation
 	 * @param proxy the proxy that accepts all pending delegation requests to him
+	 * @param proxyVoterToken necessary to accept delegations and assign proxy
 	 * @return the newly counted number of votes that his proxy now may cast.
 	 * @throws LiquidoException when one of the delegations cannot be assigned
 	 */
@@ -248,52 +258,6 @@ public class ProxyService {
 		long delegationCount = getRealDelegationCount(proxyVoterToken);
 		log.info("<= accepted "+delegationRequests.size()+" delegation requests for proxy "+proxy.toStringShort()+" in area.id="+area.getId()+ ", new delegationCount="+delegationCount);
 		return delegationCount;
-	}
-
-	/**
-	 * Collect all the proxy information for voter in that area.
-	 * Delegation to direct proxy,
-	 * The topmost proxy in the delegation chain starting at voter
-	 * If voter already is a public proxy
-	 * Pending delegation requests
-	 * Number of votes this user already has because of delegations (including his own vote)
-	 *
-	 * @param voter who's info to fetch
-	 * @return info about the voter's proxy and delegations to him in that area
-	 */
-	public Lson getProxyInfo(AreaModel area, UserModel voter) throws LiquidoException {
-		//TODO: Is a service method allowed to return schemaless Lson. Or should it return a DTO? (overkill!)   The REST resource must return JSON anyway.
-		log.debug("ENTER: getProxyMap("+voter+")");
-
-		Link areaLink = entityLinks.linkToSingleResource(area);
-		Optional<DelegationModel> directProxy = delegationRepo.findByAreaAndFromUser(area, voter);
-		Optional<UserModel> topProxy = findTopProxy(area, voter);
-		Optional<ChecksumModel> checksumOfPublicProxy = getChecksumOfPublicProxy(area, voter);
-
-		// manually build a JSON similar to the HATEOAS structure under _links
-		Lson proxyInfo = Lson.builder()
-			.put("area", area)				// also directly inline the full area JSON, because client needs it
-			.put("directProxyDelegation", directProxy.orElse(null))			// may also be a requested delegation
-			.put("topProxy", topProxy.orElse(null))   // this inlines the topProxy information, because client needs it
-			.put("isPublicProxy", checksumOfPublicProxy.isPresent())
-			.put("acceptedDelegations", findAcceptedDelegations(area, voter))   //   getRealDelegationCount(voterToken)
-			.put("delegationRequests", findDelegationRequests(area, voter))
-			.put("_links.area.href", areaLink.getHref())
-			.put("_links.area.templated", areaLink.isTemplated());
-  		//TODO: .put("_links.topProxy.href", topProxyLink.getHref())
-
-		return proxyInfo;
-
-	}
-
-	/**
-	 * Get the delegation to this voter's proxy.
-	 * @param area an area
-	 * @param voter a voter that may have a proxy assigned in area
-	 * @return the delegation to this voter's proxy. May be a requested delegation
-	 */
-	public Optional<DelegationModel> getDirectProxyDelegation(AreaModel area, UserModel voter) {
-		return delegationRepo.findByAreaAndFromUser(area, voter);
 	}
 
 	/**
@@ -350,10 +314,10 @@ public class ProxyService {
 	}
 
 	/**
-	 * Get the number of accepted delegations to a proxies checksum.
+	 * Recursively get number of accepted delegations to a proxies checksum.
 	 * The proxy may vote that many times plus his own vote.
 	 *
-	 * See also {@link #findAcceptedDelegations(AreaModel, UserModel)} which uses {@link DelegationModel} to count delegations.
+	 * See also {@link #findAcceptedDirectDelegations(AreaModel, UserModel)} which uses {@link DelegationModel} to count delegations.
 	 *
 	 * @param voterToken the voterToken of a voter who might be a proxy.
 	 * @return the number of delegations that this proxy has.
