@@ -72,12 +72,15 @@ public class UserRestController {
 		if (newUser == null || newUser.getProfile() == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need data for new user");
 		if (DoogiesUtil.isEmpty(newUser.getEmail())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need email for new user");
 		if (DoogiesUtil.isEmpty(newUser.getProfile().getMobilephone())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need mobile phone for new user");
-		UserModel existingUser = userRepo.findByEmail(newUser.getEmail());
-		if (existingUser != null)	throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "User already exists");
+		UserModel existingByEmail = userRepo.findByEmail(newUser.getEmail());
+		if (existingByEmail != null)	throw new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that email already exists");
+
+		UserModel existingByMobile = userRepo.findByProfileMobilephone(newUser.getProfile().getMobilephone());
+		if (existingByMobile != null)	throw new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that mobile phone number already exists");
 
 		//----- save new user
 		userRepo.save(newUser);
-		return ResponseEntity.ok("");
+		return ResponseEntity.ok().build();
 	}
 
 	/**

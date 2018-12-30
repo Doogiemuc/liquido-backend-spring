@@ -11,7 +11,6 @@ import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.data.rest.webmvc.RepositoryRestController;
@@ -63,12 +62,14 @@ public class ProxyRestController {
 	}
 
 	/**
-	 * When a voter delegates his vote to a proxy, then this is his direct proxy.
-	 * When the proxy in turn delegates his vote this is a transitive proxy.
-	 * At the end of this chain is the user's top proxy for that area.
+	 * When a voter delegates his vote to a proxy, then this is his direct proxy in this area.
+	 * If the proxy is not yet a public proxy, then the delegation is only requested.
+	 *
+	 * When that proxy in turn delegates his vote to another proxy, then this is a transtivie delegation.
+	 * At the end of this chain is the user's top proxy.
 	 *
 	 * @param area an area id or URI
-	 * @return all the information about the proxies of this user in that area. And delegation requests to that user.
+	 * @return all the information about the proxy of this user
 	 */
 	@RequestMapping(value = "/my/proxy/{areaId}", method = RequestMethod.GET)
 	public @ResponseBody Lson getProxyInfo(@PathVariable("areaId") AreaModel area) throws LiquidoException {
@@ -76,18 +77,18 @@ public class ProxyRestController {
 				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your proxy map!"));
 
 		Link areaLink = entityLinks.linkToSingleResource(area);
-		Optional<DelegationModel> directProxy = proxyService.getDirectProxyDelegation(area, proxy);
+		Optional<DelegationModel> directProxy = proxyService.getDelegationToDirectProxy(area, proxy);
 		Optional<UserModel> topProxy = proxyService.findTopProxy(area, proxy);
-		Optional<ChecksumModel> checksumOfPublicProxy = proxyService.getChecksumOfPublicProxy(area, proxy);
+		//Optional<ChecksumModel> checksumOfPublicProxy = proxyService.getChecksumOfPublicProxy(area, proxy);
 
-		// manually build a JSON similar to the HATEOAS structure under _links
+		// manually build a JSON similar to the HATEOAS structure
 		Lson proxyInfo = Lson.builder()
 				.put("area", area)				// also directly inline the full area JSON, because client needs it
 				.put("directProxyDelegation", directProxy.orElse(null))			// may also be a requested delegation
 				.put("topProxy", topProxy.orElse(null))   // this inlines the topProxy information, because client needs it
-				.put("isPublicProxy", checksumOfPublicProxy.isPresent())
-				.put("acceptedDelegations", proxyService.findAcceptedDelegations(area, proxy))   //   getRealDelegationCount(voterToken)
-				.put("delegationRequests", proxyService.findDelegationRequests(area, proxy))
+				//.put("isPublicProxy", checksumOfPublicProxy.isPresent())
+				//.put("acceptedDelegations", proxyService.findAcceptedDirectDelegations(area, proxy))   // these are only the direct delegations. See  getRealDelegationCount(voterToken)
+				//.put("delegationRequests", proxyService.findDelegationRequests(area, proxy))
 				.put("_links.area.href", areaLink.getHref())
 				.put("_links.area.templated", areaLink.isTemplated());
 		//TODO: .put("_links.topProxy.href", topProxyLink.getHref())
@@ -97,7 +98,7 @@ public class ProxyRestController {
 
 	/**
 	 * Save a proxy for the logged in user. This will insert a new delegation or update an existing one in that area.
-	 * @param assignProxyRequest assign proxy toProxy in area with voterToken
+	 * @param assignProxyRequest proxy and voterToken
 	 * @return the created (or updated) delegation as HAL+JSON
 	 *         If you you need full detailed data of all referenced entities, you can request the delegationProjection.
 	 *         Or you can send additional requests for example for the "_links.toProxy.href" URI
@@ -133,51 +134,34 @@ public class ProxyRestController {
 		proxyService.removeProxy(area, currentUser, voterToken);
 	}
 
-
-	/*
-	 * DEPRECATED
-	 *
-	 * Calculate the number of delegations to this proxy by using real checksum delegations.
-	 * If this voter is not yet a proxy, this method will return a delegationCount of zero.
-	 *
-	 * We need the voterToken, because real delegations are calculated from the tree of checksums.
-	 *
-	 * @param area the area. needed to check for delegation requests.
-	 * @param voterToken voterToken of a voter. Number of votes are calculated from real checksum delegations. Therefore we need the voterToken.
-	 * @return the number of votes this user may cast with this voterToken in an area.
-	 *         And also an array of delegationRequests if there are any pending ones.
-
-	@RequestMapping(value = "/my/delegationCount", method = GET)
-	public @ResponseBody Lson getDelegations(@RequestParam("area") AreaModel area, @RequestParam("voterToken")String voterToken) throws LiquidoException {
-		log.trace("=> GET /my/delegationCount");
-		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
-				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your numVotes!"));
-		long delegationCount = proxyService.getRealDelegationCount(voterToken);
-		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, proxy);
-		Lson response = Lson.builder()
-				.put("delegationCount", delegationCount)
-				.put("delegationRequests", delegationRequests.size());
-		log.info("<= GET /my/delegationCount?area="+area.getId()+" for proxy " + proxy.toStringShort() + " returns "+response);
-		return response;
-	}
+	/**
+	 * Get all information about delegations TO this voter as a proxy.
+	 * @param area an area
+	 * @param voterToken we need to the voter token to calculate the recursive delegationCount
+	 * @return JSON with accepted and requested delgations and the full recursive delegationCount
+	 * @throws LiquidoException
 	 */
-
-
 	@RequestMapping(value = "/my/delegations/{areaId}", method = GET)
-	public @ResponseBody Lson getDelegations(@PathVariable("areaId") AreaModel area) throws LiquidoException {
+	public @ResponseBody Lson getDelegations(@PathVariable("areaId") AreaModel area, @RequestParam("voterToken") String voterToken) throws LiquidoException {
 		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get delegation requests"));
-		List<DelegationModel> acceptedDelegations = proxyService.findAcceptedDelegations(area, proxy);
+		List<DelegationModel> acceptedDelegations = proxyService.findAcceptedDirectDelegations(area, proxy);
 		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, proxy);
+		Optional<ChecksumModel> checksumOfPublicProxy = proxyService.getChecksumOfPublicProxy(area, proxy);
+		long delegationCount = proxyService.getRealDelegationCount(voterToken);
 		return Lson.builder()
-				.put("acceptedDelegations", acceptedDelegations)
-				.put("delegationRequests", delegationRequests);
+				.put("acceptedDirectDelegations", acceptedDelegations)
+				.put("isPublicProxy", checksumOfPublicProxy.isPresent())
+				.put("delegationRequests", delegationRequests)
+				.put("delegationCountRec", delegationCount);
 	}
 
-	@RequestMapping(value = "/my/delegations/{areaId}/accept", method = PUT)  // must send JSON
-	public @ResponseBody Lson acceptDelegationRequests(@PathVariable("areaId") AreaModel area, @RequestBody String voterToken) throws LiquidoException {
+	@RequestMapping(value = "/my/delegations/{areaId}/accept", method = PUT)
+	public @ResponseBody Lson acceptDelegationRequests(@PathVariable("areaId") AreaModel area, @RequestBody Map bodyMap) throws LiquidoException {
 		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to accept delegation requests."));
+		String voterToken = (String)(bodyMap.get("voterToken"));    // We must pass JSON as body because of RepositoryRestController annotaion
+		if (voterToken == null) throw new IllegalArgumentException("Need voter token to acceptDelegationRequests");
 		long delegationCount = proxyService.acceptDelegationRequests(area, proxy, voterToken);
 		return Lson.builder("delegationCount", delegationCount);
 	}
@@ -190,12 +174,12 @@ public class ProxyRestController {
 	 * @return the checksum of the proxy in that area which is now public, ie. linked to this user as a REST resource
 	 * @throws LiquidoException if voterToken is not valid
 	 */
-	@RequestMapping(value = "/my/delegations/{areaId}/becomePublicProxy", method = PUT)   // PUT is idempotent, so if you PUT an object twice, it has no effect.
+	@RequestMapping(value = "/my/delegations/{areaId}/becomePublicProxy", method = PUT)   // PUT is idempotent, so if you PUT an object twice, it has no additional effect. And that is what we need here.
 	// I have to use a JSON as body.  Just a plain string doesn't work with @BasePathAwareController. It requires JSON.
 	public ResponseEntity<?> becomePublicProxy(@PathVariable("areaId") AreaModel area, @RequestBody Map bodyMap) throws LiquidoException {
 		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to become a public proxy."));
-		String voterToken = (String)bodyMap.get("voterToken");
+		String voterToken = (String)(bodyMap.get("voterToken"));
 		if (voterToken == null) throw new IllegalArgumentException("Need voter token to become a public proxy");
 		ChecksumModel checksumOfProxy = proxyService.becomePublicProxy(proxy, area, voterToken);
 		Resource checksumResource = new Resource(checksumOfProxy);

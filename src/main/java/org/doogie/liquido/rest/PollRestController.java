@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @BasePathAwareController
 //@RepositoryRestController   and    @RequestMapping("postBallot")    Both do not really work  See https://jira.spring.io/browse/DATAREST-972
+//see also https://faithfull.me/overriding-spring-data-rest-repositories/
 public class PollRestController {
 
 	@Autowired
