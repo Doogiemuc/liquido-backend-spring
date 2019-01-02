@@ -1,9 +1,14 @@
 package org.doogie.liquido.model;
 
+import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.doogie.liquido.rest.converters.BalloModelPollJsonSerializer;
+import org.springframework.data.jpa.mapping.JpaPersistentEntity;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -31,7 +36,7 @@ import java.util.stream.Collectors;
 public class BallotModel {
 	//BallotModel deliberately does not extend BaseModel!
 	//No @CreatedDate, @LastModifiedDate or @CreatedBy here.
-	//When voting it is a secret who casted this ballot and when.
+	//When voting it is confidential who casted this ballot and when.
 
 	@Id
 	@GeneratedValue(strategy= GenerationType.AUTO)
@@ -39,11 +44,13 @@ public class BallotModel {
 
   /**
 	 * Reference to poll
-	 * The poll would actually already be coded into the checksum. But we also store the reference for simlicity.
+	 * The poll would actually already be coded into the checksum. But we also store the reference for simplicity.
 	 */
   @NotNull
   @NonNull
   @ManyToOne
+	@JsonProperty("_links")   // JSON will contain "_links.poll.href"
+	@JsonSerialize(using = BalloModelPollJsonSerializer.class)  // a ballot can only be fetched when the caller already knows the poll. So we only return a simple ref to the poll
   public PollModel poll;
 
   /**
@@ -62,7 +69,7 @@ public class BallotModel {
 	 *
 	 * IMPORTANT: There are separate ballots for all these delegated votes. The voteCount is just for info. Do not sum it up.
 	 */
-	public int voteCount = 1;
+	public long voteCount = 1;
 
   /**
    * One vote puts some proposals of this poll into his personally preferred order.
@@ -74,6 +81,7 @@ public class BallotModel {
   @NotNull
   @ManyToMany(fetch = FetchType.EAGER)   //(cascade = CascadeType.MERGE, orphanRemoval = false)
   @OrderColumn  // keep order in DB
+	@JsonInclude
   public List<LawModel> voteOrder;   		//proposals in voteOrder must not be duplicate! This is checked in VoteRestController.
 
   /**

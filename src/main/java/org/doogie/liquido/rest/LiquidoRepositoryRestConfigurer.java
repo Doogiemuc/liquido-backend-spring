@@ -2,6 +2,7 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
+import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.converters.LiquidoUriToEntityConverter;
 import org.doogie.liquido.util.DoogiesRequestLogger;
@@ -9,7 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.support.ConfigurableConversionService;
+import org.springframework.data.jpa.projection.CollectionAwareProjectionFactory;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.data.projection.SpelAwareProxyProjectionFactory;
 import org.springframework.data.rest.core.config.RepositoryRestConfiguration;
 import org.springframework.data.rest.core.mapping.RepositoryDetectionStrategy;
 import org.springframework.data.rest.webmvc.config.RepositoryRestConfigurer;
@@ -52,7 +55,7 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 
     // The base path for RepositoryRestResource is configured in application.properties. It's more prominent there
     // Keep in mind that this is only the base path for our HATEOAS endpoints. The base path for normal @RestControllers has to configured individually there.
-    config.setBasePath("/liquido/v2");
+    //config.setBasePath("/liquido/v2");
 
     // Only export data repositories that are annotated with @RepositoryRestResource(...)
     // In future versions this will be configurable in application.properties   spring.data.rest.detection-strategy=visibility   https://github.com/spring-projects/spring-boot/issues/7113
@@ -67,6 +70,13 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
     //TODO: config.getCorsRegistry().addMapping("").allowedOrigins("*/*");   //when available in future version of spring: config.getCorsRegistry()
 
   }
+
+	/**
+	 * This bean is needed in {@link PollRestController#getOwnBallot(PollModel, String)}   to manually create the projection
+	 * https://stackoverflow.com/questions/33288486/using-a-spring-data-rest-projection-as-a-representation-for-a-resource-in-a-cus
+	 */
+
+	@Bean public CollectionAwareProjectionFactory projectionFactory() { return new CollectionAwareProjectionFactory(); }
 
   // see also LiquidoAuditorAware for handling @CreatedBy   https://jaxenter.com/rest-api-spring-java-8-112289.html
 
@@ -98,19 +108,22 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 	@Autowired
 	AreaRepo areaRepo;
 
+	@Autowired
+	PollRepo pollRepo;
+
 	/**
-	 * add convertes for REST RequestParams that can deserialize from HATEOAS URIs to spring data entities.
-	 * @param conversionService
+	 * Add convertes for REST RequestParams that can deserialize from HATEOAS URIs to spring data entities.
+	 * This is used when the client passes an areaId in rest URLs as PathParameters.
+	 * @param conversionService springs conversion service, that we'll addConverter() to
 	 */
 	@Override
 	public void configureConversionService(ConfigurableConversionService conversionService) {
 		//BUGFIX: must add source and target type when using generic parametrized converter
-		conversionService.addConverter(String.class, AreaModel.class, new LiquidoUriToEntityConverter(areaRepo, AreaModel.class));
+		conversionService.addConverter(String.class, AreaModel.class, new LiquidoUriToEntityConverter<>(areaRepo, AreaModel.class));
+		conversionService.addConverter(String.class, PollModel.class, new LiquidoUriToEntityConverter<>(pollRepo, PollModel.class));
 	}
 
-
-
-	/*
+	/*  DEPRECATED
   @Override
   public void configureHttpMessageConverters(List<HttpMessageConverter<?>> messageConverters) {
     log.debug("====== adding HttpMessageConverter in RepositoryRestConfigurer");
@@ -151,39 +164,5 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
   }
   */
 
-
-
-
-  /*  this manual validator for foreign keys was only necessary with MongoDB. Right now this is handled by MySQL foreign key constraints
-
-  @Autowired        // Do not builder an instance with "new". Let Spring inject the dependency, so that it can ba handled by Spring.
-  private DelegationValidator delegationValidator;
-
-  @Override
-  public void configureValidatingRepositoryEventListener(ValidatingRepositoryEventListener validatingListener) {
-    log.info("========== adding beforeCreate validator     in RepositoryRestConfigurer");
-    validatingListener.addValidator("beforeCreate", delegationValidator);
-  }
-  */
-
-  /*
-
-  /*
-    https://stackoverflow.com/questions/22029727/using-validators-in-spring-data-rest-returns-http-500-instead-of-400
-    Spring-data-rest returns HTTP 500 instead of 400 when validation fails, e.g. when required fields are missing in POST requests.
-    This does help. But then this gets into conflictd with missing createdBy, which seems to be added later. *sic*
-	@Bean
-	public Validator validator() {
-		return new LocalValidatorFactoryBean();
-	}
-
-	@Override
-	public void configureValidatingRepositoryEventListener(ValidatingRepositoryEventListener validatingListener) {
-		validatingListener.addValidator("afterCreate", validator());
-		//validatingListener.addValidator("beforeCreate", validator());
-		validatingListener.addValidator("afterSave", validator());
-		validatingListener.addValidator("beforeSave", validator());
-	}
-	*/
 
 }

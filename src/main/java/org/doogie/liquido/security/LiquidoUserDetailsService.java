@@ -26,7 +26,7 @@ public class LiquidoUserDetailsService implements UserDetailsService {
   @Autowired
   UserRepo userRepo;
 
-  //TODO: Cache autenticated users, because loadUserByUsername is called very often! MAYBE simply extend CachingUserDetailsService ?
+  // TODO: Cache autenticated users, because loadUserByUsername is called very often! MAYBE simply extend CachingUserDetailsService ?
 
   /*See:
    @Cacheable("authenticedUsers")
@@ -50,14 +50,6 @@ public class LiquidoUserDetailsService implements UserDetailsService {
   @Override
   public LiquidoAuthUser loadUserByUsername(String email) throws UsernameNotFoundException {
     log.trace("loading user "+email+" from DB for authentication");
-
-    //Just for testting
-    /*
-    if ("admin".equals(email)) {
-      log.debug("==== ADMIN LOGIN ===");
-      return new LiquidoAuthUser(email, "adminpwd", Arrays.asList(new SimpleGrantedAuthority("ROLE_USER")), adminFromDB);
-    }
-    */
 
     UserModel userModel = userRepo.findByEmail(email);
     if (userModel == null) throw new UsernameNotFoundException("Could not find user '"+email+"'");
