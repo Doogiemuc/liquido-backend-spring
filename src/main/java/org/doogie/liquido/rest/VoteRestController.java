@@ -75,7 +75,7 @@ public class VoteRestController {
 				.put("_links.area.href", areaLink.getHref())   		// return link to Area. Area Link has suffix {?projection} !
 				.put("_links.area.templated", areaLink.isTemplated())	// is true for areas
 				.put("voterToken", voterToken)
-				.put("delegationCount", delegationCount);
+				.put("delegationCount", delegationCount);					// overall number of delegations (incl. transitive ones)
 	}
 
 

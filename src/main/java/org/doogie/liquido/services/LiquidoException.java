@@ -29,9 +29,11 @@ public class LiquidoException extends Exception {
 		CANNOT_FINISH_POLL(15, HttpStatus.BAD_REQUEST),
 		NO_DELEGATION(16, HttpStatus.BAD_REQUEST),
 		CANNOT_FIND_ENTITY(17, HttpStatus.UNPROCESSABLE_ENTITY),   		// 422: cannot find entity: e.g. from PathParam or when Deserializing
-		INVALID_POLL_STATUS(18, HttpStatus.BAD_REQUEST),
-		INVALID_JWT_TOKEN(19, HttpStatus.UNAUTHORIZED),
-		PUBLIC_CHECKSUM_NOT_FOUND(20, HttpStatus.NOT_FOUND);
+		NO_BALLOT(18, HttpStatus.NO_CONTENT),  												// 422: voter has no ballot yet.  This is not an error.
+		INVALID_POLL_STATUS(19, HttpStatus.BAD_REQUEST),
+		INVALID_JWT_TOKEN(20, HttpStatus.UNAUTHORIZED),
+		PUBLIC_CHECKSUM_NOT_FOUND(21, HttpStatus.NOT_FOUND);
+
 		int liquidoErrorCode;
 		HttpStatus httpResponseStatus;
 
