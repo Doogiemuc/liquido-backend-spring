@@ -1,6 +1,7 @@
 package org.doogie.liquido.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -90,6 +91,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 
   /** All users that support this proposal. */
   //This cannot  just be a counter, because we must prevent that a user supports this more than once.
+	@JsonIgnore  // do not serialize when reeturning JSON. Only return this.getNumSupporters()
   @ManyToMany(fetch = FetchType.EAGER)
   Set<UserModel> supporters = new HashSet<>();
 
@@ -107,7 +109,8 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
   public PollModel poll = null;
 
   /** Comments and suggestions for improvement for this proposal*/
-	@OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)  // fetch all comments when loading a an idea or proposal.  Prevents "LazyInitializationException, could not initialize proxy - no Session" but at the cost of performance.
+	@JsonIgnore  // To fetch comments via REST user CommentProjection of CommentModel
+  @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)  // fetch all comments when loading a an idea or proposal.  Prevents "LazyInitializationException, could not initialize proxy - no Session" but at the cost of performance.
 	//@Cascade(org.hibernate.annotations.CascadeType.ALL)   // https://vladmihalcea.com/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
   public Set<CommentModel> comments;
 

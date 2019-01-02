@@ -66,7 +66,7 @@ public class CastVoteService {
 	@Value("${liquido.checksum.expiration.hours}")
 	int checksumExpirationHours;
 
-	//TODO:  RSA Tokens  https://stackoverflow.com/questions/37722090/java-jwt-with-public-private-keys
+	//TODO: RSA Tokens  https://stackoverflow.com/questions/37722090/java-jwt-with-public-private-keys
 	//TODO: create really secure voterTokens like this: U2F  https://blog.trezor.io/why-you-should-never-use-google-authenticator-again-e166d09d4324
 
 	/**
@@ -230,7 +230,7 @@ public class CastVoteService {
 	}
 
 	/**
-	 * This method calls itself recursivly. The <b>upsert</b> algorithm for storing a ballot:
+	 * This method calls itself recursively. The <b>upsert</b> algorithm for storing a ballot:
 	 *
 	 * 1) Check the integrity of the passed newBallot. Especially check the validity of its ChecksumModel.
 	 *    The checksum must be known.
@@ -281,7 +281,7 @@ public class CastVoteService {
 		}
 
 		//----- recursively cast a vote for each delegated checksumModel
-		int voteCount = 1;   // first vote is for the ballot itself.
+		long voteCount = 1;   // first vote is for the ballot itself.
 		List<ChecksumModel> delegatedChecksums = checksumRepo.findByDelegatedTo(existingBallot.getChecksum());
 		for (ChecksumModel delegatedChecksum : delegatedChecksums) {
 			BallotModel childBallot = new BallotModel(newBallot.getPoll(), newBallot.getLevel() + 1, newBallot.getVoteOrder(), delegatedChecksum);

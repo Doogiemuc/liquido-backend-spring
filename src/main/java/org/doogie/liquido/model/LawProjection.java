@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.rest.core.config.Projection;
 
 import java.util.Date;
+import java.util.Set;
 
 /**
  * This Spring <a href="http://docs.spring.io/spring-data/rest/docs/current/reference/html/#projections-excerpts.excerpting-commonly-accessed-data">projection</a>
@@ -29,6 +30,9 @@ public interface LawProjection {
   AreaModel getArea();  // always inline information about the area  directly into the JSON
 
   PollModel getPoll();  // always inline information poll
+
+  // To fetch comments user CommentProjection of CommentModel
+  //Set<CommentModel> getComments();
 
   Date getReachedQuorumAt();
 

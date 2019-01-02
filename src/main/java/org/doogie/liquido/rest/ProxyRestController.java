@@ -153,7 +153,7 @@ public class ProxyRestController {
 				.put("acceptedDirectDelegations", acceptedDelegations)
 				.put("isPublicProxy", checksumOfPublicProxy.isPresent())
 				.put("delegationRequests", delegationRequests)
-				.put("delegationCountRec", delegationCount);
+				.put("delegationCount", delegationCount);		// overall number of delegations (incl. transitive ones)  This is also returned by getVoterToken
 	}
 
 	@RequestMapping(value = "/my/delegations/{areaId}/accept", method = PUT)
@@ -182,7 +182,8 @@ public class ProxyRestController {
 		String voterToken = (String)(bodyMap.get("voterToken"));
 		if (voterToken == null) throw new IllegalArgumentException("Need voter token to become a public proxy");
 		ChecksumModel checksumOfProxy = proxyService.becomePublicProxy(proxy, area, voterToken);
-		Resource checksumResource = new Resource(checksumOfProxy);
+		// ChecksomRepo is not exposed as REST endpoint. So we build our own HATEOAS Resource.
+		Resource checksumResource = new Resource<>(checksumOfProxy);
 		checksumResource.add(entityLinks.linkToSingleResource(area));
 		return ResponseEntity.ok(checksumResource);
 	}

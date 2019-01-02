@@ -6,7 +6,6 @@ import org.doogie.liquido.datarepos.ChecksumRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.model.BallotModel;
-import org.doogie.liquido.model.ChecksumModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.rest.dto.JoinPollRequest;
@@ -16,9 +15,11 @@ import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
+import org.springframework.hateoas.EntityLinks;
 import org.springframework.hateoas.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -52,7 +53,7 @@ public class PollRestController {
   @Autowired
 	ChecksumRepo checksumRepo;
 
-  @Autowired
+	@Autowired
 	LiquidoRestUtils restUtils;
 
   //see https://docs.spring.io/spring-data/rest/docs/current/reference/html/#customizing-sdr.overriding-sdr-response-handlers
@@ -125,31 +126,9 @@ public class PollRestController {
   		throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "Cannot find poll with that id");
   	if (!PollModel.PollStatus.FINISHED.equals(poll.getStatus()))
 			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Poll.id="+poll.getId()+" is not in status FINISHED");
-
 		Lson pollResultsJson = pollService.calcPollResults(poll);
-
 		return pollResultsJson;
 
-		/*
-		List<BallotModel> ballots = ballotRepo.findByPoll(poll);
-
-		// For each place (1st, 2nd, ,3rd, ...) this list contains a mapping from the proposal.id to the
-		// count how often this proposal was ordered in that place.
-		List<Map<Long, Long>> counts = new ArrayList<>();
-		for (int i = 0; i < 3; i++) {
-			Map<Long, Long> counts_i = new HashMap<>();
-			counts.add(counts_i);
-			for (BallotModel ballot: ballots) {
-				if (i < ballot.getVoteOrder().size()) {											// if voteOrder has that many places
-					LawModel proposal = ballot.getVoteOrder().get(i);
-					counts_i.merge(proposal.getId(), 1L, Long::sum);   // add 1 to the count for this proposal
-				}
-			}
-		}
-
-		return counts;
-
-		*/
 	}
 
 	/**
@@ -158,19 +137,46 @@ public class PollRestController {
 	 *
 	 * @param poll a poll in status VOTING or FINISHED
 	 * @param voterToken the users own voterToken
-	 * @return voter's own ballot
-	 * @throws LiquidoException 404 when user has not ballot, ie did not vote in this poll yet
+	 * @return voter's own ballot (200)  or HTTP 204 NO_CONTENT if user has no ballot yet
 	 */
 	@RequestMapping(value = "/polls/{pollId}/ballot/my")
+	// To use pollId as @PathVariable this needs its own conversionService in LiquidoRepositoryRestConfigurer.java !
 	public @ResponseBody
-	PersistentEntityResource getOwnBallot(
+	BallotModel getOwnBallot(
 			@PathVariable(name="pollId") PollModel poll,
-			@RequestParam("voterToken") String voterToken,
-			PersistentEntityResourceAssembler resourceAssembler
+			@RequestParam("voterToken") String voterToken
+			//, PersistentEntityResourceAssembler assembler
 	) throws LiquidoException {
 		BallotModel ownBallot = pollService.getBallotForVoterToken(poll, voterToken)
-				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "No ballot found. You did not vote in this poll yet."));
-		return resourceAssembler.toFullResource(ownBallot);
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_BALLOT, "No ballot found. You did not vote in this poll yet."));   // this is not an error
+
+		// BallotRepo is deliberately not exposed as RepositoryRestResource. So we have to build our own response JSON here.
+		return ownBallot;
+
+
+		// This would return the full HATEOAS resource. But since BallotModel is not exposed as RepositoryRestResource, it contains ugly links to .../BallotModels/4711  :-(
+		//return assembler.toResource(ownBallot);
+
+
+
+
+		/*
+		List<PersistentEntityResource> voteOrder = ownBallot.getVoteOrder().stream().map(proposal -> resourceAssembler.toFullResource(proposal)).collect(Collectors.toList());
+		Link areaLink = entityLinks.linkToSingleResource(poll.getArea());
+		Link pollLink = entityLinks.linkToSingleResource(poll);
+		BallotProjection ballotProjection = projectionFactory.createProjection(BallotProjection.class, ownBallot);
+		return Lson.builder()
+				.put("checksum", ownBallot.getChecksum().getChecksum())
+				.put("level", ownBallot.getLevel())
+				.put("voteCount", ownBallot.getVoteCount())
+				.put("voteOrder", voteOrder)   // inline vote order with full HATEOAS JSON resources, because client needs it
+				.put("_links.area.href", areaLink.getHref())
+				.put("_links.area.templated", areaLink.isTemplated())
+				.put("_links.poll.href", pollLink.getHref())
+				.put("_links.poll.templated", pollLink.isTemplated());
+		*/
 	}
+
+
 
 }
