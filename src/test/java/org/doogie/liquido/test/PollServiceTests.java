@@ -36,8 +36,7 @@ import static org.junit.Assert.assertFalse;
 @Slf4j
 @RunWith(SpringRunner.class)
 @SpringBootTest
-@ActiveProfiles("test")  // this will also load the settings  from  application-test.properties
-public class PollServiceTests {
+public class PollServiceTests  extends BaseTest {
 
 
 	@Autowired
