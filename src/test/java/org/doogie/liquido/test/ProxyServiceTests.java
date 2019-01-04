@@ -31,7 +31,7 @@ import static org.junit.Assert.*;
 @Slf4j
 @RunWith(SpringRunner.class)
 @SpringBootTest
-@ActiveProfiles("test")  // this will also load the settings  from  application-test.properties
+//@ActiveProfiles("test")  // this will also load the settings  from  application-test.properties
 public class ProxyServiceTests {
 	@Autowired
 	UserRepo userRepo;
@@ -60,11 +60,13 @@ public class ProxyServiceTests {
 		UserModel topProxy = userRepo.findByEmail(USER1_EMAIL);
 		AreaModel area     = areaRepo.findByTitle(AREA_FOR_DELEGATIONS);
 		ChecksumModel proxyChecksum = castVoteService.getExistingChecksum(topProxy, USER_TOKEN_SECRET, area);
+		/*
 		log.info("=========== PROXY TREE (checksums) ========");
 		utils.printChecksumTree(proxyChecksum);
 		log.info("=========== PROXY TREE (delegations) ========");
 		utils.printProxyTree(area, topProxy);
 		log.info("============================================");
+		*/
 	}
 
 	/**

@@ -53,7 +53,7 @@ public class TestFixtures {
 	                            				    user1          <---- top Proxy
         					                     /    |    \
   user2 is not a public proxy --> (user2) user3  user4
-	          delegation request ->  /R/      |       \
+  delegation request 5-> 2    -->  /R/      |       \
       		                       user5    user6    user7
       		                      /    \           /   |  (\)    <---- 12->7  non-transitive delegation
       		                 user8    user9  user10 user11 user12
@@ -76,8 +76,9 @@ public class TestFixtures {
   public static List<String[]> delegations = new ArrayList<>();
 	public static final String AREA_FOR_DELEGATIONS = AREA0_TITLE;
 	public static final String TOP_PROXY_EMAIL = USER1_EMAIL;
-	public static final long USER1_DELEGATIONS = 7;     // testuser1@liquido.de  has 7 delegations to him
-	public static final long USER4_DELEGATIONS = 3;     // testuser4@liquido.de  has 3 direct delegations
+	public static final int USER1_DELEGATIONS = 7;     // testuser1@liquido.de  has 7 delegations to him (the non-transitive one 12-7 is not counted for him!)
+	public static final int USER2_DELEGATIONS = 0;		 // testuser2@liquido.de  only has a requested delegation. So no accepted ones yet.
+	public static final int USER4_DELEGATIONS = 3;     // testuser4@liquido.de  has 3 direct delegations
 	static {
 		// fromUser, toProxy, transitive?
 		delegations.add(new String[]{TestFixtures.USER2_EMAIL, TestFixtures.USER1_EMAIL, "true"});   // testuser2 delegates to proxy testuser1

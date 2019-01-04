@@ -48,8 +48,8 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * (2) Load testdata from an SQL script that contains schema <b>and</b> data
  *
  * In application.properties  set  spring.jpa.hibernate.ddl-auto=none (Then a data.sql is not loaded!)
- * Env loadSampleDB=true
- * Then we load our own sample-data.sql manually. This is quick!
+ * And set the environment variable loadSampleDB=true
+ * Then sample-data.sql is loaded. This is quick!
  *
  * You can create a sample-data.sql from the embedded H2 console with the SQL command
  * <pre>SCRIPT TO 'sample-DB.sql'</pre>
@@ -161,15 +161,18 @@ public class TestDataCreator implements CommandLineRunner {
       seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX);
       auditorAware.setMockAuditor(this.usersMap.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
       seedAreas();
-      AreaModel area = this.areas.get(0);
-      seedProxies(TestFixtures.delegations);
+      AreaModel area = areaMap.get(TestFixtures.AREA0_TITLE);   // most testdata is created in this area
       seedIdeas();
       seedProposals();
+			seedProxies(TestFixtures.delegations);
 			seedPollInElaborationPhase(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
+			seedPollInVotingPhase(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);						      // seed one poll in voting
 			PollModel poll = seedPollInVotingPhase(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
 			seedVotes(poll, TestFixtures.NUM_VOTES);
 			seedPollFinished(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
       seedLaws();
+
+
 
       auditorAware.setMockAuditor(null);
 
@@ -233,7 +236,8 @@ public class TestDataCreator implements CommandLineRunner {
 	 * My nice SQL script contains the schema (CREATE TABLE ...) and data (INSERT INTO...) That way I can
 	 * very quickly init a DB from scratch.  But TestDataCreator runs after my SpringApp has started.
 	 * Our Quartz scheduler is started earlier. It can be configured to create or not create its own
-	 * schema. But when I tell it to not create its own schema TestDataCreator runs too late.
+	 * schema. But when I tell it to not create its own schema TestDataCreator runs too late to
+	 * create the schema for Quartz.
 	 * So I let Quartz create its own stuff and remove any Quarts related lines from my DB script
 	 *
 	 * The alternative would be do copy the Quartz lines into schema.sql and data.sql
@@ -296,6 +300,8 @@ public class TestDataCreator implements CommandLineRunner {
 	  //PasswordEncoder passwordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();   // Springs default password encoder uses "bcrypt"
 		//String hashedPassword = passwordEncoder.encode(password);           // Password encoding takes a second! And it should take a second, for security reasons!
 
+		long countUsers = countUsers();
+
     for (int i = 0; i < numUsers; i++) {
       String email = mailPrefix + (i+1) + "@liquido.de";    // Remember that DB IDs start at 1. Testuser1 has ID=1 in DB. And there is no testuser0
       UserModel newUser = new UserModel(email);
@@ -304,7 +310,7 @@ public class TestDataCreator implements CommandLineRunner {
       profile.setName("Test User" + (i+1));
       profile.setPicture("/static/img/photos/"+((i%3)+1)+".png");
       profile.setWebsite("http://www.liquido.de");
-      profile.setMobilephone("+4912345"+(i+1));  // deterministic phone numbers
+      profile.setMobilephone("+4912345"+(countUsers+i+1));  // deterministic unique phone numbers
       newUser.setProfile(profile);
 
       UserModel existingUser = userRepo.findByEmail(email);
