@@ -30,6 +30,12 @@
 		<docker.image.prefix>org.doogie</docker.image.prefix>
 	</properties>
 
+	<scm>
+		<connection>scm:git:https://github.com/Doogiemuc/liquido-backend-spring.git</connection>
+		<developerConnection>scm:git:https://github.com/Doogiemuc/liquido-backend-spring.git</developerConnection>
+		<url>https://github.com/Doogiemuc/liquido-backend-spring/</url>
+	</scm>
+
 	<dependencies>
     	<!-- Spring Web MVC -->
 		<dependency>
@@ -187,7 +193,28 @@
 	</dependencies>
 
 	<build>
+		<finalName>$\{project.artifactId}-$\{project.version}-r$\{buildNumber}</finalName>
 		<plugins>
+			<!-- Build number -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>buildnumber-maven-plugin</artifactId>
+				<version>1.4</version>
+				<executions>
+					<execution>
+						<phase>validate</phase>
+						<goals>
+							<goal>create</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<doCheck>true</doCheck>
+					<doUpdate>false</doUpdate>
+				</configuration>
+			</plugin>
+
+			<!-- Create docker container -->
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

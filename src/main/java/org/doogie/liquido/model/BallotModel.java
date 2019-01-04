@@ -25,6 +25,8 @@ import java.util.stream.Collectors;
  * Only the voter knows his own voterToken. So only he can check that this actually is his ballot.
  *
  * This way a voter can even update his ballot as long as the voting phase is still open.
+ *
+ * BallotRepo is not exposed as REST resource. BallotModel is serialized to JSON manually. See {@link BalloModelPollJsonSerializer}
  */
 @Data
 @Entity

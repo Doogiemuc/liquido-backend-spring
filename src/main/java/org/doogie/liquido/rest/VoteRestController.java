@@ -3,6 +3,7 @@ package org.doogie.liquido.rest;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.BallotModel;
+import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.security.LiquidoAuditorAware;
@@ -18,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -69,12 +71,14 @@ public class VoteRestController {
 		log.trace("Request voterToken for " + voter.toStringShort() + " in " + area);
 		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, area, tokenSecret, becomePublicProxy);   // preconditions are checked inside castVoteService
 		long delegationCount = proxyService.getRealDelegationCount(voterToken);
+		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, voter);
 
 		Link areaLink = entityLinks.linkToSingleResource(AreaModel.class, area.getId());      // Spring HATEOAS Link rel
 		return Lson.builder()
 				.put("_links.area.href", areaLink.getHref())   		// return link to Area. Area Link has suffix {?projection} !
 				.put("_links.area.templated", areaLink.isTemplated())	// is true for areas
 				.put("voterToken", voterToken)
+		    .put("delegationRequests", delegationRequests)		// also return delegation requests, because client needs them here on the castvote page
 				.put("delegationCount", delegationCount);					// overall number of delegations (incl. transitive ones)
 	}
 
