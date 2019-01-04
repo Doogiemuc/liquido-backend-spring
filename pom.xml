@@ -29,8 +29,8 @@
 		<!-- Prefix for docker image in docker repository. ArtifactId will be appended to this. -->
 		<docker.image.prefix>org.doogie</docker.image.prefix>
 
-		<!-- command line arguments that maven surefire will pass to TESTs -->
-		<argLine>-D=loadSampleDB=true</argLine>
+		<!-- command line arguments that maven surefire will pass to TESTs
+		<argLine>-D=loadSampleDB=true</argLine  -->
 	</properties>
 
 	<scm>
@@ -196,8 +196,19 @@
 	</dependencies>
 
 	<build>
-		<finalName>$\{project.artifactId}-$\{project.version}-r$\{buildNumber}</finalName>
+		<finalName>${project.artifactId}-${project.version}-r${buildNumber}</finalName>
 		<plugins>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<systemPropertyVariables>
+						<loadSampleDB>true</loadSampleDB>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
+
 			<!-- Build number -->
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
@@ -212,7 +223,8 @@
 					</execution>
 				</executions>
 				<configuration>
-					<doCheck>true</doCheck>
+					<!-- buildnumber-maven-plugin by default checks for local changes, ie. not yet commited files -->
+					<doCheck>false</doCheck>
 					<doUpdate>false</doUpdate>
 				</configuration>
 			</plugin>

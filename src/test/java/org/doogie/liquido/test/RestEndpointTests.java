@@ -17,10 +17,7 @@ import org.doogie.liquido.util.LiquidoProperties;
 import org.doogie.liquido.util.Lson;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,7 +53,7 @@ import static org.springframework.http.HttpMethod.*;
 @ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)  // This automatically sets up everything and starts the server.
 //@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)       // TODO: Run tests against an already running server
-public class RestEndpointTests {
+public class RestEndpointTests extends BaseTest {
 
   /** path prefix for REST API from application.properties */
   @Value(value = "${spring.data.rest.base-path}")
@@ -118,12 +115,9 @@ public class RestEndpointTests {
 
 	JwtAuthInterceptor jwtAuthInterceptor = new JwtAuthInterceptor();
 
-  /** for JSON parsing */
-	ObjectMapper jsonMapper = new ObjectMapper();
-
 	/**
 	 * This is executed, when the Bean has been created and @Autowired references are injected and ready.
-	 * This runs once for all tests
+	 * This runs once for every test!
 	 */
 	@PostConstruct
 	public void postConstruct() {
@@ -171,27 +165,6 @@ public class RestEndpointTests {
 		String jwt = jwtTokenProvider.generateToken(email);
 		jwtAuthInterceptor.setJwtToken(jwt);
 	}
-
-	/**
-	 * Entry and exit logging for <b>all</b> test cases. Jiipppiiee. Did I already mention that I am a logging fanatic *G*
-	 */
-	@Rule
-	public TestWatcher slf4jTestWatcher = new TestWatcher() {
-		@Override
-		protected void starting(Description descr) {
-			log.trace("===== TEST STARTING "+descr.getDisplayName());
-		}
-
-		@Override
-		protected void failed(Throwable e, Description descr) {
-			log.error("===== TEST FAILED "+descr.getDisplayName()+ ": "+e.toString());
-		}
-
-		@Override
-		protected void succeeded(Description descr) {
-			log.trace("===== TEST SUCCESS "+descr.getDisplayName());
-		}
-	};
 
   /**
    * Configure a HTTP REST client
