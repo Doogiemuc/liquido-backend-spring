@@ -63,6 +63,7 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * http://www.sureshpw.com/2014/05/importing-json-with-references-into.html
  * http://www.generatedata.com/
  */
+//TODO: there would also be other ways of initializing a DB: http://www.javarticles.com/2015/01/example-of-spring-datasourceinitializer.html
 @Component
 //@Profile("dev")    // run test data creator only during development
 @Order(Ordered.HIGHEST_PRECEDENCE)   // seed DB first, then run the other CommandLineRunners
@@ -208,7 +209,9 @@ public class TestDataCreator implements CommandLineRunner {
 
 				log.info("TestDataCreator: Loading schema and sample data from "+ SAMPLE_DATA_FILENAME +" => DONE");
 			} catch (SQLException e) {
-				log.error("ERROR: Cannot load schema and sample data from "+ SAMPLE_DATA_FILENAME +": "+e);
+				String errMsg = "ERROR: Cannot load schema and sample data from "+ SAMPLE_DATA_FILENAME;
+				log.error(errMsg);
+				throw new RuntimeException(errMsg, e);
 			}
 		}
 

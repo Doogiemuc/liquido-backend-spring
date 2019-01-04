@@ -2,8 +2,8 @@ package org.doogie.liquido.test;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
-import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.ChecksumRepo;
+import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.ChecksumModel;
@@ -19,10 +19,8 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.test.context.support.WithUserDetails;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import javax.annotation.PostConstruct;
 import java.util.Optional;
 
 import static org.doogie.liquido.testdata.TestFixtures.*;
@@ -30,9 +28,9 @@ import static org.junit.Assert.*;
 
 @Slf4j
 @RunWith(SpringRunner.class)
-@SpringBootTest
-//@ActiveProfiles("test")  // this will also load the settings  from  application-test.properties
-public class ProxyServiceTests {
+@SpringBootTest		// Sets active profile to "test" and this will also load the settings  from  application-test.properties
+//@ActiveProfiles("test")  // already implicit
+public class ProxyServiceTests extends BaseTest {
 	@Autowired
 	UserRepo userRepo;
 
@@ -53,21 +51,6 @@ public class ProxyServiceTests {
 
 	@Autowired
 	TestUtils utils;
-
-	@PostConstruct
-	public void beforeClass() throws LiquidoException {
-		log.info("=========== ProxyServiceTest.postConstruct (once beforeClass) ========");
-		UserModel topProxy = userRepo.findByEmail(USER1_EMAIL);
-		AreaModel area     = areaRepo.findByTitle(AREA_FOR_DELEGATIONS);
-		ChecksumModel proxyChecksum = castVoteService.getExistingChecksum(topProxy, USER_TOKEN_SECRET, area);
-		/*
-		log.info("=========== PROXY TREE (checksums) ========");
-		utils.printChecksumTree(proxyChecksum);
-		log.info("=========== PROXY TREE (delegations) ========");
-		utils.printProxyTree(area, topProxy);
-		log.info("============================================");
-		*/
-	}
 
 	/**
 	 * GIVEN a public proxy P
