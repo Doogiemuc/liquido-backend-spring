@@ -1,14 +1,12 @@
 package org.doogie.liquido.test;
 
 import org.doogie.liquido.datarepos.AreaRepo;
-import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
-import org.doogie.liquido.testdata.TestDataCreator;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.junit.Assert;
 import org.junit.Test;
@@ -17,9 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.security.test.context.support.WithUserDetails;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.List;
@@ -35,7 +31,7 @@ import static org.junit.Assert.*;
 @RunWith(SpringRunner.class)
 @SpringBootTest
 //@EnableJpaAuditing  // => fails because of famous Mr. Drotbohm https://jira.spring.io/browse/DATAJPA-367
-@ActiveProfiles("test")  // this will also load the settings  from  application-test.properties
+//@ActiveProfiles("test")  // this will also load the settings  from  application-test.properties
 public class RepoTests {
   private Logger log = LoggerFactory.getLogger(this.getClass());
 
@@ -52,6 +48,7 @@ public class RepoTests {
   AreaRepo areaRepo;
 
   @Test
+  @SuppressWarnings("unchecked")
   public void findAllUsers() {
     log.trace("TEST findAllUsers");
     Iterable<UserModel> allUsers = userRepo.findAll();
@@ -110,7 +107,6 @@ public class RepoTests {
   @Test
   public void testSaveDuplicateArea() {
     log.trace("TEST testSaveDuplicateArea");
-    long count1 = areaRepo.count();
     AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
     assertNotNull("Did not find area 1 by title", area);
 

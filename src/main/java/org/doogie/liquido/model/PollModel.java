@@ -44,6 +44,7 @@ public class PollModel extends BaseModel {
 
 	// I had problems with ArrayList: https://stackoverflow.com/questions/1995080/hibernate-criteria-returns-children-multiple-times-with-fetchtype-eager
 	// So I used a SortedSet:   https://docs.jboss.org/hibernate/orm/5.2/userguide/html_single/Hibernate_User_Guide.html#collections-sorted-set
+	// TODO: change proposals in a poll to an UNSORTED Set   See https://vladmihalcea.com/hibernate-facts-favoring-sets-vs-bags/
   @OneToMany(cascade = CascadeType.MERGE, mappedBy="poll", fetch = FetchType.EAGER) //, orphanRemoval = true/false ??  Should a proposals be removed when the poll is deleted? => NO
   @NotNull
   @NonNull

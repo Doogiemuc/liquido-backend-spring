@@ -2,18 +2,11 @@ package org.doogie.liquido.test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.datarepos.AreaRepo;
-import org.doogie.liquido.datarepos.LawRepo;
-import org.doogie.liquido.datarepos.PollRepo;
-import org.doogie.liquido.datarepos.UserRepo;
+import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.jwt.JwtTokenProvider;
-import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.LawModel;
-import org.doogie.liquido.model.PollModel;
-import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.model.*;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.testUtils.JwtAuthInterceptor;
@@ -21,7 +14,6 @@ import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoProperties;
-import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Lson;
 import org.junit.Assert;
 import org.junit.Before;
@@ -45,10 +37,9 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import static org.junit.Assert.*;
 import static org.springframework.http.HttpMethod.*;
@@ -63,8 +54,8 @@ import static org.springframework.http.HttpMethod.*;
 @Slf4j
 @RunWith(SpringRunner.class)
 @ActiveProfiles("test")
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)  // This is so cool. This automatically sets up everything and starts the server. *like*
-//@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)  // Only run tests. Do not automatically start a server.
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)  // This automatically sets up everything and starts the server.
+//@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)       // TODO: Run tests against an already running server
 public class RestEndpointTests {
 
   /** path prefix for REST API from application.properties */
@@ -92,6 +83,12 @@ public class RestEndpointTests {
   PollRepo pollRepo;
 
   @Autowired
+	ChecksumRepo checksumRepo;
+
+  @Autowired
+	BallotRepo ballotRepo;
+
+  @Autowired
   CastVoteService castVoteService;
 
   @Autowired
@@ -115,14 +112,7 @@ public class RestEndpointTests {
   /** anonymous HTTP client without any auth, for testing register, login and cast vote */
 	RestTemplate anonymousClient;
 
-	/**
-	 * HTTP request interceptor that sends basic auth header
-	 * AND can change the logged in user.
-	 */
-	//LiquidoBasicAuthInterceptor basicAuthInterceptor;
-
 	// Json Web Tokens   JWT
-
 	@Autowired
 	JwtTokenProvider jwtTokenProvider;
 
@@ -164,16 +154,23 @@ public class RestEndpointTests {
 	}
 
 	/**
-	 * This runs before every test method
+	 * This runs before every test method.
+	 * Here we (fake) generation of a JWT token by directly calling jwtTokenProvider
 	 * By Default USER1_EMAIL is logged in
 	 */
 	@Before
 	public void beforeEachTest() {
-		//basicAuthInterceptor.login(TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD);
-		String jwt = jwtTokenProvider.generateToken(TestFixtures.USER1_EMAIL);
-		jwtAuthInterceptor.setJwtToken(jwt);
+		loginUser(TestFixtures.USER1_EMAIL);
 	}
 
+	/**
+	 * little helper to quickly login a specific user
+	 */
+	private void loginUser(String email) {
+		// here we see that advantage of a completely stateless server. We simply generate a JWT and that's it.
+		String jwt = jwtTokenProvider.generateToken(email);
+		jwtAuthInterceptor.setJwtToken(jwt);
+	}
 
 	/**
 	 * Entry and exit logging for <b>all</b> test cases. Jiipppiiee. Did I already mention that I am a logging fanatic *G*
@@ -265,11 +262,11 @@ public class RestEndpointTests {
 
 	@Test
 	public void testRegisterAndLoginViaSms() {
-		String phonenumber = "00491511234567";
+		String mobile = "004915112345999998";
 		HttpEntity<String> entity = Lson.builder()
 				.put("email", "userFromTest-" + System.currentTimeMillis())
-				.put("passwordHash", "dummyPasswordHashFromTest")
-				.put("profile", Lson.builder("mobilePhone", phonenumber))
+				.put("picture", "/static/img/avatars/Avatar1.png")
+				.put("profile", Lson.builder("mobilephone", mobile))
 				.toHttpEntity();
 
 		// register
@@ -278,33 +275,24 @@ public class RestEndpointTests {
 		log.debug("Successfully registered new user");
 
 		// request SMS login code
-		res = anonymousClient.getForEntity("/auth/requestSmsCode?mobile="+phonenumber, String.class);
-		String smsCode = res.getBody();  // when spring profile is TEST then backend returns code. that would normally be sent via SMS
+		res = anonymousClient.getForEntity("/auth/requestSmsCode?mobile={mobile}", String.class, mobile);
+		String smsCode = res.getHeaders().get("code").get(0);   // when spring profile is TEST then backend returns code in header. That would normally be sent via SMS.
 		assertFalse("Did not receive code.", DoogiesUtil.isEmpty(smsCode));
 		log.debug("Received login code via SMS: "+smsCode);
 
 		// login with received SMS code
-		res = anonymousClient.getForEntity("/auth/loginWithSmsCode?mobile="+phonenumber+"&code="+smsCode, String.class);
-		String jwtToken = res.getBody();
-		log.debug("received JWT: "+jwtToken);
-		assertTrue("Invalid JWT: "+jwtToken, jwtToken != null && jwtToken.length() > 20);
-		log.debug("Logged in successfully. Received JWT: "+jwtToken);
+		res = anonymousClient.getForEntity("/auth/loginWithSmsCode?mobile={mobile}&code={smsCode}", String.class, mobile, smsCode);
+		String jwt = res.getBody();
+		log.debug("received JWT: "+jwt);
+		assertTrue("Invalid JWT: "+jwt, jwt != null && jwt.length() > 20);
+		log.debug("Logged in successfully. Received JWT: "+jwt);
 
-		// verify that user is logged in with that token
-		this.jwtAuthInterceptor.setJwtToken(jwtToken);
+		// verify that user is logged in
+		this.jwtAuthInterceptor.setJwtToken(jwt);
 		String userJson = client.getForObject("/my/user", String.class);
 		log.debug("Logged in as : "+userJson);
-
-		try {
-			UserModel receivedUser = jsonMapper.readValue(userJson, UserModel.class);
-			assertEquals("Logged in user should have the phone number that we registered with", phonenumber, receivedUser.getProfile().getMobilephone());
-		} catch (IOException e) {
-			String errMsg = "Cannot read read JSON returned from GET /my/user: "+e;
-			log.error(errMsg);
-			fail(errMsg);
-		}
-
-
+		String receivedMobile = JsonPath.read(userJson, "$.profile.mobilephone");
+		assertEquals("Logged in user should have the phone number that we registered with", mobile, receivedMobile);
 	}
 
 
@@ -413,7 +401,8 @@ public class RestEndpointTests {
     log.trace("TEST postAlternativeProposal successfully created "+createdLaw);
   }
 
-  /* TODO
+  /*
+  //TODO: Test duplicate vote (with differenet faked voterToken
   @Test
   public void testPostDuplicateVote() throws JSONException {
     log.trace("TEST postDuplicateVote");
@@ -514,78 +503,79 @@ public class RestEndpointTests {
 
   }
 
+  /** helper to get the currently logged in user's voterToken */
+  private String getVoterToken(long areaId) {
+		String tokenJson = client.getForObject("/my/voterToken/{areaId}?tokenSecret={tokenSecret}", String.class, areaId, TestFixtures.USER_TOKEN_SECRET);
+		return JsonPath.read(tokenJson, "$.voterToken");
+		//Or fake REST and call service directly: return castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, TestFixtures.USER_TOKEN_SECRET, true);
+	}
 
   /**
    * User4 should have 5 votes (including his own) in area1
    */
   @Test
-  public void testGetNumVotes() {
-    log.trace("TEST getRealDelegationCount");
+  public void testGetVoterToken() {
     AreaModel area = this.areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
-    String uri = "/my/numVotes?area="+area.getId();
-
-    long numVotes = client.getForObject(uri, Long.class);
-
-    assertEquals("User "+TestFixtures.USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegated votes in area='"+TestFixtures.AREA_FOR_DELEGATIONS+"'", TestFixtures.USER1_DELEGATIONS, numVotes);
+    String voterToken = getVoterToken(area.getId());
+    assertTrue("Voter token is invalid", voterToken != null && voterToken.startsWith("$2") && voterToken.length() > 10);
     log.trace("TEST SUCCESS: found expected "+TestFixtures.USER1_DELEGATIONS +" delegations for "+TestFixtures.USER1_EMAIL + " in area "+TestFixtures.AREA_FOR_DELEGATIONS);
   }
 
-  /**
-   * User0 should have delegated his vote to User4 in Area1
-   */
-  @Test
-  //TODO: How to send requests with that user? @WithUserDetails("testuser1@liquido.de")
-  public void testGetProxyMap() {
-    log.trace("TEST getDirectProxies");
-    String uri = "/my/proxyMap";
-		String delegeeEMail = TestFixtures.delegations.get(0)[0];
-		String proxyEMail   = TestFixtures.delegations.get(0)[1];
+	@Test
+	public void testDelegationsCount() {
+		AreaModel area = areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
+		loginUser(TestFixtures.USER1_EMAIL);
 
-		log.trace("Checking if "+delegeeEMail+" has proxy "+proxyEMail);
+		String tokenJson = client.getForObject("/my/voterToken/{areaId}?tokenSecret={tokenSecret}", String.class, area.getId(), TestFixtures.USER_TOKEN_SECRET);
+		String voterToken = JsonPath.read(tokenJson, "$.voterToken");
+		int delegationCountFromVoterToken = JsonPath.read(tokenJson, "$.delegationCount");
 
-		//Login via basic auth: basicAuthInterceptor.login(delegeeEMail, TestFixtures.TESTUSER_PASSWORD);
-		//Login via oauth: send request as the delegee who assigned his vote to a proxy
-		//getOauthInterceptor().setUsername(delegeeEMail);
+		String delegationsJSON = client.getForObject("/my/delegations/{areaId}?voterToken={voterToken}", String.class, area.getId(), voterToken);
+		int delegationCount = JsonPath.read(delegationsJSON, "$.delegationCount");
+		assertEquals(TestFixtures.USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegated votes in area='"+TestFixtures.AREA_FOR_DELEGATIONS+"'", TestFixtures.USER1_DELEGATIONS, delegationCount);
+		assertEquals("DelegationCount from GET /my/voterToken must equal the returned delegation count from GET /my/delegations/{areaId}", delegationCountFromVoterToken, delegationCount);
+	}
 
-		// login with jwtToken that we can create very simple
-		String jwt = jwtTokenProvider.generateToken(delegeeEMail);
-		this.jwtAuthInterceptor.setJwtToken(jwt);
+	@Test
+  public void testRequestedDelegation() {
+		AreaModel area = areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
+		String email = TestFixtures.USER2_EMAIL;
+		loginUser(email);
+		String voterToken = getVoterToken(area.getId());
+		String delegationsJSON = client.getForObject("/my/delegations/{areaId}?voterToken={voterToken}", String.class, area.getId(), voterToken);
+		Boolean isPublicProxy = JsonPath.read(delegationsJSON, "$.isPublicProxy");
+		int delegationCount = JsonPath.read(delegationsJSON, "$.delegationCount");
+		assertFalse(email + " should NOT be a public proxy in area " + TestFixtures.AREA_FOR_DELEGATIONS, isPublicProxy);
+		assertEquals(email + " should have one delegation request", TestFixtures.USER2_DELEGATIONS, delegationCount);
+	}
 
-    String proxyMapJson = client.getForObject(uri, String.class);
-
-    log.trace("got Proxy Map:\n"+proxyMapJson);
-    String actualProxyInArea = JsonPath.read(proxyMapJson, "$['"+TestFixtures.AREA_FOR_DELEGATIONS+"'].directProxy.email");
-    assertEquals(delegeeEMail+" should have "+proxyEMail+" as proxy", proxyEMail, actualProxyInArea);
-  }
 
   /**
    * This updates a delegation and changes the toProxy via PUT to the /saveProxy endpoint
    */
   @Test
-  public void testAssignProxy() throws LiquidoException {
-    String url = "/my/proxy";
-    UserModel fromUser = this.users.get(10);
-    UserModel toProxy  = this.users.get(11);
+  public void testAssignAndRemoveProxy() {
+    UserModel fromUser = this.users.get(15);
+    UserModel toProxy  = this.users.get(10);
     AreaModel area     = this.areas.get(0);
     String toProxyUri  = basePath + "/users/" + toProxy.getId();
-    String areaUri     = basePath + "/areas/" + area.getId();
-    String voterToken  = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, TestFixtures.USER_TOKEN_SECRET, true);
 
-    //TODO: delete delegation if it exists:  proxyServcie.removeProxy(...)
-
-		HttpEntity entity = new Lson()
+    loginUser(fromUser.getEmail());
+    String voterToken  = getVoterToken(area.getId());
+    HttpEntity entity = new Lson()
 				.put("toProxy",  toProxyUri)
-				.put("area",     areaUri)
 				.put("voterToken", voterToken)
+				.put("transitive", true)
 				.toHttpEntity();
-
-    // send PUT that will assign the new proxy
-    ResponseEntity<String> response = client.exchange(url, PUT, entity, String.class);
+    ResponseEntity<String> response = client.exchange("/my/proxy/{areaId}?voterToken={voterToken}", PUT, entity, String.class, area.getId(), voterToken);
     assertEquals(HttpStatus.CREATED, response.getStatusCode());
     String updatedDelegationJson = response.getBody();
-
+		log.debug("received updated delegation: \n"+updatedDelegationJson);
     String actualProxyEmail = JsonPath.read(updatedDelegationJson, "$.toProxy.email");
-    assertEquals("expected toProxy ID to be updated", toProxy.getEmail(), actualProxyEmail);
+    assertEquals("expected toProxy to be updated", toProxy.getEmail(), actualProxyEmail);
+
+    client.delete("/my/proxy/{areaId}?voterToken={voterToken}", area.getId(), voterToken);
+
   }
 
   @Test
@@ -612,56 +602,76 @@ public class RestEndpointTests {
 
   @Test
   public void testGetGlobalProperties() {
-    log.trace("TEST getGlobalProperties");
-
     String responseJSON = client.getForObject("/globalProperties", String.class);
-
     assertNotNull(responseJSON);
   }
 
 	/**
-	 * cast a vote via real REST requests
+	 * Cast a vote via real REST requests.
+	 * This test needs one poll that is in its voting phase <b>AND</b> that has no (randomly) casted votes yet.
+	 * Because only then can we deterministically test the delegation of the proxies vote down the tree.
 	 */
   @Test
-  public void testCastVote() {
-		//----- find poll that is in voting
+  public void testCastVoteProxy() throws LiquidoException {
+		//----- find poll that is in voting and has not votes casted yet
+		List<PollModel> pollsInVoting = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
+		PollModel poll = null;
+		for(PollModel p: pollsInVoting) {
+			List<BallotModel> ballots = ballotRepo.findByPoll(p);
+			if (ballots.size() == 0) {
+				poll = p;
+				break;
+			}
+		}
+		assertNotNull("Need at least one poll in voting that has no votes yet!", poll);
+
+
+		/*  old version via plain REST
 		String pollsJson = client.getForObject("/polls/search/findByStatus?status=VOTING", String.class);
 		DocumentContext ctx = JsonPath.parse(pollsJson);
 		String pollURI       = ctx.read("$._embedded.polls[0]._links.self.href", String.class);
 		String proposal1_URI = ctx.read("$._embedded.polls[0]._embedded.proposals[0]_links.self.href", String.class);
 		String proposal2_URI = ctx.read("$._embedded.polls[0]._embedded.proposals[1]_links.self.href", String.class);
-		String areaId        = ctx.read("$._embedded.polls[0].area.id", String.class);
+		long   areaId        = Long.valueOf(ctx.read("$._embedded.polls[0].area.id", String.class));
 		proposal1_URI = LiquidoRestUtils.cleanURI(proposal1_URI);
 		proposal2_URI = LiquidoRestUtils.cleanURI(proposal2_URI);
+		*/
 
-		log.trace("casting vote in poll.id="+pollURI);
+		log.trace("Cast vote in "+poll);
 
 		//----- get voterToken
-		//Mock: String voterToken  = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, fromUser.getPasswordHash());
-		String voterTokenJson = client.getForObject("/my/voterToken?area="+areaId, String.class);
-		assertNotNull(voterTokenJson);
-		String voterToken = JsonPath.read(voterTokenJson, "voterToken");
-		log.trace("with voterToken: "+voterToken);
+		loginUser(TestFixtures.USER1_EMAIL);  // user1 is our topProxy with 7 delegations
+		//Mock: String voterToken  = castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
+		String voterToken = getVoterToken(poll.getArea().getId());
+		ChecksumModel checksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
+		log.trace("with voterToken: "+voterToken+ " => "+checksum);
 
+		//----- print already casted votes of our delegees BEFORE we cast the proxies vote
+		Function<ChecksumModel, List<ChecksumModel>> getChildrenFunc = c -> checksumRepo.findByDelegatedTo(c);
+		final PollModel finalPoll = poll;		//BUGFIX: Variables in lambda must be (effectively) final
+		BiConsumer<String, ChecksumModel> printerFunc = (prefix, c) -> {
+			Optional<BallotModel> ballotOpt = ballotRepo.findByPollAndChecksum(finalPoll, c);
+			if (ballotOpt.isPresent()) {
+				log.debug(ballotOpt.get().toString());
+			} else {
+				log.debug("No ballot for "+c.toString());
+			}
+		};
+		log.debug("============== existing ballots ===========");
+		DoogiesUtil.printTreeRec("", checksum, printerFunc, getChildrenFunc, true);
+		log.debug("============== existing ballots ===========");
 
-
-		//----- cast vote
-		String body = Lson.builder()
-		  .put("poll", pollURI)
+		//----- cast vote anonymously
+		HttpEntity entity = Lson.builder()
+		  .put("poll", "/polls/"+poll.getId())
 		  .put("voterToken", voterToken)
-		  .putArray("voteOrder",  proposal1_URI, proposal2_URI)
-			.toString();
-
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
-		HttpEntity<String> castVoteEntity = new HttpEntity<>(body, headers);
-
-		ResponseEntity<String> castVoteRes = client.postForEntity("/castVote", castVoteEntity, String.class);
+		  .putArray("voteOrder",  "/laws/"+poll.getProposals().first().getId(), "/laws/"+poll.getProposals().last().getId())
+			.toHttpEntity();
+		ResponseEntity<String> castVoteRes = anonymousClient.postForEntity("/castVote", entity, String.class);
 
 		assertEquals(HttpStatus.CREATED, castVoteRes.getStatusCode());
-		ctx = JsonPath.parse(castVoteRes.getBody());
-		Long voteCount = ctx.read("voteCount", Long.class);
-		assertTrue(voteCount > 0);
+		int voteCount = JsonPath.read(castVoteRes.getBody(), "$.voteCount");
+		assertEquals("Vote of "+TestFixtures.USER1_EMAIL+" should have been counted "+(TestFixtures.USER1_DELEGATIONS+1)+" times", TestFixtures.USER1_DELEGATIONS+1, voteCount);
 	}
 
 
@@ -676,7 +686,7 @@ public class RestEndpointTests {
 
 
 	/*==================
-	// MockMvc is nice. But it only mocks the HTTP requests (via a mocked DispatcherSrvlet)
+	// MockMvc is nice. But it only mocks the HTTP requests (via a mocked DispatcherServlet)
 	// Rest Template does really send requests (via network)
 	// https://stackoverflow.com/questions/25901985/difference-between-mockmvc-and-resttemplate-in-integration-tests
 

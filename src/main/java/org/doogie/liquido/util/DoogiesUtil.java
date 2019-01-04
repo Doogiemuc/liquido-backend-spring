@@ -1,5 +1,7 @@
 package org.doogie.liquido.util;
 
+import org.doogie.liquido.testdata.TestUtils;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -7,7 +9,10 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Random;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 /**
  * Handy little utility functions.
@@ -93,7 +98,7 @@ public class DoogiesUtil {
   }
 
   /**
-   * convert a byte array into its HEY representation as String
+   * convert a byte array into its HEX representation as String
    * @param byteData
    * @return
    */
@@ -107,4 +112,32 @@ public class DoogiesUtil {
     }
     return hexString.toString();
   }
+
+	/**
+	 * Print a tree structure in a pretty ASCII fromat.
+	 *
+	 * I LOVE stackoverflow :-)  https://stackoverflow.com/questions/4965335/how-to-print-binary-tree-diagram
+	 *
+	 * @param node The current node. Pass the root node of your tree in initial call.
+	 * @param getChildrenFunc A {@link Function} that returns the children of a given node.
+	 * @param <T> The type of your nodes. Anything that has a toString can be used.
+	 */
+	public static <T> void printTreeRec(T node, Function<T, List<T>> getChildrenFunc) {
+		BiConsumer printer = (prefix, n) -> {
+			System.out.println(prefix + n.toString());
+		};
+		printTreeRec("", node, printer, getChildrenFunc, false);
+	}
+
+	public static <T> void printTreeRec(String indent, T node, BiConsumer<String, T> printer, Function<T, List<T>> getChildrenFunc, boolean isTail) {
+		String nodeConnection = isTail ? "└─ " : "├─ ";
+		printer.accept(indent + nodeConnection, node);		// print the current node with that prefix
+		List<T> children = getChildrenFunc.apply(node);
+		for (int i = 0; i < children.size(); i++) {
+			String newPrefix = indent + (isTail ? "   " : "│  ");
+			printTreeRec(newPrefix, children.get(i), printer, getChildrenFunc, i == children.size()-1);
+		}
+	}
+
+	//FUNCTIONAL programming complete overkill:   skip first parameter indent.  Instead curry the printer function in each recursion level *H*
 }

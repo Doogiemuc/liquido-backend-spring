@@ -28,6 +28,9 @@
 
 		<!-- Prefix for docker image in docker repository. ArtifactId will be appended to this. -->
 		<docker.image.prefix>org.doogie</docker.image.prefix>
+
+		<!-- command line arguments that maven surefire will pass to TESTs -->
+		<argLine>-D=loadSampleDB=true</argLine>
 	</properties>
 
 	<scm>

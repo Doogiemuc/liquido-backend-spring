@@ -81,6 +81,8 @@ public class ProxyService {
 	@Transactional
 	public DelegationModel assignProxy(AreaModel area, UserModel fromUser, UserModel proxy, String userVoterToken, boolean transitive) throws LiquidoException {
 		//----- validate voterToken and get voters checksumModel, so that we can delegate it to the proxies checksum anonymously.
+
+		//TODO: How to check if the passed voterToken is from the currently logged in user?  (Currently this would be possible. As long as the server can create voterTokens for himself.)
 		ChecksumModel voterChecksum = castVoteService.isVoterTokenValidAndGetChecksum(userVoterToken);
 		Optional<ChecksumModel> proxyChecksum = getChecksumOfPublicProxy(area, proxy);   // get checksumModel of public proxy (may be null!)
 		return assignProxy(area, fromUser, proxy, voterChecksum, proxyChecksum, transitive);
@@ -89,17 +91,21 @@ public class ProxyService {
 	/**
 	 * This part of assigning a proxy was refactored into its own (private) method, because
 	 * when a proxy accepts pending delegations, we already have the checksum of the delegee, but not his voter token which is confidential.
-	 * @return the voter's checksum that is then eiter delegated or requested the delegation to proxy
+	 * @return the voter's checksum that is then either delegated or requested the delegation to proxy
 	 */
 	@Transactional
 	private DelegationModel assignProxy(AreaModel area, UserModel fromUser, UserModel proxy, ChecksumModel voterChecksum, Optional<ChecksumModel> proxyChecksum, boolean transitive) throws LiquidoException {
-		log.info("assignProxy(" + area + ", fromUser=" + fromUser + ", toProxy=" + proxy + " transitive=" + transitive + ")");
+		log.info("assignProxy(" + area + ", fromUser=" + fromUser.toStringShort() + ", toProxy=" + proxy.toStringShort() + " transitive=" + transitive + ")");
 		//----- sanity checks
 		if (area == null || fromUser == null || proxy == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_SAVE_PROXY, "Cannot assign proxy. Need area, fromUser and toProxy!");
 		//----- check for circular delegation with DelegationModels
 		if (thisWouldBeCircularDelegation(area, fromUser, proxy))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ASSIGN_CIRCULAR_PROXY, "Cannot assign proxy. This would be a circular delegation which cannot be allowed.");
+		//----- if voterChecksum has a public proxy then this must be fromUser
+		if (voterChecksum.getPublicProxy() != null && !voterChecksum.getPublicProxy().equals(fromUser))
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_SAVE_PROXY, "Cannot assign proxy. Voter's checksum does not belong to voter!");
+
 
 		//------ refresh validity of token's checksum
 		castVoteService.refreshChecksum(voterChecksum);
