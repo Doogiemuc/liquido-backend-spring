@@ -145,22 +145,16 @@ public class PollRestController {
 	BallotModel getOwnBallot(
 			@PathVariable(name="pollId") PollModel poll,
 			@RequestParam("voterToken") String voterToken
-			//, PersistentEntityResourceAssembler assembler
 	) throws LiquidoException {
 		BallotModel ownBallot = pollService.getBallotForVoterToken(poll, voterToken)
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_BALLOT, "No ballot found. You did not vote in this poll yet."));   // this is not an error
-
-		// BallotRepo is deliberately not exposed as RepositoryRestResource. So we have to build our own response JSON here.
-		return ownBallot;
-
+		return ownBallot;  // includes some tweaking of JSON serialization.
 
 		// This would return the full HATEOAS resource. But since BallotModel is not exposed as RepositoryRestResource, it contains ugly links to .../BallotModels/4711  :-(
 		//return assembler.toResource(ownBallot);
 
-
-
-
 		/*
+		// This was a try to build our response JSON here. But has now been moved to BallotModelPollJsonSerializer.java
 		List<PersistentEntityResource> voteOrder = ownBallot.getVoteOrder().stream().map(proposal -> resourceAssembler.toFullResource(proposal)).collect(Collectors.toList());
 		Link areaLink = entityLinks.linkToSingleResource(poll.getArea());
 		Link pollLink = entityLinks.linkToSingleResource(poll);
