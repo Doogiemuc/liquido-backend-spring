@@ -18,9 +18,7 @@ import org.springframework.hateoas.Link;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -79,7 +77,7 @@ public class VoteRestController {
 				.put("_links.area.templated", areaLink.isTemplated())	// is true for areas
 				.put("voterToken", voterToken)
 		    .put("delegationRequests", delegationRequests)		// also return delegation requests, because client needs them here on the castvote page
-				.put("delegationCount", delegationCount);					// overall number of delegations (incl. transitive ones)
+				.put("delegationCount", delegationCount);					// overall number of ACCEPTED delegations (recursively)
 	}
 
 
@@ -118,18 +116,18 @@ public class VoteRestController {
 	 */
   @RequestMapping(value = "/castVote", method = RequestMethod.POST)   // @RequestMapping(value = "somePath") here on type/method level does not work with @RepositoryRestController. But it seems to work with BasePathAwareController
   @ResponseStatus(HttpStatus.CREATED)
-  public @ResponseBody Map castVote(@RequestBody CastVoteRequest castVoteRequest) throws LiquidoException {
+  public @ResponseBody Lson castVote(@RequestBody CastVoteRequest castVoteRequest) throws LiquidoException {
     log.trace("=> POST /castVote");
     Optional<UserModel> currentUser = liquidoAuditorAware.getCurrentAuditor();
     if (currentUser.isPresent()) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast Vote. You should cast your vote anonymously. Do not send a SESSIONID.");
 
     BallotModel ballot = castVoteService.castVote(castVoteRequest);   					// all validity checks are done inside ballotService.
 
-		HashMap<String, String> result = new HashMap<>();
-		result.put("msg", "OK, your vote was counted successfully.");
-		result.put("poll", castVoteRequest.getPoll());                  // return URI of poll
-		result.put("checksum", ballot.getChecksum().getChecksum());     // Ballots are NOT exposed as RepositoryRestResource, therefore we return just the checksum.
-		result.put("voteCount", ballot.getVoteCount()+"");
+		Lson result = Lson.builder()
+			.put("msg", "OK, your vote was counted successfully.")
+			.put("poll", castVoteRequest.getPoll())                  // return URI of poll
+			.put("checksum", ballot.getChecksum().getChecksum())     // Ballots are NOT exposed as RepositoryRestResource, therefore we return just the checksum.
+			.put("voteCount", ballot.getVoteCount());									// ballot was counted this number of times.
     return result;
    }
 

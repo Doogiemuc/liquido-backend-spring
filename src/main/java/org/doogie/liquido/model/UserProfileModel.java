@@ -19,14 +19,14 @@ public class UserProfileModel {
   String mobilephone;
 
   /**
-   *  Always store mobilephone with '+' and numbers only
+   *  Always store mobilephone with '+' and numbers only. No spaces.
    * @param mobile
    */
   public void setMobilephone(String mobile) {
     if (mobile == null) {
       this.mobilephone = "";
     } else {
-      this.mobilephone = mobile.replaceAll("[^0-9\\+]", "");
+      this.mobilephone = mobile.replaceAll("[^0-9\\+ ]", "");
     }
   }
 }

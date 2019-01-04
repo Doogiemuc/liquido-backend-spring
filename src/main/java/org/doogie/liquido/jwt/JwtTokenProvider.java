@@ -23,8 +23,8 @@ public class JwtTokenProvider {
 	private String jwtClaimRefreshName;
 
 	/**
-	 * Generates a token from a principal object. Embed the refresh token in the jwt
-	 * so that a new jwt can be created
+	 * This generates a new JWT. This needs jwtSecret as input, so that only the server can
+	 * generate JWTs.
 	 */
 	public String generateToken(String subject) {
 		Instant expiryDate = Instant.now().plusMillis(jwtExpirationInMs);

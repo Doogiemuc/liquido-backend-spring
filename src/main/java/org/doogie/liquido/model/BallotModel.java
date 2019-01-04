@@ -83,8 +83,13 @@ public class BallotModel {
   @NotNull
   @ManyToMany(fetch = FetchType.EAGER)   //(cascade = CascadeType.MERGE, orphanRemoval = false)
   @OrderColumn  // keep order in DB
-	@JsonInclude
   public List<LawModel> voteOrder;   		//proposals in voteOrder must not be duplicate! This is checked in VoteRestController.
+
+	public void setVoteOrder(List<LawModel> voteOrder) {
+		if (voteOrder == null || voteOrder.size() == 0)
+			throw new IllegalArgumentException("Vote Order must not be null or empty!");
+		this.voteOrder = voteOrder;
+	}
 
   /**
    * Encrypted and anonymous information about the voter that casted this vote into the ballot.

@@ -14,10 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * This service contains all the voting logic for casting a vote.
@@ -201,6 +198,7 @@ public class CastVoteService {
 	 * @return BallotModel the casted ballot
 	 * @throws LiquidoException when something is wrong with the ballot
 	 */
+	@Transactional
 	public BallotModel castVote(CastVoteRequest castVoteRequest) throws LiquidoException {
 		log.debug("castVote: "+ castVoteRequest);
 		if (castVoteRequest.getVoteOrder() == null || castVoteRequest.getVoteOrder().size() == 0)
@@ -252,8 +250,8 @@ public class CastVoteService {
 	 * @return the newly created or updated existing ballot  OR
 	 *         null if the ballot wasn't stored due to an already existing ballot with a smaller level.
 	 */
-	@Transactional
-	public BallotModel storeBallot(BallotModel newBallot) throws LiquidoException {
+	//@Transactional   //Do not open a transaction for each recursion!
+	private BallotModel storeBallot(BallotModel newBallot) throws LiquidoException {
 		log.debug("storeBallot("+newBallot+") checksum="+newBallot.getChecksum().getChecksum());
 
 		//----- check validity of the ballot
@@ -266,7 +264,7 @@ public class CastVoteService {
 			log.trace("  Insert new ballot");
 			existingBallot = ballotRepo.save(newBallot);
 		} else {
-			//----- Proxy must not overwrite a voter's own vote  OR  a vote from a proxy below
+			//----- Proxy must not overwrite a voter's own vote  OR  a vote from a proxy below him
 			existingBallot = existingBallotOpt.get();
 			if (existingBallot.getLevel() < newBallot.getLevel()) {
 				log.trace("  Will not overwrite existing ballot with smaller level " + existingBallot);
@@ -284,10 +282,13 @@ public class CastVoteService {
 		long voteCount = 1;   // first vote is for the ballot itself.
 		List<ChecksumModel> delegatedChecksums = checksumRepo.findByDelegatedTo(existingBallot.getChecksum());
 		for (ChecksumModel delegatedChecksum : delegatedChecksums) {
-			BallotModel childBallot = new BallotModel(newBallot.getPoll(), newBallot.getLevel() + 1, newBallot.getVoteOrder(), delegatedChecksum);
-			//log.trace("checking delegated childBallot "+childBallot);
-			BallotModel savedChildBallot = storeBallot(childBallot);  // will return null when childBallot level is to large and a smaller one was found  => then we stop this recursion tree
-			if (savedChildBallot != null) voteCount = voteCount + savedChildBallot.getVoteCount();
+			List<LawModel> voteOrderClone = new ArrayList<>(newBallot.getVoteOrder());   // BUGFIX for org.hibernate.HibernateException: Found shared references to a collection
+			BallotModel childBallot = new BallotModel(newBallot.getPoll(), newBallot.getLevel() + 1, voteOrderClone, delegatedChecksum);
+			log.trace("checking delegated childBallot "+childBallot);
+			if (newBallot.getLevel() == 0 || delegatedChecksum.isTransitive()) {
+				BallotModel savedChildBallot = storeBallot(childBallot);  // will return null when level of an existing childBallot is smaller then the childBallot that the proxy would cast. => this ends the recursion
+				if (savedChildBallot != null) voteCount = voteCount + savedChildBallot.getVoteCount();
+			}
 		}
 		existingBallot.setVoteCount(voteCount);
 		return ballotRepo.save(existingBallot);

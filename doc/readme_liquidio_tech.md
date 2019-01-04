@@ -110,11 +110,23 @@ GET /users/{userId}/publicChecksum         get checksum of public proxy
  * If you are on Windows: Start "Docker for Windows" `mvn dockerfile:build`
  * Run `docker run org.doogie/liquido-backend-spring`
 
-## Test
+# Tests
 
-Run the test cases under `srs/test/java` with `mvn test`.
+Run the test cases under `srs/test/java` with `mvn test -DloadSampleDB=true`.
 Spring Boot will automatically start the test server for you.
-Test data is automatically created by the `TestDataCreator.java`.
+Test data is taken from the sample DB. 
+
+## Test Data
+
+Test data can be created with `TestDataCreator`. BE CAREFULL: This will delete and kill your whole DB!!! 
+
+    -Dspring.profiles.active=dev -DcreateSampleData=true -Dspring.jpa.hibernate.ddl-auto=create
+
+Then all tests can be run against this test data by passing the environemtn variable 
+
+    -DloadSampleDB=true
+
+
 
 # Dev Links
 
