@@ -1,4 +1,5 @@
 
 .idea/
 target/
-
+build/buildNumber.properties
+release.properties
