@@ -72,11 +72,11 @@ public class UserRestController {
 		if (newUser == null || newUser.getProfile() == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need data for new user");
 		if (DoogiesUtil.isEmpty(newUser.getEmail())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need email for new user");
 		if (DoogiesUtil.isEmpty(newUser.getProfile().getMobilephone())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need mobile phone for new user");
-		UserModel existingByEmail = userRepo.findByEmail(newUser.getEmail());
-		if (existingByEmail != null)	throw new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that email already exists");
+		UserModel existingByEmail = userRepo.findByEmail(newUser.getEmail())
+				.orElseThrow(()->  new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that email already exists"));
 
-		UserModel existingByMobile = userRepo.findByProfileMobilephone(newUser.getProfile().getMobilephone());
-		if (existingByMobile != null)	throw new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that mobile phone number already exists");
+		UserModel existingByMobile = userRepo.findByProfileMobilephone(newUser.getProfile().getMobilephone())
+				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that mobile phone number already exists"));
 
 		//----- save new user
 		userRepo.save(newUser);
@@ -94,8 +94,8 @@ public class UserRestController {
 		if (mobile == null) throw new LiquidoException(LiquidoException.Errors.MOBILE_NOT_FOUND,  "Need mobile phone number!");
 		//mobile = cleanMobilephone(mobile);
   	log.info("request SMS login code for mobile="+mobile);
-	  UserModel user = userRepo.findByProfileMobilephone(mobile);
-	  if (user == null) throw new LiquidoException(LiquidoException.Errors.MOBILE_NOT_FOUND,  "No user found with mobile number "+mobile+". You must register first.");
+	  UserModel user = userRepo.findByProfileMobilephone(mobile)
+		  .orElseThrow(() -> new LiquidoException(LiquidoException.Errors.MOBILE_NOT_FOUND,  "No user found with mobile number "+mobile+". You must register first."));
 
 	  // Create new SMS token: four random digits between [1000...9999]
 	  String smsCode = String.valueOf(new Random().nextInt(9000)+ 1000);
@@ -125,8 +125,8 @@ public class UserRestController {
 
 	  // in DEV or TEST environment allow login as any use with a special code
 	  if (springEnv.acceptsProfiles(Profiles.of("dev", "test")) && code.equals(springEnv.getProperty("liquido.dev.dummySmsLoginCode"))) {
-	  	UserModel user = userRepo.findByProfileMobilephone(mobile);
-	  	if (user == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN, "DevLogin: user for mobile phone "+mobile+" not found.");
+	  	UserModel user = userRepo.findByProfileMobilephone(mobile)
+					.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN, "DevLogin: user for mobile phone "+mobile+" not found."));
 	  	log.info("DEV Login as "+mobile+" => "+user);
 			return jwtTokenProvider.generateToken(user.getEmail());
 		}

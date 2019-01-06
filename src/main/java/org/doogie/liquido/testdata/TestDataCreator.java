@@ -16,7 +16,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.core.env.Environment;
+import org.springframework.core.env.*;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -31,6 +31,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static org.doogie.liquido.model.LawModel.LawStatus;
 
@@ -44,6 +45,7 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * In application.properties  set  spring.jpa.hibernate.ddl-auto=create   to let Spring-JPA init the DB schema.
  * Then run this app with createSampleData=true
  * TestDataCreator will create test data from scratch via spring data and JPA.  This takes around a minute.
+ * The schema and testdata will be exported into an SQL script  sample-DB.sql
  *
  * (2) Load testdata from an SQL script that contains schema <b>and</b> data
  *
@@ -151,7 +153,24 @@ public class TestDataCreator implements CommandLineRunner {
    * @param args command line args
    */
   public void run(String... args) {
-    boolean seedDB = "true".equalsIgnoreCase(springEnv.getProperty(SEED_DB_PARAM));
+
+		try {
+			String dbURL = jdbcTemplate.getDataSource().getConnection().getMetaData().getURL();
+			log.info("===== Connecting to DB at "+dbURL);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		log.info("===== Spring environment properties ");
+		// https://stackoverflow.com/questions/23506471/spring-access-all-environment-properties-as-a-map-or-properties-object
+		MutablePropertySources propSrcs = ((AbstractEnvironment) springEnv).getPropertySources();
+		StreamSupport.stream(propSrcs.spliterator(), false)
+				.filter(ps -> ps instanceof EnumerablePropertySource)
+				.map(ps -> ((EnumerablePropertySource) ps).getPropertyNames())
+				.flatMap(Arrays::<String>stream)
+				.forEach(propName -> log.debug(propName+"="+springEnv.getProperty(propName)));
+
+		boolean seedDB = "true".equalsIgnoreCase(springEnv.getProperty(SEED_DB_PARAM));
     for(String arg : args) {
       if (("--"+ SEED_DB_PARAM).equalsIgnoreCase(arg)) { seedDB = true; }
     }
@@ -178,7 +197,7 @@ public class TestDataCreator implements CommandLineRunner {
       auditorAware.setMockAuditor(null);
 
 			log.info("===== TestDataCreator: Store sample data in file: "+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME);
-			jdbcTemplate.execute("SCRIPT TO '"+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME+"'");
+			jdbcTemplate.execute("SCRIPT TO '"+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME+"'");				//TODO: export schema only with  SCRIPT NODATA TO ...   and export MySQL compatible script!!!
 			removeQartzSchema();
 			log.info("===== TestDataCreator: Sample data stored successfully in file: "+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME);
     }
@@ -215,22 +234,24 @@ public class TestDataCreator implements CommandLineRunner {
 			}
 		}
 
-		log.debug("====== TestDataCreator: Proxy tree =====");
 		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA_FOR_DELEGATIONS);
-		UserModel topProxy = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
-		utils.printProxyTree(area, topProxy);
+		Optional<UserModel> topProxyOpt = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
+  	if (area != null && topProxyOpt.isPresent()) {
+			UserModel topProxy = topProxyOpt.get();
+			log.debug("====== TestDataCreator: Proxy tree =====");
+			utils.printProxyTree(area, topProxy);
 
-		log.debug("====== TestDataCreator: Tree of delegations =====");
-		utils.printDelegationTree(area, topProxy);
+			log.debug("====== TestDataCreator: Tree of delegations =====");
+			utils.printDelegationTree(area, topProxy);
 
-		try {
-			log.debug("====== TestDataCreator: Proxy tree (checksums) =====");
-			ChecksumModel checksum = castVoteService.getExistingChecksum(topProxy, TestFixtures.USER_TOKEN_SECRET, area);
-			utils.printChecksumTree(checksum);
-		} catch (LiquidoException e) {
-			log.error("Cannot get checksum of "+topProxy+": "+e.getMessage());
+			try {
+				log.debug("====== TestDataCreator: Proxy tree (checksums) =====");
+				ChecksumModel checksum = castVoteService.getExistingChecksum(topProxy, TestFixtures.USER_TOKEN_SECRET, area);
+				utils.printChecksumTree(checksum);
+			} catch (LiquidoException e) {
+				log.error("Cannot get checksum of " + topProxy + ": " + e.getMessage());
+			}
 		}
-
 		log.info("===== TestDataCreator FINISHED");
   }
 
@@ -316,10 +337,10 @@ public class TestDataCreator implements CommandLineRunner {
       profile.setMobilephone("+4912345"+(countUsers+i+1));  // deterministic unique phone numbers
       newUser.setProfile(profile);
 
-      UserModel existingUser = userRepo.findByEmail(email);
-      if (existingUser != null) {
-        log.debug("Updating existing user with id=" + existingUser.getId());
-        newUser.setId(existingUser.getId());
+      Optional<UserModel> existingUserOpt = userRepo.findByEmail(email);
+      if (existingUserOpt.isPresent()) {
+        log.debug("Updating existing user with id=" + existingUserOpt.get().getId());
+        newUser.setId(existingUserOpt.get().getId());
       } else {
         log.debug("Creating new user " + newUser);
       }

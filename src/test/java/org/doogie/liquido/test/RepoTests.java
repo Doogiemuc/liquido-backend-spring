@@ -57,9 +57,9 @@ public class RepoTests extends BaseTest {
 
   @Test
   public void findUserByEmail() {
-    UserModel foundUser = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
-    assertNotNull(TestFixtures.USER1_EMAIL +" could not be found", foundUser);
-    assertEquals(TestFixtures.USER1_EMAIL, foundUser.getEmail());
+    Optional<UserModel> foundUser = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
+    assertTrue(TestFixtures.USER1_EMAIL +" could not be found", foundUser.isPresent());
+    assertEquals(TestFixtures.USER1_EMAIL, foundUser.get().getEmail());
     log.info("TEST SUCCESS: "+ TestFixtures.USER1_EMAIL +" found by email.");
   }
 
@@ -68,7 +68,7 @@ public class RepoTests extends BaseTest {
   public void testCreateIdeaWithMockAuditor() {
     auditorAware.setMockAuditor(null);    // BUGFIX: Must remove any previously set mock auditor
 
-    UserModel user2 = userRepo.findByEmail(TestFixtures.USER2_EMAIL);
+    UserModel user2 = userRepo.findByEmail(TestFixtures.USER2_EMAIL).get();
     AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
 
     Optional<UserModel> currentAuditor = auditorAware.getCurrentAuditor();
@@ -117,7 +117,7 @@ public class RepoTests extends BaseTest {
 
   @Test
   public void testFindSupportedIdeas() {
-    UserModel supporter = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
+    UserModel supporter = userRepo.findByEmail(TestFixtures.USER1_EMAIL).get();
     List<LawModel> supportedLaws = lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.IDEA, supporter);
     assertTrue("Expected at least 2 ideas that user "+TestFixtures.USER1_EMAIL+" supports", supportedLaws.size() >= 2);
     log.debug("User "+supporter.getEmail()+" supports "+supportedLaws.size()+" ideas.");

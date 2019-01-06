@@ -10,10 +10,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 /**
  * This class loads users from the DB via {@link UserRepo} and grants them roles.
@@ -51,8 +48,8 @@ public class LiquidoUserDetailsService implements UserDetailsService {
   public LiquidoAuthUser loadUserByUsername(String email) throws UsernameNotFoundException {
     log.trace("loading user "+email+" from DB for authentication");
 
-    UserModel userModel = userRepo.findByEmail(email);
-    if (userModel == null) throw new UsernameNotFoundException("Could not find user '"+email+"'");
+    UserModel userModel = userRepo.findByEmail(email)
+     .orElseThrow(()-> new UsernameNotFoundException("Could not find user '"+email+"'"));
     if (DoogiesUtil.isEmpty(userModel.getEmail()))
     	throw new UsernameNotFoundException("User's eMail is emtpy.");
 
