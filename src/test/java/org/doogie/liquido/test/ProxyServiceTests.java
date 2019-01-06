@@ -64,8 +64,8 @@ public class ProxyServiceTests extends BaseTest {
 	@WithUserDetails(USER2_EMAIL)
 	public void testAssignProxy() throws LiquidoException {
 		//GIVEN
-		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL);
-		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL);
+		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL).get();
+		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL).get();
 		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
 
 		//Make sure that toProxy is a public proxy
@@ -97,14 +97,14 @@ public class ProxyServiceTests extends BaseTest {
 		log.trace("ENTER: testGetNumVotes");
 		AreaModel area  = areaRepo.findByTitle(AREA0_TITLE);
 
-		UserModel proxy = userRepo.findByEmail(USER1_EMAIL);
+		UserModel proxy = userRepo.findByEmail(USER1_EMAIL).get();
 		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, USER_TOKEN_SECRET, true);
 		ChecksumModel proxyChecksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
 		utils.printChecksumTree(proxyChecksum);
 		long delegationCount = proxyService.getRealDelegationCount(voterToken);
 		assertEquals(USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegations", TestFixtures.USER1_DELEGATIONS, delegationCount);
 
-		proxy = userRepo.findByEmail(USER4_EMAIL);
+		proxy = userRepo.findByEmail(USER4_EMAIL).get();
 		voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, USER_TOKEN_SECRET, true);
 		proxyChecksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
 		utils.printChecksumTree(proxyChecksum);
@@ -131,8 +131,8 @@ public class ProxyServiceTests extends BaseTest {
 		Optional<UserModel> topProxy;
 
 		//GIVEN   - proxy 5 -> 3 -> 1    see TestFixtures.java
-		voter             = userRepo.findByEmail(USER10_EMAIL);
-		expectedTopProxy  = userRepo.findByEmail(USER1_EMAIL);
+		voter             = userRepo.findByEmail(USER10_EMAIL).get();
+		expectedTopProxy  = userRepo.findByEmail(USER1_EMAIL).get();
 		//WHEN
 		topProxy = proxyService.findTopProxy(area, voter);
 		//THEN
@@ -140,8 +140,8 @@ public class ProxyServiceTests extends BaseTest {
 		assertEquals(expectedTopProxy, topProxy.get());
 
 		//GIVEN   - proxy 12 -> 7 because delegation is non transitive
-		voter             = userRepo.findByEmail(USER12_EMAIL);
-		expectedTopProxy  = userRepo.findByEmail(USER7_EMAIL);
+		voter             = userRepo.findByEmail(USER12_EMAIL).get();
+		expectedTopProxy  = userRepo.findByEmail(USER7_EMAIL).get();
 		//WHEN
 		topProxy = proxyService.findTopProxy(area, voter);
 		//THEN
@@ -149,7 +149,7 @@ public class ProxyServiceTests extends BaseTest {
 		assertEquals(expectedTopProxy, topProxy.get());
 
 		//GIVEN   - voter 5 -> no proxy, because delegation is only requested
-		voter             = userRepo.findByEmail(USER5_EMAIL);
+		voter             = userRepo.findByEmail(USER5_EMAIL).get();
 		//WHEN
 		topProxy = proxyService.findTopProxy(area, voter);
 		//THEN
@@ -172,8 +172,8 @@ public class ProxyServiceTests extends BaseTest {
 	@WithUserDetails(USER2_EMAIL)
 	public void testCircularDelegationErrorCases() throws LiquidoException {
 		//GIVEN
-		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL);
-		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL);
+		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL).get();
+		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL).get();
 		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
 		//String proxyVoterToken = castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, toProxy.getPasswordHash(), true);
 
@@ -196,8 +196,8 @@ public class ProxyServiceTests extends BaseTest {
 	@Test
 	public void testRemoveProxy() throws LiquidoException {
 		//GIVEN
-		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL);
-		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL);
+		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL).get();
+		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL).get();
 		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
 
 		//WHEN
