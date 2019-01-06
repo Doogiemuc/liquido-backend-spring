@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.data.domain.AuditorAware;
+import org.springframework.lang.Nullable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -33,14 +34,14 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
   @Override
   public Optional<UserModel> getCurrentAuditor() {
     if (mockAuditor != null) {
-    	// warn about mock users if we are not in dev or test
+    	// warn about mock users, but only if we are not in dev or test
 			if (!springEnv.acceptsProfiles(Profiles.of("dev", "test")))
 				log.warn("Returning mock auditor "+mockAuditor.getEmail());
       return Optional.of(mockAuditor);
     }
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication == null || !authentication.isAuthenticated()) {
-      log.warn("Cannot getCurrentAuditor. No one is currently authenticated");
+      log.trace("Cannot getCurrentAuditor. No one is currently authenticated");
       return Optional.empty();
     }
 
@@ -52,18 +53,21 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
 		// 1. I load one in LiquidoUserDetailsService.java
 		// 2. and JwtAuthenticationFilter puts it into the security context
     LiquidoAuthUser authUser = (LiquidoAuthUser)authentication.getPrincipal();
-    log.trace("Returning current auditor " + authUser);
+    //log.trace("Returning current auditor " + authUser);
 
     return Optional.of(authUser.getLiquidoUserModel());
 
-    //BUGFIX:  Must not do this, since this will lead to an endless loop StackOverflowException
+    //BUGFIX:  Must not call userRepo, since this will lead to an endless loop and throw a StackOverflowException
     //https://stackoverflow.com/questions/14223649/how-to-implement-auditoraware-with-spring-data-jpa-and-spring-security
     //http://stackoverflow.com/questions/42315960/stackoverflowexception-in-spring-data-jpa-app-with-spring-security-auditoraware
     //UserModel currentlyLoggedInUser = userRepo.findByEmail(principal.getUsername()) ;
 
   }
 
-  public void setMockAuditor(UserModel mockAuditor) {
+  public void setMockAuditor(@Nullable UserModel mockAuditor) {
+    if (springEnv.acceptsProfiles(Profiles.of("dev", "test"))) {
+      log.debug("Setting mockauditor to "+mockAuditor);  // mockauditor may be null!!!
+    }
     this.mockAuditor = mockAuditor;
   }
 }
