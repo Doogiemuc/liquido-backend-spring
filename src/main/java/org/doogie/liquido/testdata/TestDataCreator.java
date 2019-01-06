@@ -66,6 +66,7 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * http://www.generatedata.com/
  */
 //TODO: there would also be other ways of initializing a DB: http://www.javarticles.com/2015/01/example-of-spring-datasourceinitializer.html
+//TODO: Split this up: Use a CommandLineRunnter onyl to output some debug info after app has started. And have a seperate test data creator that creates schema.sql, data.sql, schema-H2.sql and data-H2.sql
 @Component
 //@Profile("dev")    // run test data creator only during development
 @Order(Ordered.HIGHEST_PRECEDENCE)   // seed DB first, then run the other CommandLineRunners
@@ -74,7 +75,7 @@ public class TestDataCreator implements CommandLineRunner {
 
   public static final String SEED_DB_PARAM = "createSampleData";
   public static final String LOAD_SAMPLE_DB_PARAM = "loadSampleDB";
-	public static final String SAMPLE_DATA_FILENAME = "sample-DB.sql";
+	public static final String SAMPLE_DATA_FILENAME = "sampleDB-H2.sql";
 	public static final String SAMPLE_DATA_PATH     = "src/main/resources/";
 
 	@Value("${spring.data.rest.base-path}")   // value from application.properties file
