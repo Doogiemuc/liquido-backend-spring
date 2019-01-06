@@ -97,20 +97,33 @@ PUT /my/delegations/{areaId}/becomePublicProxy     become a public proxy in that
 GET /users/{userId}/publicChecksum         get checksum of public proxy
 
 
-# Build pipeline
 
-# Compile and build
+# Liquido CI build pipeline
+
+## Compile and build
 
  * Rename `src/main/resources/application.properties.example` to `application.properties` and fill in all necessary passwords.
  * Build `mvn package`
  * Run: `mvn install && mvn run:jetty`
 
-### Docker build
+## Docker build
 
  * If you are on Windows: Start "Docker for Windows" `mvn dockerfile:build`
  * Run `docker run org.doogie/liquido-backend-spring`
 
-# Tests
+
+## Build a release with maven
+
+ * `mvn release:prepare` -> Enter name for tag (can accept default) and next development version
+ *  This will also run all tests. There must not be any uncommitted local changes in your working directory.
+ *  This will automatically increment the build number (`mvn buildnumber:create`)
+  
+
+
+
+# Testing
+
+## Running all tests
 
 Run the test cases under `srs/test/java` with `mvn test -DloadSampleDB=true`.
 Spring Boot will automatically start the test server for you.
@@ -125,6 +138,8 @@ Test data can be created with `TestDataCreator`. BE CAREFULL: This will delete a
 Then all tests can be run against this test data by passing the environemtn variable 
 
     -DloadSampleDB=true
+
+
 
 
 

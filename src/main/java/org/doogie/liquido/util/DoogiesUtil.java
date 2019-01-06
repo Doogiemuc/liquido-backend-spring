@@ -123,9 +123,9 @@ public class DoogiesUtil {
 	 * @param <T> The type of your nodes. Anything that has a toString can be used.
 	 */
 	public static <T> void printTreeRec(T node, Function<T, List<T>> getChildrenFunc) {
-		BiConsumer printer = (prefix, n) -> {
-			System.out.println(prefix + n.toString());
-		};
+		if (getChildrenFunc == null) throw new IllegalArgumentException("need getChildrenFunc to printTreeRec");
+		if (node == null) return;
+		BiConsumer printer = (prefix, n) -> System.out.println(prefix + n.toString());
 		printTreeRec("", node, printer, getChildrenFunc, false);
 	}
 
@@ -139,5 +139,5 @@ public class DoogiesUtil {
 		}
 	}
 
-	//FUNCTIONAL programming complete overkill:   skip first parameter indent.  Instead curry the printer function in each recursion level *H*
+	//FUNCTIONAL programming complete overkill:   skip first parameter indent.  Instead curry the printer function in each recursion level *G*
 }

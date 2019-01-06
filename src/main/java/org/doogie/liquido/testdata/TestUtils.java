@@ -26,12 +26,14 @@ public class TestUtils {
 	ChecksumRepo checksumRepo;
 
 	public void printProxyTree(AreaModel area, UserModel proxy) {
+		if (proxy == null) return;
 		Function<UserModel, List<UserModel>> getChildrenFunc = toProxy -> delegationRepo.findByAreaAndToProxy(area, toProxy)
 				.stream().map(del -> del.getFromUser()).collect(Collectors.toList());
 		DoogiesUtil.printTreeRec(proxy, getChildrenFunc);
 	}
 
 	public void printDelegationTree(AreaModel area, UserModel proxy) {
+		if (proxy == null) return;
 		UserModel dummyUser = new UserModel("aboveTopProxy@dummy.org");
 		DelegationModel dummyTopProxyDel = new DelegationModel(area, proxy, dummyUser);
 		Function<DelegationModel, List<DelegationModel>> getChildrenFunc = del -> delegationRepo.findByAreaAndToProxy(area, del.getFromUser())
@@ -40,6 +42,7 @@ public class TestUtils {
 	}
 
 	public void printChecksumTree(ChecksumModel checksum) {
+		if (checksum == null) return;
 		Function<ChecksumModel, List<ChecksumModel>> getChildrenFunc = c -> checksumRepo.findByDelegatedTo(c);
 		DoogiesUtil.printTreeRec(checksum, getChildrenFunc);
 	}

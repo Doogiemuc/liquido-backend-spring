@@ -5,6 +5,8 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
+import java.util.Optional;
+
 /**
  * Database abstraction for "users".
  *
@@ -24,9 +26,9 @@ public interface UserRepo extends CrudRepository<UserModel, Long> {
    * @param email users email
    * @return one UserModel or null if no user with that email was found.
    */
-  UserModel findByEmail(@Param("email") String email);   // This magically creates a query just from the method name!
+  Optional<UserModel> findByEmail(@Param("email") String email);   // This magically creates a query just from the method name!
 
   /** find a user by his mobile phone number */
-  UserModel findByProfileMobilephone(String mobilephone);
+  Optional<UserModel> findByProfileMobilephone(String mobilephone);
 
 }

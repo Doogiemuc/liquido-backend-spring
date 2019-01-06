@@ -21,6 +21,7 @@ import static org.doogie.liquido.util.LiquidoProperties.KEY.BCRYPT_SALT;
  */
 @Slf4j
 @Component
+//TODO: replace LiquidoProperties this with Type safe configuration properties https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-external-config.html#boot-features-external-config-typesafe-configuration-properties
 public class LiquidoProperties extends HashMap<LiquidoProperties.KEY, String> /*implements CommandLineRunner*/ {
   //Implementation note: A CommandLine runner makes this run AFTER TestDataCreator.
   // But LiquidoProperties must be initialized BEFORE TestDataCreator. This is now possible with the @PostConstruct annotation below.

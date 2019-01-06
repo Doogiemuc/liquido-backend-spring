@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>org.doogie.liquido</groupId>
 	<artifactId>liquido-backend-spring</artifactId>
-	<version>0.21.0</version>
+	<version>0.3.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>liquido-backend-spring</name>
@@ -15,7 +14,7 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>2.1.0.RELEASE</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 
 	<properties>
@@ -30,14 +29,15 @@
 		<docker.image.prefix>org.doogie</docker.image.prefix>
 
 		<!-- command line arguments that maven surefire will pass to TESTs
-		<argLine>-D=loadSampleDB=true</argLine  -->
+		<argLine>-D=loadSampleDB=true</argLine -->
 	</properties>
 
 	<scm>
 		<connection>scm:git:https://github.com/Doogiemuc/liquido-backend-spring.git</connection>
 		<developerConnection>scm:git:https://github.com/Doogiemuc/liquido-backend-spring.git</developerConnection>
 		<url>https://github.com/Doogiemuc/liquido-backend-spring/</url>
-	</scm>
+	  <tag>HEAD</tag>
+  </scm>
 
 	<dependencies>
     	<!-- Spring Web MVC -->
@@ -74,25 +74,10 @@
 			<version>${spring-boot.version}</version>
 		</dependency>
 
-
-		<!-- ================ OAuth 2.0 with spring security  TRY V3       FAILED AGAIN :-( ==================================
 		<dependency>
-			<groupId>org.springframework.security</groupId>
-			<artifactId>spring-security-oauth2-client</artifactId>
-			<version>5.1.1.RELEASE</version>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>org.springframework.security</groupId>
-			<artifactId>spring-security-oauth2-jose</artifactId>
-			<version>5.1.1.RELEASE</version>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.security</groupId>
-			<artifactId>spring-security-oauth2-resource-server</artifactId>
-			<version>5.1.1.RELEASE</version>
-		</dependency>
-
-		-->
 
 		<!--Jwt-->
 		<dependency>
@@ -196,9 +181,10 @@
 	</dependencies>
 
 	<build>
-		<finalName>${project.artifactId}-${project.version}-r${buildNumber}</finalName>
+		<finalName>${project.artifactId}-${project.version}-build${buildNumber}</finalName>
 		<plugins>
 
+			<!-- maven-surefire-plugin for running JUnit tests -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
@@ -209,7 +195,9 @@
 				</configuration>
 			</plugin>
 
-			<!-- Build number -->
+			<!-- Auto increment a numerical build number. Stored in buildNumber.properties file.
+			     mvn buildnumber:create
+			-->
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>buildnumber-maven-plugin</artifactId>
@@ -223,6 +211,12 @@
 					</execution>
 				</executions>
 				<configuration>
+					<!-- See https://stackoverflow.com/questions/8988405/automatically-incrementing-a-build-number-in-a-java-project -->
+					<format>{0,number}</format>
+					<items>
+					  <item>buildNumber</item>
+					</items>
+					<buildNumberPropertiesFileLocation>${basedir}/build/buildNumber.properties</buildNumberPropertiesFileLocation>
 					<!-- buildnumber-maven-plugin by default checks for local changes, ie. not yet commited files -->
 					<doCheck>false</doCheck>
 					<doUpdate>false</doUpdate>
