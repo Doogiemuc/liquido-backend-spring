@@ -15,7 +15,7 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="liquido-backend-spring" options="-parameters" />
+      <module name="liquido-backend-spring" options="" />
     </option>
   </component>
 </project>

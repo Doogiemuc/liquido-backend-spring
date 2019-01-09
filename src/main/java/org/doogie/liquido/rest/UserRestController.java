@@ -18,9 +18,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.Random;
-
-import static org.springframework.web.bind.annotation.RequestMethod.GET;
 
 /**
  * Rest Controller for registration, login and user data
@@ -72,11 +71,10 @@ public class UserRestController {
 		if (newUser == null || newUser.getProfile() == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need data for new user");
 		if (DoogiesUtil.isEmpty(newUser.getEmail())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need email for new user");
 		if (DoogiesUtil.isEmpty(newUser.getProfile().getMobilephone())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need mobile phone for new user");
-		UserModel existingByEmail = userRepo.findByEmail(newUser.getEmail())
-				.orElseThrow(()->  new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that email already exists"));
-
-		UserModel existingByMobile = userRepo.findByProfileMobilephone(newUser.getProfile().getMobilephone())
-				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that mobile phone number already exists"));
+		Optional<UserModel> existingByEmail = userRepo.findByEmail(newUser.getEmail());
+		if (existingByEmail.isPresent()) throw new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that email already exists");
+		Optional<UserModel> existingByMobile = userRepo.findByProfileMobilephone(newUser.getProfile().getMobilephone());
+		if (existingByMobile.isPresent()) throw new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that mobile phone number already exists");
 
 		//----- save new user
 		userRepo.save(newUser);
