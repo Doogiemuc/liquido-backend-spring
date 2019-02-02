@@ -1,5 +1,6 @@
 package org.doogie.liquido.rest;
 
+import io.jsonwebtoken.lang.Collections;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.BallotRepo;
 import org.doogie.liquido.datarepos.ChecksumRepo;
@@ -7,9 +8,11 @@ import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.model.BallotModel;
 import org.doogie.liquido.model.LawModel;
+import org.doogie.liquido.model.LawProjection;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.rest.dto.JoinPollRequest;
 import org.doogie.liquido.services.CastVoteService;
+import org.doogie.liquido.services.LawService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.util.LiquidoRestUtils;
@@ -19,10 +22,17 @@ import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
-import org.springframework.hateoas.EntityLinks;
 import org.springframework.hateoas.Resource;
+import org.springframework.hateoas.Resources;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 
 /**
  * REST controller for working with Polls.
@@ -41,6 +51,9 @@ public class PollRestController {
 	@Autowired
 	CastVoteService castVoteService;
 
+	@Autowired
+	LawService lawService;
+
   @Autowired
   LawRepo lawRepo;
 
@@ -52,6 +65,9 @@ public class PollRestController {
 
   @Autowired
 	ChecksumRepo checksumRepo;
+
+	@Autowired
+	private ProjectionFactory factory;
 
 	@Autowired
 	LiquidoRestUtils restUtils;
@@ -148,7 +164,7 @@ public class PollRestController {
 	) throws LiquidoException {
 		BallotModel ownBallot = pollService.getBallotForVoterToken(poll, voterToken)
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_BALLOT, "No ballot found. You did not vote in this poll yet."));   // this is not an error
-		return ownBallot;  // includes some tweaking of JSON serialization.
+		return ownBallot;  // includes some tweaking of JSON serialization  in BallotModelPollJsonSerializer
 
 		// This would return the full HATEOAS resource. But since BallotModel is not exposed as RepositoryRestResource, it contains ugly links to .../BallotModels/4711  :-(
 		//return assembler.toResource(ownBallot);
@@ -171,6 +187,18 @@ public class PollRestController {
 		*/
 	}
 
-
+	/**
+	 * Get recently discussed proposals.
+	 * @return a sorted list of (max 10) proposals with recent comments.
+	 *   The list will contain LawProjections as Spring HATEOAS JSON
+	 */
+	@RequestMapping("/laws/search/recentlyDiscussed")
+	public @ResponseBody Resources<LawProjection> getRecentlyDiscussedProposals() {
+		List<LawModel> mostDiscussedProposals = lawService.getRecentlyDiscussed(10);
+		// Some more Spring HATEOAS magic:
+		// https://stackoverflow.com/questions/28139856/how-can-i-get-spring-mvchateoas-to-encode-a-list-of-resources-into-hal
+		List<LawProjection> projected = mostDiscussedProposals.stream().map(l -> factory.createProjection(LawProjection.class, l)).collect(Collectors.toList());
+		return new Resources<>(projected, linkTo(methodOn(PollRestController.class).getRecentlyDiscussedProposals()).withRel("self"));
+	}
 
 }
