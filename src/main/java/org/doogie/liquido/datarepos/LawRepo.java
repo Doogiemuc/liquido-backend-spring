@@ -1,5 +1,6 @@
 package org.doogie.liquido.datarepos;
 
+import org.doogie.liquido.model.CommentModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.LawProjection;
 import org.doogie.liquido.model.UserModel;
@@ -99,5 +100,7 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>  // 
   @RestResource(path = "findSupportedBy")
   List<LawModel> findDistinctByStatusAndSupportersContains(@Param("status") LawModel.LawStatus status, @Param("user") UserModel user);
 
-  
+
+  //@Query("SELECT l FROM LawModel l JOIN CommentModel c ON c.  WHERE l.status = 1 ")
+  //List<LawModel> getRecentlyDiscussed();
 }

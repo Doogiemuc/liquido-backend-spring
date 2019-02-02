@@ -1,18 +1,23 @@
 package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.datarepos.CommentRepo;
 import org.doogie.liquido.datarepos.LawEventHandler;
 import org.doogie.liquido.datarepos.LawRepo;
+import org.doogie.liquido.model.CommentModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.util.LiquidoProperties;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import javax.validation.constraints.NotNull;
-import java.util.Date;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Utility methods for a Law. These are for example used by {@link org.doogie.liquido.model.LawProjection}
@@ -26,6 +31,9 @@ public class LawService {
 
   @Autowired
   LawRepo lawRepo;
+
+  @Autowired
+  CommentRepo commentRepo;
 
   @Autowired
   LiquidoProperties props;
@@ -79,6 +87,46 @@ public class LawService {
     }
     return idea;
     //TODO: What happens with a law when a supporter gets removed?
+  }
+
+
+
+  private class CompareByRecentComments implements Comparator<LawModel> {
+    final Map<Long, Long> numRecentComments;
+
+    public CompareByRecentComments(Map<Long, Long> numRecentComments) {
+      this.numRecentComments = numRecentComments;
+    }
+
+    @Override
+    public int compare(LawModel o1, LawModel o2) {
+      long count1 = numRecentComments.getOrDefault(o1.getId(), 0L);
+      long count2 = numRecentComments.getOrDefault(o2.getId(), 0L);
+      return Long.compare(count2, count1);   // need to reverse the order
+    }
+  }
+
+  /**
+   * Get recently discussed proposals. (Only proposals can be discussed!)
+   * @param max maximum number of proposals to return
+   * @return most discussed proposals sorted by their number of recent comments
+   */
+  public List<LawModel> getRecentlyDiscussed(int max) {
+    Map<Long, Long> numRecentComments = new HashMap<>();
+    Set<LawModel> mostDiscussedProposals = new HashSet<>();
+    //Iterable<CommentModel> recentComments = commentRepo.findAll(Sort.by(Sort.Order.desc("createdAt")));   // newest comments first
+    Iterable<CommentModel> recentComments = commentRepo.findAll(PageRequest.of(0, 50, Sort.by(Sort.Order.desc("createdAt"))));  // when a line of code ends with four closing brackets, then you do have to many factory methods ! :-)
+    for (CommentModel c: recentComments) {
+      mostDiscussedProposals.add(c.getLaw());
+      Long key   = c.getLaw().getId();
+      Long count = numRecentComments.getOrDefault(key, 0L);
+      numRecentComments.put(key, count + 1);
+    }
+    List<LawModel> sortedProposals = mostDiscussedProposals.stream()
+        .sorted(new CompareByRecentComments(numRecentComments))
+        .limit(max)
+        .collect(Collectors.toList());
+    return sortedProposals;
   }
 
 }

@@ -1,10 +1,7 @@
 package org.doogie.liquido.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
+import lombok.*;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -27,7 +24,12 @@ import java.util.Set;
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "comments")
 public class CommentModel extends BaseModel {
-  /** Suggestion for improvement or comment.  The comment can be written in HTML. */
+  @NonNull
+	@NotNull
+	@ManyToOne
+	public LawModel law;
+
+	/** Suggestion for improvement or comment.  The comment can be written in HTML. */
   @NotNull
   @NonNull
   public String comment;
@@ -39,7 +41,7 @@ public class CommentModel extends BaseModel {
 	@ManyToOne
 	public UserModel createdBy;
 
-	// Bidirectional hierarchical reference:
+	// Bidirectional hierarchical recursive reference - nice1
 
 	/** Parent comment that we reply to */
 	@ManyToOne
@@ -70,10 +72,12 @@ public class CommentModel extends BaseModel {
   }
 
 
-  public CommentModel(String comment, CommentModel parent) {
+  public CommentModel(LawModel law, String comment, CommentModel parent) {
+  	this.law = law;
   	this.comment = comment;
   	this.parent = parent;
 	}
+
 
 	/** @return nicely formatted and useful information for debugging */
 	public String toString() {
