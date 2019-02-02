@@ -51,8 +51,6 @@ else
 	echo "Backend will NOT be rebuilt."
 fi
 
-
-
 # ===== Copy latest JAR file to AWS EC2 =====
 echo
 echo "===== Deploy Backend ====="
@@ -100,6 +98,12 @@ if [[ $yn =~ ^[Yy](es)?$ ]] ; then
 else
  	echo "WebApp will NOT be deployed."
 fi
+
+# ===== Run E2E tests =====
+
+
+
+
 
 cd $CURRENT_DIR
 echo

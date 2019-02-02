@@ -8,9 +8,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 /**
  * <h3>Data model for an ida -> proposal -> law.</h3>
@@ -134,18 +132,42 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 
   /** The user that initially created the idea */
   @CreatedBy  // automatically handled by spring data jpa auditing
-  //@NonNull
+  //@NonNull		//TODO: createdBy should b e nonNull. Why did I comment this out?
   //@NotNull
   @ManyToOne
   public UserModel createdBy;
 
   //Remember: You MUST NOT call idea.getSupporters.add(someUser) directly! Because this circumvents the restrictions
   // that there are for supporting an idea. E.g. a user must not support his own idea. Call LawService.addSupporter() instead!
-
   public int getNumSupporters() {
     if (this.supporters == null) return 0;
     return this.supporters.size();
   }
+
+  private static int getNumChildComments(CommentModel c) {
+  	int count = 0;
+  	if (c == null || c.getReplies() == null || c.getReplies().size() == 0) return 0;
+		for (Iterator<CommentModel> it = c.getReplies().iterator(); it.hasNext(); ) {
+			CommentModel reply = it.next();
+			count += 1 + getNumChildComments(reply);
+		}
+		return count;
+	}
+
+	/**
+	 * Number of comments and (recursive) replies.
+	 * @return overall number of comments
+	 */
+	public int getNumComments() {
+  	if (this.comments == null) return 0;
+  	int count = 0;
+		for (Iterator<CommentModel> it = comments.iterator(); it.hasNext(); ) {
+			CommentModel c = it.next();
+			count += 1 + getNumChildComments(c);
+		}
+		//Optional<Integer> countStream = comments.stream().map(LawModel::getNumChildComments).reduce(Integer::sum);
+		return count;
+	}
 
   public void setDescription(String description) {
     if (this.getStatus() == null ||
@@ -157,7 +179,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
     }
   }
 
-  /** need some tweaking for a nice and short representation as a string */
+  /** Nice and short representation of an Idea, Proposal or Law as a string */
   @Override
   public String toString() {
     StringBuilder buf = new StringBuilder();
@@ -176,6 +198,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
     buf.append(", poll.id=" + (poll != null ? poll.getId() : "<null>"));
     buf.append(", status=" + status);
     buf.append(", numSupporters=" + getNumSupporters());
+		buf.append(", numComments=" + getNumComments());
     buf.append(", createdBy.email=" + (createdBy != null ? createdBy.getEmail() : "<null>"));
     buf.append(", reachedQuorumAt=" + reachedQuorumAt);
     buf.append(", updatedAt=" + updatedAt);

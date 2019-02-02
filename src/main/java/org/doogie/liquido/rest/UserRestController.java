@@ -126,6 +126,8 @@ public class UserRestController {
 	  	UserModel user = userRepo.findByProfileMobilephone(mobile)
 					.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN, "DevLogin: user for mobile phone "+mobile+" not found."));
 	  	log.info("DEV Login as "+mobile+" => "+user);
+	  	user.setLastLogin(LocalDateTime.now());
+	  	userRepo.save(user);
 			return jwtTokenProvider.generateToken(user.getEmail());
 		}
 
@@ -144,13 +146,18 @@ public class UserRestController {
 	  }
 
 	  //---- delete used one time token
+		UserModel user = oneTimeToken.getUser();
 		ottRepo.delete(oneTimeToken);
 
     // return JWT token for this email
-		String jwt = jwtTokenProvider.generateToken(oneTimeToken.getUser().getEmail());
-		log.info("User "+oneTimeToken.getUser()+ "logged in with valid SMS code.");
+		String jwt = jwtTokenProvider.generateToken(user.getEmail());
+		oneTimeToken.getUser().setLastLogin(LocalDateTime.now());
+		userRepo.save(user);
+		log.info("User "+user+ "logged in with valid SMS code.");
 		return jwt;
   }
+
+  //TODO: login via E-Mail magic link
 
 	//TODO: change a user's password => delete all tokens and checksums
 

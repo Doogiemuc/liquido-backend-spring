@@ -478,6 +478,7 @@ public class TestDataCreator implements CommandLineRunner {
       AreaModel area = this.areas.get(rand.nextInt(TestFixtures.NUM_AREAS));
       int ageInDays = rand.nextInt(10);
       LawModel proposal = createProposal(title, description, area, createdBy, ageInDays);
+			addCommentsToProposal(proposal);
       log.debug("Created proposal for user "+createdBy.getEmail());
     }
   }
@@ -513,7 +514,7 @@ public class TestDataCreator implements CommandLineRunner {
   private LawModel addCommentsToProposal(LawModel proposal) {
   	UserModel randUser = this.randUser();
 		auditorAware.setMockAuditor(randUser);
-		CommentModel rootComment = new CommentModel("Comment on root level. I really like this idea, but needs to be improved.", null);
+		CommentModel rootComment = new CommentModel(proposal, "Comment on root level. I really like this idea, but needs to be improved. "+System.currentTimeMillis(), null);
 		for (int i = 0; i < rand.nextInt(10); i++) {
 			rootComment.getUpVoters().add(randUser());
 		}
@@ -523,9 +524,9 @@ public class TestDataCreator implements CommandLineRunner {
 		// Must save CommentModel immediately, to prevent "TransientPropertyValueException: object references an unsaved transient instance"
     // Could also add @Cascade(org.hibernate.annotations.CascadeType.ALL) on LawModel.comments but this would always overwrite and save the full list of all comments on every save of a LawModel.
     commentRepo.save(rootComment);
-		for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < rand.nextInt(8)+2; i++) {
 			auditorAware.setMockAuditor(randUser());
-			CommentModel reply = new CommentModel("Reply "+i+" "+getLoremIpsum(10, 100), rootComment);
+			CommentModel reply = new CommentModel(proposal, "Reply "+i+" "+getLoremIpsum(10, 100) , rootComment);
 			for (int k = 0; k < rand.nextInt(10); k++) {
 				reply.getUpVoters().add(randUser());
 			}
