@@ -46,4 +46,16 @@ public class LiquidoRestUtils {
 		if (uri.endsWith(PROJECTION)) uri = uri.substring(0, uri.length()-PROJECTION.length());
 		return uri;
 	}
+
+	/**
+	 * Clean mobile phone number: Replace everything except plus('+') and number (0-9).
+	 * Specifically spaces will be removed.
+	 * This is a very simple thing. Have a look at google phone lib for sophisticated phone number parsing
+	 * @param mobile a non formatted phone numer
+	 * @return the cleaned up phone number
+	 */
+	public static String cleanMobilephone(String mobile) {
+		if (mobile == null) return null;
+		return mobile.replaceAll("/[\\+0-9]/", "");
+	}
 }

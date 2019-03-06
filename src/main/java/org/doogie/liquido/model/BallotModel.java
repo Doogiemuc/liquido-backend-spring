@@ -20,10 +20,9 @@ import java.util.stream.Collectors;
  *
  * Each ballot contains the ordered list of proposals that this user voted for.
  * But the ballot does *NOT* contain any reference to the voter.
- * Insted each ballot contains a checksum which is the hashed value of the user's voterToken.
+ * Instead each ballot contains a checksum which is the hashed value of the user's voterToken.
  *
  * Only the voter knows his own voterToken. So only he can check that this actually is his ballot.
- *
  * This way a voter can even update his ballot as long as the voting phase is still open.
  *
  * BallotRepo is not exposed as REST resource. BallotModel is serialized to JSON manually. See {@link BalloModelPollJsonSerializer}
@@ -36,7 +35,7 @@ import java.util.stream.Collectors;
   @UniqueConstraint(columnNames = {"POLL_ID", "CHECKSUM"} )   // a voter is only allowed to vote once per poll with his checksum!
 })
 public class BallotModel {
-	//BallotModel deliberately does not extend BaseModel!
+	//BallotModel deliberately does NOT extend BaseModel!
 	//No @CreatedDate, @LastModifiedDate or @CreatedBy here.
 	//When voting it is confidential who casted this ballot and when.
 

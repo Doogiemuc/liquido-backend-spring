@@ -10,6 +10,7 @@ import java.util.Comparator;
  * Compare two majorities which one is "better" and wins.
  * A Majority is how often a candidate i was preferred to candidate j.
  * int[3] = { i, j, numPreferences_I_over_J }
+ *
  */
 class MajorityComparator implements Comparator<int[]> {
 	Matrix duelMatrix;

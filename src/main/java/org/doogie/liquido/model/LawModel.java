@@ -18,7 +18,6 @@ import java.util.*;
  * proposal must not be changed anymore. Users can vote in the poll. When the voting phase is finished,
  * then the winning proposal becomes a law. All other proposals in the poll are dropped.
  *
- *
  * The title of every idea must be globally unique!
  */
 //Lombok @Data does not work very well with spring. Need to use the individual annotations
