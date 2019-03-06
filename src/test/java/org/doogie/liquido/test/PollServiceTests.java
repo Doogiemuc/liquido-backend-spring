@@ -124,7 +124,7 @@ public class PollServiceTests  extends BaseTest {
 		List<BallotModel> ballots = seedBallotsQuickly(poll, voteOrderIndexes, numBallots);
 
 		Matrix duel = RankedPairVoting.calcDuelMatrix(poll, ballots);
-		log.info("Duel matrix:\n"+duel.toFormattedString());
+		log.info("Duel matrix:\n"+duel.toString());
 
 		// Some checks for random positions of the result
 		assertEquals( 0, duel.get(0, 0));
@@ -140,7 +140,7 @@ public class PollServiceTests  extends BaseTest {
 		assertEquals(31, duel.get(4, 3));
 
 		Matrix strong = SchulzeMethod.calcStrongestPathMatrix(poll, ballots);
-		log.info("Strongest path matrix:\n"+strong.toFormattedString());
+		log.info("Strongest path matrix:\n"+strong.toString());
 
 		List<LawModel> winningProposals = SchulzeMethod.calcSchulzeMethodWinners(poll, ballots);
 		log.info("Potential Winners:" +winningProposals);
@@ -253,8 +253,8 @@ public class PollServiceTests  extends BaseTest {
 		int[] numBallots = new int[] { 42, 26, 15, 17 };   // 100 ballots == 100%
 
 		List<BallotModel> ballots = seedBallotsQuickly(poll, voteOrderIndexes, numBallots);
-
-		List<LawModel> winners = RankedPairVoting.calcRankedPairsWinners(poll, ballots);
+		Matrix duelMatrix = RankedPairVoting.calcDuelMatrix(poll, ballots);
+		List<LawModel> winners = RankedPairVoting.calcRankedPairsWinners(poll, duelMatrix);
 
 		log.debug("===== Votes ");
 		for (int i = 0; i < voteOrderIndexes.length; i++) {

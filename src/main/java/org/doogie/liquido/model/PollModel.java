@@ -4,6 +4,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.doogie.liquido.model.converter.MatrixConverter;
+import org.doogie.liquido.util.Matrix;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.SortNatural;
@@ -36,15 +38,15 @@ public class PollModel extends BaseModel {
    * When the poll is in PollStatus == ELABORATION, then these proposals may still be changed and further
    * proposals may be added. When The PollStauts == VOTING, then proposals must not be changed anymore.
    */
-  // This is the ONE side of a bidirectional ManyToOne aggregation relationship.
-  // https://vladmihalcea.com/2017/03/29/the-best-way-to-map-a-onetomany-association-with-jpa-and-hibernate/
-  // Beginners guide to Hibernate Cascade types:  https://vladmihalcea.com/2015/03/05/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
-
-	// we deliberately fetch all proposals in this poll EAGERly, so that getNumCompetingProposals can be called on the returned entity.
-
-	// I had problems with ArrayList: https://stackoverflow.com/questions/1995080/hibernate-criteria-returns-children-multiple-times-with-fetchtype-eager
-	// So I used a SortedSet:   https://docs.jboss.org/hibernate/orm/5.2/userguide/html_single/Hibernate_User_Guide.html#collections-sorted-set   => Therefore LawModel must implement Comparable
-	// TODO: change proposals in a poll to an UNSORTED Set   See https://vladmihalcea.com/hibernate-facts-favoring-sets-vs-bags/
+  /* Implementation notes:
+     This is the ONE side of a bidirectional ManyToOne aggregation relationship.
+     https://vladmihalcea.com/2017/03/29/the-best-way-to-map-a-onetomany-association-with-jpa-and-hibernate/
+     Beginners guide to Hibernate Cascade types:  https://vladmihalcea.com/2015/03/05/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
+	   we deliberately fetch all proposals in this poll EAGERly, so that getNumCompetingProposals can be called on the returned entity.
+     I had problems with ArrayList: https://stackoverflow.com/questions/1995080/hibernate-criteria-returns-children-multiple-times-with-fetchtype-eager
+	   So I used a SortedSet:   https://docs.jboss.org/hibernate/orm/5.2/userguide/html_single/Hibernate_User_Guide.html#collections-sorted-set   => Therefore LawModel must implement Comparable
+ 	   See also https://vladmihalcea.com/hibernate-facts-favoring-sets-vs-bags/
+	*/
   @OneToMany(cascade = CascadeType.MERGE, mappedBy="poll", fetch = FetchType.EAGER) //, orphanRemoval = true/false ??  Should a proposals be removed when the poll is deleted? => NO
   @NotNull
   @NonNull
@@ -77,6 +79,17 @@ public class PollModel extends BaseModel {
 	/** The wining proposal of this poll, that became a law. Filled after poll is FINISHED. */
 	@OneToOne
 	LawModel winner = null;
+
+
+	/**
+	 * The calculated duelMatrix when the voting phase is finished.
+	 * This is set in {@link org.doogie.liquido.services.PollService#finishVotingPhase(PollModel)}
+	 * This attribute is serialized as JSON array of arrays and then stored as VARCHAR
+	 */
+	@Convert(converter = MatrixConverter.class)
+	Matrix duelMatrix;
+
+	//Implementation note: A poll does not contain a link to its BallotModels. We do not want to expose the ballots while the voting phase is still running.
 
   /** return the number of competing proposals */
   public int getNumCompetingProposals() {
