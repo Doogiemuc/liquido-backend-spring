@@ -10,6 +10,7 @@ import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
 import org.doogie.liquido.util.DoogiesUtil;
+import org.doogie.liquido.util.LiquidoRestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
@@ -76,31 +77,31 @@ public class UserRestController {
 		Optional<UserModel> existingByMobile = userRepo.findByProfileMobilephone(newUser.getProfile().getMobilephone());
 		if (existingByMobile.isPresent()) throw new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that mobile phone number already exists");
 
-		//----- save new user
+		//----- save new user (mobile phone number is automatically cleaned in UserProfileModel.java
 		userRepo.save(newUser);
 		return ResponseEntity.ok().build();
 	}
 
 	/**
 	 * SMS login flow - step 1 - user requests login code via SMS
-	 * @param mobile users mobile phone number. MUST be a known user
+	 * @param mobile users mobile phone number. MUST be a known user. Mobile numer will be cleaned.
 	 * @return HttpStatus.OK, when code was sent via SMS
-	 *        OR HttpStatus.NOT_FOUND when mobile phone number was not found and user must register first.
+	 *        OR HttpStatus.NOT_FOUND when cleaned mobile phone number was not found and user must register first.
 	 */
   @RequestMapping(value = "/auth/requestSmsCode", produces = MediaType.TEXT_PLAIN_VALUE)
   public ResponseEntity requestSmsCode(@RequestParam("mobile") String mobile) throws LiquidoException {
-		if (mobile == null) throw new LiquidoException(LiquidoException.Errors.MOBILE_NOT_FOUND,  "Need mobile phone number!");
-		//mobile = cleanMobilephone(mobile);
-  	log.info("request SMS login code for mobile="+mobile);
-	  UserModel user = userRepo.findByProfileMobilephone(mobile)
-		  .orElseThrow(() -> new LiquidoException(LiquidoException.Errors.MOBILE_NOT_FOUND,  "No user found with mobile number "+mobile+". You must register first."));
+		if (DoogiesUtil.isEmpty(mobile)) throw new LiquidoException(LiquidoException.Errors.MOBILE_NOT_FOUND,  "Need mobile phone number!");
+		final String cleanMobile = LiquidoRestUtils.cleanMobilephone(mobile);
+  	log.info("request SMS login code for mobile="+cleanMobile);
+	  UserModel user = userRepo.findByProfileMobilephone(cleanMobile)
+		  .orElseThrow(() -> new LiquidoException(LiquidoException.Errors.MOBILE_NOT_FOUND,  "No user found with mobile number "+cleanMobile+". You must register first."));
 
-	  // Create new SMS token: four random digits between [1000...9999]
-	  String smsCode = String.valueOf(new Random().nextInt(9000)+ 1000);
+	  // Create new SMS token: six random digits between [100000...999999]
+	  String smsCode = DoogiesUtil.randomDigits(6);
 	  LocalDateTime validUntil = LocalDateTime.now().plusHours(1);  // login token via SMS is valid for one hour. That should be enough!
 		OneTimeToken oneTimeToken = new OneTimeToken(smsCode, user, OneTimeToken.TOKEN_TYPE.SMS, validUntil);
 		ottRepo.save(oneTimeToken);
-		log.debug("User "+user.getEmail()+" may login. Sending code via SMS.");
+		log.info("User "+user.getEmail()+" may login. Sending code via SMS.");
 	  if (springEnv.acceptsProfiles(Profiles.of("dev", "test"))) {
 		  return ResponseEntity.ok().header("code", smsCode).build();  // when debugging, return the code in the header
 	  } else {

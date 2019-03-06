@@ -41,7 +41,7 @@ public class DoogiesUtil {
   }
 
   /** @return a Data n days ago */
-  public static Date daysAgo(int days) {
+  public static Date daysAgo(long days) {  //BUGFIX: MUST calculate in long!
     return new Date(System.currentTimeMillis() - days * 3600*24*1000);
   }
 
@@ -55,7 +55,8 @@ public class DoogiesUtil {
   }
 
   static final Random rand = new Random();
-  private static final char[] EASY_CHARS = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".toCharArray();
+  /** There is deliberately no number 1(one), and no letters i and j in this array, because they can be interchanged so easily in many fonts. */
+  private static final char[] EASY_CHARS = "234567890ABCDEFGHKLMNOPQRSTUVWXYZabcdefghklmnopqrstuvwxyz".toCharArray();
 
   /**
    * Simply generate some random characters

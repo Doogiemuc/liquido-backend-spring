@@ -26,7 +26,7 @@ public class UserProfileModel {
     if (mobile == null) {
       this.mobilephone = "";
     } else {
-      this.mobilephone = mobile.replaceAll("[^0-9\\+ ]", "");
+      this.mobilephone = mobile.replaceAll("[^0-9\\+]", "");
     }
   }
 }

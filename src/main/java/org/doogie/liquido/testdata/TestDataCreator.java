@@ -750,7 +750,7 @@ public class TestDataCreator implements CommandLineRunner {
 			// Create a random voteOrder. Get some proposal URIs in random order
 			List<String> voteOrder = pollInVoting.getProposals().stream()
 					.filter(p -> rand.nextInt(10) > 0)					// keep 90% of the candidates
-					.sorted((p1, p2) -> rand.nextInt(2) - 1)
+					.sorted((p1, p2) -> rand.nextInt(2)*2 - 1)  // compare randomly  -1 or +1
 					.map(p -> basePath+"/laws/"+p.getId() )
 					.collect(Collectors.toList());
 

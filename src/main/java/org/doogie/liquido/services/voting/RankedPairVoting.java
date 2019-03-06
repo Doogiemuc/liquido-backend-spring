@@ -20,7 +20,7 @@ public class RankedPairVoting {
 
 	/**
 	 * Calculate the winning proposal(s) with the Ranked Pairs voting method.
-	 * 1. TALLY -   For each pair of proposals in the poll calculate the winner of the direct comparision
+	 * 1. TALLY -   For each pair of proposals in the poll calculate the winner of the direct comparison
 	 *              Which proposal has more preferences i&lt;j compared to j&gt;i.
 	 * 2. SORT -    Sort these majorities by the number of preferences i over j
 	 * 3. LOCK IN - For each of the sorted majorities: add the majority to a directed graph,
@@ -29,9 +29,7 @@ public class RankedPairVoting {
 	 * @param poll a poll that finished his voting phase
 	 * @return the sorted list of winners. Best winner to least.
 	 */
-	public static List<LawModel> calcRankedPairsWinners(PollModel poll, List<BallotModel> ballots) {
-		Matrix duelMatrix = calcDuelMatrix(poll, ballots);
-
+	public static List<LawModel> calcRankedPairsWinners(PollModel poll, Matrix duelMatrix) {
 		// TALLY
 		// one "majority"       := how often was candidate i preferred over j
 		// list of "majorities" := sorted list of majorities i>j  with n votes

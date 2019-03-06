@@ -209,8 +209,10 @@ public class PollService {
 		//TODO: make the method of calculating a winner configurable: LawModel winningProposal = calcSchulzeMethodWinners(poll).get(0);
 
 		List<BallotModel> ballots = ballotRepo.findByPoll(poll);
-		LawModel winningProposal = RankedPairVoting.calcRankedPairsWinners(poll, ballots).get(0);
+		Matrix duelMatrix = RankedPairVoting.calcDuelMatrix(poll, ballots);
+		LawModel winningProposal = RankedPairVoting.calcRankedPairsWinners(poll, duelMatrix).get(0);
 		winningProposal.setStatus(LawModel.LawStatus.LAW);
+		poll.setDuelMatrix(duelMatrix);
 		poll.setWinner(winningProposal);
 		lawRepo.save(winningProposal);
 		pollRepo.save(poll);
