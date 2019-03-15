@@ -38,7 +38,6 @@ import static org.junit.Assert.assertFalse;
 @SpringBootTest
 public class PollServiceTests  extends BaseTest {
 
-
 	@Autowired
 	PollService pollService;
 

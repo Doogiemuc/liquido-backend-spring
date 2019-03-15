@@ -24,6 +24,8 @@ public class DoogiesUtil {
     return s == null || s.trim().length() == 0;
   }
 
+	public static boolean isNotEmpty(String s) { return !isEmpty(s);	}
+
   //http://stackoverflow.com/questions/309424/read-convert-an-inputstream-to-a-string
   public static String _stream2String(InputStream inputStream) throws IOException {
     ByteArrayOutputStream result = new ByteArrayOutputStream();
@@ -139,6 +141,8 @@ public class DoogiesUtil {
 			printTreeRec(newPrefix, children.get(i), printer, getChildrenFunc, i == children.size()-1);
 		}
 	}
+
+
 
 	//FUNCTIONAL programming complete overkill:   skip first parameter indent.  Instead curry the printer function in each recursion level *G*
 }

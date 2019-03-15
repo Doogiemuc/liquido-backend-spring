@@ -20,6 +20,7 @@ public class TestFixtures {
 	public static final  int NUM_PROPOSALS = 50;
 	public static final  int NUM_ALTERNATIVE_PROPOSALS = 5;   // proposals in poll
 	public static final  int NUM_LAWS = 2;
+	public static final String LAW_TITLE = "Law 1";
 
 	public static final String AREA0_TITLE = "Area 0";
 	public static final String AREA1_TITLE = "Area 1";
