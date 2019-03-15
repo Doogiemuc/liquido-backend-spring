@@ -6,13 +6,17 @@ import org.doogie.liquido.model.LawProjection;
 import org.doogie.liquido.model.UserModel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.repository.query.QueryByExampleExecutor;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.data.rest.core.annotation.RestResource;
 import org.springframework.format.annotation.DateTimeFormat;
 
+import javax.persistence.criteria.Predicate;
 import java.util.Date;
 import java.util.List;
 
@@ -25,13 +29,11 @@ import java.util.List;
  * This Spring-data repository is a database abstraction layer for "laws".
  */
 @RepositoryRestResource(collectionResourceRel = "laws", path = "laws", itemResourceRel = "law", excerptProjection = LawProjection.class)
-public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>  // , LawRepoCustom
-
-  //MAYBE: Check this out:     extends QueryDslPredicateExecutor<LawModel>
-  // https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#core.extensions
-  // http://www.querydsl.com/
-
-  // sorting:  http://localhost:8080/liquido/v2/laws?sort=id,desc
+public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>
+    //, LawRepoCustom
+    , JpaSpecificationExecutor<LawModel>
+    //, QueryByExampleExecutor<LawModel>
+    //, QuerydslPredicateExecutor<LawModel>
 
 {
 

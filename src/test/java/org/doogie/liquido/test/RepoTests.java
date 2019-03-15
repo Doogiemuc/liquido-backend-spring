@@ -122,4 +122,9 @@ public class RepoTests extends BaseTest {
     assertTrue("Expected at least 2 ideas that user "+TestFixtures.USER1_EMAIL+" supports", supportedLaws.size() >= 2);
     log.debug("User "+supporter.getEmail()+" supports "+supportedLaws.size()+" ideas.");
   }
+
+  public void testLawFindBySpecification() {
+
+    //lawRepo.findBy
+  }
 }
