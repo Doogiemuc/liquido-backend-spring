@@ -1,21 +1,24 @@
 package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.datarepos.CommentRepo;
-import org.doogie.liquido.datarepos.LawEventHandler;
-import org.doogie.liquido.datarepos.LawRepo;
+import org.doogie.liquido.datarepos.*;
+import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.CommentModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.rest.dto.LawQuery;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.util.LiquidoProperties;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
 import javax.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -34,6 +37,12 @@ public class LawService {
 
   @Autowired
   CommentRepo commentRepo;
+
+  @Autowired
+  UserRepo userRepo;
+
+  @Autowired
+  AreaRepo areaRepo;
 
   @Autowired
   LiquidoProperties props;
@@ -129,5 +138,131 @@ public class LawService {
     return sortedProposals;
   }
 
+  // ============= server side search for ideas, proposals and laws ==============
+
+
+  // lovely duplicate metadata :-(
+  public static final String LAW_TITLE = "title";
+  public static final String LAW_DESCRIPTION = "description"; // LawModel.class.getDeclaredFields()[0].getName();
+  public static final String LAW_CREATED_BY = "createdBy";
+  public static final String LAW_AREA = "area";
+  public static final String LAW_STATUS = "status";
+  public static final String LAW_CREATED_AT = "createdAt";
+  public static final String LAW_UPDATED_AT = "updatedAt";
+  public static final String USER_EMAIL = "email";
+
+
+  public static Specification<LawModel> updatedWithinDateRange(LocalDateTime from, LocalDateTime until) {
+    return (Specification<LawModel>) (law, query, builder) -> builder.between(law.<LocalDateTime>get("updatedAt"), from, until);
+  }
+
+  /**
+   * Matches an idea, proposal or law by its creator
+   * @param creator a user
+   * @return spring data JPA {@link Specification<LawModel>}
+   */
+  public static Specification<LawModel> createdBy(UserModel creator) {
+    return (Specification<LawModel>) (law, query, builder) -> builder.equal(law.get(LAW_CREATED_BY), creator);
+  }
+
+  public static Specification<LawModel> matchesArea(AreaModel area) {
+    return (Specification<LawModel>) (law, query, builder) -> builder.equal(law.get(LAW_AREA), area);
+  }
+
+  public static Specification<LawModel> matchesStatus(LawModel.LawStatus status) {
+    return (Specification<LawModel>) (law, query, builder) -> builder.equal(law.get(LAW_STATUS), status);
+  }
+
+  public static Specification<LawModel> supportedBy(UserModel supporter) {
+    return (Specification<LawModel>) (law, query, builder) -> builder.isMember(supporter, law.get("supporters"));   // Why params the other way round???
+  }
+
+  public static Specification<LawModel> updatedAfter(Date after) {
+    return (Specification<LawModel>) (law, query, builder) -> builder.greaterThanOrEqualTo(law.<Date>get(LAW_UPDATED_AT), after);
+  }
+
+  public static Specification<LawModel> updatedBefore(Date before) {
+    return (Specification<LawModel>) (law, query, builder) -> builder.lessThanOrEqualTo(law.<Date>get(LAW_UPDATED_AT), before);
+  }
+
+  public static Specification<LawModel> freeTextSearch(String searchText) {
+    return (Specification<LawModel>) (law, query, cb) -> {
+      String pattern = "%"+searchText+"%";
+      return cb.or(
+        cb.like(law.get(LAW_TITLE), pattern),
+        cb.like(law.get(LAW_DESCRIPTION), pattern)
+        //cb.like(law.get(LAW_CREATED_BY).get(USER_EMAIL), pattern)
+      );
+    };
+  }
+
+  /**
+   * Match a LawModel against a set of query parameters. All query parameters are optional.
+   * If more are given they are AND'ed.
+   * @param lawQuery
+   * @return
+   */
+  public Specification<LawModel> matchesQuery(LawQuery lawQuery) {
+    List<Specification<LawModel>> specs = new ArrayList<>();
+
+    // created by
+    lawQuery.getCreatedByEmail().ifPresent((email) ->       // TODO: email to lowercase?
+      userRepo.findByEmail(email).ifPresent((creator) ->
+        specs.add(createdBy(creator))));            // Now Java 8 finally looks like javascript! :-)
+
+    // supported by
+    lawQuery.getSupportedByEMail().ifPresent((email) ->
+      userRepo.findByEmail(email).ifPresent((supporter) ->
+        specs.add(supportedBy(supporter))));
+
+    // status
+    lawQuery.getStatus().ifPresent((status) ->
+      specs.add(matchesStatus(status)));
+
+    // free text search
+    lawQuery.getSearchText().ifPresent((searchText) ->
+      specs.add(freeTextSearch(searchText)));
+
+    // area
+    lawQuery.getAreaTitle().ifPresent((areaTitle) -> {
+      AreaModel area = areaRepo.findByTitle(areaTitle);
+        specs.add(matchesArea(area));
+    });
+
+    // updated after
+    lawQuery.getUpdatedAfter().ifPresent((after) ->
+      specs.add(updatedAfter(after)));
+
+    // updated before
+    lawQuery.getUpdatedBefore().ifPresent((before) ->
+      specs.add(updatedBefore(before)));
+
+
+    if (specs.size() == 0) return null;   // empty query
+
+    Specification<LawModel> spec = specs.get(0);    // there is no way to build an empty specification that always matches
+    for (int i = 1; i < specs.size(); i++) {
+      spec = spec.and(specs.get(i));
+    }
+    return spec;
+  }
+
+  /**
+   * Sever side search for ideas, proposals and laws. With advanced filter capabilities.
+   * @param lawQuery search criterias
+   * @return paged list of LawModels that match the query
+   */
+  public Page<LawModel> findBySearchQuery(LawQuery lawQuery) {
+    //Implementation note: This couldn't be implemented as a LawRepoCustomImpl, because I could not autowire LawRepo in the custom impl class.
+    Specification<LawModel> spec = matchesQuery(lawQuery);
+    int page = 0;
+    int size = 20;
+    String[] sortByProperties = new String[] {"title"};
+    Sort.Direction direction = Sort.DEFAULT_DIRECTION;
+
+    //TODO: sorting:  http://localhost:8080/liquido/v2/laws?sort=id,desc
+
+    return lawRepo.findAll(spec, PageRequest.of(page, size, direction, sortByProperties));
+  }
 }
 
