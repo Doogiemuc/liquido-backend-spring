@@ -20,6 +20,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
 
@@ -48,7 +49,7 @@ public class LawServiceTests extends BaseTest {
 	public void testFindLaw() {
 		// GIVEN
 		LawQuery lawQuery = new LawQuery();
-		lawQuery.setStatus(LawModel.LawStatus.LAW);
+		lawQuery.setStatusList(Arrays.asList(LawModel.LawStatus.LAW));
 
 		// WHEN
 		Page<LawModel> page = lawService.findBySearchQuery(lawQuery);
@@ -99,7 +100,7 @@ public class LawServiceTests extends BaseTest {
 	public void testFindBySearchQueryWithSorting() {
 		// GIVEN
 		LawQuery lawQuery = new LawQuery();
-		lawQuery.setStatus(LawModel.LawStatus.IDEA);
+		lawQuery.setStatusList(Arrays.asList(LawModel.LawStatus.IDEA));
 		lawQuery.setSingleSortProperty("title");
 		lawQuery.setDirection(Sort.Direction.ASC);
 
@@ -119,7 +120,7 @@ public class LawServiceTests extends BaseTest {
 	public void testFindByCreator() {
 		// GIVEN
 		LawQuery lawQuery = new LawQuery();
-		lawQuery.setStatus(LawModel.LawStatus.IDEA);
+		lawQuery.setStatusList(Arrays.asList(LawModel.LawStatus.IDEA));
 		lawQuery.setCreatedByEmail(TestFixtures.USER1_EMAIL);
 
 		// WHEN
@@ -140,7 +141,7 @@ public class LawServiceTests extends BaseTest {
 	public void testFindBySupporter() {
 		// GIVEN
 		LawQuery lawQuery = new LawQuery();
-		lawQuery.setStatus(LawModel.LawStatus.IDEA);
+		lawQuery.setStatusList(Arrays.asList(LawModel.LawStatus.IDEA));
 		lawQuery.setSupportedByEMail(TestFixtures.USER1_EMAIL);
 
 		// WHEN

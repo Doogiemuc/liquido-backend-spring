@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Filter, paging and sorting parmateres for server side filtering of LawModels.
@@ -18,7 +19,7 @@ import java.util.Optional;
 public class LawQuery {
 
 	// filter criteria (all criterias are optional)
-	Optional<LawModel.LawStatus> status = Optional.empty();
+	Optional<List<LawModel.LawStatus>> statusList = Optional.empty();  // List of status values to filter for. Empty list or Optional.empty() returns all laws in any status
 	Optional<String> searchText = Optional.empty();
 	Optional<Date> updatedAfter = Optional.empty();
 	Optional<Date> updatedBefore= Optional.empty();
@@ -32,8 +33,8 @@ public class LawQuery {
 	Sort.Direction direction = Sort.DEFAULT_DIRECTION;
 	List<String> sortByProperties = new ArrayList<>();
 
-	public void setStatus(@Nullable LawModel.LawStatus status) {
-		this.status = Optional.of(status);
+	public void setStatusList(@Nullable List<LawModel.LawStatus> statusList) {
+		this.statusList = Optional.of(statusList);
 	}
 
 	public void setSearchText(String searchText) {
@@ -73,4 +74,24 @@ public class LawQuery {
 		this.sortByProperties.add(prop);
 	}
 
+	@Override
+	public String toString() {
+		final StringBuffer sb = new StringBuffer("LawQuery{");
+		if (statusList.isPresent()) sb.append(", status=").append(statusList);
+		if (searchText.isPresent()) sb.append(", searchText=").append(searchText);
+		if (updatedAfter.isPresent()) sb.append(", updatedAfter=").append(updatedAfter);
+		if (updatedBefore.isPresent()) sb.append(", updatedBefore=").append(updatedBefore);
+		if (areaTitle.isPresent()) sb.append(", areaTitle=").append(areaTitle);
+		if (createdByEmail.isPresent()) sb.append(", createdByEmail=").append(createdByEmail);
+		if (supportedByEMail.isPresent()) sb.append(", supportedByEMail=").append(supportedByEMail);
+		sb.append(", page=").append(page);
+		sb.append(", size=").append(size);
+		if (sortByProperties.size() > 0) {
+			sb.append(", direction=").append(direction);
+			String props = sortByProperties.stream().collect(Collectors.joining(","));
+			sb.append(", sortByProperties=").append(props);
+		}
+		sb.append('}');
+		return sb.toString();
+	}
 }
