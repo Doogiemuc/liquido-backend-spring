@@ -329,10 +329,12 @@ public class TestDataCreator implements CommandLineRunner {
 
     for (int i = 0; i < numUsers; i++) {
       String email = mailPrefix + (i+1) + "@liquido.de";    // Remember that DB IDs start at 1. Testuser1 has ID=1 in DB. And there is no testuser0
+			String name  = "Test User" + (i+1);
+			if (i == 0) name = TestFixtures.USER1_NAME;           // user1 has a special fixed name. And yes  this breaks the system. That's the idea of test data :-) Sames as in areal world db.
       UserModel newUser = new UserModel(email);
 
       UserProfileModel profile = new UserProfileModel();
-      profile.setName("Test User" + (i+1));
+      profile.setName(name);
       profile.setPicture("/static/img/photos/"+((i%3)+1)+".png");
       profile.setWebsite("http://www.liquido.de");
       profile.setMobilephone("+4912345"+(countUsers+i+1));  // deterministic unique phone numbers
@@ -412,6 +414,7 @@ public class TestDataCreator implements CommandLineRunner {
     log.info("Seeding Ideas ...");
     for (int i = 0; i < TestFixtures.NUM_IDEAS; i++) {
       String ideaTitle = "Idea " + i + " that suggest that we definitely need a longer title for ideas";
+      if (i == 0) ideaTitle = TestFixtures.IDEA_0_TITLE;   // special fixed title for first idea
       StringBuffer ideaDescr = new StringBuffer();
       ideaDescr.append(DoogiesUtil.randString(8));    // prepend with some random chars to test sorting
       ideaDescr.append(" ");

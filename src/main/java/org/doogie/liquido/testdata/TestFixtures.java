@@ -19,13 +19,13 @@ public class TestFixtures {
 	public static final int NUM_IDEAS = 111;
 	public static final  int NUM_PROPOSALS = 50;
 	public static final  int NUM_ALTERNATIVE_PROPOSALS = 5;   // proposals in poll
-	public static final  int NUM_LAWS = 2;
-	public static final String LAW_TITLE = "Law 1";
+
 
 	public static final String AREA0_TITLE = "Area 0";
 	public static final String AREA1_TITLE = "Area 1";
 
 	public static final String MAIL_PREFIX = "testuser";
+	public static final String USER1_NAME = "Donald Duck";
   public static final String USER1_EMAIL = MAIL_PREFIX+"1@liquido.de";      // testuser1 has  ID 1 in the DB !
   public static final String USER2_EMAIL = MAIL_PREFIX+"2@liquido.de";
   public static final String USER3_EMAIL = MAIL_PREFIX+"3@liquido.de";
@@ -39,11 +39,19 @@ public class TestFixtures {
 	public static final String USER11_EMAIL = MAIL_PREFIX+"11@liquido.de";
 	public static final String USER12_EMAIL = MAIL_PREFIX+"12@liquido.de";
 
+	// Ideas
+	public static final String IDEA_0_TITLE = "Idea 0 title from TestFixtures";
+
+	// Laws
+	public static final  int NUM_LAWS = 2;
+	public static final String LAW_TITLE = "Law 1";
+
   /**
    * This secret is used when a test needs to create a voter token
    * This must only be used in tests!
    */
 	public static final String USER_TOKEN_SECRET = "userTokenSecret";
+
 
 
 	/** dynamic method as TestFixture.  Mmhh nice! */
