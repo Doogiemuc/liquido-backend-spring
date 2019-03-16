@@ -12,7 +12,8 @@ import java.util.Set;
  * and adds some more date fields relevant for a proposal or law.
  *
  * Keep in mind that projections are only used, when a LawModel is returned inside a list, e.g. in "_embedded" array.
- * When exactly one LawModel is returned e.g. GET /laws/4711 then  * Spring Data REST will always show the original LawModel as JSON. Because only then can the client send PUT requests with this data.
+ * When exactly one LawModel is returned e.g. by GET /laws/4711 ,
+ * then Spring Data REST will always show the original LawModel as JSON. Because only then can the client send PUT requests with this data.
  */
 @Projection(name = "lawProjection", types = { LawModel.class })
 public interface LawProjection {
