@@ -17,6 +17,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
+import javax.persistence.criteria.Join;
+import javax.persistence.criteria.JoinType;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -139,22 +141,24 @@ public class LawService {
   }
 
   // ============= server side search for ideas, proposals and laws ==============
+  //
+  // References
+  // https://www.baeldung.com/rest-api-query-search-language-more-operations   Advanced REST queries
+  // https://leaks.wanari.com/2018/01/23/awesome-spring-specification/         nice code
 
 
-  // lovely duplicate metadata :-(
+  // lovely duplicate metadata :-(     This could be created automatically by code generation. But that's overkill!
   public static final String LAW_TITLE = "title";
   public static final String LAW_DESCRIPTION = "description"; // LawModel.class.getDeclaredFields()[0].getName();
   public static final String LAW_CREATED_BY = "createdBy";
   public static final String LAW_AREA = "area";
   public static final String LAW_STATUS = "status";
+  public static final String LAW_SUPPORTERS = "supporters";
   public static final String LAW_CREATED_AT = "createdAt";
   public static final String LAW_UPDATED_AT = "updatedAt";
   public static final String USER_EMAIL = "email";
+  public static final String USER_NAME = "name";
 
-
-  public static Specification<LawModel> updatedWithinDateRange(LocalDateTime from, LocalDateTime until) {
-    return (Specification<LawModel>) (law, query, builder) -> builder.between(law.<LocalDateTime>get("updatedAt"), from, until);
-  }
 
   /**
    * Matches an idea, proposal or law by its creator
@@ -174,24 +178,37 @@ public class LawService {
   }
 
   public static Specification<LawModel> supportedBy(UserModel supporter) {
-    return (Specification<LawModel>) (law, query, builder) -> builder.isMember(supporter, law.get("supporters"));   // Why params the other way round???
+    return (Specification<LawModel>) (law, query, builder) -> builder.isMember(supporter, law.get(LAW_SUPPORTERS));   // Why does builder.isMember have the params the other way round???
   }
 
   public static Specification<LawModel> updatedAfter(Date after) {
     return (Specification<LawModel>) (law, query, builder) -> builder.greaterThanOrEqualTo(law.<Date>get(LAW_UPDATED_AT), after);
   }
 
+  public static Specification<LawModel> updatedWithinDateRange(LocalDateTime from, LocalDateTime until) {
+    return (Specification<LawModel>) (law, query, builder) -> builder.between(law.<LocalDateTime>get(LAW_UPDATED_AT), from, until);
+  }
+
+
   public static Specification<LawModel> updatedBefore(Date before) {
     return (Specification<LawModel>) (law, query, builder) -> builder.lessThanOrEqualTo(law.<Date>get(LAW_UPDATED_AT), before);
   }
 
+  /**
+   * This free text search tries to match as much as possible. This specification matches if searchText is contained in
+   * law's title or description or email of creator or name of creator.
+   * @param searchText any string that may be contained in one of the fields.
+   * @return a specification that matches LawModels
+   */
   public static Specification<LawModel> freeTextSearch(String searchText) {
     return (Specification<LawModel>) (law, query, cb) -> {
       String pattern = "%"+searchText+"%";
+      Join<LawModel, UserModel> creatorJoin = law.join(LAW_CREATED_BY, JoinType.LEFT);
       return cb.or(
         cb.like(law.get(LAW_TITLE), pattern),
-        cb.like(law.get(LAW_DESCRIPTION), pattern)
-        //cb.like(law.get(LAW_CREATED_BY).get(USER_EMAIL), pattern)
+        cb.like(law.get(LAW_DESCRIPTION), pattern),
+        cb.like(creatorJoin.get(USER_EMAIL), pattern),
+        cb.like(creatorJoin.get("profile").get("name"), pattern)
       );
     };
   }
@@ -202,7 +219,7 @@ public class LawService {
    * @param lawQuery
    * @return
    */
-  public Specification<LawModel> matchesQuery(LawQuery lawQuery) {
+  private Specification<LawModel> matchesQuery(LawQuery lawQuery) {
     List<Specification<LawModel>> specs = new ArrayList<>();
 
     // created by
@@ -253,16 +270,13 @@ public class LawService {
    * @return paged list of LawModels that match the query
    */
   public Page<LawModel> findBySearchQuery(LawQuery lawQuery) {
-    //Implementation note: This couldn't be implemented as a LawRepoCustomImpl, because I could not autowire LawRepo in the custom impl class.
     Specification<LawModel> spec = matchesQuery(lawQuery);
-    int page = 0;
-    int size = 20;
-    String[] sortByProperties = new String[] {"title"};
-    Sort.Direction direction = Sort.DEFAULT_DIRECTION;
+    Pageable pageable = lawQuery.getSortByProperties().size() == 0
+      ? PageRequest.of(lawQuery.getPage(), lawQuery.getSize())        // Pagerequest.of does not accept empty properties array :-(  This call sets Sort.UNSORTED
+      : PageRequest.of(lawQuery.getPage(), lawQuery.getSize(), lawQuery.getDirection(), lawQuery.getSortbyPropertiesAsStringArray());
 
-    //TODO: sorting:  http://localhost:8080/liquido/v2/laws?sort=id,desc
-
-    return lawRepo.findAll(spec, PageRequest.of(page, size, direction, sortByProperties));
+    //Implementation note: This couldn't be implemented as a LawRepoCustomImpl, because I could not autowire LawRepo in the custom impl class.
+    return lawRepo.findAll(spec, pageable);
   }
 }
 
