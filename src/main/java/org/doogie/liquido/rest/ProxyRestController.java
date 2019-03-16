@@ -32,7 +32,7 @@ import static org.springframework.web.bind.annotation.RequestMethod.*;
  * Liquido REST endpoint for working with proxies.
  */
 @Slf4j
-//@BasePathAwareController   //ProxyRestController MUST be a spring data rest controller. Otherwise the deserialization of URIs does not work in POST /my/proxy  Either a BasePathAwareController or a RepositoryRestController work.
+//@BasePathAwareController   //BUGFIX: ProxyRestController MUST be a  RepositoryRestController. Otherwise the deserialization of URIs does not work in POST /my/proxy
 @RepositoryRestController
 @RequestMapping("${spring.data.rest.base-path}")   // MUST have Request Mapping on class level https://stackoverflow.com/questions/38607421/spring-data-rest-controllers-behaviour-and-usage-of-basepathawarecontroller
 																									 //https://jira.spring.io/browse/DATAREST-1327

@@ -2,10 +2,7 @@ package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
-import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.CommentModel;
-import org.doogie.liquido.model.LawModel;
-import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.LawQuery;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.util.LiquidoProperties;
@@ -15,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.stereotype.Component;
 
 import javax.persistence.criteria.Join;
@@ -48,6 +46,7 @@ public class LawService {
 
   @Autowired
   LiquidoProperties props;
+
 
   /**
    * Check if a given idea is already supported by the currently logged in user.
@@ -177,6 +176,11 @@ public class LawService {
     return (Specification<LawModel>) (law, query, builder) -> builder.equal(law.get(LAW_STATUS), status);
   }
 
+  /** matches LawModels that have a status which is contained in the passed list of statuus */
+  public static Specification<LawModel> matchesStatusList(List<LawModel.LawStatus> statusList) {
+    return (Specification<LawModel>) (law, query, builder) -> law.get("status").in(statusList);
+  }
+
   public static Specification<LawModel> supportedBy(UserModel supporter) {
     return (Specification<LawModel>) (law, query, builder) -> builder.isMember(supporter, law.get(LAW_SUPPORTERS));   // Why does builder.isMember have the params the other way round???
   }
@@ -193,6 +197,16 @@ public class LawService {
   public static Specification<LawModel> updatedBefore(Date before) {
     return (Specification<LawModel>) (law, query, builder) -> builder.lessThanOrEqualTo(law.<Date>get(LAW_UPDATED_AT), before);
   }
+
+  /* This would be the "old" way of getting the necessary dependencies by hand:
+
+  @Autowire EntityManager em;
+  CriteriaBuilder cb = em.getCriteriaBuilder();
+  CriteriaQuery<Message> cq = cb.createQuery(LawModel.class);
+  Root<Message> root = cq.from(LawModel.class);
+
+  These are now provided by Spring when using Specification.
+  */
 
   /**
    * This free text search tries to match as much as possible. This specification matches if searchText is contained in
@@ -233,8 +247,8 @@ public class LawService {
         specs.add(supportedBy(supporter))));
 
     // status
-    lawQuery.getStatus().ifPresent((status) ->
-      specs.add(matchesStatus(status)));
+    lawQuery.getStatusList().ifPresent((statusList) ->
+      specs.add(matchesStatusList(statusList)));
 
     // free text search
     lawQuery.getSearchText().ifPresent((searchText) ->
@@ -272,7 +286,7 @@ public class LawService {
   public Page<LawModel> findBySearchQuery(LawQuery lawQuery) {
     Specification<LawModel> spec = matchesQuery(lawQuery);
     Pageable pageable = lawQuery.getSortByProperties().size() == 0
-      ? PageRequest.of(lawQuery.getPage(), lawQuery.getSize())        // Pagerequest.of does not accept empty properties array :-(  This call sets Sort.UNSORTED
+      ? PageRequest.of(lawQuery.getPage(), lawQuery.getSize())        // PageRequest.of does not accept empty properties array :-(  This call sets Sort.UNSORTED
       : PageRequest.of(lawQuery.getPage(), lawQuery.getSize(), lawQuery.getDirection(), lawQuery.getSortbyPropertiesAsStringArray());
 
     //Implementation note: This couldn't be implemented as a LawRepoCustomImpl, because I could not autowire LawRepo in the custom impl class.
