@@ -5,7 +5,7 @@ import org.doogie.liquido.model.CommentModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
@@ -13,7 +13,7 @@ import java.util.Optional;
  * Utility methods for comments of a proposal
  */
 @Slf4j
-@Component
+@Service
 public class CommentService {
 
   @Autowired

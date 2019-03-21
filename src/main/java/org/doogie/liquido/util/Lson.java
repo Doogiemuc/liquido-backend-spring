@@ -21,7 +21,7 @@ public class Lson extends HashMap<String, Object> {
 		mapper = new ObjectMapper();
 	}
 
-	/** Factory method.  Lson.builder().putArray("name", someValue).... */
+	/** Factory method.  Lson.builder().put("name", someValue).... */
 	public static Lson builder() {
 		return new Lson();
 	}
@@ -45,7 +45,7 @@ public class Lson extends HashMap<String, Object> {
 		if (idx > 0) {
 			String key       = path.substring(0, idx);
 			String childPath = path.substring(idx+1);
-			Lson child = (Lson)this.get(key);
+			Map child = (Map)this.get(key);
 			if (child != null) {
 				child.put(childPath, value);
 			} else {
@@ -58,32 +58,15 @@ public class Lson extends HashMap<String, Object> {
 	}
 
 	/**
-	 * Put a value under a give child element, which must at least be a Map.
-	 * Will create the child as Lson under key1 if that key does not exist in the parent Lson yet.
-	 * This way you can easily create something like this:
-	 * <pre>
-	 * {
-	 *   key1: {		// child under key1 must at least be a Map
-	 *     key2: value
-	 *     //other keys might already exist here.
-	 *   }
-	 * }
-	 * </pre>
-	 *
-	 * @param key1 child key pointing to the Map
-	 * @param key2 map key inside this map
-	 * @param value value to putArray into the child Map
-	 * @throws ClassCastException when there is no Map under key1
-	 * @return the parent Lson for chaining
+	 * Put value under that path, but only if value != null.
+	 * This prevents creating attributes with empty values.
+	 * @param path
+	 * @param value
+	 * @return
 	 */
-	public Lson putLsonChild(String key1, String key2, Object value) {
-		if (this.containsKey(key1)) {
-			Map child = (Map)this.get(key1);
-			child.put(key2, value);
-		} else {
-			super.put(key1, Lson.builder(key2, value));
-		}
-		return this;
+	public Lson putIfValueIsPresent(String path, Object value) {
+		if (value == null) return this;
+		return this.put(path, value);
 	}
 
 	/**

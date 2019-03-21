@@ -382,7 +382,7 @@ public class RestEndpointTests extends BaseTest {
 
     // ===== Find a poll tha is in VOTING phase
     List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
-    assertTrue("Need a poll that currently is in VOTING phase for this test", polls != null && polls.size() > 0);
+    assertTrue("Need a poll that currently is in VOTING phase for this test", polls != null && polls.limit() > 0);
 
     String pollUri     = basePath + "/polls/" + polls.get(0).getId();
     String proposalUri = basePath + "/laws/" + this.laws.get(0).getId();

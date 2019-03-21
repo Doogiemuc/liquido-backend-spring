@@ -2,7 +2,10 @@ package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
-import org.doogie.liquido.model.*;
+import org.doogie.liquido.model.AreaModel;
+import org.doogie.liquido.model.CommentModel;
+import org.doogie.liquido.model.LawModel;
+import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.LawQuery;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.util.LiquidoProperties;
@@ -12,8 +15,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.data.projection.ProjectionFactory;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.JoinType;
@@ -24,9 +26,10 @@ import java.util.stream.Collectors;
 
 /**
  * Utility methods for a Law. These are for example used by {@link org.doogie.liquido.model.LawProjection}
+ * And advanced search for LawModels by filter query.
  */
 @Slf4j
-@Component
+@Service
 public class LawService {
 
   @Autowired
@@ -210,19 +213,21 @@ public class LawService {
 
   /**
    * This free text search tries to match as much as possible. This specification matches if searchText is contained in
-   * law's title or description or email of creator or name of creator.
+   * law's title or description or email of creator or name of creator. It also matches case insensitive.
    * @param searchText any string that may be contained in one of the fields.
-   * @return a specification that matches LawModels
+   * @return a specification that matches LawModels or null if searchText is null.
    */
   public static Specification<LawModel> freeTextSearch(String searchText) {
     return (Specification<LawModel>) (law, query, cb) -> {
-      String pattern = "%"+searchText+"%";
+      if (searchText == null || searchText.length() == 0) return null;
+      String pattern = "%"+searchText.toLowerCase()+"%";
       Join<LawModel, UserModel> creatorJoin = law.join(LAW_CREATED_BY, JoinType.LEFT);
+
       return cb.or(
-        cb.like(law.get(LAW_TITLE), pattern),
-        cb.like(law.get(LAW_DESCRIPTION), pattern),
-        cb.like(creatorJoin.get(USER_EMAIL), pattern),
-        cb.like(creatorJoin.get("profile").get("name"), pattern)
+        cb.like(cb.lower(law.get(LAW_TITLE)), pattern),
+        cb.like(cb.lower(law.get(LAW_DESCRIPTION)), pattern),
+        cb.like(cb.lower(creatorJoin.get(USER_EMAIL)), pattern),
+        cb.like(cb.lower(creatorJoin.get("profile").get("name")), pattern)
       );
     };
   }
@@ -237,13 +242,13 @@ public class LawService {
     List<Specification<LawModel>> specs = new ArrayList<>();
 
     // created by
-    lawQuery.getCreatedByEmail().ifPresent((email) ->       // TODO: email to lowercase?
-      userRepo.findByEmail(email).ifPresent((creator) ->
-        specs.add(createdBy(creator))));            // Now Java 8 finally looks like javascript! :-)
+    lawQuery.getCreatedByEmail().ifPresent((email) ->
+      userRepo.findByEmail(email.toLowerCase()).ifPresent((creator) ->
+        specs.add(createdBy(creator))));
 
     // supported by
-    lawQuery.getSupportedByEMail().ifPresent((email) ->
-      userRepo.findByEmail(email).ifPresent((supporter) ->
+    lawQuery.getSupportedByEMail().ifPresent((email) ->       // Now Java 8 finally looks like javascript! :-)
+      userRepo.findByEmail(email.toLowerCase()).ifPresent((supporter) ->
         specs.add(supportedBy(supporter))));
 
     // status
@@ -254,11 +259,16 @@ public class LawService {
     lawQuery.getSearchText().ifPresent((searchText) ->
       specs.add(freeTextSearch(searchText)));
 
-    // area
+    // area title
     lawQuery.getAreaTitle().ifPresent((areaTitle) -> {
       AreaModel area = areaRepo.findByTitle(areaTitle);
-        specs.add(matchesArea(area));
+      specs.add(matchesArea(area));
     });
+
+    // area Id
+    lawQuery.getAreaId().ifPresent((areaId) ->
+      areaRepo.findById(areaId).ifPresent(area ->
+        specs.add(matchesArea(area))));
 
     // updated after
     lawQuery.getUpdatedAfter().ifPresent((after) ->
@@ -280,14 +290,21 @@ public class LawService {
 
   /**
    * Sever side search for ideas, proposals and laws. With advanced filter capabilities.
-   * @param lawQuery search criterias
-   * @return paged list of LawModels that match the query
+   * @param lawQuery search criteria for LawModels
+   * @return list of LawModels that match the given query
    */
   public Page<LawModel> findBySearchQuery(LawQuery lawQuery) {
     Specification<LawModel> spec = matchesQuery(lawQuery);
+
+    /*
     Pageable pageable = lawQuery.getSortByProperties().size() == 0
-      ? PageRequest.of(lawQuery.getPage(), lawQuery.getSize())        // PageRequest.of does not accept empty properties array :-(  This call sets Sort.UNSORTED
-      : PageRequest.of(lawQuery.getPage(), lawQuery.getSize(), lawQuery.getDirection(), lawQuery.getSortbyPropertiesAsStringArray());
+      ? PageRequest.of(lawQuery.getPage(), lawQuery.getLimit())        // PageRequest.of does not accept empty properties array :-(  This call sets Sort.UNSORTED
+      : PageRequest.of(lawQuery.getPage(), lawQuery.getLimit(), lawQuery.getDirection(), lawQuery.getSortByPropertiesAsStringArray());
+    */
+
+    Pageable pageable = lawQuery.getSortByProperties().size() == 0
+      ? new OffsetLimitPageable(lawQuery.getOffset(), lawQuery.getLimit())
+      : new OffsetLimitPageable(lawQuery.getOffset(), lawQuery.getLimit(), Sort.by(lawQuery.getDirection(), lawQuery.getSortByPropertiesAsStringArray()));
 
     //Implementation note: This couldn't be implemented as a LawRepoCustomImpl, because I could not autowire LawRepo in the custom impl class.
     return lawRepo.findAll(spec, pageable);
