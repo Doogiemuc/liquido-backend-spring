@@ -61,7 +61,7 @@ class DirectedGraph extends HashMap<Integer, Set<Integer>> {
 			sb.append("]");
 			if (it.hasNext()) sb.append(", ");
 		}
-		//if (this.keySet().size() > 0) sb.delete(sb.length()-2, sb.length()-1);
+		//if (this.keySet().limit() > 0) sb.delete(sb.length()-2, sb.length()-1);
 		sb.append("]");
 		return sb.toString();
 	}

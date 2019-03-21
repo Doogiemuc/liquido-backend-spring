@@ -88,7 +88,7 @@ public class PollServiceTests  extends BaseTest {
 			log.debug("Seeding " + NUM_USERS + " users");
 			PollServiceTests.users = testDataCreator.seedUsers(NUM_USERS, mailPrefix);
 		} else {
-			log.debug("Using existing "+users.size()+" users ");
+			log.debug("Using existing "+users.limit()+" users ");
 		}
 	}
 	*/
