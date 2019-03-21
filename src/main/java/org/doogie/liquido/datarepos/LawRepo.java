@@ -54,7 +54,7 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>
    * case insensitive full-text search for ideas, proposals or laws in their fields title, description, name or email of creator
    * @param searchterm text that needs to be contained
    * @param status <b>optionally</b> filter for status == IDEA|PROPOSAL|LAW   (must be uppercase!)
-   * @param p size of one page and page number
+   * @param p limit of one page and page number
    * @return matching ideas, proposals and laws
    */
   @Query("select distinct l from LawModel l where " +

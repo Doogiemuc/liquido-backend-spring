@@ -9,7 +9,7 @@ public class Matrix {
 
 	/**
 	 * Create a new matrix. All values are 0 by default.
-	 * An empty Matrix of size 0,0 is allowed.
+	 * An empty Matrix of limit 0,0 is allowed.
 	 * @param rows
 	 * @param cols
 	 */
@@ -89,7 +89,7 @@ public class Matrix {
 
 	/**
 	 * Create a Matrix from a JSON array of arrays, e.g. [[1,2,3],[4,5,6],[7,8,9]]
-	 * Edge case: "[]" will be converted to a Matrix of size (0,0)
+	 * Edge case: "[]" will be converted to a Matrix of limit (0,0)
 	 * @param json a json value that contains an array of arrays
 	 * @return
 	 * @throws IllegalArgumentException when json is null or does not start with [ or does not end with ]
