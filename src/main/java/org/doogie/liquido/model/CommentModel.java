@@ -27,7 +27,7 @@ public class CommentModel extends BaseModel {
   @NonNull
 	@NotNull
 	@ManyToOne
-	public LawModel law;
+	public LawModel proposal;
 
 	/** Suggestion for improvement or comment.  The comment can be written in HTML. */
   @NotNull
@@ -72,8 +72,8 @@ public class CommentModel extends BaseModel {
   }
 
 
-  public CommentModel(LawModel law, String comment, CommentModel parent) {
-  	this.law = law;
+  public CommentModel(LawModel proposal, String comment, CommentModel parent) {
+  	this.proposal = proposal;
   	this.comment = comment;
   	this.parent = parent;
 	}
@@ -85,6 +85,8 @@ public class CommentModel extends BaseModel {
   	b.append(this.getClass().getSimpleName());
   	b.append("{id=");
   	b.append(this.getId());
+  	b.append(", proposal.id=");
+  	b.append(this.getProposal().getId());
   	b.append(", comment='");
   	b.append(this.getComment());
   	b.append(", createdByID=");

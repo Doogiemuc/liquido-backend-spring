@@ -37,8 +37,9 @@ public class LiquidoBackendSpringApplication {
 
 		SpringApplication.run(LiquidoBackendSpringApplication.class, args);
 
-
-
+		System.out.println("=======================================================");
+		System.out.println("======== LIQUIDO backend is up and running! ===========");
+		System.out.println("=======================================================");
 	}
 
   //TODO: package-by-feature  http://www.javapractices.com/topic/TopicAction.do?Id=205
