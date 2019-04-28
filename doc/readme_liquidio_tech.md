@@ -6,10 +6,10 @@ This is a more technical guide for developers
 
  - At first there is an short rough idea. (NEW_IDEA)
  - When an idea reaches its quorum, then it becomes a proposal. (NEW_PROPOSAL)
- - Alternative proposals can be added to that initial proposal. (NEW_PROPOSAL) 
+ - Alternative proposals can be added to that initial proposal. (NEW_PROPOSAL)
    But they first need to reach a certain quorum too, before they can be voted upon.
  - Each proposal can be discussed. Comments can be voted up and down. (ELABORATION)
- - n days after the initial proposal reached its quorum, then the voting phase starts. 
+ - n days after the initial proposal reached its quorum, then the voting phase starts.
    All competing proposals can be voted upon. (VOTING_PHASE)
  - The winning proposal becomes a law (LAW) and all other proposals are (DECLINED)
 
@@ -47,13 +47,13 @@ This is a more technical guide for developers
  - Add a suggestion to a law
  - Up/Down-vote a suggestion.
  - Sort competing proposals into vote order (XXL)
- 
+
  ### Voter Token
- 
+
  A voter token is the digital representation of your right to vote.
  You can request a voter token for every area.
- 
- You need a voterToken to 
+
+ You need a voterToken to
   - cast your vote
   - check for an existing ballot in a given poll
   - assign, edit or remove a proxy
@@ -62,17 +62,17 @@ This is a more technical guide for developers
   - get number of real delegations to your checksum
 
 Get proxy info for an area is possible without a voterToken
-    
- 
+
+
  ### Token Checksum
- 
+
  The token checksum is the hashed value of your voter token. And a server secret, so that only the
  server is able to create valid checksums.
- 
- 
- 
- 
-     Voter =request=> Voter Token =hashed=> Voter's Checksum =delegatedTo=> Proxies Checksum <= ProxyToken <= Proxy 
+
+
+
+
+     Voter =request=> Voter Token =hashed=> Voter's Checksum =delegatedTo=> Proxies Checksum <= ProxyToken <= Proxy
 
 
 # REST API
@@ -87,12 +87,12 @@ GET /my/voterToken/{areaId}
 GET /my/proxy/{areaId}                      collect all info about the proxy and delegations in that area
 PUT /my/proxy/{areaId}  AssignProxyRequest  Assign (or reassign) a proxy
 DELETE /my/proxy/{areaId}                   Remove a proxy in that area
- 
+
 ### Being and becoming a proxy onself
- 
+
 GET /my/delegations/{areaId}                       get accepted and requested delegations
 PUT /my/delegations/{areaId}/accept?voterToken=... accept delegation requests
-PUT /my/delegations/{areaId}/becomePublicProxy     become a public proxy in that area 
+PUT /my/delegations/{areaId}/becomePublicProxy     become a public proxy in that area
 
 GET /users/{userId}/publicChecksum         get checksum of public proxy
 
@@ -108,8 +108,18 @@ GET /users/{userId}/publicChecksum         get checksum of public proxy
 
 ## Docker build
 
+ * Check your database configuration in the default `src/java/resources/application.properties` file
  * If you are on Windows: Start "Docker for Windows" `mvn dockerfile:build`
- * Run `docker run org.doogie/liquido-backend-spring`
+
+## Run docker container
+
+ * `docker run -p 8080:8080 org.doogie/liquido-backend-spring`
+   will create and start a docker container and expose port 8080. Check that no other process is already running on that port!
+ * Reconnect to logs of an already running container: `docker logs -f [CONTAINER_ID]`
+
+## Docker commands on WIN
+
+ * `docker ps -a -q | ForEach { docker stop $_ }`  - stop all running containers
 
 
 ## Build a release with maven
@@ -117,7 +127,7 @@ GET /users/{userId}/publicChecksum         get checksum of public proxy
  * `mvn release:prepare` -> Enter name for tag (can accept default) and next development version
  *  This will also run all tests. There must not be any uncommitted local changes in your working directory.
  *  This will automatically increment the build number (`mvn buildnumber:create`)
-  
+
 
 
 
@@ -127,15 +137,15 @@ GET /users/{userId}/publicChecksum         get checksum of public proxy
 
 Run the test cases under `srs/test/java` with `mvn test -DloadSampleDB=true`.
 Spring Boot will automatically start the test server for you.
-Test data is taken from the sample DB. 
+Test data is taken from the sample DB.
 
 ## Test Data
 
-Test data can be created with `TestDataCreator`. BE CAREFULL: This will delete and kill your whole DB!!! 
+Test data can be created with `TestDataCreator`. BE CAREFULL: This will delete and kill your whole DB!!!
 
     -Dspring.profiles.active=dev -DcreateSampleData=true -Dspring.jpa.hibernate.ddl-auto=create
 
-Then all tests can be run against this test data by passing the environemtn variable 
+Then all tests can be run against this test data by passing the environemtn variable
 
     -DloadSampleDB=true
 
@@ -171,7 +181,7 @@ https://www.draw.io/#LLiquido%20Architecture
  - [Spring Data Rest - Security](http://docs.spring.io/spring-data/rest/docs/current/reference/html/#security)
 
 ## Good Spring Boot Resources
- 
+
  - https://github.com/spring-projects/spring-data-examples
  - Book+++: High Performance Java Persistence: https://leanpub.com/high-performance-java-persistence?utm_source=blog&utm_medium=banner&utm_campaign=banner
  - [Great Hibernate Tutorials](https://vladmihalcea.com/tutorials/hibernate/)  about mappings and sequences
@@ -194,10 +204,10 @@ https://www.draw.io/#LLiquido%20Architecture
  - [Baelddung Oauth Tutorials Overview](https://www.baeldung.com/spring-security-oauth)
  - [Baeldung Tutorial Oauth with JWT](https://www.baeldung.com/spring-security-oauth-jwt)
  - [Very nice Sprint Boot example app for JWT](https://github.com/nydiarra/springboot-jwt)
- 
+
  ### OLD: conneetion to MongoDB
- 
+
     # MongoDB via spring-data-mongo
     spring.data.mongodb.uri=mongodb://testuser:PASSWORD@ds019664.mlab.com:19664/liquido-test
     spring.data.mongodb.uri=mongodb://localhost:27017/liquido-test
-    
+

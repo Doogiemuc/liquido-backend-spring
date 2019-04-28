@@ -4,7 +4,7 @@
 
 	<groupId>org.doogie.liquido</groupId>
 	<artifactId>liquido-backend-spring</artifactId>
-	<version>0.3.1-SNAPSHOT</version>
+	<version>0.9.2</version>
 	<packaging>jar</packaging>
 
 	<name>liquido-backend-spring</name>
@@ -188,7 +188,8 @@
 	</dependencies>
 
 	<build>
-		<finalName>${project.artifactId}-${project.version}-build${buildNumber}</finalName>
+		<!--finalName>${project.artifactId}-${project.version}-build${buildNumber}</finalName -->
+        <finalName>${project.artifactId}-${project.version}</finalName>
 		<plugins>
 
 			<!-- maven-surefire-plugin for running JUnit tests -->
@@ -205,7 +206,7 @@
 			<!-- Auto increment a numerical build number. Stored in buildNumber.properties file.
 			     mvn buildnumber:create
 			-->
-			<plugin>
+			<!-- plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>buildnumber-maven-plugin</artifactId>
 				<version>1.4</version>
@@ -218,17 +219,17 @@
 					</execution>
 				</executions>
 				<configuration>
-					<!-- See https://stackoverflow.com/questions/8988405/automatically-incrementing-a-build-number-in-a-java-project -->
+					<!- See https://stackoverflow.com/questions/8988405/automatically-incrementing-a-build-number-in-a-java-project ->
 					<format>{0,number}</format>
 					<items>
 					  <item>buildNumber</item>
 					</items>
 					<buildNumberPropertiesFileLocation>${basedir}/build/buildNumber.properties</buildNumberPropertiesFileLocation>
-					<!-- buildnumber-maven-plugin by default checks for local changes, ie. not yet commited files -->
+					<!- buildnumber-maven-plugin by default checks for local changes, ie. not yet commited files ->
 					<doCheck>false</doCheck>
 					<doUpdate>false</doUpdate>
 				</configuration>
-			</plugin>
+			</plugin -->
 
 			<!-- Create docker container -->
 			<plugin>
@@ -241,6 +242,7 @@
 				<version>1.3.7</version>
 				<configuration>
 					<repository>${docker.image.prefix}/${project.artifactId}</repository>
+					<!-- tag>${project.version}</tag -->  <!-- will default to "latest" -->
 					<buildArgs>
 						<JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
 					</buildArgs>

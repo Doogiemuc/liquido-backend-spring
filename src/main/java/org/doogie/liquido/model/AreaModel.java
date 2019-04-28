@@ -31,7 +31,7 @@ public class AreaModel extends BaseModel {
   @NotNull
   public UserModel createdBy;
 
-  /* This way one could inline createdBy user information as "creator" field.  But this would unconditionally ALWAYS inline that informatin.  e.g. also  as law.area.creator  in list of laws which I do not want
+  /* This way one could inline createdBy user information as "creator" field.  But this would unconditionally ALWAYS inline that informatin.  e.g. also  as proposal.area.creator  in list of laws which I do not want
   public UserModel getCreator() {
     return this.createdBy;
   }

@@ -335,7 +335,7 @@ public class RestEndpointTests extends BaseTest {
   }
 
   /**
-   * Create a new proposal for a law. This test case posts an alternative proposal to an already existing proposal.
+   * Create a new proposal for a proposal. This test case posts an alternative proposal to an already existing proposal.
    */
   @Test
   public void testPostAlternativeProposal() {
@@ -351,7 +351,7 @@ public class RestEndpointTests extends BaseTest {
     // Instead I want to post plain JSON as a client would:
     String areaUri  = basePath + "/areas/" + this.areas.get(0).getId();
     String pollUri  = basePath + "/polls/" + polls.get(0).getId();
-    String newLawTitle = "Law from test "+System.currentTimeMillis() % 10000;  // law.title must be unique!!
+    String newLawTitle = "Law from test "+System.currentTimeMillis() % 10000;  // proposal.title must be unique!!
 
     String newLawJson = new Lson()
       .put("title", newLawTitle)
@@ -368,8 +368,8 @@ public class RestEndpointTests extends BaseTest {
     HttpEntity<String> entity = new HttpEntity<>(newLawJson.toString(), headers);
 
     LawModel createdLaw = client.postForObject("/laws", entity, LawModel.class);  // this actually deserializes the response into a LawModel. But that's ok. Makes the assertions much easier than digging around in a plain String response.
-    assertNotNull("ERROR: could not post proposal for new law", createdLaw);   // createdLaw will be null, when there was an error.  (I hate methods that return null instead of throwing exceptions!)
-    assertEquals("ERROR: builder law title does not match", newLawTitle, createdLaw.getTitle());
+    assertNotNull("ERROR: could not post proposal for new proposal", createdLaw);   // createdLaw will be null, when there was an error.  (I hate methods that return null instead of throwing exceptions!)
+    assertEquals("ERROR: builder proposal title does not match", newLawTitle, createdLaw.getTitle());
 
     log.trace("TEST postAlternativeProposal successfully created "+createdLaw);
   }

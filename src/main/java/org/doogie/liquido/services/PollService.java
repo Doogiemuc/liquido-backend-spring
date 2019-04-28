@@ -190,7 +190,7 @@ public class PollService {
 	/**
 	 * Finish the voting phase of a poll and calculate the winning proposal.
 	 * @param poll A poll in voting phase
-	 * @return Winnin proposal of this poll that now is a law.
+	 * @return Winnin proposal of this poll that now is a proposal.
 	 * @throws LiquidoException When poll is not in voting phase
 	 */
 	@Transactional

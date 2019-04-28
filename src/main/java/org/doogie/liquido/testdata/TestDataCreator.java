@@ -92,7 +92,6 @@ public class TestDataCreator implements CommandLineRunner {
 
   @Autowired
   LawRepo lawRepo;
-  List<LawModel> lawModels = new ArrayList<>();    // ideas, proposals and laws
 
   @Autowired
   LawService lawService;
@@ -434,22 +433,25 @@ public class TestDataCreator implements CommandLineRunner {
       //LawModel savedIdea = lawRepo.save(newIdea);
       fakeCreateAt(newIdea, i+1);
       fakeUpdatedAt(newIdea, i);
-      this.lawModels.add(newIdea);
     }
   }
 
 
 
-  private LawModel createProposal(String title, String description, AreaModel area, UserModel createdBy, int ageInDays) {
+  private LawModel createProposal(String title, String description, AreaModel area, UserModel createdBy, int ageInDays, int reachedQuorumDaysAgo) {
+  	if (ageInDays < reachedQuorumDaysAgo) throw new RuntimeException("Proposal cannot reach its quorum before it was created.");
     auditorAware.setMockAuditor(createdBy);
     LawModel proposal = new LawModel(title, description, area);
-    lawRepo.save(proposal);
+		lawRepo.save(proposal);
+
     proposal = addSupportersToIdea(proposal, props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
-    //proposal.setStatus(LawStatus.PROPOSAL);
-    //LawModel savedProposal = lawRepo.save(proposal);
+		Date reachQuorumAt = DoogiesUtil.daysAgo(reachedQuorumDaysAgo);
+    proposal.setReachedQuorumAt(reachQuorumAt);			// fake reachQuorumAt date to be in the past
+
+		lawRepo.save(proposal);
+
     fakeCreateAt(proposal,  ageInDays);
     fakeUpdatedAt(proposal, ageInDays > 1 ? ageInDays - 1 : 0);
-    this.lawModels.add(proposal);
     return proposal;
   }
 
@@ -460,7 +462,9 @@ public class TestDataCreator implements CommandLineRunner {
     description.append(getLoremIpsum(0,400));
     UserModel createdBy = this.randUser();
     AreaModel area = this.areas.get(rand.nextInt(TestFixtures.NUM_AREAS));
-    LawModel proposal = createProposal(title, description.toString(), area, createdBy, rand.nextInt(10));
+    int ageInDays = rand.nextInt(10);
+    int reachQuorumDaysAgo = (int)(ageInDays*rand.nextFloat());
+    LawModel proposal = createProposal(title, description.toString(), area, createdBy, ageInDays, reachQuorumDaysAgo);
     return proposal;
 
   }
@@ -480,7 +484,8 @@ public class TestDataCreator implements CommandLineRunner {
       String description = getLoremIpsum(100,400);
       AreaModel area = this.areas.get(rand.nextInt(TestFixtures.NUM_AREAS));
       int ageInDays = rand.nextInt(10);
-      LawModel proposal = createProposal(title, description, area, createdBy, ageInDays);
+      int reachedQuorumDaysAgo = (int)(ageInDays*rand.nextFloat());
+      LawModel proposal = createProposal(title, description, area, createdBy, ageInDays, reachedQuorumDaysAgo);
 			addCommentsToProposal(proposal);
       log.debug("Created proposal for user "+createdBy.getEmail());
     }
@@ -497,20 +502,22 @@ public class TestDataCreator implements CommandLineRunner {
    */
   private LawModel addSupportersToIdea(@NonNull LawModel idea, int num) {
     if (num >= usersMap.size()-1) throw new RuntimeException("Cannot at "+num+" supporters to idea. There are not enough usersMap.");
+    if (idea.getId() == null) throw new RuntimeException(("Idea must must be saved to DB before you can add supporter to it. IdeaModel must have an Id"));
+
     // https://stackoverflow.com/questions/8378752/pick-multiple-random-elements-from-a-list-in-java
     LinkedList<UserModel> otherUsers = new LinkedList<>();
     for (UserModel user: this.usersMap.values()) {
       if (!user.equals(idea.getCreatedBy()))   otherUsers.add(user);
     }
     Collections.shuffle(otherUsers);
-    LawModel ideaFromDB = lawRepo.findById(idea.getId())  // Get JPA "attached" entity
-     .orElseThrow(()->new RuntimeException("Cannot find idea with id="+idea.getId()));
+    //LawModel ideaFromDB = lawRepo.findById(idea.getId())  // Get JPA "attached" entity
+    // .orElseThrow(()->new RuntimeException("Cannot find idea with id="+idea.getId()));
 
     List<UserModel> newSupporters = otherUsers.subList(0, num);
     for (UserModel supporter: newSupporters) {
-      ideaFromDB = lawService.addSupporter(supporter, ideaFromDB);   //Remember: Don't just do idea.getSupporters().add(supporter);
+      idea = lawService.addSupporter(supporter, idea);   //Remember: Don't just do idea.getSupporters().add(supporter);
     }
-    return ideaFromDB;
+    return idea;
   }
 
   @Transactional
@@ -540,7 +547,7 @@ public class TestDataCreator implements CommandLineRunner {
       rootComment.getReplies().add(reply);
 		}
 		proposal.getComments().add(rootComment);
-  	return lawRepo.save(proposal);
+		return lawRepo.save(proposal);
 	}
 
   /**
@@ -562,7 +569,7 @@ public class TestDataCreator implements CommandLineRunner {
       title = "Initial Proposal in a poll that is in elaboration "+System.currentTimeMillis();
       desc = getLoremIpsum(100, 400);
       createdBy = getUser(0);
-      LawModel initialProposal = createProposal(title, desc, area, createdBy, 10);
+      LawModel initialProposal = createProposal(title, desc, area, createdBy, 10, 7);
 			initialProposal = addCommentsToProposal(initialProposal);
       PollModel newPoll = pollService.createPoll(initialProposal);
 
@@ -571,7 +578,7 @@ public class TestDataCreator implements CommandLineRunner {
         title = "Alternative Proposal" + i + " in a poll that is in elaboration"+System.currentTimeMillis();
         desc = getLoremIpsum(100, 400);
         createdBy = getUser(i);
-        LawModel altProp = createProposal(title, desc, area, createdBy, 20);
+        LawModel altProp = createProposal(title, desc, area, createdBy, 20, 18);
 				altProp = addCommentsToProposal(altProp);
         newPoll = pollService.addProposalToPoll(altProp, newPoll);
       }
@@ -668,8 +675,8 @@ public class TestDataCreator implements CommandLineRunner {
 
     for (int i = 0; i < TestFixtures.NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
-      LawModel realLaw = createProposal(lawTitle, getLoremIpsum(100,400), area, createdBy, 12);
-      addSupportersToIdea(realLaw, props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)+5);
+      LawModel realLaw = createProposal(lawTitle, getLoremIpsum(100,400), area, createdBy, 12, 10);
+			realLaw = addSupportersToIdea(realLaw, props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)+5);
       //TODO: reaLaw actually needs to have been part of a (finished) poll with alternative proposals
 			//realLaw.setPoll(poll);
       realLaw.setReachedQuorumAt(DoogiesUtil.daysAgo(24));
@@ -679,22 +686,21 @@ public class TestDataCreator implements CommandLineRunner {
   }
 
   /**
-   * Will builder a new law or update an existing one with matching title.
+   * Will builder a new proposal or update an existing one with matching title.
    * And will set the createdAt date to n days ago
-   * @param lawModel the new law to builder (or update)
+   * @param lawModel the new proposal to builder (or update)
    * @param ageInDays will setCreatedAt to so many days ago (measured from now)
-   * @return the saved law
+   * @return the saved proposal
    */
   private LawModel upsertLawModel(LawModel lawModel, int ageInDays) {
     LawModel existingLaw = lawRepo.findByTitle(lawModel.getTitle());  // may return null!
     if (existingLaw != null) {
-      log.trace("Updating existing law with id=" + existingLaw.getId());
+      log.trace("Updating existing proposal with id=" + existingLaw.getId());
       lawModel.setId(existingLaw.getId());
     } else {
-      log.trace("Creating new law " + lawModel);
+      log.trace("Creating new proposal " + lawModel);
     }
     LawModel savedLaw = lawRepo.save(lawModel);
-    this.lawModels.add(savedLaw);
     fakeCreateAt(savedLaw, ageInDays);
     return savedLaw;
   }

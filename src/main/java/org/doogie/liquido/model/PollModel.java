@@ -33,7 +33,7 @@ import java.util.*;
 public class PollModel extends BaseModel {
 
   /**
-   * The proposals for a law in this poll. All of these proposal must already have reached their quorum.
+   * The proposals for a proposal in this poll. All of these proposal must already have reached their quorum.
 	 * There must not be any duplicates. A proposal can join a poll only once.
    * When the poll is in PollStatus == ELABORATION, then these proposals may still be changed and further
    * proposals may be added. When The PollStauts == VOTING, then proposals must not be changed anymore.
@@ -61,7 +61,7 @@ public class PollModel extends BaseModel {
   public enum PollStatus {
     ELABORATION(0),     // When the initial proposal reaches its quorum, the poll is created. Alternative proposals can be added in this phase.
     VOTING(1),          // When the voting phase starts, all proposals can be voted upon. No more alternative proposals can be added. Proposals cannot be edited in this phase.
-    FINISHED(2);        // The winning proposal becomes a law.
+    FINISHED(2);        // The winning proposal becomes a proposal.
     int statusId;
     PollStatus(int id) { this.statusId = id; }
   }
@@ -76,7 +76,7 @@ public class PollModel extends BaseModel {
   /** Date when the voting phase will end. Will be set in PollService */
 	LocalDateTime votingEndAt;
 
-	/** The wining proposal of this poll, that became a law. Filled after poll is FINISHED. */
+	/** The wining proposal of this poll, that became a proposal. Filled after poll is FINISHED. */
 	@OneToOne
 	LawModel winner = null;
 
