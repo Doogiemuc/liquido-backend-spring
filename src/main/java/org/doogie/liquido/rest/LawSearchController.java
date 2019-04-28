@@ -46,7 +46,7 @@ public class LawSearchController {
 		// Create an HATEOAS compliant JSON response with _projected_ LawModels and self, next and prev Links.
 		// No paging here!. Instead we use offset and limit. Therefore we cannot simply use PagedResourceAssembler because it serializes to PagedResources class, which uses PageMetadata internally.
 		Page<LawProjection> projectedPage = resultPage.map(l -> factory.createProjection(LawProjection.class, l));
-		LawQueryResult<LawProjection> result = new LawQueryResult(projectedPage.getContent(), lawQuery, resultPage.getTotalElements());
+		LawQueryResult<LawProjection> result = new LawQueryResult<>(projectedPage.getContent(), lawQuery, resultPage.getTotalElements());
 
 		long offset = lawQuery.getOffset();
 		long limit  = lawQuery.getLimit();
@@ -61,15 +61,15 @@ public class LawSearchController {
 			result.add(buildLink(lawQuery.getOffset() - lawQuery.getLimit(), lawQuery.getLimit(), Link.REL_PREVIOUS));
 		}
 
-		//RAGE: Scrap all this stupid spring HATEOAS stuff and just simply build JSON by hand and return that!!!
-
-
+		//TODO:  RAGE: Scrap all this stupid spring HATEOAS stuff and just simply build JSON by hand and return that!!!
+		/*
 		Lson.builder()
 			.put("_embedded", Lson.builder("laws", projectedPage.getContent()))
-			.put("_link.self.href", buildLink(offset, limit, null) )
-			.put("_link.self.first", buildLink(0, limit, null) )
+			.put("_link.self.href", buildLink(offset, limit, Link.REL_SELF) )
+			.put("_link.self.first", buildLink(0, limit, Link.REL_FIRST) )
 			.put("query", lawQuery)
 			.put("totalElements", resultPage.getTotalElements());
+    */
 
 		return result;
 	}

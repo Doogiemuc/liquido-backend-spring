@@ -12,16 +12,15 @@ import java.io.IOException;
 
 /**
  * Custom Jackson serializer for the poll link inside a BallotModel.
- * I don't need the fully serialized HATEOAS info about a poll in the BallotModel.  Just the href is enough.
+ * I don't need the fully serialized HATEOAS info about a poll in the BallotModel. Just the href is enough.
  */
 public class BalloModelPollJsonSerializer extends StdSerializer<PollModel> {
-	protected BalloModelPollJsonSerializer() {
-		super(PollModel.class);
-	}
-
 	@Autowired
 	EntityLinks entityLinks;
 
+	protected BalloModelPollJsonSerializer() {
+		super(PollModel.class);
+	}
 
 	/**
 	 * <pre>

@@ -8,8 +8,8 @@ import java.util.Set;
 
 /**
  * This Spring <a href="http://docs.spring.io/spring-data/rest/docs/current/reference/html/#projections-excerpts.excerpting-commonly-accessed-data">projection</a>
- * inlines the creatdBy user information into the returned JSON for every law
- * and adds some more date fields relevant for a proposal or law.
+ * inlines the creatdBy user information into the returned JSON for every proposal
+ * and adds some more date fields relevant for a proposal or proposal.
  *
  * Keep in mind that projections are only used, when a LawModel is returned inside a list, e.g. in "_embedded" array.
  * When exactly one LawModel is returned e.g. by GET /laws/4711 ,
@@ -47,7 +47,7 @@ public interface LawProjection {
    */
   UserModel getCreatedBy();
 
-  /** true, if this idea, proposal or law is already supported by the currently logged in user */
+  /** true, if this idea, proposal or proposal is already supported by the currently logged in user */
   @Value("#{@lawService.isSupportedByCurrentUser(target)}")
   boolean isSupportedByCurrentUser();
 

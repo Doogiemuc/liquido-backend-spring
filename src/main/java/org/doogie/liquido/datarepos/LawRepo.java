@@ -1,6 +1,5 @@
 package org.doogie.liquido.datarepos;
 
-import org.doogie.liquido.model.CommentModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.LawProjection;
 import org.doogie.liquido.model.UserModel;
@@ -8,15 +7,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.repository.query.QueryByExampleExecutor;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.data.rest.core.annotation.RestResource;
 import org.springframework.format.annotation.DateTimeFormat;
 
-import javax.persistence.criteria.Predicate;
 import java.util.Date;
 import java.util.List;
 
@@ -28,7 +24,7 @@ import java.util.List;
 /**
  * This Spring-data repository is a database abstraction layer for "laws".
  */
-@RepositoryRestResource(collectionResourceRel = "laws", path = "laws", itemResourceRel = "law", excerptProjection = LawProjection.class)
+@RepositoryRestResource(collectionResourceRel = "laws", path = "laws", itemResourceRel = "proposal", excerptProjection = LawProjection.class)
 public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>
     //, LawRepoCustom
     , JpaSpecificationExecutor<LawModel>
@@ -57,6 +53,7 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>
    * @param p limit of one page and page number
    * @return matching ideas, proposals and laws
    */
+  @Deprecated   // This has been superseded by LawService#findBySearchQuery()
   @Query("select distinct l from LawModel l where " +
       "(:status is null OR l.status = :status) " +
       "AND (" +
@@ -80,12 +77,18 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>
   @Query("select l from LawModel l where l.status = 1 and reachedQuorumAt > :since order by reachedQuorumAt desc")
   List<LawModel> reachedQuorumSince(@DateTimeFormat(pattern = "yyyy-MM-dd") @Param("since") Date since);
 
-  //@RestResource(path = "reachedQuorumSince")
-  //List<LawModel> findByReachedQuorumAtGreaterThanEqual(@DateTimeFormat(pattern = "yyyy-MM-dd") @Param("since") Date since);
+  /**
+   * Query for proposals that reach their quorum since a given date <b>and</b> that were created by a given user.
+   * @param since date how long ago. Format of URL parameter: <pre>?since=yyyy-MM-dd</pre>
+   * @param createdBy userURI that created the proposal: <pre>/users/4711</pre>
+   * @return list of proposals that match the query
+   */
+  @RestResource(path = "reachedQuorumSinceAndCreatedBy")
+  List<LawModel> findByReachedQuorumAtGreaterThanEqualAndCreatedBy(@DateTimeFormat(pattern = "yyyy-MM-dd") @Param("since") Date since, @Param("createdBy") UserModel createdBy);
 
   /**
    * Find ideas or proposals that were created by a given user
-   * @param status idea, proposal or law
+   * @param status idea, proposal or proposal
    * @param user a user that created them
    * @return list of LawModels that were created by this user
    */

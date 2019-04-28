@@ -25,6 +25,7 @@ import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.Resources;
 import org.springframework.http.MediaType;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -75,7 +76,7 @@ public class PollRestController {
   //see https://docs.spring.io/spring-data/rest/docs/current/reference/html/#customizing-sdr.overriding-sdr-response-handlers
 
   /**
-   * When an idea reaches its quorum then it becomes a law and its creator <i>can</i> builder a new poll for this proposal.
+   * When an idea reaches its quorum then it becomes a proposal and its creator <i>can</i> builder a new poll for this proposal.
    * Other proposals need to join this poll before voting can be started.
    * @param pollResource the new poll with the link to (at least) one proposal, e.g.
    *          <pre>{ "proposals": [ "/liquido/v2/laws/152" ] }</pre>
@@ -156,15 +157,19 @@ public class PollRestController {
 	 * @return voter's own ballot (200)  or HTTP 204 NO_CONTENT if user has no ballot yet
 	 */
 	@RequestMapping(value = "/polls/{pollId}/ballot/my")
-	// To use pollId as @PathVariable this needs its own conversionService in LiquidoRepositoryRestConfigurer.java !
-	public @ResponseBody
-	BallotModel getOwnBallot(
-			@PathVariable(name="pollId") PollModel poll,
+	@ResponseBody
+	public BallotModel getOwnBallot(
+			@PathVariable(name="pollId") PollModel poll,			// To use pollId as @PathVariable this needs its own conversionService in LiquidoRepositoryRestConfigurer.java !
 			@RequestParam("voterToken") String voterToken
 	) throws LiquidoException {
 		BallotModel ownBallot = pollService.getBallotForVoterToken(poll, voterToken)
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_BALLOT, "No ballot found. You did not vote in this poll yet."));   // this is not an error
-		return ownBallot;  // includes some tweaking of JSON serialization  in BallotModelPollJsonSerializer
+
+		//FIXME: Throws failed to lazily initialize a collection of role: org.doogie.liquido.model.LawModel.comments, could not initialize proxy - no Session;    because of lazily loaded comments
+		//       WHY IS BalloModelPollJsonSerializer   not called ?????
+
+
+		return ownBallot;  // includes some tweaking of JSON serialization  in
 
 		// This would return the full HATEOAS resource. But since BallotModel is not exposed as RepositoryRestResource, it contains ugly links to .../BallotModels/4711  :-(
 		//return assembler.toResource(ownBallot);

@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.security.LiquidoUserDetailsService;
 import org.doogie.liquido.services.LiquidoException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -53,11 +52,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 				SecurityContextHolder.getContext().setAuthentication(authentication);
 			}
 		} catch (UsernameNotFoundException e) {
-			log.warn("Authenticate JWT: Username was not found", e);
+			log.debug("Authenticate JWT: Username was not found", e);
+			throw e;
 		} catch (LiquidoException e) {
-			log.warn("JWT could not be validated", e);
+			log.debug("JWT could not be validated", e);
+			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
+			return;
 		}
-		filterChain.doFilter(request, response);			// Important: continue the chain of filters.
+		filterChain.doFilter(request, response);			// Important: continue the chain of filters, if there was no error
 	}
 
 	/**

@@ -11,12 +11,12 @@ import javax.validation.constraints.NotNull;
 import java.util.*;
 
 /**
- * <h3>Data model for an ida -> proposal -> law.</h3>
+ * <h3>Data model for an ida -> proposal -> proposal.</h3>
  *
  * User's can suggest ideas. Once an idea reaches its quorum, then it becomes a proposal. When a proposal joins
  * a poll, then it can be discussed and elaborated. When the voting phase of the poll starts, then a
  * proposal must not be changed anymore. Users can vote in the poll. When the voting phase is finished,
- * then the winning proposal becomes a law. All other proposals in the poll are dropped.
+ * then the winning proposal becomes a proposal. All other proposals in the poll are dropped.
  *
  * The title of every idea must be globally unique!
  */
@@ -61,34 +61,34 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
   @Column(length = 1000)
   public String description;
 
-  /** Area of this idea/proposal/law */
+  /** Area of this idea/proposal/proposal */
   @NotNull
   @NonNull
   @ManyToOne(optional = false)
   public AreaModel area;
 
-	/** enumeration for law status */
+	/** enumeration for proposal status */
 	public enum LawStatus {
-		IDEA(0),            // An idea is a newly created proposal for a law that did not reach its quorum yet.
+		IDEA(0),            // An idea is a newly created proposal for a proposal that did not reach its quorum yet.
 		PROPOSAL(1),        // When an idea reaches its quorum, then it becomes a proposal and can join a poll.
 		ELABORATION(2),     // Proposal is part of a poll and can be discussed. Voting has not yet started.
 		VOTING(3),          // When the voting phase starts, the description of a proposals cannot be changed anymore.
-		LAW(4),             // The winning proposal becomes a law.
+		LAW(4),             // The winning proposal becomes a proposal.
 		DROPPED(5),         // All non winning proposals in a finished poll are dropped.
-		RETENTION(6),       // When a law looses support, it is in the retention phase
-		RETRACTED(7);       // When a law looses support for too long, it will be retracted.
+		RETENTION(6),       // When a proposal looses support, it is in the retention phase
+		RETRACTED(7);       // When a proposal looses support for too long, it will be retracted.
 		int statusId;
 		LawStatus(int id) { this.statusId = id; }
 	}
 
-	/** current status of this law */
+	/** current status of this proposal */
 	@NotNull
 	@NonNull
 	public LawStatus status =  LawStatus.IDEA;
 
   /** All users that support this proposal. */
   //This cannot  just be a counter, because we must prevent that a user supports this more than once.
-	@JsonIgnore  // do not serialize when reeturning JSON. Only return this.getNumSupporters()
+	@JsonIgnore  // do not serialize when returning JSON. Only return this.getNumSupporters()
   @ManyToMany(fetch = FetchType.EAGER)
   Set<UserModel> supporters = new HashSet<>();
 
@@ -107,9 +107,9 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 
   /** Comments and suggestions for improvement for this proposal*/
 	@JsonIgnore  // To fetch comments via REST user CommentProjection of CommentModel
-  @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)  // fetch all comments when loading a an idea or proposal.  Prevents "LazyInitializationException, could not initialize proxy - no Session" but at the cost of performance.
+  @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)  // If you get a "LazyInitializationException, could not initialize proxy - no Session" you might need to pre load comments of a proposal. You should not generally change this to FetchTypoe.EAGER for performance reasons!
 	//@Cascade(org.hibernate.annotations.CascadeType.ALL)   // https://vladmihalcea.com/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
-  public Set<CommentModel> comments;
+  public Set<CommentModel> comments = new HashSet<>();
 
   /**
    * Date when this proposal reached its quorum.
@@ -119,7 +119,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 
   /**
    * compare two LawModels by their ID. This is used for sorting proposals in PollModel
-   * @param law another idea, proposal or law
+   * @param law another idea, proposal or proposal
    * @return -1, 0 or +1
    */
   @Override
@@ -131,8 +131,6 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 
   /** The user that initially created the idea */
   @CreatedBy  // automatically handled by spring data jpa auditing
-  //@NonNull		//TODO: createdBy should b e nonNull. Why did I comment this out?
-  //@NotNull
   @ManyToOne
   public UserModel createdBy;
 
@@ -157,8 +155,9 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 	 * Number of comments and (recursive) replies.
 	 * @return overall number of comments
 	 */
+	@JsonIgnore  // prevent LazyInitialisationException - comments might not be loaded
 	public int getNumComments() {
-  	if (this.comments == null) return 0;
+  	if (this.comments == null || comments.size() == 0) return 0;
   	int count = 0;
 		for (Iterator<CommentModel> it = comments.iterator(); it.hasNext(); ) {
 			CommentModel c = it.next();

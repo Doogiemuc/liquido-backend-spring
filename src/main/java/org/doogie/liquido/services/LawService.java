@@ -54,7 +54,7 @@ public class LawService {
   /**
    * Check if a given idea is already supported by the currently logged in user.
    * Remark: The creator is not counted as a supporter! Of course one could say that an idea is implicitly supported by its creator. But that is not counted in the list of supporters,
-   * because an idea needs "external" supporters, to become a proposal for a law.
+   * because an idea needs "external" supporters, to become a proposal for a proposal.
    * @param law a LawModel
    * @return true  IF this idea is supported by the currently logged in user
    *         false IF there is no user logged in
@@ -99,7 +99,7 @@ public class LawService {
       return lawRepo.save(idea);
     }
     return idea;
-    //TODO: What happens with a law when a supporter gets removed?
+    //TODO: What happens with a proposal when a supporter gets removed?
   }
 
 
@@ -130,8 +130,8 @@ public class LawService {
     //Iterable<CommentModel> recentComments = commentRepo.findAll(Sort.by(Sort.Order.desc("createdAt")));   // newest comments first
     Iterable<CommentModel> recentComments = commentRepo.findAll(PageRequest.of(0, 50, Sort.by(Sort.Order.desc("createdAt"))));  // when a line of code ends with four closing brackets, then you do have to many factory methods ! :-)
     for (CommentModel c: recentComments) {
-      mostDiscussedProposals.add(c.getLaw());
-      Long key   = c.getLaw().getId();
+      mostDiscussedProposals.add(c.getProposal());
+      Long key   = c.getProposal().getId();
       Long count = numRecentComments.getOrDefault(key, 0L);
       numRecentComments.put(key, count + 1);
     }
@@ -163,7 +163,7 @@ public class LawService {
 
 
   /**
-   * Matches an idea, proposal or law by its creator
+   * Matches an idea, proposal or proposal by its creator
    * @param creator a user
    * @return spring data JPA {@link Specification<LawModel>}
    */
@@ -213,7 +213,7 @@ public class LawService {
 
   /**
    * This free text search tries to match as much as possible. This specification matches if searchText is contained in
-   * law's title or description or email of creator or name of creator. It also matches case insensitive.
+   * proposal's title or description or email of creator or name of creator. It also matches case insensitive.
    * @param searchText any string that may be contained in one of the fields.
    * @return a specification that matches LawModels or null if searchText is null.
    */
@@ -238,7 +238,7 @@ public class LawService {
    * @param lawQuery
    * @return
    */
-  private Specification<LawModel> matchesQuery(LawQuery lawQuery) {
+  public Specification<LawModel> matchesQuery(LawQuery lawQuery) {
     List<Specification<LawModel>> specs = new ArrayList<>();
 
     // created by
