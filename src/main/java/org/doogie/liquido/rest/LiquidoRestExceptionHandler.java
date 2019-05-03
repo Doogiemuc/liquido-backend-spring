@@ -52,27 +52,27 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 	}
 
 	/**
-	 * Create a body for an error response.
+	 * Create a body for an error response. This tries to be the one main central method where we build error
+	 * responses for the whole liquido backend API. It's actually quite hard to add it to all thinkable ways
+	 * that spring boot may respond to requests. ControllerAdvice is simple. But it is way harder e.g. for
+	 * exceptions ins filters
+	 *
 	 * Here we try to return as much usefull information as possible.
 	 * @param ex any exception or a LiquidoException
 	 * @param request normally a ServletWebRequest in our REST world.
 	 * @return JSON for body
 	 */
-	private Lson getMessageAsJson(Exception ex, WebRequest request) {
-		Lson bodyOfResponse = Lson.builder()
+	public static Lson getMessageAsJson(Exception ex, WebRequest request) {
+		Lson bodyOfResponse;
+		if (ex instanceof LiquidoException) {
+			bodyOfResponse = ((LiquidoException)ex).toLson();
+		} else {
+			bodyOfResponse = Lson.builder()
 				.put("exception", ex.getClass().toString())
 				.put("message", ex.getMessage());
-
+		}
 		if (ex.getCause() != null && ex.getCause().getMessage() != null) {
 			bodyOfResponse.put("cause", ex.getCause().getMessage());
-		}
-
-		if (ex instanceof LiquidoException) {
-			LiquidoException lex = (LiquidoException)ex;
-			bodyOfResponse
-					.put("liquidoErrorCode", lex.getErrorCodeAsInt())
-					.put("liquidoErrorName", lex.getErrorName())
-					.put("httpStatus", lex.getHttpResponseStatus().value());
 		}
 
 		// Let's try to add some more valuable info if request is a ServletWebRequest
@@ -84,7 +84,7 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 			bodyOfResponse.put("remoteUser", request.getRemoteUser());
 		} catch (Throwable ignore) { }
 
-		// add first fiveElems of stack trace   (when DEV or TEST env)
+		/* add first fiveElems of stack trace   (when DEV or TEST env)
 		if (springEnv.acceptsProfiles(Profiles.of("DEV", "TEST"))) {
 			try {
 				StackTraceElement[] firstElems = Arrays.copyOfRange(ex.getStackTrace(), 0, Math.min(5, ex.getStackTrace().length));
@@ -92,7 +92,12 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 			} catch (Throwable ignore) {
 			}
 		}
+		*/
 
+		if (log.isDebugEnabled()) {
+			log.debug("LiquidoException.body=");
+			log.debug(bodyOfResponse.toPrettyString());
+		}
 		return bodyOfResponse;
 	}
 
