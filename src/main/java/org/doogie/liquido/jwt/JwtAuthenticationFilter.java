@@ -1,9 +1,12 @@
 package org.doogie.liquido.jwt;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.rest.LiquidoRestExceptionHandler;
 import org.doogie.liquido.security.LiquidoUserDetailsService;
 import org.doogie.liquido.services.LiquidoException;
+import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -51,16 +54,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 				authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 				SecurityContextHolder.getContext().setAuthentication(authentication);
 			}
+
+			filterChain.doFilter(request, response);		// IMPORTANT: MUST always continue chain of filters
+
 		} catch (UsernameNotFoundException e) {
-			log.debug("Authenticate JWT: Username was not found", e);
+			log.debug("Authenticate JWT: Username from JWT does not exist", e);
 			throw e;
-		} catch (LiquidoException e) {
-			log.debug("JWT could not be validated", e);
-			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
-			return;
+		} catch (LiquidoException lex) {
+			log.debug(lex.toString());
+			response.setStatus(lex.getHttpResponseStatus().value());
+			response.setContentType("application/json");
+			Lson lson = lex.toLson();
+			lson.put("requestURL", request.getRequestURL().toString());
+			response.getWriter().println(lson.toString());
 		}
-		filterChain.doFilter(request, response);			// Important: continue the chain of filters, if there was no error
+
 	}
+
+	//https://stackoverflow.com/questions/34595605/how-to-manage-exceptions-thrown-in-filters-in-spring/34633687#34633687
+	//This does not really work: response.sendError(e.getHttpResponseStatus().value(), "Error msg from JwtAuthenticationFilter: "+ e.getMessage());
+
 
 	/**
 	 * Extract the token from the Authorization request header

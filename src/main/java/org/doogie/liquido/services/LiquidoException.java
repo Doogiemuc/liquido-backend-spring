@@ -1,12 +1,12 @@
 package org.doogie.liquido.services;
 
+import org.doogie.liquido.util.Lson;
 import org.springframework.http.HttpStatus;
 
 /**
  * General purpose exception for functional ("business") Exceptions.
  * For example for inconsistent state.
  */
-//TOOD: different errors shall have different response status @ResponseStatus(value = HttpStatus.BAD_REQUEST)
 public class LiquidoException extends Exception {
 
   Errors error;
@@ -29,10 +29,11 @@ public class LiquidoException extends Exception {
 		CANNOT_FINISH_POLL(15, HttpStatus.BAD_REQUEST),
 		NO_DELEGATION(16, HttpStatus.BAD_REQUEST),
 		CANNOT_FIND_ENTITY(17, HttpStatus.UNPROCESSABLE_ENTITY),   		// 422: cannot find entity: e.g. from PathParam or when Deserializing
-		NO_BALLOT(18, HttpStatus.NO_CONTENT),  												// 422: voter has no ballot yet.  This is not an error.
+		NO_BALLOT(18, HttpStatus.NO_CONTENT),  												// 204: voter has no ballot yet. This is OK and not an error.
 		INVALID_POLL_STATUS(19, HttpStatus.BAD_REQUEST),
-		INVALID_JWT_TOKEN(20, HttpStatus.UNAUTHORIZED),
-		PUBLIC_CHECKSUM_NOT_FOUND(21, HttpStatus.NOT_FOUND);
+		JWT_TOKEN_INVALID(20, HttpStatus.UNAUTHORIZED),
+		JWT_TOKEN_EXPIRED(21, HttpStatus.UNAUTHORIZED),
+		PUBLIC_CHECKSUM_NOT_FOUND(22, HttpStatus.NOT_FOUND);
 
 		int liquidoErrorCode;
 		HttpStatus httpResponseStatus;
@@ -41,7 +42,9 @@ public class LiquidoException extends Exception {
     	this.liquidoErrorCode = code;
     	this.httpResponseStatus = httpResponseStatus;
     }
-  }
+
+
+	}
 
 	/**
 	 * A Liquido exception must always have an error code and a human readable error message
@@ -70,6 +73,16 @@ public class LiquidoException extends Exception {
 
 	public HttpStatus getHttpResponseStatus() {
 		return this.error.httpResponseStatus;
+	}
+
+	public Lson toLson() {
+		return Lson.builder()
+			.put("exception", this.getClass().toString())
+			.put("message", this.getMessage())
+			.put("liquidoErrorCode", this.getErrorCodeAsInt())
+			.put("liquidoErrorName", this.getErrorName())
+			.put("httpStatus", this.getHttpResponseStatus().value())
+		  .put("httpStatusName", this.getHttpResponseStatus().getReasonPhrase());
 	}
 
   public String toString() {

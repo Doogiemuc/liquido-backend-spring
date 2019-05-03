@@ -55,20 +55,20 @@ public class JwtTokenProvider {
 			Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(authToken);
 			return true;
 		} catch (SignatureException ex) {
-			log.error("Invalid JWT signature");
-			throw new LiquidoException(LiquidoException.Errors.INVALID_JWT_TOKEN, "Incorrect signature");
+			log.debug("Invalid JWT signature");
+			throw new LiquidoException(LiquidoException.Errors.JWT_TOKEN_INVALID, "Incorrect signature");
 		} catch (MalformedJwtException ex) {
-			log.error("Invalid JWT token");
-			throw new LiquidoException(LiquidoException.Errors.INVALID_JWT_TOKEN, "Malformed jwt token");
+			log.debug("Invalid JWT token");
+			throw new LiquidoException(LiquidoException.Errors.JWT_TOKEN_INVALID, "Malformed jwt token");
 		} catch (ExpiredJwtException ex) {
-			log.error("Expired JWT token");
-			throw new LiquidoException(LiquidoException.Errors.INVALID_JWT_TOKEN, "Token expired. Refresh required.");
+			log.debug("Expired JWT token");
+			throw new LiquidoException(LiquidoException.Errors.JWT_TOKEN_EXPIRED, "Token expired. Refresh required.");
 		} catch (UnsupportedJwtException ex) {
-			log.error("Unsupported JWT token");
-			throw new LiquidoException(LiquidoException.Errors.INVALID_JWT_TOKEN, "Unsupported JWT token");
+			log.debug("Unsupported JWT token");
+			throw new LiquidoException(LiquidoException.Errors.JWT_TOKEN_INVALID, "Unsupported JWT token");
 		} catch (IllegalArgumentException ex) {
-			log.error("JWT claims string is empty.");
-			throw new LiquidoException(LiquidoException.Errors.INVALID_JWT_TOKEN, "Illegal argument token");
+			log.debug("JWT claims string is empty.");
+			throw new LiquidoException(LiquidoException.Errors.JWT_TOKEN_INVALID, "Illegal argument token");
 		}
 	}
 
