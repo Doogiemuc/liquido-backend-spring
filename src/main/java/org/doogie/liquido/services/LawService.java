@@ -77,7 +77,7 @@ public class LawService {
   public LawModel addSupporter(@NotNull UserModel supporter, @NotNull LawModel idea) {
     if (idea.getSupporters().contains(supporter)) return idea;   // Do not add supporter twice
     if (idea.getCreatedBy().equals(supporter)) return idea;      // Must not support your own idea
-    //TODO: temporarily disabled:   log.info("addSupporter: "+supporter.getEmail()+"(id="+supporter.getId()+") now supports "+idea);
+    log.info("addSupporter: "+supporter.toStringShort()+" now supports "+idea);
     idea.getSupporters().add(supporter);
     idea = lawRepo.save(idea);
     idea = checkQuorum(idea);

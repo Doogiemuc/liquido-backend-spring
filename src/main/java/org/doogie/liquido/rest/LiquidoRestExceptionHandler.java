@@ -64,6 +64,7 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 	 */
 	public static Lson getMessageAsJson(Exception ex, WebRequest request) {
 		Lson bodyOfResponse;
+
 		if (ex instanceof LiquidoException) {
 			bodyOfResponse = ((LiquidoException)ex).toLson();
 		} else {
@@ -77,6 +78,7 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 
 		// Let's try to add some more valuable info if request is a ServletWebRequest
 		try {
+			bodyOfResponse.put("httpMethod", ((ServletWebRequest) request).getHttpMethod());
 			String requestURL  = ((ServletWebRequest)request).getRequest().getRequestURL().toString();
 			String queryString = ((ServletWebRequest)request).getRequest().getQueryString();
 			if (!DoogiesUtil.isEmpty(queryString)) requestURL += "?" + queryString;

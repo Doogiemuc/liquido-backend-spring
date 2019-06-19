@@ -14,13 +14,16 @@ import org.doogie.liquido.util.LiquidoRestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
+import org.springframework.data.rest.webmvc.PersistentEntityResource;
+import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.Random;
+
+import static org.springframework.web.bind.annotation.RequestMethod.GET;
 
 /**
  * Rest Controller for registration, login and user data
@@ -58,6 +61,7 @@ public class UserRestController {
 
   @Autowired
 	JwtTokenProvider jwtTokenProvider;
+
 
 	/**
 	 * Register as a new user
@@ -160,7 +164,7 @@ public class UserRestController {
 
   //TODO: login via E-Mail magic link
 
-	//TODO: change a user's password => delete all tokens and checksums
+	//TODO: clean logout: delete all pending OTPs and voterTokens
 
 }
 

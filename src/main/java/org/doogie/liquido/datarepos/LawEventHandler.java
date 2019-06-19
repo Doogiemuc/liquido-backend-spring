@@ -3,7 +3,9 @@ package org.doogie.liquido.datarepos;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LawService;
+import org.doogie.liquido.services.LiquidoException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.core.annotation.HandleAfterLinkSave;
 import org.springframework.data.rest.core.annotation.HandleAfterSave;
@@ -21,6 +23,9 @@ public class LawEventHandler {
   @Autowired
   LawService lawService;
 
+  @Autowired
+  LiquidoAuditorAware liquidoAuditorAware;
+
   //BUGFIX:  All of this is only called for REST operations.   SOLUTION: added logic directly into LawService.addSupporter
   /**
    * This is called when a supporter is added from an idea.
@@ -29,12 +34,15 @@ public class LawEventHandler {
    * @param supporters the new set of supporters
    */
   @HandleAfterLinkSave
-  public void handleLawLinkSave(LawModel idea, Set<UserModel> supporters) {
-    log.debug("handleLawLinkSave: supporter added: "+supporters);
+  public void handleLawLinkSave(LawModel idea, Set<UserModel> supporters) throws LiquidoException {
+     UserModel currentUser = liquidoAuditorAware.getCurrentAuditor().orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "MUST be logged in to add a supporter"));
+    if (supporters.contains(currentUser)) throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_SUPPORTER, "User must not support his own proposal!");
+    log.debug("handleLawLinkSave: adding supporters: "+supporters+" to idea "+idea);
     lawService.checkQuorum(idea);
   }
 
 
+  /*
 
   // called only for PUT !!!
   @HandleAfterSave
@@ -49,7 +57,6 @@ public class LawEventHandler {
     log.debug("handleBeforeCreateIdea");
   }
 
-
-
+  */
 
 }

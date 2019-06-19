@@ -86,11 +86,19 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 	@NonNull
 	public LawStatus status =  LawStatus.IDEA;
 
-  /** All users that support this proposal. */
-  //This cannot  just be a counter, because we must prevent that a user supports this more than once.
+  /**
+	 * Users that support this.
+	 * This is not just a counter, because there are restrictions:
+	 *  - A user must not support an idea, proposal or law more than once.
+	 *  - A user must not support his own idea, proposal or law.
+	 *  - When a new support is added, this idea might become a proposal.
+	 *
+	 * This attribute is private, so that you cannot (and must not) call idea.getSupporters.add(someUser)
+	 * Instead you must use LawService.addSupporter()
+	 */
 	@JsonIgnore  // do not serialize when returning JSON. Only return this.getNumSupporters()
   @ManyToMany(fetch = FetchType.EAGER)
-  Set<UserModel> supporters = new HashSet<>();
+  private Set<UserModel> supporters = new HashSet<>();
 
   /**
    * When in status ELABORATION this is the link to the poll.
@@ -133,9 +141,8 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
   @CreatedBy  // automatically handled by spring data jpa auditing
   @ManyToOne
   public UserModel createdBy;
-
-  //Remember: You MUST NOT call idea.getSupporters.add(someUser) directly! Because this circumvents the restrictions
-  // that there are for supporting an idea. E.g. a user must not support his own idea. Call LawService.addSupporter() instead!
+  //Remember: You MUST NOT call idea.getSupporters.add(someUser) directly! Because this circumvents functional restrictions.
+  //E.g. a user must not support his own idea. Call LawService.addSupporter() instead!
   public int getNumSupporters() {
     if (this.supporters == null) return 0;
     return this.supporters.size();

@@ -46,7 +46,7 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
     }
 
     if (authentication.getPrincipal() != null && authentication.getPrincipal().equals("anonymousUser")) {
-      log.trace("Anonymous user");
+      log.trace("Returning anonymous user as current auditor.");
 			return Optional.empty();
     }
 		// principal _IS_ a LiquidoAuthUser, because
