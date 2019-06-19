@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.rest.webmvc.RestMediaTypes;
 import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.*;
@@ -98,7 +99,9 @@ public class RestEndpointTests extends BaseTest {
   List<UserModel> users;
   List<AreaModel> areas;
   Map<String, AreaModel> areaMap;  // areas by title
-  List<LawModel>  laws;
+	List<LawModel>  ideas;
+	List<LawModel>  proposals;
+	List<LawModel>  laws;
 
   //@Autowired
   //Environment springEnv;
@@ -140,11 +143,24 @@ public class RestEndpointTests extends BaseTest {
 		}
 		log.trace("loaded "+this.areas.size()+ " areas");
 
+		this.ideas = new ArrayList<>();
+		for (LawModel lawModel : lawRepo.findByStatus(LawModel.LawStatus.IDEA, Pageable.unpaged())) {
+			this.ideas.add(lawModel);
+		}
+		log.trace("loaded "+this.ideas.size()+ " ideas");
+
+		this.proposals = new ArrayList<>();
+		for (LawModel lawModel : lawRepo.findByStatus(LawModel.LawStatus.PROPOSAL, Pageable.unpaged())) {
+			this.ideas.add(lawModel);
+		}
+		log.trace("loaded "+this.proposals.size()+ " proposals");
+
 		this.laws = new ArrayList<>();
-		for (LawModel lawModel : lawRepo.findAll()) {
-			this.laws.add(lawModel);
+		for (LawModel lawModel : lawRepo.findByStatus(LawModel.LawStatus.LAW, Pageable.unpaged())) {
+			this.ideas.add(lawModel);
 		}
 		log.trace("loaded "+this.laws.size()+ " laws");
+
 	}
 
 	/**
@@ -161,7 +177,7 @@ public class RestEndpointTests extends BaseTest {
 	 * little helper to quickly login a specific user
 	 */
 	private void loginUser(String email) {
-		// here we see that advantage of a completely stateless server. We simply generate a JWT and that's it.
+		// Here we see that advantage of a completely stateless server. We simply generate a JWT and that's it. No login state is stored on the server.
 		String jwt = jwtTokenProvider.generateToken(email);
 		jwtAuthInterceptor.setJwtToken(jwt);
 	}
@@ -408,14 +424,37 @@ public class RestEndpointTests extends BaseTest {
   }
   */
 
+	/**
+	 * Negative test case: User must be able to support his own idea
+	 */
+	@Test
+	public void testSupportOwnIdea() {
+		log.trace("TEST supportOwnIdea");
+		//GIVEN
+		LawModel idea = postNewIdea("Idea from testSupportOwnIdea");
+		UserModel currentUser = getCurrentUser();
+		String supporterURI = basePath + "/users/" + currentUser.getId();
+		try {
+			//WHEN
+			ResponseEntity<String> res = addSupporterToIdea(supporterURI, idea);
+			fail("addSupporterToIdea should have thrown an Exception");
+		} catch (HttpClientErrorException e) {
+			//THEN
+			Assert.assertEquals("Response should have status" + HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST, e.getStatusCode());
+			Assert.assertTrue("LiquidoException.Error should have been CANNOT_ADD_SUPPORTER", e.getResponseBodyAsString().contains(LiquidoException.Errors.CANNOT_ADD_SUPPORTER.name()) );
+			log.trace("TEST supportOwnIdea SUCCESSFUL");
+		} catch (Throwable t) {
+			fail("Should have thrown a HttpClientErrorException");
+		}
+	}
 
-  /**
+	/**
    * Create a new idea. Then add as many supporters, so that the idea reaches its quorum.
    * A new poll will then automatically be created.
    * Test for {@link org.doogie.liquido.services.LawService#checkQuorum(LawModel)}
    */
   @Test
-  //This would only work with MockMvc:  @WithUserDetails(value=TestFixtures.USER1_EMAIL , userDetailsServiceBeanName="liquidoUserDetailsService")
+  //With user Details only works with MockMvc:  @WithUserDetails(value=TestFixtures.USER1_EMAIL , userDetailsServiceBeanName="liquidoUserDetailsService")
   public void testIdeaReachesQuorum() {
     log.trace("TEST ideaReachesQuorum");
 
@@ -426,17 +465,10 @@ public class RestEndpointTests extends BaseTest {
     //===== add Supporters via JSON, so that idea reaches its quorum
     int supportersForProposal = props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL);
     Assert.assertTrue("Need at least "+supportersForProposal+" users to run this test", this.users.size() >= supportersForProposal);
-
-    String supportersURL = "/laws/"+idea.getId()+"/supporters";
     for (int j = 0; j < this.users.size(); j++) {
       if (!this.users.get(j).getEmail().equals(TestFixtures.USER1_EMAIL)) {   // creator is implicitly already a supporter
-        String userURI = basePath + "/users/" + this.users.get(j).getId();
-        HttpHeaders headers2 = new HttpHeaders();
-        headers2.setContentType(RestMediaTypes.TEXT_URI_LIST);
-        HttpEntity<String> entity2 = new HttpEntity<>(userURI, headers2);
-        ResponseEntity<String> addSupporterResponse = client.postForEntity(supportersURL, entity2, String.class);
-        assertEquals(HttpStatus.NO_CONTENT, addSupporterResponse.getStatusCode());   // 204
-        log.debug("Added supporter to idea: "+userURI);
+				String supporterURI = basePath + "/users/" + this.users.get(j).getId();
+      	addSupporterToIdea(supporterURI, idea);
       }
     }
 
@@ -444,14 +476,24 @@ public class RestEndpointTests extends BaseTest {
     LawModel updatedIdea = client.getForObject("/laws/"+idea.getId(), LawModel.class);
     Assert.assertEquals("Idea should have reached its quorum and be in status PROPOSAL", LawModel.LawStatus.PROPOSAL, updatedIdea.getStatus());
 
-    log.trace("TEST ideaReachesQuorum SUCCESSFULL");
+    log.trace("TEST ideaReachesQuorum SUCCESSFUL");
   }
+
+
+	/**
+	 * fetch currently logged in user
+	 * @return
+	 */
+	private UserModel getCurrentUser() {
+		ResponseEntity<UserModel> response = client.getForEntity("/my/user", UserModel.class);
+		return response.getBody();
+	}
 
   /**
    * Helper to builder a new idea (via REST)
    * @param ideaTitlePrefix the title of the idea. A random number will be added,
    *                        because title MUST be unique.
-   * @return the created idea (but without dependant entities such  as area and createdBy filled!)
+   * @return the created idea (but without dependant entities such as area and createdBy filled!)
    */
   private LawModel postNewIdea(String ideaTitlePrefix) {
     String ideaTitle = ideaTitlePrefix+" "+System.currentTimeMillis();;  // title must be unique!
@@ -470,11 +512,26 @@ public class RestEndpointTests extends BaseTest {
 
 		ResponseEntity<LawModel> createdIdea = client.postForEntity("/laws", entity, LawModel.class);
 
-    // Keep in mind that createdIdea.createdBy is not filled, because this is just the idea not the ideaProjection
+    // Keep in mind that createdIdea.createdBy is not filled, because this is just the serialized idea not the ideaProjection
     assertEquals(HttpStatus.CREATED, createdIdea.getStatusCode());
     return createdIdea.getBody();
-
   }
+
+	/**
+	 * Add a supporter to an idea
+	 * @param supporterURI  basePath + "/users/" + supporter.getId();
+	 * @param idea
+	 */
+  private ResponseEntity<String> addSupporterToIdea(String supporterURI, LawModel idea) {
+		String supportersURL = "/laws/"+idea.getId()+"/supporters";
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(RestMediaTypes.TEXT_URI_LIST);
+		HttpEntity<String> entity = new HttpEntity<>(supporterURI, headers);
+		ResponseEntity<String> addSupporterResponse = client.postForEntity(supportersURL, entity, String.class);
+		assertEquals(HttpStatus.NO_CONTENT, addSupporterResponse.getStatusCode());   // 204
+		log.debug("Added supporter to idea: "+supporterURI);
+		return addSupporterResponse;
+	}
 
   /** helper to get the currently logged in user's voterToken */
   private String getVoterToken(long areaId) {

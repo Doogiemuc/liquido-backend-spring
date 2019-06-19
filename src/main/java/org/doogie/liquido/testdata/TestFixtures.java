@@ -15,16 +15,18 @@ public class TestFixtures {
 
 	public static final int NUM_USERS = 20;
 	public static final int NUM_VOTES = 15;			// number of casted votes.  Must be smaller than NUM_USERS!
-	public static final  int NUM_AREAS = 10;
+	public static final int NUM_AREAS = 10;
 	public static final int NUM_IDEAS = 111;
-	public static final  int NUM_PROPOSALS = 50;
-	public static final  int NUM_ALTERNATIVE_PROPOSALS = 5;   // proposals in poll
+	public static final int NUM_PROPOSALS = 50;
+	public static final int NUM_ALTERNATIVE_PROPOSALS = 5;   // proposals in poll
 
 
 	public static final String AREA0_TITLE = "Area 0";
 	public static final String AREA1_TITLE = "Area 1";
 
 	public static final String MAIL_PREFIX = "testuser";
+	public static final String MOBILEPHONE_PREFIX = "+4912345";
+
 	public static final String USER1_NAME = "Donald Duck";
   public static final String USER1_EMAIL = MAIL_PREFIX+"1@liquido.de";      // testuser1 has  ID 1 in the DB !
   public static final String USER2_EMAIL = MAIL_PREFIX+"2@liquido.de";
