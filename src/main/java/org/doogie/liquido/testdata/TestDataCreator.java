@@ -320,10 +320,6 @@ public class TestDataCreator implements CommandLineRunner {
     log.info("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
     if (this.usersMap == null) this.usersMap = new HashMap<>();
 
-    /* DEPRECATED. No more passwords. Hashing a password takes time. So all test usersMap have the same password to speed TestDataCreator up alot. */
-	  //PasswordEncoder passwordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();   // Springs default password encoder uses "bcrypt"
-		//String hashedPassword = passwordEncoder.encode(password);           // Password encoding takes a second! And it should take a second, for security reasons!
-
 		long countUsers = countUsers();
 
     for (int i = 0; i < numUsers; i++) {
@@ -336,7 +332,7 @@ public class TestDataCreator implements CommandLineRunner {
       profile.setName(name);
       profile.setPicture("/static/img/photos/"+((i%3)+1)+".png");
       profile.setWebsite("http://www.liquido.de");
-      profile.setMobilephone("+4912345"+(countUsers+i+1));  // deterministic unique phone numbers
+      profile.setMobilephone(TestFixtures.MOBILEPHONE_PREFIX+(countUsers+i+1));  // deterministic unique phone numbers
       newUser.setProfile(profile);
 
       Optional<UserModel> existingUserOpt = userRepo.findByEmail(email);

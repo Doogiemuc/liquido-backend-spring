@@ -33,7 +33,8 @@ public class LiquidoException extends Exception {
 		INVALID_POLL_STATUS(19, HttpStatus.BAD_REQUEST),
 		JWT_TOKEN_INVALID(20, HttpStatus.UNAUTHORIZED),
 		JWT_TOKEN_EXPIRED(21, HttpStatus.UNAUTHORIZED),
-		PUBLIC_CHECKSUM_NOT_FOUND(22, HttpStatus.NOT_FOUND);
+		PUBLIC_CHECKSUM_NOT_FOUND(22, HttpStatus.NOT_FOUND),
+		CANNOT_ADD_SUPPORTER(23, HttpStatus.BAD_REQUEST);						// e.g. when user tries to support his own proposal
 
 		int liquidoErrorCode;
 		HttpStatus httpResponseStatus;
