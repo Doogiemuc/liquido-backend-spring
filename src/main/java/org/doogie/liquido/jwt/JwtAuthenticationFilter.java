@@ -68,7 +68,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			lson.put("requestURL", request.getRequestURL().toString());
 			response.getWriter().println(lson.toString());
 		}
-
+		//MAYBE: catch (Exception e)    for example for unhandled internal server errors.  See LiquidoRestExceptionHandler
 	}
 
 	//https://stackoverflow.com/questions/34595605/how-to-manage-exceptions-thrown-in-filters-in-spring/34633687#34633687

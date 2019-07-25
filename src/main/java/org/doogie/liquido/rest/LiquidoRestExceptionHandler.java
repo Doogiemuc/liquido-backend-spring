@@ -5,6 +5,8 @@ import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpHeaders;
@@ -23,14 +25,28 @@ import java.util.Arrays;
  * Global Liquido REST exception handler
  * This exception handler returns a nice JSON for each error.
  * And it also returns the corresponding HttpStatus code depending on the errorCode
- * @See LiquidoException
+ * @See {@link LiquidoException}  and {@link LiquidoGeneralExceptionHandler}
+ * @See https://www.baeldung.com/exception-handling-for-rest-with-spring
  */
 @Slf4j
 @ControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler {
+
+	// Another possible implementation could be   https://www.mkyong.com/spring-boot/spring-rest-error-handling-example/
+	//   @Component
+	//   public class CustomErrorAttributes extends DefaultErrorAttributes { ... }
 
 	@Autowired
 	Environment springEnv;
+
+	/* BUGFIX: If I do this then LiquidoException is not handled anymore.
+	@ExceptionHandler(value = {Exception.class})
+	ResponseEntity<Object> handleGeneralException(Exception e, WebRequest request) {
+		log.warn("Internal server error", e);
+		return handleExceptionInternal(e, null, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, request);
+	}
+	*/
 
 	@ExceptionHandler(value = {LiquidoException.class})
 	ResponseEntity<Object> handleLiquidoException(LiquidoException lex, WebRequest request) {
@@ -98,7 +114,7 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 
 		if (log.isDebugEnabled()) {
 			log.debug("LiquidoException.body=");
-			log.debug(bodyOfResponse.toPrettyString());
+			log.debug("\n"+bodyOfResponse.toPrettyString());
 		}
 		return bodyOfResponse;
 	}

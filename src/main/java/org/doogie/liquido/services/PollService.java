@@ -70,9 +70,10 @@ public class PollService {
    */
   @Transactional    // run inside a transaction (all or nothing)
   public PollModel createPoll(@NonNull LawModel proposal) throws LiquidoException {
-    //===== sanity checks: There must be at least one proposal (in status PROPOSAL)
+    //===== sanity checks
     if (proposal == null)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Proposal must not be null");
+    // The proposal must be in status PROPOSAL
     if (!LawModel.LawStatus.PROPOSAL.equals(proposal.getStatus()))
       throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Need proposal with quorum for creating a poll!");
     // that proposal must not already be linked to another poll
@@ -80,7 +81,7 @@ public class PollService {
       throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Proposal (id="+proposal.getId()+") is already part of another poll!");
 
     //===== builder new Poll with one initial proposal
-    log.info("Create new poll. InitialProposal (id={}): {}", proposal.getId(), proposal.getTitle());
+    log.info("Create new poll from proposal "+proposal.toStringShort());
     PollModel poll = new PollModel();
     // voting starts n days in the future (at midnight)
     LocalDateTime votingStart = LocalDateTime.now().truncatedTo(ChronoUnit.DAYS).plusDays(props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS));

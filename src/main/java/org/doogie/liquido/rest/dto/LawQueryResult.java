@@ -1,6 +1,7 @@
 package org.doogie.liquido.rest.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import org.doogie.liquido.rest.LawRestController;
 import org.springframework.hateoas.Link;
 import org.springframework.hateoas.Resources;
 
@@ -10,7 +11,7 @@ import java.util.Collection;
  * Result of a /laws/search/findByQuery call that holds
  * the list of matching LawModels as content and
  * the original query parameters of this search.
- * @see  org.doogie.liquido.rest.LawSearchController#searchForLaw(LawQuery)
+ * @see  LawRestController#searchForLaw(LawQuery)
  * @param <T> one LawModel  (NOT a collection of LawModels!)
  */
 public class LawQueryResult<T> extends Resources<T> {

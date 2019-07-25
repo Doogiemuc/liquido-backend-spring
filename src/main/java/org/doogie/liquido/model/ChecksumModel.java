@@ -2,6 +2,7 @@ package org.doogie.liquido.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
+import org.springframework.data.rest.core.annotation.RestResource;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
@@ -54,7 +55,8 @@ public class ChecksumModel {
 	 * There is no relation between a checksum and a voter (except for public proxies).
 	 */
 	@ManyToOne
-	@JsonIgnore    // do not reveal to whom a checksum is delegated
+	@JsonIgnore    										// Do not reveal to whom a checksum is delegated
+	@RestResource(exported = false)   // And also do not expose via Spring Data Rest
 	ChecksumModel delegatedTo;
 
 	// only expose WHETHER a checksum is delegated or not
