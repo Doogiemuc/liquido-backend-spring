@@ -652,6 +652,9 @@ public class TestDataCreator implements CommandLineRunner {
 			//----- end voting Phase
 			LawModel winner = pollService.finishVotingPhase(poll);
 
+			winner.setTitle("This winning Proposal is now a Law");
+			lawRepo.save(winner);
+
 			log.info("Created finished poll (id="+poll.getId()+" with winning proposal.id="+winner.getId());
 		} catch (Exception e) {
 			log.error("Cannot seed finished poll", e);
