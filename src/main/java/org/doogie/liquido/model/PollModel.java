@@ -10,6 +10,7 @@ import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.SortNatural;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.springframework.lang.Nullable;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -31,6 +32,10 @@ import java.util.*;
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "polls")
 public class PollModel extends BaseModel {
+
+	/** The title of a poll can be edited by anyone who has a proposal in this poll. */
+	@Nullable
+	String title;
 
   /**
    * The proposals for a proposal in this poll. All of these proposal must already have reached their quorum.
@@ -106,8 +111,8 @@ public class PollModel extends BaseModel {
   public String toString() {
     return "PollModel{" +
         "id=" + id +
-        ", numProposals=" + (proposals != null ? proposals.size() : "<NULL>") +
         ", status=" + status +
+		    ", numProposals=" + (proposals != null ? proposals.size() : "<NULL>") +
         '}';
   }
 }

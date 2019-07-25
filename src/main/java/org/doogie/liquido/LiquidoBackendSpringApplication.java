@@ -1,12 +1,11 @@
 package org.doogie.liquido;
 
-import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
-import org.quartz.impl.StdSchedulerFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
@@ -17,14 +16,20 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableScheduling
 public class LiquidoBackendSpringApplication {
-  static Logger log = LoggerFactory.getLogger(LiquidoBackendSpringApplication.class);
+
+	@Value("${server.port}")
+	private String serverPort;
+
+	/** path prefix for REST API from application.properties */
+	@Value(value = "${spring.data.rest.base-path}")
+	String basePath;
 
   /**
    * Main entry point for Liquido Spring backend.
    * @param args command line arguments (none currently used)
    */
   public static void main(String[] args) throws SchedulerException {
-		log.trace("====== Starting Liquido");
+		System.out.println("====== Starting Liquido Backend =====");
 		/*
 		try {
 			Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
@@ -36,9 +41,13 @@ public class LiquidoBackendSpringApplication {
 		*/
 
 		SpringApplication.run(LiquidoBackendSpringApplication.class, args);
+	}
 
-		System.out.println("=======================================================");
-		System.out.println("======== LIQUIDO backend is up and running! ===========");
+	@EventListener(ApplicationReadyEvent.class)
+	public void applicationStarted() {
+		System.out.println("=====================================================");
+		System.out.println("=== LIQUIDO backend is up and running at");
+		System.out.println("=== http://localhost:"+this.serverPort+this.basePath);
 		System.out.println("=======================================================");
 	}
 
