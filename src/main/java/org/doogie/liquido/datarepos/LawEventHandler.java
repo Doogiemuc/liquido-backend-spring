@@ -7,9 +7,7 @@ import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LawService;
 import org.doogie.liquido.services.LiquidoException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.rest.core.annotation.HandleAfterLinkSave;
-import org.springframework.data.rest.core.annotation.HandleAfterSave;
-import org.springframework.data.rest.core.annotation.HandleBeforeCreate;
+import org.springframework.data.rest.core.annotation.HandleBeforeLinkSave;
 import org.springframework.data.rest.core.annotation.RepositoryEventHandler;
 import org.springframework.stereotype.Component;
 
@@ -26,18 +24,27 @@ public class LawEventHandler {
   @Autowired
   LiquidoAuditorAware liquidoAuditorAware;
 
-  //BUGFIX:  All of this is only called for REST operations.   SOLUTION: added logic directly into LawService.addSupporter
+  //BUGFIX:  All of this is only called for REST operations.   SOLUTION: Also added same logic directly into LawService.addSupporter()
+  //BUGFIX 2: https://jira.spring.io/browse/DATAREST-1241
   /**
-   * This is called when a supporter is added from an idea.
+   * This is called when a supporter is added via Spring data rest directly.
    * Then we'll check if the quorum has been reached.
+   *
+   * POST /laws/{id}/supporters
+   * content-type: text/uri-list
+   * body:   /liquido/v2/user/1   *
+   *
    * @param idea a supported has been added to this idea
-   * @param supporters the new set of supporters
+   * @param supporters the <b>new</b> set of supporters
    */
-  @HandleAfterLinkSave
+  @HandleBeforeLinkSave
   public void handleLawLinkSave(LawModel idea, Set<UserModel> supporters) throws LiquidoException {
-     UserModel currentUser = liquidoAuditorAware.getCurrentAuditor().orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "MUST be logged in to add a supporter"));
-    if (supporters.contains(currentUser)) throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_SUPPORTER, "User must not support his own proposal!");
-    log.debug("handleLawLinkSave: adding supporters: "+supporters+" to idea "+idea);
+    UserModel currentUser = liquidoAuditorAware.getCurrentAuditor().orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "MUST be logged in to add a supporter"));
+    if (supporters.contains(idea.getCreatedBy())) {
+      log.debug(idea.getCreatedBy().toStringShort()+" must not support his own proposal! "+idea);
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_SUPPORTER, "You cannot support your own idea or proposal!");
+    }
+    log.debug("handleLawLinkSave: "+currentUser.toStringShort()+" now supports "+idea);
     lawService.checkQuorum(idea);
   }
 

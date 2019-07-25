@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.springframework.data.rest.core.annotation.RestResource;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -94,9 +95,10 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 	 *  - When a new support is added, this idea might become a proposal.
 	 *
 	 * This attribute is private, so that you cannot (and must not) call idea.getSupporters.add(someUser)
-	 * Instead you must use LawService.addSupporter()
+	 * Instead you must use LawService.addSupporter()   or POST to /laws/{id}/like
 	 */
 	@JsonIgnore  // do not serialize when returning JSON. Only return this.getNumSupporters()
+	@RestResource(exported = false)		// supportes are not exposed as Spring Data REST resource directly.
   @ManyToMany(fetch = FetchType.EAGER)
   private Set<UserModel> supporters = new HashSet<>();
 
@@ -125,7 +127,12 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
    */
   Date reachedQuorumAt;
 
-  /**
+	/** The user that initially created the idea */
+	@CreatedBy  // automatically handled by spring data jpa auditing
+	@ManyToOne
+	public UserModel createdBy;
+
+	/**
    * compare two LawModels by their ID. This is used for sorting proposals in PollModel
    * @param law another idea, proposal or proposal
    * @return -1, 0 or +1
@@ -136,11 +143,6 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
     return law.getId().compareTo(this.getId());
   }
 
-
-  /** The user that initially created the idea */
-  @CreatedBy  // automatically handled by spring data jpa auditing
-  @ManyToOne
-  public UserModel createdBy;
   //Remember: You MUST NOT call idea.getSupporters.add(someUser) directly! Because this circumvents functional restrictions.
   //E.g. a user must not support his own idea. Call LawService.addSupporter() instead!
   public int getNumSupporters() {
@@ -184,7 +186,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
     }
   }
 
-  /** Nice and short representation of an Idea, Proposal or Law as a string */
+  /** Stringify mostly all info about this idea, proposal or law */
   @Override
   public String toString() {
     StringBuilder buf = new StringBuilder();
@@ -203,7 +205,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
     buf.append(", poll.id=" + (poll != null ? poll.getId() : "<null>"));
     buf.append(", status=" + status);
     buf.append(", numSupporters=" + getNumSupporters());
-		buf.append(", numComments=" + getNumComments());
+		buf.append(", numComments=" + getNumComments());					// keep in mind  that comments are loaded lazily. So toString MUST be called within a Hibernate Session
     buf.append(", createdBy.email=" + (createdBy != null ? createdBy.getEmail() : "<null>"));
     buf.append(", reachedQuorumAt=" + reachedQuorumAt);
     buf.append(", updatedAt=" + updatedAt);
@@ -211,5 +213,18 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
     buf.append('}');
     return buf.toString();
   }
+
+	/** Nice and short representation of an Idea, Proposal or Law as a string */
+  public String toStringShort() {
+		StringBuilder buf = new StringBuilder();
+		buf.append("LawModel{");
+		buf.append("id=" + id);
+		buf.append(", title='" + title + "'");
+		if (poll != null) buf.append(", poll.id=" + poll.getId());
+		buf.append(", status=" + status);
+		buf.append(", createdBy.email=" + (createdBy != null ? createdBy.getEmail() : "<null>"));
+		buf.append('}');
+		return buf.toString();
+	}
 
 }

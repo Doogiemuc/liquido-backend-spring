@@ -17,8 +17,7 @@ import java.util.Date;
 import java.util.List;
 
 // https://docs.spring.io/spring-data/rest/docs/current/reference/html/
-
-//TODO:   implement queries with offset+count param: https://gist.github.com/tcollins/0ebd1dfa78028ecdef0b
+//DONE:   implement queries with offset+count param: https://gist.github.com/tcollins/0ebd1dfa78028ecdef0b
 
 
 /**

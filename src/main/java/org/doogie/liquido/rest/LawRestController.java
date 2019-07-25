@@ -3,32 +3,51 @@ package org.doogie.liquido.rest;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.LawProjection;
+import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.LawQuery;
 import org.doogie.liquido.rest.dto.LawQueryResult;
+import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LawService;
-import org.doogie.liquido.util.Lson;
+import org.doogie.liquido.services.LiquidoException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.rest.webmvc.RepositoryRestController;
 import org.springframework.hateoas.Link;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.util.Set;
 
 @Slf4j
 @RepositoryRestController  // with all spring magic
 @RequestMapping("${spring.data.rest.base-path}")
-public class LawSearchController {
+public class LawRestController {
 
 	@Autowired
 	LawService lawService;
 
+	@Autowired
+	LiquidoAuditorAware liquidoAuditorAware;
 
 	@Autowired
 	ProjectionFactory factory;
+
+	/**
+	 * Add current user as a supporter for the given idea, proposal or law.
+	 * Will check quorum if idea can become a proposal.
+	 * @param idea id of an idea, proposal or law
+	 * @return 200
+	 * @throws LiquidoException When current user is the creator of that idea
+	 */
+	@RequestMapping(value = "/laws/{ideaId}/like", method = RequestMethod.POST)
+	public @ResponseBody ResponseEntity<?> addSupporter(@PathVariable(name="ideaId") LawModel idea) throws LiquidoException {
+		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor().orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "MUST be logged in to add a supporter"));
+		lawService.addSupporter(currentUser, idea);
+		return ResponseEntity.ok("Thank you for supporting this idea.");
+	}
 
 	/**
 	 * Search for ideas, proposals or laws with advanced search criteria

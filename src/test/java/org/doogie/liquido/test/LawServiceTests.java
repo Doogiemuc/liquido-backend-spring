@@ -16,7 +16,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
+import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -31,6 +34,7 @@ import java.util.Optional;
 @Slf4j
 @RunWith(SpringRunner.class)
 @SpringBootTest
+@Transactional   // needed to prevent LazyInitalizationException when getting law.comments in law.toString()
 public class LawServiceTests extends BaseTest {
 
 	@Autowired
@@ -46,6 +50,7 @@ public class LawServiceTests extends BaseTest {
 	LawService lawService;
 
 	@Test
+
 	public void testFindLaw() {
 		// GIVEN
 		LawQuery lawQuery = new LawQuery();

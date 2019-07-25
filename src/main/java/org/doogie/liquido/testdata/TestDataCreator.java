@@ -491,7 +491,7 @@ public class TestDataCreator implements CommandLineRunner {
   /**
    * Add num supporters to idea/proposal.   This only adds the references. It does not save/persist anything.
    * This is actually a quite interesting algorithm, because the initial creator of the idea must not be added as supporter
-   * and supporters must not be added twice.
+   * ,supporters must not be added twice but we want random supporters given these restrictions
    * @param idea the idea to add to
    * @param num number of new supporters to add.
    * @return the idea with the added supporters. The idea might have reached its quorum and now be a proposal
@@ -511,8 +511,12 @@ public class TestDataCreator implements CommandLineRunner {
 
     List<UserModel> newSupporters = otherUsers.subList(0, num);
     for (UserModel supporter: newSupporters) {
-      idea = lawService.addSupporter(supporter, idea);   //Remember: Don't just do idea.getSupporters().add(supporter);
-    }
+			try {
+				idea = lawService.addSupporter(supporter, idea);   //Remember: Don't just do idea.getSupporters().add(supporter);
+			} catch (LiquidoException e) {
+				// should not happen, can be ignored.
+			}
+		}
     return idea;
   }
 
