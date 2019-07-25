@@ -42,12 +42,12 @@ import java.util.function.Function;
 import static org.junit.Assert.*;
 import static org.springframework.http.HttpMethod.*;
 
-
-
 /**
  * Integration test for Liquiodo REST endpoint.
  *
  * These test cases test the Liquido Java backend via its REST interface.
+ * Keep in mind, that these tests run from the point of view of an HTTP client.
+ * We CAN use Autowired spring components here. But the tests should assert just the HTTP responses.
  */
 @Slf4j
 @RunWith(SpringRunner.class)
@@ -425,7 +425,7 @@ public class RestEndpointTests extends BaseTest {
   */
 
 	/**
-	 * Negative test case: User must be able to support his own idea
+	 * Negative test case: User must NOT be able to support his own idea
 	 */
 	@Test
 	public void testSupportOwnIdea() {
@@ -441,10 +441,11 @@ public class RestEndpointTests extends BaseTest {
 		} catch (HttpClientErrorException e) {
 			//THEN
 			Assert.assertEquals("Response should have status" + HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST, e.getStatusCode());
-			Assert.assertTrue("LiquidoException.Error should have been CANNOT_ADD_SUPPORTER", e.getResponseBodyAsString().contains(LiquidoException.Errors.CANNOT_ADD_SUPPORTER.name()) );
+			String liquidoErrorName = JsonPath.read(e.getResponseBodyAsString(), "$.liquidoErrorName");
+			Assert.assertEquals("LiquidoException.Error should have been CANNOT_ADD_SUPPORTER", LiquidoException.Errors.CANNOT_ADD_SUPPORTER.name(), liquidoErrorName );
 			log.trace("TEST supportOwnIdea SUCCESSFUL");
 		} catch (Throwable t) {
-			fail("Should have thrown a HttpClientErrorException");
+			fail("Should have thrown a HttpClientErrorException but threw "+t);
 		}
 	}
 
@@ -523,12 +524,14 @@ public class RestEndpointTests extends BaseTest {
 	 * @param idea
 	 */
   private ResponseEntity<String> addSupporterToIdea(String supporterURI, LawModel idea) {
-		String supportersURL = "/laws/"+idea.getId()+"/supporters";
+		String supportersURL = "/laws/"+idea.getId()+"/like";
+		/*
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(RestMediaTypes.TEXT_URI_LIST);
 		HttpEntity<String> entity = new HttpEntity<>(supporterURI, headers);
-		ResponseEntity<String> addSupporterResponse = client.postForEntity(supportersURL, entity, String.class);
-		assertEquals(HttpStatus.NO_CONTENT, addSupporterResponse.getStatusCode());   // 204
+		*/
+		ResponseEntity<String> addSupporterResponse = client.postForEntity(supportersURL, null, String.class);
+		assertEquals(HttpStatus.OK, addSupporterResponse.getStatusCode());
 		log.debug("Added supporter to idea: "+supporterURI);
 		return addSupporterResponse;
 	}

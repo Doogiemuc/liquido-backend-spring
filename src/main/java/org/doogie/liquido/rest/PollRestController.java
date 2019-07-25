@@ -84,7 +84,7 @@ public class PollRestController {
    * @return the saved poll as HATEOAS resource with all _links
    * @throws LiquidoException when sent LawModel is not in state PROPOSAL or creation of new poll failed
    */
-  @RequestMapping(value = "/createNewPoll", method = RequestMethod.POST)
+  @RequestMapping(value = "/polls/add", method = RequestMethod.POST)
   public @ResponseBody Resource createNewPoll(
       @RequestBody Resource<PollModel> pollResource,                         // how to convert URI to object? https://github.com/spring-projects/spring-hateoas/issues/292
       PersistentEntityResourceAssembler resourceAssembler
