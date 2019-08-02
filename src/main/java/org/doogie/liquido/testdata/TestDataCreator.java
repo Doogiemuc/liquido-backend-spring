@@ -571,7 +571,8 @@ public class TestDataCreator implements CommandLineRunner {
       createdBy = getUser(0);
       LawModel initialProposal = createProposal(title, desc, area, createdBy, 10, 7);
 			initialProposal = addCommentsToProposal(initialProposal);
-      PollModel newPoll = pollService.createPoll(initialProposal);
+			String pollTitle = "Poll in ELABORATION from TestDataCreator "+System.currentTimeMillis() % 10000;
+      PollModel newPoll = pollService.createPoll(pollTitle, initialProposal);
       newPoll.setTitle("Poll from TestDataCreator "+System.currentTimeMillis() % 10000);
 
       //===== add alternative proposals
@@ -618,6 +619,7 @@ public class TestDataCreator implements CommandLineRunner {
       LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
       savedPoll.setVotingStartAt(yesterday);
 			savedPoll.setVotingEndAt(yesterday.truncatedTo(ChronoUnit.DAYS).plusDays(props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE)));     //voting ends in n days at midnight
+			savedPoll.setTitle("Poll in voting phase "+System.currentTimeMillis()%10000);
       savedPoll = pollRepo.save(savedPoll);
 
       return savedPoll;
@@ -646,6 +648,7 @@ public class TestDataCreator implements CommandLineRunner {
 			poll.setVotingStartAt(votingStartAt);
 			LocalDateTime votingEndAt = LocalDateTime.now().minusDays(daysFinished).truncatedTo(ChronoUnit.DAYS);  // voting ends at midnight
 			poll.setVotingEndAt(votingEndAt);
+			poll.setTitle("Finished Poll "+System.currentTimeMillis()%10000);
 
 			pollRepo.save(poll);
 			fakeCreateAt(poll, daysVotingStarts+durationVotingPhase+daysFinished);
