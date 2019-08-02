@@ -1,6 +1,5 @@
 package org.doogie.liquido.rest;
 
-import io.jsonwebtoken.lang.Collections;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.BallotRepo;
 import org.doogie.liquido.datarepos.ChecksumRepo;
@@ -19,15 +18,15 @@ import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
+import org.springframework.hateoas.EntityLinks;
+import org.springframework.hateoas.Link;
 import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.Resources;
 import org.springframework.http.MediaType;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
@@ -68,6 +67,9 @@ public class PollRestController {
 	private ProjectionFactory factory;
 
 	@Autowired
+	EntityLinks entityLinks;
+
+	@Autowired
 	LiquidoRestUtils restUtils;
 
   //see https://docs.spring.io/spring-data/rest/docs/current/reference/html/#customizing-sdr.overriding-sdr-response-handlers
@@ -76,7 +78,7 @@ public class PollRestController {
    * When an idea reaches its quorum then it becomes a proposal and its creator <i>can</i> builder a new poll for this proposal.
    * Other proposals need to join this poll before voting can be started.
    * @param pollResource the new poll with the link to (at least) one proposal, e.g.
-   *          <pre>{ "proposals": [ "/liquido/v2/laws/152" ] }</pre>
+   *          <pre>{ title: "Poll Title", "proposals": [ "/liquido/v2/laws/152" ] }</pre>
    * @param resourceAssembler spring's PersistentEntityResourceAssembler that can builder the reply
    * @return the saved poll as HATEOAS resource with all _links
    * @throws LiquidoException when sent LawModel is not in state PROPOSAL or creation of new poll failed
@@ -90,7 +92,7 @@ public class PollRestController {
     PollModel pollFromRequest = pollResource.getContent();
     LawModel proposalFromRequest = pollFromRequest.getProposals().iterator().next();             // This proposal is a "detached entity". Cannot simply be saved.
     //jpaContext.getEntityManagerByManagedType(PollModel.class).merge(proposal);      // DOES NOT WORK IN SPRING.  Must handle transaction via a seperate PollService class and @Transactional annotation there.
-    PollModel createdPoll = pollService.createPoll(proposalFromRequest);
+    PollModel createdPoll = pollService.createPoll(pollFromRequest.getTitle(), proposalFromRequest);
 
     PersistentEntityResource persistentEntityResource = resourceAssembler.toFullResource(createdPoll);
 
@@ -142,7 +144,20 @@ public class PollRestController {
 			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Poll.id="+poll.getId()+" is not in status FINISHED");
 		Lson pollResultsJson = pollService.calcPollResults(poll);
 		return pollResultsJson;
+	}
 
+	@RequestMapping(value = "/polls/{pollId}/verifyChecksum")
+	@ResponseBody
+	public Lson verifyChecksum(
+		@PathVariable("pollId") PollModel poll,
+		@RequestParam("checksum") String checksumStr
+	) {
+  	boolean valid = pollService.verifyChecksum(poll, checksumStr);
+		Link pollLink = entityLinks.linkToSingleResource(PollModel.class, poll.getId());
+  	return new Lson()
+			.put("checksum", checksumStr)
+			.put("poll", pollLink.getHref())
+			.put("valid", valid);
 	}
 
 	/**

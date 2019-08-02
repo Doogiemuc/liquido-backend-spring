@@ -2,10 +2,7 @@ package org.doogie.liquido.services;
 
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.datarepos.BallotRepo;
-import org.doogie.liquido.datarepos.DelegationRepo;
-import org.doogie.liquido.datarepos.LawRepo;
-import org.doogie.liquido.datarepos.PollRepo;
+import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.services.scheduler.FinishPollJob;
 import org.doogie.liquido.services.voting.RankedPairVoting;
@@ -18,6 +15,7 @@ import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -53,6 +51,9 @@ public class PollService {
 	BallotRepo ballotRepo;
 
   @Autowired
+	ChecksumRepo checksumRepo;
+
+  @Autowired
 	ProxyService proxyService;
 
   @Autowired
@@ -69,7 +70,7 @@ public class PollService {
    * @throws LiquidoException if passed LawModel is not in state PROPOSAL.
    */
   @Transactional    // run inside a transaction (all or nothing)
-  public PollModel createPoll(@NonNull LawModel proposal) throws LiquidoException {
+  public PollModel createPoll(@NonNull String title, @NonNull LawModel proposal) throws LiquidoException {
     //===== sanity checks
     if (proposal == null)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Proposal must not be null");
@@ -83,6 +84,7 @@ public class PollService {
     //===== builder new Poll with one initial proposal
     log.info("Create new poll from proposal "+proposal.toStringShort());
     PollModel poll = new PollModel();
+    poll.setTitle(title);
     // voting starts n days in the future (at midnight)
     LocalDateTime votingStart = LocalDateTime.now().truncatedTo(ChronoUnit.DAYS).plusDays(props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS));
     poll.setVotingStartAt(votingStart);
@@ -259,7 +261,7 @@ public class PollService {
 		return ballotRepo.findByPollAndChecksum(poll, voterChecksum.getDelegatedTo());
 	}
 
-	//TODO: actually I need getBallotOfEfectiveProxy
+	//TODO: actually I need getBallotOfEffectiveProxy
 	public Optional<BallotModel> getBallotOfTopProxy(PollModel poll, ChecksumModel voterChecksum) throws LiquidoException {
 		if (PollModel.PollStatus.ELABORATION.equals(poll.getStatus()))
 			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Cannot get ballot of poll in ELABORATION");
@@ -272,6 +274,19 @@ public class PollService {
 	private ChecksumModel findTopChecksumRec(ChecksumModel checksum) {
 		if (checksum.getDelegatedTo() == null) return checksum;
 		return findTopChecksumRec(checksum.getDelegatedTo());
+	}
+
+	/**
+	 * Checks if a given checksum was counted in that poll
+	 * @param poll SHOULD have status == FINISHED
+	 * @param checksumStr a checksum string
+	 * @return true if a ballot with that checksum was counted in that poll
+	 */
+	public boolean verifyChecksum(@NotNull PollModel poll, @NotNull String checksumStr) {
+		Optional<ChecksumModel> checksumOpt = checksumRepo.findByChecksum(checksumStr);
+		if (!checksumOpt.isPresent()) return false;
+		Optional<BallotModel> ballotOpt = ballotRepo.findByPollAndChecksum(poll, checksumOpt.get());
+		return ballotOpt.isPresent() && ballotOpt.get().getPoll().equals(poll);
 	}
 
 	/**
