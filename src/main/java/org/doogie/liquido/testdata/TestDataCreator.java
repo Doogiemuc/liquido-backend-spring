@@ -572,6 +572,7 @@ public class TestDataCreator implements CommandLineRunner {
       LawModel initialProposal = createProposal(title, desc, area, createdBy, 10, 7);
 			initialProposal = addCommentsToProposal(initialProposal);
       PollModel newPoll = pollService.createPoll(initialProposal);
+      newPoll.setTitle("Poll from TestDataCreator "+System.currentTimeMillis() % 10000);
 
       //===== add alternative proposals
       for (int i = 1; i < numProposals; i++) {
