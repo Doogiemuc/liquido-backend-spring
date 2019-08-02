@@ -6,10 +6,7 @@ import org.doogie.liquido.datarepos.BallotRepo;
 import org.doogie.liquido.datarepos.ChecksumRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
-import org.doogie.liquido.model.BallotModel;
-import org.doogie.liquido.model.LawModel;
-import org.doogie.liquido.model.LawProjection;
-import org.doogie.liquido.model.PollModel;
+import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.JoinPollRequest;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LawService;
@@ -191,6 +188,64 @@ public class PollRestController {
 				.put("_links.poll.templated", pollLink.isTemplated());
 		*/
 	}
+
+	/**
+	 * Find polls by status and area
+	 * @param status {@link org.doogie.liquido.model.PollModel.PollStatus}
+	 * @param area URI of an AreaModel
+	 * @return HATEOAS JSON with _embedded.polls[]
+	 * @throws LiquidoException when status String does not match any PollStatus
+	 *
+	 * Example JSON response
+	 * <pre>
+	 * {
+	 *   "_embedded" : {
+	 *     "polls" : [ {
+	 *       "id" : 239,
+	 *       "createdAt" : "2019-07-17T05:38:45.141+0000",
+	 *       "updatedAt" : "2019-07-17T05:38:45.141+0000",
+	 *       "title" : null,
+	 *       "status" : "ELABORATION",
+	 *       "votingStartAt" : "2019-08-07T00:00:00",
+	 *       "votingEndAt" : "2019-08-21T00:00:00",
+	 *       "duelMatrix" : {
+	 *         "rows" : 0,
+	 *         "cols" : 0,
+	 *         "rawData" : [ ]
+	 *       },
+	 *       "area" : {
+	 *         "id" : 21,
+	 *         "createdAt" : "2019-07-24T05:38:29.802+0000",
+	 *         "updatedAt" : "2019-07-24T05:38:29.802+0000",
+	 *         "title" : "Area 0",
+	 *         "description" : "Nice description for test area #0"
+	 *       },
+	 *       "numCompetingProposals" : 5
+	 *     } ]
+	 *   },
+	 *   "_links" : {
+	 *     "self" : {
+	 *       "href" : "http://localhost:57253/polls/search/findByStatus?status={status}",
+	 *       "templated" : true
+	 *     }
+	 *   }
+	 * }
+	 * </pre>
+   */
+	@RequestMapping("/polls/search/findByStatusAndArea")
+	public @ResponseBody Resources<PollModel> findPollsByStatusAndArea(@RequestParam("status") String status, @RequestParam("area")AreaModel area) throws LiquidoException {
+		PollModel.PollStatus pollStatus = null;
+		try {
+			 pollStatus = PollModel.PollStatus.valueOf(status);
+		} catch (IllegalArgumentException e) {
+			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Unknown status for poll '"+status+"'. Must be one of ELABORATION, VOTING or FINISHED");
+		}
+		List<PollModel> polls = pollRepo.findByStatus(pollStatus);
+		List<PollModel> pollsInArea = polls.stream().filter(poll -> poll.getArea().equals(area)).collect(Collectors.toList());
+		return new Resources<>(pollsInArea, linkTo(methodOn(PollRestController.class).findPollsByStatusAndArea(null, null)).withRel("self"));
+	}
+
+
 
 	/**
 	 * Get recently discussed proposals.

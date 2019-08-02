@@ -12,11 +12,11 @@ import java.lang.reflect.Type;
 /**
  * This converter can deserialize from IDs <b>and</b> spring-data-HATEOAS URIs to JPA entities.
  * It is added as a converter in {@link org.doogie.liquido.rest.LiquidoRepositoryRestConfigurer}.
- * Now you can use plain numerical IDs (eg. myentity=4711)  or URIs (/basepath/entity/4711) as REST @RequestParams in the request URL.
+ * Now you can use plain numerical IDs (eg. myentity=4711)  or URIs (/entities/4711) as REST @RequestParams in the request URL.
  *
  * Spring data rest would be able to do this for plain IDs (myentityid=4711) but not for URIs.
  *
- * The other way round from enttity to URI can be done like this:
+ * The other way round from entity to URI can be done like this:
  * Link areaLink = entityLinks.linkToSingleResource(AreaModel.class, area.getId());
  *
  * @see org.springframework.data.rest.core.UriToEntityConverter
@@ -40,7 +40,7 @@ public class LiquidoUriToEntityConverter<T> implements Converter<String, T>, Con
 
 	/**
 	 * Check if this converter can convert from sourceType to targetType.
-	 * @param sourceType sourceType.getType() should be String.class   (Spring interstingly also passes String.class when only a numerical ID is given as @RequestParam. It does not pass Integer.class or Long.class)
+	 * @param sourceType sourceType.getType() should be String.class   (Spring interestingly also passes String.class when only a numerical ID is given as @RequestParam. It does not pass Integer.class or Long.class)
 	 * @param targetType targetType.getType() should match clazz
 	 * @return return true if this converter is able to convert
 	 */
@@ -61,7 +61,7 @@ public class LiquidoUriToEntityConverter<T> implements Converter<String, T>, Con
 	@Override
 	public T convert(String sourceUri) {
 		Long id = LiquidoRestUtils.getIdFromURI(this.pathSegment, sourceUri);
-		T entity = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Cannot find entity "+clazz.getTypeName()+" with id="+id));
+		T entity = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Cannot find entity "+clazz.getTypeName()+" with id="+id));  //TODO: Cannot simply throw a LiquidoException when Entity is not found
 		return entity;
 	}
 

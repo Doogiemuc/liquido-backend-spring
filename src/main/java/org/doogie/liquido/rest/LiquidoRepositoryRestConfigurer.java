@@ -2,6 +2,7 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
+import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.converters.LiquidoUriToEntityConverter;
@@ -110,10 +111,13 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 	AreaRepo areaRepo;
 
 	@Autowired
+	LawRepo lawRepo;
+
+	@Autowired
 	PollRepo pollRepo;
 
 	/**
-	 * Add convertes for REST RequestParams that can deserialize from HATEOAS URIs to spring data entities.
+	 * Add converters for REST RequestParams that can deserialize from HATEOAS URIs to spring data entities.
 	 * This is used when the client passes an areaId in rest URLs as PathParameters.
 	 * @param conversionService springs conversion service, that we'll addConverter() to
 	 */
@@ -121,6 +125,7 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 	public void configureConversionService(ConfigurableConversionService conversionService) {
 		//BUGFIX: must add source and target type when using generic parametrized converter
 		conversionService.addConverter(String.class, AreaModel.class, new LiquidoUriToEntityConverter<>(areaRepo, AreaModel.class));
+		conversionService.addConverter(String.class, LawModel.class,  new LiquidoUriToEntityConverter<>(lawRepo,  LawModel.class));
 		conversionService.addConverter(String.class, PollModel.class, new LiquidoUriToEntityConverter<>(pollRepo, PollModel.class));
 	}
 
@@ -134,10 +139,9 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
   */
 
 
-  /**
+  /*
    * Automatically generated Swagger REST API documentation
    * @return the configured docket bean
-
   @Bean
   public Docket getSwaggerApi() {
     return new Docket(DocumentationType.SWAGGER_2)
