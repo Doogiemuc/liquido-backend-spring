@@ -3,6 +3,7 @@ package org.doogie.liquido.test;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.PathNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.jwt.JwtTokenProvider;
@@ -638,6 +639,22 @@ public class RestEndpointTests extends BaseTest {
     String responseJSON = client.getForObject("/globalProperties", String.class);
     assertNotNull(responseJSON);
   }
+
+	/**
+	 * Search a poll by its status.
+	 * Precondition: This test expects at least on poll in status ELABORATION (which is created by TestDataCreator)
+	 */
+	@Test
+	public void testSearchPollByStatus() {
+  	String res = client.getForObject("/polls/search/findByStatus?status=ELABORATION", String.class);
+  	try {
+			Map<String, Object> poll = JsonPath.read(res, "$._embedded.polls[0]");
+			assertEquals("Found poll should have had status ELABORATION!", PollModel.PollStatus.ELABORATION.name(), poll.get("status"));
+		}	catch (PathNotFoundException e) {
+  		fail("Expected to find at least one poll in status ELABORATION: "+e.getMessage());
+		}
+	}
+
 
 	/**
 	 * Cast a vote via real REST requests.
