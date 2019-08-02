@@ -21,13 +21,13 @@ import java.util.*;
  * Data model for a poll. A poll has a list of competing proposals
  * A poll CAN be started by the creator of an idea, when this idea reaches its quorum and becomes a proposal.
  * A poll then runs for a configurable number of days.
- *
+ * The votes within a poll are stored in anonymous ballots.
  * This is just a domain model class. All the business logic is in {@link org.doogie.liquido.services.PollService}!
  */
 @Data
 @Entity
 @NoArgsConstructor
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(of="id", callSuper = true)
 //@RequiredArgsConstructor(suppressConstructorProperties = true)
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "polls")
