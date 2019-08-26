@@ -15,7 +15,7 @@ import java.util.Map;
 import static org.doogie.liquido.util.LiquidoProperties.KEY.BCRYPT_SALT;
 
 /**
- * Global properties that are persistet in the DB.
+ * Global properties that are persisted in the DB.
  * These properties can be changed at runtime
  * and new values <strong>can</strong> be persisted in the DB.
  */
@@ -40,7 +40,7 @@ public class LiquidoProperties extends HashMap<LiquidoProperties.KEY, String> /*
    *  - I can iterate over all KEYs.
    */
   public enum KEY {
-    LIQUIDO_VERSION("liquido.version"),
+    LIQUIDO_BACKEND_VERSION("liquido.backend.version"),
     SUPPORTERS_FOR_PROPOSAL("liquido.supporters.for.proposal"),
     DAYS_UNTIL_VOTING_STARTS("liquido.days.until.voting.starts"),
     DURATION_OF_VOTING_PHASE("liquido.duration.of.voting.phase"),
