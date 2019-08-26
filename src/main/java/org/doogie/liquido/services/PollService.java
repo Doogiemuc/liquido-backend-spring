@@ -204,7 +204,7 @@ public class PollService {
 
     poll.setStatus(PollModel.PollStatus.FINISHED);
     for(LawModel proposal : poll.getProposals()) {
-      proposal.setStatus(LawModel.LawStatus.DROPPED);
+      proposal.setStatus(LawModel.LawStatus.LOST);
     }
     poll.setVotingEndAt(LocalDateTime.now());
 
