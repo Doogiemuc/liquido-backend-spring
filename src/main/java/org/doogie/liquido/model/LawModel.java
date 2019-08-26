@@ -12,12 +12,14 @@ import javax.validation.constraints.NotNull;
 import java.util.*;
 
 /**
- * <h3>Data model for an ida -> proposal -> proposal.</h3>
+ * <h3>Data model for an idea, proposal or law</h3>
  *
- * User's can suggest ideas. Once an idea reaches its quorum, then it becomes a proposal. When a proposal joins
+ * This is the central model class in Liquido.
+ *
+ * Any user can add an ideas. Once an idea reaches its quorum, then it becomes a proposal. When a proposal joins
  * a poll, then it can be discussed and elaborated. When the voting phase of the poll starts, then a
  * proposal must not be changed anymore. Users can vote in the poll. When the voting phase is finished,
- * then the winning proposal becomes a proposal. All other proposals in the poll are dropped.
+ * then the winning proposal becomes a law. All other proposals in the poll are dropped.
  *
  * The title of every idea must be globally unique!
  */
@@ -49,9 +51,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
   @Column(unique = true)
   public String title;
 
-  //TODO: lawModel.tagline
-  //TODO: lawModel.tags
-  //TODO: related ideas? => relations built automatically, when a proposal is added to a running poll.
+  //MAYBE: lawModel.tags or related ideas? => relations built automatically, when a proposal is added to a running poll.
 
 	/**
 	 * HTML description of this proposal. This description can only be edited by the creator
@@ -75,7 +75,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 		ELABORATION(2),     // Proposal is part of a poll and can be discussed. Voting has not yet started.
 		VOTING(3),          // When the voting phase starts, the description of a proposals cannot be changed anymore.
 		LAW(4),             // The winning proposal becomes a proposal.
-		DROPPED(5),         // All non winning proposals in a finished poll are dropped.
+		LOST(5),         		// All non winning proposals in a finished poll are dropped. They lost the vote.
 		RETENTION(6),       // When a proposal looses support, it is in the retention phase
 		RETRACTED(7);       // When a proposal looses support for too long, it will be retracted.
 		int statusId;
@@ -164,7 +164,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 	 * Number of comments and (recursive) replies.
 	 * @return overall number of comments
 	 */
-	@JsonIgnore  // prevent LazyInitialisationException - comments might not be loaded
+	@JsonIgnore  // prevent LazyInitialisationException for getter - comments might not be loaded
 	public int getNumComments() {
   	if (this.comments == null || comments.size() == 0) return 0;
   	int count = 0;
@@ -176,6 +176,10 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 		return count;
 	}
 
+	/**
+	 * Description can only be changed when in status IDEA or PROPOSAL
+	 * @param description the new description (HTML)
+	 */
   public void setDescription(String description) {
     if (this.getStatus() == null ||
         LawStatus.IDEA.equals(this.getStatus()) ||
