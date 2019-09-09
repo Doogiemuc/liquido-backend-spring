@@ -8,6 +8,7 @@ import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.*;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoProperties;
+import org.h2.jdbc.JdbcSQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -153,7 +154,6 @@ public class TestDataCreator implements CommandLineRunner {
    * @param args command line args
    */
   public void run(String... args) {
-
 		try {
 			String dbURL = jdbcTemplate.getDataSource().getConnection().getMetaData().getURL();
 			log.info("===== Connecting to DB at "+dbURL);
@@ -176,7 +176,19 @@ public class TestDataCreator implements CommandLineRunner {
     }
     if (seedDB) {
 			log.info("===== START TestDataCreator");
-      log.debug("Create test data from scratch via spring-data for DB: "+ jdbcTemplate.getDataSource().toString());
+			// Sanity check: Is there a schema with tables?
+	    try {
+		    List<UserModel> users = jdbcTemplate.queryForList("SELECT * FROM USERS LIMIT 10", UserModel.class);
+	    } catch (Exception e) {
+		    if (e.getCause() instanceof JdbcSQLException) {
+		    	log.error("Cannot find table USERS! Did you create a DB schema at all?");
+		    } else {
+		    	throw e;
+		    }
+	    }
+
+
+	    log.debug("Create test data from scratch via spring-data for DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
       seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX);
       auditorAware.setMockAuditor(this.usersMap.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
@@ -191,9 +203,6 @@ public class TestDataCreator implements CommandLineRunner {
 			seedVotes(poll, TestFixtures.NUM_VOTES);
 			seedPollFinished(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
       seedLaws();
-
-
-
       auditorAware.setMockAuditor(null);
 
 			log.info("===== TestDataCreator: Store sample data in file: "+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME);
