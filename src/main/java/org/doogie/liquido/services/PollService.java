@@ -129,12 +129,13 @@ public class PollService {
    * @param poll a poll in elaboration phase with at least two proposals
    */
   @Transactional
-  public void startVotingPhase(@NonNull PollModel poll) throws LiquidoException, SchedulerException {
+  public void startVotingPhase(@NonNull PollModel poll) throws LiquidoException {
     log.info("startVotingPhase of "+poll.toString());
     if (poll.getStatus() != PollModel.PollStatus.ELABORATION)
-      throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Poll must be in status ELABORATION");
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Poll(id=\"+poll.id+\") must be in status ELABORATION");
     if (poll.getProposals().size() < 2)
-      throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Poll must have at least two alternative proposals");
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Poll(id="+poll.id+") must have at least two alternative proposals");
+
     for (LawModel proposal : poll.getProposals()) {
       proposal.setStatus(LawModel.LawStatus.VOTING);
     }
@@ -145,7 +146,13 @@ public class PollService {
 		pollRepo.save(poll);
 
 		//----- schedule a Quartz Job that will finish the voting phase at poll.votingEndAt() date
-		scheduleJobToFinishPoll(poll);
+	  try {
+		  scheduleJobToFinishPoll(poll);
+	  } catch (SchedulerException e) {
+	  	String msg = "Cannot start voting phase, because of scheduler error";
+		  log.error(msg, e);
+		  throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, msg, e);
+	  }
   }
 
   /** An auto-configured spring bean that gives us access to the Quartz scheduler */

@@ -14,6 +14,9 @@ import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
@@ -22,7 +25,9 @@ import org.springframework.hateoas.EntityLinks;
 import org.springframework.hateoas.Link;
 import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.Resources;
+import org.springframework.hateoas.mvc.ControllerLinkBuilder;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -35,6 +40,8 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
  * REST controller for working with Polls.
  *   /createNewPoll   add a proposal to a new poll
  *   /joinPoll        add a proposal to an existing poll that is (and must be) in elaboration
+ *
+ * PollRepo is delibarately not exposed via REST. All Poll related REST APIs are implemented here.
  */
 @Slf4j
 @BasePathAwareController
@@ -62,6 +69,9 @@ public class PollRestController {
 
   @Autowired
 	ChecksumRepo checksumRepo;
+
+  @Autowired
+  Environment springEnv;
 
 	@Autowired
 	private ProjectionFactory factory;
@@ -206,7 +216,7 @@ public class PollRestController {
 
 	/**
 	 * Find polls by status and area
-	 * @param status {@link org.doogie.liquido.model.PollModel.PollStatus}
+	 * @param status {@link PollModel.PollStatus}
 	 * @param area URI of an AreaModel
 	 * @return HATEOAS JSON with _embedded.polls[]
 	 * @throws LiquidoException when status String does not match any PollStatus
@@ -248,7 +258,7 @@ public class PollRestController {
 	 * </pre>
    */
 	@RequestMapping("/polls/search/findByStatusAndArea")
-	public @ResponseBody Resources<PollModel> findPollsByStatusAndArea(@RequestParam("status") String status, @RequestParam("area")AreaModel area) throws LiquidoException {
+	public @ResponseBody Lson findPollsByStatusAndArea(@RequestParam("status") String status, @RequestParam("area")AreaModel area) throws LiquidoException {
 		PollModel.PollStatus pollStatus = null;
 		try {
 			 pollStatus = PollModel.PollStatus.valueOf(status);
@@ -257,7 +267,16 @@ public class PollRestController {
 		}
 		List<PollModel> polls = pollRepo.findByStatus(pollStatus);
 		List<PollModel> pollsInArea = polls.stream().filter(poll -> poll.getArea().equals(area)).collect(Collectors.toList());
-		return new Resources<>(pollsInArea, linkTo(methodOn(PollRestController.class).findPollsByStatusAndArea(null, null)).withRel("self"));
+
+		// Implementation note: PollRepo is deliberately NOT exposed as REST resource. Polls MUST be handled through this custom PollRestController.
+		// CODE: return new Resources<>(pollsInArea, linkTo(methodOn(PollRestController.class).findPollsByStatusAndArea(null, null)).withRel("self"));
+		// BUG: returning resource does not add _embedded.polls: [] when List is empty. https://stackoverflow.com/questions/30286795/how-to-force-spring-hateoas-resources-to-render-an-empty-embedded-array/30297552
+		// FIX: Doogies LSON Builder for the win once again!! :-)
+		// LEARNING:  Always fine tune the returned JSON of your API !YOURSELF!  Do NOT rely on auto generated Repos.
+		ControllerLinkBuilder controllerLinkBuilder = linkTo(methodOn(PollRestController.class).findPollsByStatusAndArea(null, null));
+		return new Lson()
+				.put("_embedded.polls", pollsInArea)
+				.put("_links.self.href", controllerLinkBuilder.toUri());
 	}
 
 
@@ -274,6 +293,19 @@ public class PollRestController {
 		// https://stackoverflow.com/questions/28139856/how-can-i-get-spring-mvchateoas-to-encode-a-list-of-resources-into-hal
 		List<LawProjection> projected = mostDiscussedProposals.stream().map(l -> factory.createProjection(LawProjection.class, l)).collect(Collectors.toList());
 		return new Resources<>(projected, linkTo(methodOn(PollRestController.class).getRecentlyDiscussedProposals()).withRel("self"));
+	}
+
+	//TODO: refactor this into its own controller anotated with   @Profile({"dev", "test"})
+	@RequestMapping("/polls/{pollId}/devStartVotingPhase")
+	public ResponseEntity startVotingPhaseDevHock(
+			@PathVariable("pollId") PollModel poll
+	) throws LiquidoException {
+		if (!springEnv.acceptsProfiles(Profiles.of("dev", "test")))
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "This hook is only available in spring envorinment dev or test!");
+		if (poll == null || poll.getId() == null)
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Could not find poll with that id");
+		pollService.startVotingPhase(poll);
+		return ResponseEntity.ok("Voting phase of poll(id="+poll.id+") has been started.");
 	}
 
 }

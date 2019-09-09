@@ -112,6 +112,7 @@ public class PollModel extends BaseModel {
     return "PollModel{" +
         "id=" + id +
         ", status=" + status +
+		    ", title='" + title + "'" +
 		    ", numProposals=" + (proposals != null ? proposals.size() : "<NULL>") +
         '}';
   }
