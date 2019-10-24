@@ -71,7 +71,7 @@ public class RankedPairVoting {
 	 * @param poll a poll where voting was just finished
 	 * @return a two dimensional Matrix that contains the number of voters that prefer i over j
 	 */
-	public static Matrix calcDuelMatrix(@NonNull PollModel poll, @NonNull List<BallotModel> ballots) {
+	public static Matrix calcDuelMatrixBAK(@NonNull PollModel poll, @NonNull List<BallotModel> ballots) {
 		// First of all each proposal in the poll gets an array index (poll.proposals is a SortedSet)
 		// Map: proposal -> array index of this proposal
 		Map<LawModel, Integer> proposalIdx = new HashMap<>();
@@ -130,6 +130,44 @@ public class RankedPairVoting {
 				// and add a preference i>k for each proposal k that was not voted for at all in this voteOrder
 				for (int k = 0; k < notVotedForMap.get(key).length; k++) {
 					duelMatrix.add(idx[i], notVotedForMap.get(key)[k], numberOfBallots.get(key));
+				}
+			}
+		}
+		return  duelMatrix;
+	}
+
+	public static Matrix calcDuelMatrix(@NonNull PollModel poll, @NonNull List<BallotModel> ballots) {
+		// First of all each proposal in the poll gets an array index (poll.proposals is a SortedSet for very complex reasons ... :-)  )
+		// Map: proposal -> array index of this proposal
+		Map<LawModel, Integer> proposalIdx = new HashMap<>();
+		int proposalIndex = 0;
+		for(LawModel prop : poll.getProposals()) {
+			proposalIdx.put(prop, proposalIndex++);
+		}
+
+		//----- Fill the duelMatrix that stores the number of preferences i > j
+		int n = poll.getNumCompetingProposals();
+		Matrix duelMatrix = new Matrix(n, n);
+
+		// Loop over each ballot
+		for(BallotModel ballot : ballots) {
+			List<LawModel> voteOrder = ballot.getVoteOrder();
+
+			//TODO: optimize:  the notVotedForIndexes can be cached per ballot.voteOrder
+
+			List<Integer> notVotedForIndexes = new ArrayList(poll.getProposals());
+			notVotedForIndexes.removeAll(voteOrder);     // indexes of proposals in poll that this ballot has NOT voted for at all.
+
+			// for each pair of proposals in the ballot's voteOrder add one preference i>j to the duelMatrix
+			for (int i = 0; i < voteOrder.size(); i++) {
+				for (int j = i+1; j < voteOrder.size(); j++) {
+					// add a preference i>j
+					duelMatrix.add(i, j, 1);
+				}
+				// and add a preference i>k for each proposal k that was not voted for at all in this voteOrder
+				// the notVotedFor proposals do not have any preferences among themselves. They are all just simply "lower".
+				for (int k = 0; k < notVotedForIndexes.size(); k++) {
+					duelMatrix.add(i, notVotedForIndexes.get(k), 1);
 				}
 			}
 		}

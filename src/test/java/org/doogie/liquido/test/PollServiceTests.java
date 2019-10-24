@@ -33,6 +33,12 @@ import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
+/**
+ * Tests for {@link PollService}
+ *
+ * These tests rely on the test data (test fixtures) that is created by the {@link TestDataCreator}.
+ * So you must load that data before running these tests.
+ */
 @Slf4j
 @RunWith(SpringRunner.class)
 @SpringBootTest
@@ -77,21 +83,6 @@ public class PollServiceTests  extends BaseTest {
 
 	@Value("spring.data.rest.base-path")
 	public String basePath;
-
-	/*   DEPRECATED: USers are loaded by TestDataCreator
-	 * Lazily create users for each test
-
-	@Before
-	public void seedUsersForThisTest() {
-		if (users == null) {
-			//TODO:  try to load users from the DB
-			log.debug("Seeding " + NUM_USERS + " users");
-			PollServiceTests.users = testDataCreator.seedUsers(NUM_USERS, mailPrefix);
-		} else {
-			log.debug("Using existing "+users.limit()+" users ");
-		}
-	}
-	*/
 
 	/**
 	 * This test creates a new poll. This makes it a bit slow, but we need a given combination of ballots.
@@ -155,7 +146,7 @@ public class PollServiceTests  extends BaseTest {
 	/**
 	 * Quick and dirty hack to QUICKLY cast a vote.  NO CHECKS are performed at all.
 	 * VoterToken and Checksum will not be real BCRYPT values but static dummies.
-	 * Because PCRYPT hashing is the slow part of casting a vote.
+	 * Because BCRYPT hashing is the slow part of casting a vote.
 	 *
 	 * The correct call for all this would be:   castVoteService.castVote(castVoteRequest);
 	 *
@@ -183,7 +174,7 @@ public class PollServiceTests  extends BaseTest {
 	 * We simply create dummy voter tokens
 	 *
 	 * @param poll a new poll in voting phase
-	 * @param voteOrderIndexes list of voteOrders (inner index is index of proposal in poll.getProposals() )
+	 * @param voteOrderIndexes list of voteOrders (inner index is index of proposal in poll.getProposals() starting at 0)
 	 * @param numBallots How many times each voteOrder should be casted
 	 * @return the list of casted ballots
 	 * @throws LiquidoException
@@ -205,9 +196,10 @@ public class PollServiceTests  extends BaseTest {
 		for (int i = 0; i < voteOrderIndexes.length; i++) {
 			List<LawModel> voteOrder = new ArrayList<>();
 			for (int j = 0; j < voteOrderIndexes[i].length; j++) {
-				voteOrder.add(propsArray[voteOrderIndexes[i][j]-1]);
+				voteOrder.add(propsArray[voteOrderIndexes[i][j]]);
 			}
-			log.debug("----- seeding "+numBallots[i]+" ballots with voteOrder "+voteOrderIndexes[i]);
+			String proposalIds = voteOrder.stream().map(law->law.getId().toString()).collect(Collectors.joining(","));
+			log.debug("----- seeding "+numBallots[i]+" ballots with voteOrder(proposal.ids)=["+proposalIds+"]");
 			for (int k = 0; k < numBallots[i]; k++) {
 				UserModel voter = testDataCreator.getUser(count);
 				auditor.setMockAuditor(voter);
@@ -245,11 +237,16 @@ public class PollServiceTests  extends BaseTest {
 
 		// Example data for 100 ballots
 		int[][] voteOrderIndexes = new int[4][4];
-		voteOrderIndexes[0] = new int[]{1, 2, 4, 3};  //indexes starting at 1 !
-		voteOrderIndexes[1] = new int[]{2, 4, 3, 1};
-		voteOrderIndexes[2] = new int[]{4, 3, 2, 1};
-		voteOrderIndexes[3] = new int[]{3, 4, 2, 1};
+		voteOrderIndexes[0] = new int[]{0, 1, 3, 2};  //index  0 is first proposal !
+		voteOrderIndexes[1] = new int[]{1, 3, 2, 0};
+		voteOrderIndexes[2] = new int[]{3, 2, 1, 0};
+		voteOrderIndexes[3] = new int[]{2, 3, 1, 0};
 		int[] numBallots = new int[] { 42, 26, 15, 17 };   // 100 ballots == 100%
+
+		/* This is data for the edge case when there is only one ballot
+		voteOrderIndexes[0] = new int[]{0};
+		numBallots = new int[] { 1, 0, 0, 0 };
+    */
 
 		List<BallotModel> ballots = seedBallotsQuickly(poll, voteOrderIndexes, numBallots);
 		Matrix duelMatrix = RankedPairVoting.calcDuelMatrix(poll, ballots);
@@ -260,17 +257,31 @@ public class PollServiceTests  extends BaseTest {
 			StringBuffer sb = new StringBuffer();
 			sb.append(numBallots[i]+" ballots voted ");
 			for (int j = 0; j < voteOrderIndexes[i].length; j++) {
-				sb.append(cities[voteOrderIndexes[i][j]-1]);
+				sb.append(cities[voteOrderIndexes[i][j]]);
 				sb.append(" > ");
 			}
 			log.debug(sb.toString());
 		}
 
+		log.debug("===== duelMatrix");
+		log.debug(duelMatrix.toString());
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < duelMatrix.getRows(); i++) {
+			sb.append(cities[i] + ": [");
+			for (int j = 0; j < duelMatrix.getCols(); j++) {
+				sb.append(duelMatrix.get(i,j));
+				if (j < duelMatrix.getCols()-1) sb.append(",");
+			}
+			sb.append("]\n");
+		}
+		System.out.println(sb.toString());
 
+		String winnerNames = winners.stream().map(law->law.getTitle()).collect(Collectors.joining(", "));
+		log.debug("Winners: "+winnerNames);
 		assertTrue("There should be one winner with this example data", winners.size() == 1);
+		log.info("Winner is "+winners.get(0).getTitle());
 		assertEquals("Nashville should have won the poll", cities[1], winners.get(0).getTitle());
 
-		log.info("Winner is "+winners.get(0).getTitle());
 		log.info("testRankedPairs SUCCESSFUL.");
 	}
 
