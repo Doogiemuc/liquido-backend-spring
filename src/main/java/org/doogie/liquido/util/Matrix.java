@@ -1,9 +1,14 @@
 package org.doogie.liquido.util;
 
+import java.util.function.Function;
+
 /**
  * Two dimensional array of ints.
  */
 public class Matrix {
+  // Implementation note: Be carefull not to accidentically invert the matrix.
+	// All methods with two parameters in here think of the order "row" and then "col"
+	// This different than "x" and then "y" axis!  But that may only be of importance to completely fanatic geeks :-)
 
 	private int[][] data;
 
@@ -65,6 +70,21 @@ public class Matrix {
 
 	//TODO: inverse
 	//TODO: multiply
+
+	/**
+	 * Map all integer values of this matrix into a new Matrix
+	 * @param mapper mapper function Int -> Int
+	 * @return the newly created Matrix
+	 */
+	public Matrix map(Function<Integer, Integer> mapper) {
+		Matrix result = new Matrix(this.getRows(), this.getCols());
+		for (int i = 0; i < getRows(); i++) {
+			for (int j = 0; j < getCols(); j++) {
+				result.set(i, j, mapper.apply(this.get(i, j)));
+			}
+		}
+		return result;
+	}
 
 	/**
 	 * Resizes the Matrix to the new dimensions and copies the existing data.
