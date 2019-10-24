@@ -38,15 +38,12 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 
 /**
  * REST controller for working with Polls.
- *   /createNewPoll   add a proposal to a new poll
- *   /joinPoll        add a proposal to an existing poll that is (and must be) in elaboration
- *
- * PollRepo is delibarately not exposed via REST. All Poll related REST APIs are implemented here.
  */
 @Slf4j
-@BasePathAwareController
-//@RepositoryRestController   and    @RequestMapping("postBallot")    Both do not really work  See https://jira.spring.io/browse/DATAREST-972
-//see also https://faithfull.me/overriding-spring-data-rest-repositories/
+@BasePathAwareController		// expose controller under basePath
+//@RepositoryRestController   and    @RequestMapping("postBallot")    Both do not really work:
+// https://jira.spring.io/browse/DATAREST-972
+// https://faithfull.me/overriding-spring-data-rest-repositories/
 public class PollRestController {
 
 	@Autowired
@@ -280,7 +277,7 @@ public class PollRestController {
 	}
 
 
-
+	//TODO: Move getRecentlyDiscussed() method to LawRestController (There was something about URL pathes????
 	/**
 	 * Get recently discussed proposals.
 	 * @return a sorted list of (max 10) proposals with recent comments.

@@ -147,7 +147,8 @@ public class PollService {
 
 		//----- schedule a Quartz Job that will finish the voting phase at poll.votingEndAt() date
 	  try {
-		  scheduleJobToFinishPoll(poll);
+			Date votingEndAtDate = Date.from(poll.getVotingEndAt().atZone(ZoneId.systemDefault()).toInstant());
+			scheduleJobToFinishPoll(poll, votingEndAtDate);
 	  } catch (SchedulerException e) {
 	  	String msg = "Cannot start voting phase, because of scheduler error";
 		  log.error(msg, e);
@@ -164,18 +165,18 @@ public class PollService {
 	 * @param poll a poll in voting phase
 	 * @throws SchedulerException
 	 */
-	private void scheduleJobToFinishPoll(@NonNull PollModel poll) throws SchedulerException {
+	private void scheduleJobToFinishPoll(@NonNull PollModel poll, Date votingEndAtDate) throws SchedulerException {
+		JobKey finishPollJobKey = new JobKey("finishVoting_pollId="+poll.getId(), "finishPollJobGroup");
+
 		JobDetail jobDetail = newJob(FinishPollJob.class)
-				.withIdentity("finishVoting_pollId="+poll.getId(), "pollJobs")
+				.withIdentity(finishPollJobKey)
 				.withDescription("Finish voting phase of poll.id="+poll.getId())
 				.usingJobData("poll.id", poll.getId())
 				.storeDurably()
 				.build();
 
-		Date votingEndAtDate = Date.from(poll.getVotingEndAt().atZone(ZoneId.systemDefault()).toInstant());
-
 		Trigger trigger = newTrigger()
-				.withIdentity("finishVotingTrigger_poll.id="+poll.getId(), "pollTrigger")
+				.withIdentity("finishVotingTrigger_poll.id="+poll.getId(), "finishPollTriggerGroup")
 				.withDescription("Finish voting phase of poll.id="+poll.getId())
 				.startAt(votingEndAtDate )
 				.withSchedule(SimpleScheduleBuilder.simpleSchedule()
@@ -200,13 +201,13 @@ public class PollService {
 	/**
 	 * Finish the voting phase of a poll and calculate the winning proposal.
 	 * @param poll A poll in voting phase
-	 * @return Winnin proposal of this poll that now is a proposal.
+	 * @return Winning proposal of this poll that now is a proposal.
 	 * @throws LiquidoException When poll is not in voting phase
 	 */
 	@Transactional
   public LawModel finishVotingPhase(@NonNull PollModel poll) throws LiquidoException {
 		log.debug("finishVotingPhase(poll.id="+poll.getId()+")");
-    if (!poll.getStatus().equals(PollModel.PollStatus.VOTING))
+    if (!PollModel.PollStatus.VOTING.equals(poll.getStatus()))
       throw new LiquidoException(LiquidoException.Errors.CANNOT_FINISH_POLL, "Cannot finishVotingPhase: Poll must be in status VOTING.");
 
     poll.setStatus(PollModel.PollStatus.FINISHED);
