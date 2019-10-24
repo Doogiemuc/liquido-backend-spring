@@ -9,6 +9,7 @@ import org.doogie.liquido.services.voting.MajorityComparator;
 import org.doogie.liquido.util.Matrix;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Ranked Pairs voting
@@ -109,9 +110,14 @@ public class RankedPairVoting {
 				notVotedFor.removeAll(ballot.getVoteOrder());
 				Integer[] notVotedForIndexes = notVotedFor.stream().map(p -> proposalIdx.get(p)).toArray(Integer[]::new);
 				notVotedForMap.put(key, notVotedForIndexes);
-			} else {
-				numberOfBallots.put(key, numBallots+1);
+				numBallots = 0;
 			}
+			// Count the ballot under this voteOrder's key
+
+
+			//FIXME:  This is not counted when there is only one vote.  Why?
+
+			numberOfBallots.put(key, numBallots+1);
 		}
 
 		//----- Fill the duelMatrix that stores the number of preferences i > j
@@ -137,8 +143,11 @@ public class RankedPairVoting {
 	}
 
 	public static Matrix calcDuelMatrix(@NonNull PollModel poll, @NonNull List<BallotModel> ballots) {
-		// First of all each proposal in the poll gets an array index (poll.proposals is a SortedSet for very complex reasons ... :-)  )
-		// Map: proposal -> array index of this proposal
+		//Map proposal index from voteOrder to index in poll.proposals (poll.proposals is a SortedSet for very complex reasons ... :-)  )
+		Map<Integer, Integer> idx = new HashMap<>();
+
+
+		// Map proposals in the poll to their array indexes (poll.proposals is a SortedSet for very complex reasons ... :-)  )
 		Map<LawModel, Integer> proposalIdx = new HashMap<>();
 		int proposalIndex = 0;
 		for(LawModel prop : poll.getProposals()) {
@@ -155,19 +164,24 @@ public class RankedPairVoting {
 
 			//TODO: optimize:  the notVotedForIndexes can be cached per ballot.voteOrder
 
-			List<Integer> notVotedForIndexes = new ArrayList(poll.getProposals());
-			notVotedForIndexes.removeAll(voteOrder);     // indexes of proposals in poll that this ballot has NOT voted for at all.
+			// indexes of proposals in poll that this ballot has NOT voted for at all.
+			List<Integer> notVotedForIndexes = poll.getProposals().stream()
+				.filter(prop -> !voteOrder.contains(prop))
+				.map(prop -> proposalIdx.get(prop))
+				.collect(Collectors.toList());
 
 			// for each pair of proposals in the ballot's voteOrder add one preference i>j to the duelMatrix
 			for (int i = 0; i < voteOrder.size(); i++) {
+				int pref = proposalIdx.get(voteOrder.get(i));
 				for (int j = i+1; j < voteOrder.size(); j++) {
 					// add a preference i>j
-					duelMatrix.add(i, j, 1);
+					int less = proposalIdx.get(voteOrder.get(j));
+					duelMatrix.add(pref, less, 1);
 				}
 				// and add a preference i>k for each proposal k that was not voted for at all in this voteOrder
 				// the notVotedFor proposals do not have any preferences among themselves. They are all just simply "lower".
 				for (int k = 0; k < notVotedForIndexes.size(); k++) {
-					duelMatrix.add(i, notVotedForIndexes.get(k), 1);
+					duelMatrix.add(pref, notVotedForIndexes.get(k), 1);
 				}
 			}
 		}

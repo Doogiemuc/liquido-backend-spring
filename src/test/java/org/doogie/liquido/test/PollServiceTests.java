@@ -97,16 +97,16 @@ public class PollServiceTests  extends BaseTest {
 		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 5);
 
 		// These numbers are from the example on wikipedia https://de.wikipedia.org/wiki/Schulze-Methode
-		// The last proposal (ID = 5) will win the election as the sole winner.
+		// The last proposal (ID = 4) will win the election as the sole winner.
 		int[][] voteOrderIndexes = new int[8][5];
-		voteOrderIndexes[0] = new int[] { 1, 3, 2, 5, 4 };		// voteOrder:  A > C > B > E > D
-		voteOrderIndexes[1] = new int[] { 1, 4, 5, 3, 2 };
-		voteOrderIndexes[2] = new int[] { 2, 5, 4, 1, 3 };
-		voteOrderIndexes[3] = new int[] { 3, 1, 2, 5, 4 };
-		voteOrderIndexes[4] = new int[] { 3, 1, 5, 2, 4 };
-		voteOrderIndexes[5] = new int[] { 3, 2, 1, 4, 5 };
-		voteOrderIndexes[6] = new int[] { 4, 3, 5, 2, 1 };
-		voteOrderIndexes[7] = new int[] { 5, 2, 1, 4, 3 };
+		voteOrderIndexes[0] = new int[] { 0, 2, 1, 4, 3 };		// voteOrder:  A > C > B > E > D
+		voteOrderIndexes[1] = new int[] { 0, 3, 4, 2, 1 };
+		voteOrderIndexes[2] = new int[] { 1, 4, 3, 0, 2 };
+		voteOrderIndexes[3] = new int[] { 2, 0, 1, 4, 3 };
+		voteOrderIndexes[4] = new int[] { 2, 0, 4, 1, 3 };
+		voteOrderIndexes[5] = new int[] { 2, 1, 0, 3, 4 };
+		voteOrderIndexes[6] = new int[] { 3, 2, 4, 1, 0 };
+		voteOrderIndexes[7] = new int[] { 4, 1, 0, 3, 2 };
 
 		int[] numBallots = new int[] { 5, 5, 8, 3, 7, 2, 7, 8 };
 
@@ -225,6 +225,7 @@ public class PollServiceTests  extends BaseTest {
 		log.info("=========== testRankedPairs");
 
 		// These cities and numbers are from the example on wikipedia https://en.wikipedia.org/wiki/Ranked_pairs
+		//															  0              1          2             3
 		String[] cities = new String[] {"Memphis", "Nashville", "Knoxville", "Chattanooga"};
 		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
 		PollModel poll = testDataCreator.seedPollInVotingPhase(area, cities.length);
@@ -280,7 +281,7 @@ public class PollServiceTests  extends BaseTest {
 		log.debug("Winners: "+winnerNames);
 		assertTrue("There should be one winner with this example data", winners.size() == 1);
 		log.info("Winner is "+winners.get(0).getTitle());
-		assertEquals("Nashville should have won the poll", cities[1], winners.get(0).getTitle());
+		assertEquals(cities[1]+" should have won the poll", cities[1], winners.get(0).getTitle());
 
 		log.info("testRankedPairs SUCCESSFUL.");
 	}
@@ -351,5 +352,7 @@ public class PollServiceTests  extends BaseTest {
 		log.info("SUCCESS: " + expectedProxy.toStringShort() + " now is the effective proxy of "+ voter.toStringShort()  + " in poll.id="+poll.getId());
 		log.info("===== testFindEffectiveProxy SUCCESS");
 	}
+
+	//TODO: testFinishVotingPhase :  When there is no vote, then there must not be a winner! (needs a BUGFIX)
 
 }
