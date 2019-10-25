@@ -292,17 +292,4 @@ public class PollRestController {
 		return new Resources<>(projected, linkTo(methodOn(PollRestController.class).getRecentlyDiscussedProposals()).withRel("self"));
 	}
 
-	//TODO: refactor this into its own controller anotated with   @Profile({"dev", "test"})
-	@RequestMapping("/polls/{pollId}/devStartVotingPhase")
-	public ResponseEntity startVotingPhaseDevHock(
-			@PathVariable("pollId") PollModel poll
-	) throws LiquidoException {
-		if (!springEnv.acceptsProfiles(Profiles.of("dev", "test")))
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "This hook is only available in spring envorinment dev or test!");
-		if (poll == null || poll.getId() == null)
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Could not find poll with that id");
-		pollService.startVotingPhase(poll);
-		return ResponseEntity.ok("Voting phase of poll(id="+poll.id+") has been started.");
-	}
-
 }
