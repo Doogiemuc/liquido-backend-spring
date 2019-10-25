@@ -460,6 +460,7 @@ public class RestEndpointTests extends BaseTest {
   public void testIdeaReachesQuorum() {
     log.trace("TEST ideaReachesQuorum");
 
+		loginUser(TestFixtures.USER1_EMAIL);
     LawModel idea = postNewIdea("Idea from testIdeaReachesQuorum");
     log.trace(idea.toString());
     assertEquals(0, idea.getNumSupporters());
@@ -470,6 +471,7 @@ public class RestEndpointTests extends BaseTest {
     for (int j = 0; j < this.users.size(); j++) {
       if (!this.users.get(j).getEmail().equals(TestFixtures.USER1_EMAIL)) {   // creator is implicitly already a supporter
 				String supporterURI = basePath + "/users/" + this.users.get(j).getId();
+				loginUser(this.users.get(j).getEmail());
       	addSupporterToIdea(supporterURI, idea);
       }
     }
