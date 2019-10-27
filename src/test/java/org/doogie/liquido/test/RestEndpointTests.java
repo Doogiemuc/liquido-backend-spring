@@ -26,7 +26,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.rest.webmvc.RestMediaTypes;
 import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
@@ -171,13 +170,13 @@ public class RestEndpointTests extends BaseTest {
 	 */
 	@Before
 	public void beforeEachTest() {
-		loginUser(TestFixtures.USER1_EMAIL);
+		loginUserJWT(TestFixtures.USER1_EMAIL);
 	}
 
 	/**
 	 * little helper to quickly login a specific user
 	 */
-	private void loginUser(String email) {
+	private void loginUserJWT(String email) {
 		// Here we see that advantage of a completely stateless server. We simply generate a JWT and that's it. No login state is stored on the server.
 		String jwt = jwtTokenProvider.generateToken(email);
 		jwtAuthInterceptor.setJwtToken(jwt);
@@ -460,7 +459,7 @@ public class RestEndpointTests extends BaseTest {
   public void testIdeaReachesQuorum() {
     log.trace("TEST ideaReachesQuorum");
 
-		loginUser(TestFixtures.USER1_EMAIL);
+		loginUserJWT(TestFixtures.USER1_EMAIL);
     LawModel idea = postNewIdea("Idea from testIdeaReachesQuorum");
     log.trace(idea.toString());
     assertEquals(0, idea.getNumSupporters());
@@ -471,7 +470,7 @@ public class RestEndpointTests extends BaseTest {
     for (int j = 0; j < this.users.size(); j++) {
       if (!this.users.get(j).getEmail().equals(TestFixtures.USER1_EMAIL)) {   // creator is implicitly already a supporter
 				String supporterURI = basePath + "/users/" + this.users.get(j).getId();
-				loginUser(this.users.get(j).getEmail());
+				loginUserJWT(this.users.get(j).getEmail());
       	addSupporterToIdea(supporterURI, idea);
       }
     }
@@ -560,7 +559,7 @@ public class RestEndpointTests extends BaseTest {
 	@Test
 	public void testDelegationsCount() {
 		AreaModel area = areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
-		loginUser(TestFixtures.USER1_EMAIL);
+		loginUserJWT(TestFixtures.USER1_EMAIL);
 
 		String tokenJson = client.getForObject("/my/voterToken/{areaId}?tokenSecret={tokenSecret}", String.class, area.getId(), TestFixtures.USER_TOKEN_SECRET);
 		String voterToken = JsonPath.read(tokenJson, "$.voterToken");
@@ -576,7 +575,7 @@ public class RestEndpointTests extends BaseTest {
   public void testRequestedDelegation() {
 		AreaModel area = areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
 		String email = TestFixtures.USER2_EMAIL;
-		loginUser(email);
+		loginUserJWT(email);
 		String voterToken = getVoterToken(area.getId());
 		String delegationsJSON = client.getForObject("/my/delegations/{areaId}?voterToken={voterToken}", String.class, area.getId(), voterToken);
 		Boolean isPublicProxy = JsonPath.read(delegationsJSON, "$.isPublicProxy");
@@ -596,7 +595,7 @@ public class RestEndpointTests extends BaseTest {
     AreaModel area     = this.areas.get(0);
     String toProxyUri  = basePath + "/users/" + toProxy.getId();
 
-    loginUser(fromUser.getEmail());
+    loginUserJWT(fromUser.getEmail());
     String voterToken  = getVoterToken(area.getId());
     HttpEntity entity = new Lson()
 				.put("toProxy",  toProxyUri)
@@ -692,7 +691,7 @@ public class RestEndpointTests extends BaseTest {
 		log.trace("Cast vote in "+poll);
 
 		//----- get voterToken
-		loginUser(TestFixtures.USER1_EMAIL);  // user1 is our topProxy with 7 delegations
+		loginUserJWT(TestFixtures.USER1_EMAIL);  // user1 is our topProxy with 7 delegations
 		//Mock: String voterToken  = castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
 		String voterToken = getVoterToken(poll.getArea().getId());
 		ChecksumModel checksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);

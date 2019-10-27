@@ -17,8 +17,18 @@ public class Lson extends HashMap<String, Object> {
 
 	public static ObjectMapper mapper;
 
+	/**
+	 * Create a builder for JSON.
+	 * Use its fluid syntax to add attributes
+	 * <pre>String json = new Lson().put("some.attr", "value").toString()</pre>
+	 */
 	public Lson() {
 		mapper = new ObjectMapper();
+	}
+
+	public Lson(String path, Object value) {
+		this();
+		this.put(path, value);
 	}
 
 	/** Factory method.  Lson.builder().put("name", someValue).... */

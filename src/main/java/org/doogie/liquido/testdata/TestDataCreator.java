@@ -82,6 +82,17 @@ public class TestDataCreator implements CommandLineRunner {
 	@Value("${spring.data.rest.base-path}")   // value from application.properties file
 	String basePath;
 
+	@Value("${liquido.admin.email}")
+	String adminEmail;
+
+	@Value("${liquido.admin.name}")
+	String adminName;
+
+	@Value("${liquido.admin.mobilephone}")
+	String adminMobilephone;
+
+	// TestDataCreator pretty much depends on any Model, Repo and Service that we have. Which proves that we have a nice code coverage :-)
+
   @Autowired
   UserRepo userRepo;
   private Map<String, UserModel> usersMap = new HashMap<>();  // user by their email address
@@ -191,6 +202,7 @@ public class TestDataCreator implements CommandLineRunner {
 	    log.debug("Create test data from scratch via spring-data for DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
       seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX);
+      seedAdminUser();
       auditorAware.setMockAuditor(this.usersMap.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
       seedAreas();
       AreaModel area = areaMap.get(TestFixtures.AREA0_TITLE);   // most testdata is created in this area
@@ -357,6 +369,19 @@ public class TestDataCreator implements CommandLineRunner {
       if (i==0) auditorAware.setMockAuditor(savedUser);   // prevent some warnings
     }
   }
+
+	/**
+	 * Create the admin user with the values from application.properties
+	 */
+	public void seedAdminUser() {
+  	UserModel admin = new UserModel(adminEmail);
+  	UserProfileModel adminProfile = new UserProfileModel();
+  	adminProfile.setMobilephone(adminMobilephone);
+  	adminProfile.setName(adminName);
+  	admin.setProfile(adminProfile);
+		log.debug("Create admin "+admin);
+  	userRepo.save(admin);
+	}
 
   /**
    * Create some areas with unique titles. All created by user0
