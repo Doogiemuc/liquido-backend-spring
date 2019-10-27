@@ -1,6 +1,5 @@
 package org.doogie.liquido.services;
 
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
@@ -11,7 +10,9 @@ import org.doogie.liquido.util.Lson;
 import org.doogie.liquido.util.Matrix;
 import org.quartz.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -359,5 +360,30 @@ public class PollService {
 		//of course the order of all the IF statements in this method is extremely important. Managed to do it without any "else" !! :-)
 	}
 
+	/**
+	 * Delete a poll and all ballots casted in it.
+	 * This will not delete any Proposals.
+	 * @param poll The poll to delete
+	 */
+	@PreAuthorize("hasRole('ROLE_ADMIN')")  // only the admin may delete polls.  See application.properties for admin name and email
+	@Transactional
+	public void deletePoll(@NonNull PollModel poll) {
+		log.info("DELETE Poll "+poll);
+		if (poll == null) return;
+
+		// unlink laws from poll
+		for (LawModel prop : poll.getProposals()) {
+			prop.setPoll(null);
+			lawRepo.save(prop);
+		}
+
+		// Delete casted Ballots in poll
+		for (BallotModel ballot : ballotRepo.findByPoll(poll)) {
+			ballotRepo.delete(ballot);
+		}
+
+		// Delete the poll
+		pollRepo.delete(poll);
+	}
 }
 

@@ -5,6 +5,8 @@ import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.security.LiquidoAuthUser;
+import org.doogie.liquido.security.LiquidoUserDetailsService;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
@@ -22,10 +24,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.util.Assert;
 
+import javax.validation.constraints.NotNull;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -71,15 +80,14 @@ public class PollServiceTests  extends BaseTest {
 	@Autowired
 	ChecksumRepo checksumRepo;
 
-
 	@Autowired
 	LiquidoRestUtils restUtils;
 
 	@Autowired
 	Environment springEnv;
 
-	@Autowired
-	LiquidoAuditorAware auditor;
+	@Value("${liquido.admin.email}")
+	String adminEmail;
 
 	@Value("spring.data.rest.base-path")
 	public String basePath;
@@ -220,12 +228,13 @@ public class PollServiceTests  extends BaseTest {
 		return ballots;
 	}
 
+	/**
+	 * Test calculating of winner with "Ranked Pair" method.
+	 * These cities and numbers in this methods are from the example on wikipedia https://en.wikipedia.org/wiki/Ranked_pairs
+	 * @throws LiquidoException
+	 */
 	@Test
 	public void testRankedPairs() throws LiquidoException {
-		log.info("=========== testRankedPairs");
-
-		// These cities and numbers are from the example on wikipedia https://en.wikipedia.org/wiki/Ranked_pairs
-		//															  0              1          2             3
 		String[] cities = new String[] {"Memphis", "Nashville", "Knoxville", "Chattanooga"};
 		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
 		PollModel poll = testDataCreator.seedPollInVotingPhase(area, cities.length);
@@ -354,5 +363,31 @@ public class PollServiceTests  extends BaseTest {
 	}
 
 	//TODO: testFinishVotingPhase :  When there is no vote, then there must not be a winner! (needs a BUGFIX)
+
+
+	/**
+	 * Test for {@link PollService#deletePoll(PollModel)} that a poll can be deleted.
+	 * WHEN a poll is deleted, THEN its casted ballots are also removed, but not the proposals in it.
+	 * @throws LiquidoException when admin user is not available in DB
+	 */
+	@Test
+	public void deletePollTest() throws LiquidoException {
+		// GIVEN a poll with votes in it
+		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA0_TITLE);
+		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 2);
+		testDataCreator.seedVotes(poll, 3);
+
+		Long firstProposalId = poll.getProposals().first().getId();
+
+		// WHEN login as ADMIN
+		this.loginUser(adminEmail);
+
+		//  AND poll is deleted
+		pollService.deletePoll(poll);
+
+		// THEN the proposals from the former poll still exist
+		Optional<LawModel> prop = lawRepo.findById(firstProposalId);
+		assertTrue("Proposal from former poll should still extist.", prop.isPresent());
+	}
 
 }

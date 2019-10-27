@@ -45,7 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		try {
 			String jwt = getJwtFromRequest(request);
 			if (StringUtils.hasText(jwt) && jwtTokenProvider.validateToken(jwt)) {
-				log.trace("Trying to authenticate JWT: "+jwt);
+				//log.trace("Trying to authenticate JWT: "+jwt);
 				String username = jwtTokenProvider.getSubjectFromJWT(jwt);
 				UserDetails userDetails = liquidoUserDetailsService.loadUserByUsername(username);
 				//----- if token is valid and user was found, then login that user as principal.

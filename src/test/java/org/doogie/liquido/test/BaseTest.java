@@ -1,12 +1,41 @@
 package org.doogie.liquido.test;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.datarepos.UserRepo;
+import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.security.LiquidoAuthUser;
+import org.doogie.liquido.security.LiquidoUserDetailsService;
+import org.doogie.liquido.services.LiquidoException;
 import org.junit.Rule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * Base for all test classes.
+ * Also contains some utility methods.
+ */
 @Slf4j
 public class BaseTest {
+	@Autowired
+	LiquidoAuditorAware auditor;
+
+	@Autowired
+	UserRepo userRepo;
+
+	@Autowired
+	LiquidoUserDetailsService liquidoUserDetailsService;
+
 	/**
 	 * Entry and exit logging for <b>all</b> test cases. Jiipppiiee. Did I already mention that I am a logging fanatic *G*
 	 */
@@ -27,4 +56,28 @@ public class BaseTest {
 			log.trace("===== TEST SUCCESS "+descr.getDisplayName());
 		}
 	};
+
+	/**
+	 * Login a user into spring's SecurityContext for testing
+	 * @param email email of an existing user
+	 * @throws UsernameNotFoundException when email is not found in the DB.
+	 * @throws LiquidoException when
+	 */
+	public void loginUser(String email) throws LiquidoException {
+		log.debug("TEST loginUser("+email+")");
+		LiquidoAuthUser userDetails;
+		try {
+			userDetails = liquidoUserDetailsService.loadUserByUsername(email);
+		} catch(UsernameNotFoundException e) {
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "Cannot login testuser. email="+email, e);
+		}
+		List<GrantedAuthority> authList = userDetails.getAuthorities().stream().collect(Collectors.toList());
+		Authentication authentication = new TestingAuthenticationToken(userDetails, null, authList);
+		SecurityContextHolder.getContext().setAuthentication(authentication);
+
+		// also log in as mock auditor
+		UserModel admin = userRepo.findByEmail(email)
+			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "Cannot login test user. email="+email));
+		auditor.setMockAuditor(admin);
+	}
 }

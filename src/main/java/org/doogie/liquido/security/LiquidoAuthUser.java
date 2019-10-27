@@ -9,7 +9,7 @@ import java.util.Collection;
 
 /**
  * Adapter between my Liquido-{@link UserModel} and Spring-security's {@link org.springframework.security.core.userdetails.User}
- * The spring User can be retreived as the HTTP Principal. With this adapter you can get our custom Liuqido UserModel from that.
+ * The spring User can be retrieved as the HTTP Principal. With this adapter you can get our custom Liquido UserModel from that.
  */
 public class LiquidoAuthUser extends User {  // org.springframework.security.core.userdetails.User implements UserDetails, CredentialsContainer
   private UserModel liquidoUserModel;
@@ -33,7 +33,7 @@ public class LiquidoAuthUser extends User {  // org.springframework.security.cor
 
   @Override
   public String getPassword() {
-    System.out.println("SEC TRACE: (LiquidoAuthUser.java:30): Some code is getting the password of "+this.getUsername());
+    System.out.println("SEC TRACE: (LiquidoAuthUser.java:35): Some code is getting the password of "+this.getUsername()+ "!!!");
     return super.getPassword();
   }
 }
