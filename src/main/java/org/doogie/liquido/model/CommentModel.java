@@ -50,7 +50,9 @@ public class CommentModel extends BaseModel {
 	public CommentModel parent;
 
 	/** list of replies to this comment */
-  @OneToMany(mappedBy = "parent", fetch = FetchType.EAGER)    // default CascadeType https://vladmihalcea.com/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
+	// CascadeType.REMOVE => Also Delete child comments (aka "replies" when parent is deleted) https://stackoverflow.com/questions/25967935/jpa-hibernate-spring-onetomany-delete-cascade
+	// FYI: default CascadeType https://vladmihalcea.com/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
+  @OneToMany(mappedBy = "parent", fetch = FetchType.EAGER, cascade = CascadeType.REMOVE)
   public List<CommentModel> replies = new ArrayList<>();
 
   /** Users that like this comment. I need the full list of users, nut just the number of upVotes, because we need to prevent duplicate voting. */

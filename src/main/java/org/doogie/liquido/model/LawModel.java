@@ -33,25 +33,11 @@ import java.util.*;
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "laws")
 public class LawModel extends BaseModel implements Comparable<LawModel> {
-  /*
-   * DEPRECATED
-   * When a class uses a self references (as we formerly had it in initialLawId, then you must use a sequence for generating IDs,
-   * because of the self reference via field "initialLawId".
-   * https://vladmihalcea.com/2014/07/15/from-jpa-to-hibernates-legacy-and-enhanced-identifier-generators/
-   * https://docs.jboss.org/hibernate/orm/5.0/mappingGuide/en-US/html_single/#identifiers-generators-sequence
-
-  @Id
-  @GeneratedValue(strategy=GenerationType.SEQUENCE)
-  @SequenceGenerator(name = "sequence", allocationSize = 10)
-  public Long id;
-  */
 
   @NotNull
   @NonNull
   @Column(unique = true)
   public String title;
-
-  //MAYBE: lawModel.tags or related ideas? => relations built automatically, when a proposal is added to a running poll.
 
 	/**
 	 * HTML description of this proposal. This description can only be edited by the creator
@@ -116,10 +102,10 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
   public PollModel poll = null;
 
   /** Comments and suggestions for improvement for this proposal*/
-	@JsonIgnore  // To fetch comments via REST user CommentProjection of CommentModel
-  @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)  // If you get a "LazyInitializationException, could not initialize proxy - no Session" you might need to pre load comments of a proposal. You should not generally change this to FetchTypoe.EAGER for performance reasons!
-	//@Cascade(org.hibernate.annotations.CascadeType.ALL)   // https://vladmihalcea.com/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
-  public Set<CommentModel> comments = new HashSet<>();
+	@JsonIgnore  																											// To fetch comments via REST user CommentProjection of CommentModel
+  @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)  	// If you get a "LazyInitializationException, could not initialize proxy - no Session" you might need to pre load comments of a proposal. You should not generally change this to FetchTypoe.EAGER for performance reasons!
+	//@Cascade(org.hibernate.annotations.CascadeType.ALL)   					// https://vladmihalcea.com/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
+  public Set<CommentModel> comments = new HashSet<>();							// Comments are deliberately a Set and not a List. There are no duplicates.
 
   /**
    * Date when this proposal reached its quorum.
@@ -131,6 +117,12 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 	@CreatedBy  // automatically handled by spring data jpa auditing
 	@ManyToOne
 	public UserModel createdBy;
+
+
+	//MAYBE: lawModel.tags or related ideas? => relations built automatically, when a proposal is added to a running poll.
+
+
+
 
 	/**
    * compare two LawModels by their ID. This is used for sorting proposals in PollModel

@@ -5,6 +5,7 @@ import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -24,7 +25,6 @@ public class LiquidoUserDetailsService implements UserDetailsService {
   UserRepo userRepo;
 
   // TODO: Cache autenticated users, because loadUserByUsername is called very often! MAYBE simply extend CachingUserDetailsService ?
-
   /*See:
    @Cacheable("authenticedUsers")
    https://spring.io/guides/gs/caching/
@@ -33,6 +33,14 @@ public class LiquidoUserDetailsService implements UserDetailsService {
    Do not forget to @CacheEvict the cache elem, when a user or its roles & rights change
   */
 
+  @Value("${liquido.admin.email}")
+  String adminEmail;
+
+  @Value("${liquido.admin.name}")
+  String adminName;
+
+  @Value("${liquido.admin.mobilephone}")
+  String adminMobilephone;
 
   /**
    * load a user by its email and return it as a LiquidoAuthUser class. This class will be used as
@@ -51,15 +59,23 @@ public class LiquidoUserDetailsService implements UserDetailsService {
     UserModel userModel = userRepo.findByEmail(email)
      .orElseThrow(()-> new UsernameNotFoundException("Could not find user '"+email+"'"));
     if (DoogiesUtil.isEmpty(userModel.getEmail()))
-    	throw new UsernameNotFoundException("User's eMail is emtpy.");
+    	throw new UsernameNotFoundException("User's eMail is empty.");
 
     // NO PASSWORD!   We authenticate voters with voterTokens! Yeah!
     return new LiquidoAuthUser(userModel.getEmail(), getGrantedAuthorities(userModel), userModel);
   }
 
-  private Collection<GrantedAuthority> getGrantedAuthorities(UserModel userModel) {
-    // if user.email == admin then return "ROLE_ADMIN" else ...
+  private List<GrantedAuthority> getGrantedAuthorities(UserModel userModel) {
+    if (userModel == null) throw new RuntimeException("Cannot getGrantedAuthorities for null user!");
     List<GrantedAuthority> authorities = new ArrayList<>();
-    return Arrays.asList(new SimpleGrantedAuthority("ROLE_USER"));
+    if (adminEmail != null && adminEmail.equals(userModel.getEmail()) &&
+        adminName  != null && adminName.equals(userModel.getProfile().getName()) &&
+        adminMobilephone != null && adminMobilephone.equals(userModel.getProfile().getMobilephone())
+    ) {
+      authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+      log.info("The ADMIN logged in!");
+    }
+    authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+    return authorities;
   }
 }

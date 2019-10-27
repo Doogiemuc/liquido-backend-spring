@@ -8,6 +8,7 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.data.rest.core.annotation.RestResource;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -24,7 +25,7 @@ public interface PollRepo extends CrudRepository<PollModel, Long> {
   @Query("SELECT DISTINCT poll FROM PollModel poll JOIN poll.proposals prop WHERE poll.status = :status and prop.area = :area order by reachedQuorumAt desc")
   List<PollModel> findByStatusAndArea(@Param("status") PollModel.PollStatus status, @Param("area")AreaModel area);
 
-  // the /polls  endpoint is read-only.  To builder a poll one must use the PollRestController
+  // the /polls  endpoint is READ-ONLY!!  To builder a poll one must use the PollRestController
 
   @RestResource(exported = false)
   PollModel save(PollModel pollModel);
@@ -33,8 +34,9 @@ public interface PollRepo extends CrudRepository<PollModel, Long> {
   <S extends PollModel> Iterable<S> saveAll(Iterable<S> polls);
 
   @RestResource(exported = false)
-  void delete(PollModel ballot);
+  void delete(PollModel poll);
 
+  // Before you can delete a poll, you must unlink its proposals and delete its ballots first!
   @RestResource(exported = false)
   void deleteById(Long id);
 
