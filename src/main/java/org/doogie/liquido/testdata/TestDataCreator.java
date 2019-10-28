@@ -351,7 +351,7 @@ public class TestDataCreator implements CommandLineRunner {
 
       UserProfileModel profile = new UserProfileModel();
       profile.setName(name);
-      profile.setPicture("/static/img/photos/"+((i%3)+1)+".png");
+      profile.setPicture(TestFixtures.AVATAR_PREFIX+((i%16)+1)+".png");
       profile.setWebsite("http://www.liquido.de");
       profile.setMobilephone(TestFixtures.MOBILEPHONE_PREFIX+(countUsers+i+1));  // deterministic unique phone numbers
       newUser.setProfile(profile);
@@ -412,7 +412,7 @@ public class TestDataCreator implements CommandLineRunner {
 
 
 	/**
-	 * seed delegations from email[0] to email[1] so that email[1] becomes a proxy
+	 * Seed delegations
 	 * @param delegations list of email[0] -> email[1] pairs where the second element will become the proxy
 	 */
   private void seedProxies(List<String[]> delegations) {
