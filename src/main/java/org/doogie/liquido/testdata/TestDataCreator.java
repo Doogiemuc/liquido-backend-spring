@@ -794,7 +794,7 @@ public class TestDataCreator implements CommandLineRunner {
   	if (pollInVoting.getNumCompetingProposals() < 2) throw new RuntimeException("Cannot seed votes. Poll in voting must have at least two proposals.");
 
 		String pollURI = basePath+"/polls/"+pollInVoting.getId();
-		Long firstId = pollInVoting.getProposals().first().getId();
+		Long firstId = pollInVoting.getProposals().iterator().next().getId();
 
 		this.usersMap.values().stream().limit(numVotes).forEach(voter -> {
 			// Create a random voteOrder. Get some proposal URIs in random order
