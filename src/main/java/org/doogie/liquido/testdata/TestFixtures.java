@@ -27,6 +27,7 @@ public class TestFixtures {
 	public static final String MAIL_PREFIX = "testuser";
 	public static final String MOBILEPHONE_PREFIX = "+4912345";
 
+	public static final String AVATAR_PREFIX = "/static/img/avatars/Avatar";
 	public static final String USER1_NAME = "Donald Duck";
   public static final String USER1_EMAIL = MAIL_PREFIX+"1@liquido.de";      // testuser1 has  ID 1 in the DB !
   public static final String USER2_EMAIL = MAIL_PREFIX+"2@liquido.de";
@@ -53,7 +54,6 @@ public class TestFixtures {
    * This must only be used in tests!
    */
 	public static final String USER_TOKEN_SECRET = "userTokenSecret";
-
 
 
 	/** dynamic method as TestFixture.  Mmhh nice! */
@@ -91,7 +91,7 @@ public class TestFixtures {
 	public static final String AREA_FOR_DELEGATIONS = AREA0_TITLE;
 	public static final String TOP_PROXY_EMAIL = USER1_EMAIL;
 	public static final int USER1_DELEGATIONS = 7;     // testuser1@liquido.de  has 7 delegations to him (the non-transitive one 12-7 is not counted for him!)
-	public static final int USER2_DELEGATIONS = 0;		 // testuser2@liquido.de  only has a requested delegation. So no accepted ones yet.
+	public static final int USER2_DELEGATIONS = 0;		 // testuser2@liquido.de  has a requested delegation. He has no accepted delegations yet.
 	public static final int USER4_DELEGATIONS = 3;     // testuser4@liquido.de  has 3 direct delegations
 	static {
 		// fromUser, toProxy, transitive?
