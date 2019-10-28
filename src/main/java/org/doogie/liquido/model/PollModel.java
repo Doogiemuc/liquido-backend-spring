@@ -38,30 +38,29 @@ public class PollModel extends BaseModel {
 	String title;
 
   /**
-   * The proposals for a proposal in this poll. All of these proposal must already have reached their quorum.
-	 * There must not be any duplicates. A proposal can join a poll only once.
+   * The set of proposals in this poll. All of these proposal must already have reached their quorum.
+	 * There cannot be any duplicates. A proposal can join a poll only once.
    * When the poll is in PollStatus == ELABORATION, then these proposals may still be changed and further
-   * proposals may be added. When The PollStauts == VOTING, then proposals must not be changed anymore.
+   * proposals may be added. When The PollStatus == VOTING, then proposals must not be added or be changed anymore.
    */
   /* Implementation notes:
      This is the ONE side of a bidirectional ManyToOne aggregation relationship.
-     https://vladmihalcea.com/2017/03/29/the-best-way-to-map-a-onetomany-association-with-jpa-and-hibernate/
-     Beginners guide to Hibernate Cascade types:  https://vladmihalcea.com/2015/03/05/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
-	   we deliberately fetch all proposals in this poll EAGERly, so that getNumCompetingProposals can be called on the returned entity.
-     I had problems with ArrayList: https://stackoverflow.com/questions/1995080/hibernate-criteria-returns-children-multiple-times-with-fetchtype-eager
-	   So I used a SortedSet:   https://docs.jboss.org/hibernate/orm/5.2/userguide/html_single/Hibernate_User_Guide.html#collections-sorted-set   => Therefore LawModel must implement Comparable
- 	   See also https://vladmihalcea.com/hibernate-facts-favoring-sets-vs-bags/
+     Keep in mind that you must not call  poll.proposals.add(prop). Because this circumvents all the restrictions that there are for adding a proposals to a poll!
+     Instead use PollService.addProposalToPoll(proposals, poll) !
+	   We deliberately fetch all proposals in this poll EAGERly, so that getNumCompetingProposals can be called on the returned entity.
 	*/
   @OneToMany(cascade = CascadeType.MERGE, mappedBy="poll", fetch = FetchType.EAGER) //, orphanRemoval = true/false ??  Should a proposals be removed when the poll is deleted? => NO
   @NotNull
   @NonNull
-	@SortNatural		// sort proposals in this poll by their ID  (LawModel implements Comparable)
-	SortedSet<LawModel> proposals = new TreeSet<>();
+	Set<LawModel> proposals = new HashSet<>();
 
-  // Keep in mind that you SHOULD NOT just simply call
-  //   anyPoll.getProposals.add(someProposal)
-  // Because this circumvents all the restrictions that there are for adding a proposals to a poll!
-  // Instead use PollService.addProposalToPoll(proposals, poll) !
+  // Some older notes, when proposals still was a SortedSet.  Not relevant anymore, but still very interesting reads!
+	// https://vladmihalcea.com/2017/03/29/the-best-way-to-map-a-onetomany-association-with-jpa-and-hibernate/
+	// Beginners guide to Hibernate Cascade types:  https://vladmihalcea.com/2015/03/05/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
+	// I had problems with ArrayList: https://stackoverflow.com/questions/1995080/hibernate-criteria-returns-children-multiple-times-with-fetchtype-eager
+	// So I used a SortedSet:   https://docs.jboss.org/hibernate/orm/5.2/userguide/html_single/Hibernate_User_Guide.html#collections-sorted-set   => Therefore LawModel must implement Comparable
+	// See also https://vladmihalcea.com/hibernate-facts-favoring-sets-vs-bags/
+	// @SortNatural		// sort proposals in this poll by their ID  (LawModel implements Comparable)
 
   public enum PollStatus {
     ELABORATION(0),     // When the initial proposal reaches its quorum, the poll is created. Alternative proposals can be added in this phase.

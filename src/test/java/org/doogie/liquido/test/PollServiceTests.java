@@ -314,8 +314,9 @@ public class PollServiceTests  extends BaseTest {
 
     //  AND a dummy voteOrder
 		List<String> voteOrder = new ArrayList<>();
-		voteOrder.add(basePath + "/laws/" + poll.getProposals().first().getId());
-		voteOrder.add(basePath + "/laws/" + poll.getProposals().last().getId());
+		Iterator<LawModel> iterator = poll.getProposals().iterator();
+		voteOrder.add(basePath + "/laws/" + iterator.next().getId());
+		voteOrder.add(basePath + "/laws/" + iterator.next().getId());
 
 		// WHEN USER1_EMAIL casts his vote with a dummy voteOrder (the topProxy)
 		voter = testDataCreator.getUser(TestFixtures.USER1_EMAIL);
@@ -377,7 +378,7 @@ public class PollServiceTests  extends BaseTest {
 		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 2);
 		testDataCreator.seedVotes(poll, 3);
 
-		Long firstProposalId = poll.getProposals().first().getId();
+		Long firstProposalId = poll.getProposals().iterator().next().getId();
 
 		// WHEN login as ADMIN
 		this.loginUser(adminEmail);

@@ -699,7 +699,7 @@ public class RestEndpointTests extends BaseTest {
 
 		//----- print already casted votes of our delegees BEFORE we cast the proxies vote
 		Function<ChecksumModel, List<ChecksumModel>> getChildrenFunc = c -> checksumRepo.findByDelegatedTo(c);
-		final PollModel finalPoll = poll;		//BUGFIX: Variables in lambda must be (effectively) final
+		final PollModel finalPoll = poll;									//BUGFIX: Variables in lambda must be (effectively) final
 		BiConsumer<String, ChecksumModel> printerFunc = (prefix, c) -> {
 			Optional<BallotModel> ballotOpt = ballotRepo.findByPollAndChecksum(finalPoll, c);
 			if (ballotOpt.isPresent()) {
@@ -713,10 +713,11 @@ public class RestEndpointTests extends BaseTest {
 		log.debug("============== existing ballots ===========");
 
 		//----- cast vote anonymously
+		Iterator<LawModel> iterator = poll.getProposals().iterator();
 		HttpEntity entity = Lson.builder()
 		  .put("poll", "/polls/"+poll.getId())
 		  .put("voterToken", voterToken)
-		  .putArray("voteOrder",  "/laws/"+poll.getProposals().first().getId(), "/laws/"+poll.getProposals().last().getId())
+		  .putArray("voteOrder",  "/laws/"+iterator.next().getId(), "/laws/"+iterator.next().getId())
 			.toHttpEntity();
 		ResponseEntity<String> castVoteRes = anonymousClient.postForEntity("/castVote", entity, String.class);
 
