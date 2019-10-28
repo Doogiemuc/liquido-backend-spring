@@ -44,7 +44,7 @@ public class DatabaseTests extends BaseTest {
 		List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.ELABORATION);
 		if (polls.size() < 1) throw new RuntimeException("Need at least  one poll for testDeletePoll");
 		PollModel poll = polls.get(0);
-		Long firstPropId = poll.getProposals().first().getId();
+		Long firstPropId = poll.getProposals().iterator().next().getId();
 
 		// WHEN poll is deleted
 		for (LawModel prop : poll.getProposals()) {
