@@ -4,9 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
-import org.doogie.liquido.security.LiquidoAuditorAware;
-import org.doogie.liquido.security.LiquidoAuthUser;
-import org.doogie.liquido.security.LiquidoUserDetailsService;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
@@ -17,30 +14,19 @@ import org.doogie.liquido.testdata.TestDataCreator;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Matrix;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
-import org.springframework.security.authentication.TestingAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.util.Assert;
 
-import javax.validation.constraints.NotNull;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.*;
 
 /**
  * Tests for {@link PollService}
@@ -260,7 +246,7 @@ public class PollServiceTests  extends BaseTest {
 
 		List<BallotModel> ballots = seedBallotsQuickly(poll, voteOrderIndexes, numBallots);
 		Matrix duelMatrix = RankedPairVoting.calcDuelMatrix(poll, ballots);
-		List<LawModel> winners = RankedPairVoting.calcRankedPairsWinners(poll, duelMatrix);
+		LawModel winner = RankedPairVoting.calcRankedPairsWinner(poll, duelMatrix);
 
 		log.debug("===== Votes ");
 		for (int i = 0; i < voteOrderIndexes.length; i++) {
@@ -286,11 +272,58 @@ public class PollServiceTests  extends BaseTest {
 		}
 		System.out.println(sb.toString());
 
-		String winnerNames = winners.stream().map(law->law.getTitle()).collect(Collectors.joining(", "));
-		log.debug("Winners: "+winnerNames);
-		assertTrue("There should be one winner with this example data", winners.size() == 1);
-		log.info("Winner is "+winners.get(0).getTitle());
-		assertEquals(cities[1]+" should have won the poll", cities[1], winners.get(0).getTitle());
+		log.debug("Winner: "+winner);
+		assertEquals(cities[1]+" should have won the poll", cities[1], winner.getTitle());
+
+		// We could delete the created dummy poll now.
+
+		log.info("testRankedPairs SUCCESSFUL.");
+	}
+
+	@Test
+	public void testRankedPairs2() throws LiquidoException {
+		String[] cities = new String[] {"Memphis", "Nashville", "Knoxville", "Chattanooga"};
+		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+		PollModel poll = testDataCreator.seedPollInVotingPhase(area, cities.length);
+
+		int ll = 0;
+		Map<Integer, Long> mapIndexToId = new HashMap();
+		HashMap<Long, String> mapId2Name = new HashMap<>();
+		for(LawModel prop : poll.getProposals()) {
+			prop.setTitle(cities[ll]);
+			mapIndexToId.put(ll, prop.getId());
+			mapId2Name.put(prop.getId(), cities[ll]);
+			ll++;
+		}
+		pollRepo.save(poll);
+
+		// Example data for 100 ballots
+		int[][] voteOrderIndexes = new int[4][4];
+		voteOrderIndexes[0] = new int[]{0, 1, 3, 2};  //index  0 is first proposal !
+		voteOrderIndexes[1] = new int[]{1, 3, 2, 0};
+		voteOrderIndexes[2] = new int[]{3, 2, 1, 0};
+		voteOrderIndexes[3] = new int[]{2, 3, 1, 0};
+		int[] numBallots = new int[] { 42, 26, 15, 17 };   // 100 ballots == 100%
+
+		List<BallotModel> ballots = seedBallotsQuickly(poll, voteOrderIndexes, numBallots);
+		List<Long> allIds = poll.getProposals().stream().map(p -> p.getId()).collect(Collectors.toList());
+		Long winnerId = RankedPairVoting.calcRankedPairWinner2(allIds, ballots);
+
+		log.debug("===== Votes ");
+		for (int i = 0; i < voteOrderIndexes.length; i++) {
+			StringBuffer sb = new StringBuffer();
+			sb.append(numBallots[i]+" ballots voted    ");
+			for (int j = 0; j < voteOrderIndexes[i].length; j++) {
+				sb.append(cities[voteOrderIndexes[i][j]]);
+				sb.append("(id=");
+				sb.append(mapIndexToId.get(voteOrderIndexes[i][j]));
+				sb.append(") > ");
+			}
+			log.debug(sb.toString());
+		}
+
+		log.debug("Winner : "+mapId2Name.get(winnerId)+"(id="+winnerId+")");
+		assertEquals(cities[1]+" should have won the poll", cities[1], mapId2Name.get(winnerId));
 
 		log.info("testRankedPairs SUCCESSFUL.");
 	}
@@ -363,7 +396,19 @@ public class PollServiceTests  extends BaseTest {
 		log.info("===== testFindEffectiveProxy SUCCESS");
 	}
 
-	//TODO: testFinishVotingPhase :  When there is no vote, then there must not be a winner! (needs a BUGFIX)
+	/** When there is no vote, then there must not be a winner! (came from a BUGFIX) */
+	@Test
+	public void testFinishVotingPhaseWithoutVotes() throws LiquidoException {
+		// GIVEN a poll in voting phase
+		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA0_TITLE);
+		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 2);
+
+		// WHEN we finish the voting phase of this poll
+		LawModel winner = pollService.finishVotingPhase(poll);
+
+		// THEN there should not be any winner of this poll.
+		assertNull("There should not be any winner in a poll without votes", winner);
+	}
 
 
 	/**
