@@ -5,10 +5,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.doogie.liquido.model.converter.MatrixConverter;
-import org.doogie.liquido.util.Matrix;
-import org.hibernate.annotations.Fetch;
-import org.hibernate.annotations.FetchMode;
-import org.hibernate.annotations.SortNatural;
+import org.doogie.liquido.util.LongMatrix;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.lang.Nullable;
 
@@ -91,7 +88,7 @@ public class PollModel extends BaseModel {
 	 * This attribute is serialized as JSON array of arrays and then stored as VARCHAR
 	 */
 	@Convert(converter = MatrixConverter.class)
-	Matrix duelMatrix;
+	LongMatrix duelMatrix;
 
 	//Implementation note: A poll does not contain a link to its BallotModels. We do not want to expose the ballots while the voting phase is still running.
 

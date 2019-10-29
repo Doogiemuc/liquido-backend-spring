@@ -4,7 +4,7 @@ import lombok.NonNull;
 import org.doogie.liquido.model.BallotModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
-import org.doogie.liquido.util.Matrix;
+import org.doogie.liquido.util.LongMatrix;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,11 +18,11 @@ public class SchulzeMethod {
 	 * The strongest path from candidate ("proposal") A to B is the path with the best weakest link.
 	 * "A chain can only be so strong as its weakest link."
 	 * @param poll a poll where voting has just finished
-	 * @return a two dimensional Matrix that contains the strength of the weakest links for each stongest path
+	 * @return a two dimensional LongMatrix that contains the strength of the weakest links for each stongest path
 	 */
-	public static Matrix calcStrongestPathMatrix(@NonNull PollModel poll, List<BallotModel> ballots) {
-		Matrix d = RankedPairVoting.calcDuelMatrix(poll, ballots);										// number of preferences i over j
-		Matrix p = new Matrix(d.getRows(), d.getCols());		// strongest path matrix
+	public static LongMatrix calcStrongestPathMatrix(@NonNull PollModel poll, List<BallotModel> ballots) {
+		LongMatrix d = RankedPairVoting.calcDuelMatrix(poll, ballots);										// number of preferences i over j
+		LongMatrix p = new LongMatrix(d.getRows(), d.getCols());		// strongest path matrix
 		int C = poll.getNumCompetingProposals();
 
 		for (int i = 0; i < C; i++) {
@@ -54,7 +54,7 @@ public class SchulzeMethod {
 	 */
 	public static List<LawModel> calcSchulzeMethodWinners(@NonNull PollModel poll, @NonNull List<BallotModel> ballots) {
 		List<LawModel> winnerList = new ArrayList<>();
-		Matrix p = SchulzeMethod.calcStrongestPathMatrix(poll, ballots);
+		LongMatrix p = SchulzeMethod.calcStrongestPathMatrix(poll, ballots);
 		int C = poll.getNumCompetingProposals();
 
 		int i = 0;

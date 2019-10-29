@@ -3,24 +3,24 @@ package org.doogie.liquido.util;
 import java.util.function.Function;
 
 /**
- * Two dimensional array of ints.
+ * Two dimensional array of Long values.
  */
-public class Matrix {
-  // Implementation note: Be carefull not to accidentically invert the matrix.
+public class LongMatrix {
+  // Implementation note: Be careful not to accidentally invert the matrix.
 	// All methods with two parameters in here think of the order "row" and then "col"
-	// This different than "x" and then "y" axis!  But that may only be of importance to completely fanatic geeks :-)
+	// This os different than "x" and then "y" axis!  But that may only be of importance to completely fanatic geeks :-)
 
-	private int[][] data;
+	private long[][] data;
 
 	/**
 	 * Create a new matrix. All values are 0 by default.
-	 * An empty Matrix of limit 0,0 is allowed.
+	 * An empty LongMatrix of limit 0,0 is allowed.
 	 * @param rows
 	 * @param cols
 	 */
-	public Matrix(int rows, int cols) {
+	public LongMatrix(int rows, int cols) {
 		if (rows < 0 || cols < 0) throw new IllegalArgumentException("rows and cols must be positive");
-		this.data = new int[rows][cols];
+		this.data = new long[rows][cols];
 	}
 
 	public int getRows() {
@@ -28,39 +28,39 @@ public class Matrix {
 	}
 
 	public int getCols() {
-		if (data.length == 0) return 0;  //BUGFIX for edge case Matrix(0,0)
+		if (data.length == 0) return 0;  //BUGFIX for edge case LongMatrix(0,0)
 		return data[0].length;
 	}
 
-	public int get(int i, int j) {
-		return this.data[i][j];
+	public long get(int row, int col) {
+		return this.data[row][col];
 	}
 
-	public int[][] getRawData() { return this.data; }
+	public long[][] getRawData() { return this.data; }
 
-	public void set(int i, int j, int val) {
-		this.data[i][j] = val;
+	public void set(int row, int col, long val) {
+		this.data[row][col] = val;
 	}
 
-	public void inc(int i, int j) {
-		this.data[i][j]++;
+	public void inc(int row, int col) {
+		this.data[row][col] = this.data[row][col] + 1;
 	}
 
-	public void dec(int i, int j) {
-		this.data[i][j]--;
+	public void dec(int row, int col) {
+		this.data[row][col] = this.data[row][col] - 1;
 	}
 
-	public void add(int row, int col, int value) {
-		this.data[row][col] += value;
+	public void add(int row, int col, long value) {
+		this.data[row][col] = this.data[row][col] + value;
 	}
 
 	/**
 	 * Add the value of each elements of m to our elements
 	 * If m is larger than this matrix, then only the values that fit into this matrix will be added. This matrix will not be resized.
 	 * If m is smaller then this matrix, then only those rows and cols from m will be added to this matrix.
-	 * @param m another Matrix
+	 * @param m another LongMatrix
 	 */
-	public void add(Matrix m) {
+	public void add(LongMatrix m) {
 		for (int i = 0; i < Math.min(getRows(), m.getRows()); i++) {
 			for (int j = 0; j < Math.min(getCols(), m.getCols()); j++) {
 				this.add(i,j, m.get(i,j));
@@ -72,12 +72,12 @@ public class Matrix {
 	//TODO: multiply
 
 	/**
-	 * Map all integer values of this matrix into a new Matrix
+	 * Map all integer values of this matrix into a new LongMatrix
 	 * @param mapper mapper function Int -> Int
-	 * @return the newly created Matrix
+	 * @return the newly created LongMatrix
 	 */
-	public Matrix map(Function<Integer, Integer> mapper) {
-		Matrix result = new Matrix(this.getRows(), this.getCols());
+	public LongMatrix map(Function<Long, Long> mapper) {
+		LongMatrix result = new LongMatrix(this.getRows(), this.getCols());
 		for (int i = 0; i < getRows(); i++) {
 			for (int j = 0; j < getCols(); j++) {
 				result.set(i, j, mapper.apply(this.get(i, j)));
@@ -87,13 +87,13 @@ public class Matrix {
 	}
 
 	/**
-	 * Resizes the Matrix to the new dimensions and copies the existing data.
+	 * Resizes the LongMatrix to the new dimensions and copies the existing data.
 	 * If new dimensions are smaller than the existing ones, data will be clipped.
 	 * @param newRows new height
 	 * @param newCols new width
 	 */
 	public void resize(int newRows, int newCols) {
-		int[][] newData = new int[newRows][newCols];
+		long[][] newData = new long[newRows][newCols];
 		for (int i = 0; i < Math.min(getRows(), newRows); i++) {
 			for (int j = 0; j < Math.min(getCols(), newCols); j++) {
 				newData[i][j] = this.get(i,j);
@@ -108,27 +108,27 @@ public class Matrix {
 	}
 
 	/**
-	 * Create a Matrix from a JSON array of arrays, e.g. [[1,2,3],[4,5,6],[7,8,9]]
-	 * Edge case: "[]" will be converted to a Matrix of limit (0,0)
+	 * Create a LongMatrix from a JSON array of arrays, e.g. [[1,2,3],[4,5,6],[7,8,9]]
+	 * Edge case: "[]" will be converted to a LongMatrix of limit (0,0)
 	 * @param json a json value that contains an array of arrays
 	 * @return
 	 * @throws IllegalArgumentException when json is null or does not start with [ or does not end with ]
 	 * @throws RuntimeException when the the rows in the array do not have the same length
 	 * @throws NumberFormatException when any of the values inside the arrays is not an int
 	 */
-	public static Matrix fromJsonValue(String json) {
-		if (json == null) throw new IllegalArgumentException("Cannot create a Matrix object from <null>");  // never ever return null anywhere!
-		if (!json.startsWith("[") || !json.endsWith("]")) throw new IllegalArgumentException("JSON must start with [ and end with ] (array of arrays) to create a Matrix object. Cannot convert from '"+json+"'");
-		if (json.length() == 2) return new Matrix(0,0);
+	public static LongMatrix fromJsonValue(String json) {
+		if (json == null) throw new IllegalArgumentException("Cannot create a LongMatrix object from <null>");  // never ever return null anywhere!
+		if (!json.startsWith("[") || !json.endsWith("]")) throw new IllegalArgumentException("JSON must start with [ and end with ] (array of arrays) to create a LongMatrix object. Cannot convert from '"+json+"'");
+		if (json.length() == 2) return new LongMatrix(0,0);
 
 		json = json.substring(2, json.length()-2);
 		String[] parts = json.split("\\], ?\\[");
 		int rows = parts.length;
 		int cols = parts[0].split(",").length;
-		Matrix matrix = new Matrix(rows, cols);
+		LongMatrix matrix = new LongMatrix(rows, cols);
 		for (int i = 0; i < parts.length; i++) {
 			String[] values = parts[i].split(",");
-			if (values.length != cols) throw new RuntimeException("Cannot parse Matrix form JSON. Invalid data for Matrix. Rows in data do not have the same width.");
+			if (values.length != cols) throw new RuntimeException("Cannot parse LongMatrix form JSON. Invalid data for LongMatrix. Rows in data do not have the same width.");
 			for (int j = 0; j < cols; j++) {
 				matrix.set(i,j, Integer.valueOf(values[j]));
 			}
