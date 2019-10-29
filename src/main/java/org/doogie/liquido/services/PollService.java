@@ -222,7 +222,7 @@ public class PollService {
 
 		List<BallotModel> ballots = ballotRepo.findByPoll(poll);
 		Matrix duelMatrix = RankedPairVoting.calcDuelMatrix(poll, ballots);
-		LawModel winningProposal = RankedPairVoting.calcRankedPairsWinners(poll, duelMatrix).get(0);
+		LawModel winningProposal = RankedPairVoting.calcRankedPairsWinner(poll, duelMatrix);
 		winningProposal.setStatus(LawModel.LawStatus.LAW);
 		poll.setDuelMatrix(duelMatrix);
 		poll.setWinner(winningProposal);

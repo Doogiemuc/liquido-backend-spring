@@ -34,8 +34,8 @@ public class LiquidoException extends Exception {
 		JWT_TOKEN_INVALID(20, HttpStatus.UNAUTHORIZED),
 		JWT_TOKEN_EXPIRED(21, HttpStatus.UNAUTHORIZED),
 		PUBLIC_CHECKSUM_NOT_FOUND(22, HttpStatus.NOT_FOUND),
-		CANNOT_ADD_SUPPORTER(23, HttpStatus.BAD_REQUEST);						// e.g. when user tries to support his own proposal
-
+		CANNOT_ADD_SUPPORTER(23, HttpStatus.BAD_REQUEST),							// e.g. when user tries to support his own proposal
+		CANNOT_CALCULATE_UNIQUE_RANKED_PAIR_WINNER(24, HttpStatus.INTERNAL_SERVER_ERROR);		// this is only used in the  exceptional situation, that no unique winner can be calculated in RankedPairVoting
 		int liquidoErrorCode;
 		HttpStatus httpResponseStatus;
 
