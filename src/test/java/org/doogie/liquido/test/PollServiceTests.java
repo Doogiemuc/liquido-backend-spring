@@ -13,7 +13,7 @@ import org.doogie.liquido.services.voting.SchulzeMethod;
 import org.doogie.liquido.testdata.TestDataCreator;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.LiquidoRestUtils;
-import org.doogie.liquido.util.Matrix;
+import org.doogie.liquido.util.LongMatrix;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -107,7 +107,7 @@ public class PollServiceTests  extends BaseTest {
 		LawModel[] propsArray = poll.getProposals().stream().toArray(LawModel[]::new);
 		List<BallotModel> ballots = seedBallotsQuickly(poll, voteOrderIndexes, numBallots);
 
-		Matrix duel = RankedPairVoting.calcDuelMatrix(poll, ballots);
+		LongMatrix duel = RankedPairVoting.calcDuelMatrix(poll, ballots);
 		log.info("Duel matrix:\n"+duel.toString());
 
 		// Some checks for random positions of the result
@@ -123,7 +123,7 @@ public class PollServiceTests  extends BaseTest {
 		assertEquals( 0, duel.get(3, 3));
 		assertEquals(31, duel.get(4, 3));
 
-		Matrix strong = SchulzeMethod.calcStrongestPathMatrix(poll, ballots);
+		LongMatrix strong = SchulzeMethod.calcStrongestPathMatrix(poll, ballots);
 		log.info("Strongest path matrix:\n"+strong.toString());
 
 		List<LawModel> winningProposals = SchulzeMethod.calcSchulzeMethodWinners(poll, ballots);
@@ -245,7 +245,7 @@ public class PollServiceTests  extends BaseTest {
     */
 
 		List<BallotModel> ballots = seedBallotsQuickly(poll, voteOrderIndexes, numBallots);
-		Matrix duelMatrix = RankedPairVoting.calcDuelMatrix(poll, ballots);
+		LongMatrix duelMatrix = RankedPairVoting.calcDuelMatrix(poll, ballots);
 		LawModel winner = RankedPairVoting.calcRankedPairsWinner(poll, duelMatrix);
 
 		log.debug("===== Votes ");
@@ -307,6 +307,7 @@ public class PollServiceTests  extends BaseTest {
 
 		List<BallotModel> ballots = seedBallotsQuickly(poll, voteOrderIndexes, numBallots);
 		List<Long> allIds = poll.getProposals().stream().map(p -> p.getId()).collect(Collectors.toList());
+		LongMatrix duelMatrix = RankedPairVoting.calcDuelMatrix2(allIds, ballots);
 		Long winnerId = RankedPairVoting.calcRankedPairWinner2(allIds, ballots);
 
 		log.debug("===== Votes ");

@@ -6,8 +6,8 @@ import org.doogie.liquido.model.*;
 import org.doogie.liquido.services.scheduler.FinishPollJob;
 import org.doogie.liquido.services.voting.RankedPairVoting;
 import org.doogie.liquido.util.LiquidoProperties;
+import org.doogie.liquido.util.LongMatrix;
 import org.doogie.liquido.util.Lson;
-import org.doogie.liquido.util.Matrix;
 import org.quartz.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
@@ -221,7 +221,7 @@ public class PollService {
 		//TODO: make the method of calculating a winner configurable: LawModel winningProposal = calcSchulzeMethodWinners(poll).get(0);
 
 		List<BallotModel> ballots = ballotRepo.findByPoll(poll);
-		Matrix duelMatrix = RankedPairVoting.calcDuelMatrix(poll, ballots);
+		LongMatrix duelMatrix = RankedPairVoting.calcDuelMatrix(poll, ballots);
 		LawModel winningProposal = RankedPairVoting.calcRankedPairsWinner(poll, duelMatrix);
 		winningProposal.setStatus(LawModel.LawStatus.LAW);
 		poll.setDuelMatrix(duelMatrix);
@@ -234,7 +234,7 @@ public class PollService {
 
   public Lson calcPollResults(PollModel poll) {
 		List<BallotModel> ballots = ballotRepo.findByPoll(poll);
-		Matrix duelMatrix = RankedPairVoting.calcDuelMatrix(poll, ballots);
+		LongMatrix duelMatrix = RankedPairVoting.calcDuelMatrix(poll, ballots);
 		Lson lson = Lson.builder()
 				.put("winner", poll.getWinner())
 				.put("numBallots", ballots.size())
