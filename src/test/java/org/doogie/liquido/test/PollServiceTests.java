@@ -107,6 +107,7 @@ public class PollServiceTests  extends BaseTest {
 		LawModel[] propsArray = poll.getProposals().stream().toArray(LawModel[]::new);
 		List<BallotModel> ballots = seedBallotsQuickly(poll, voteOrderIndexes, numBallots);
 
+		/*
 		Matrix duel = RankedPairVoting.calcDuelMatrix(poll, ballots);
 		log.info("Duel matrix:\n"+duel.toString());
 
@@ -122,6 +123,7 @@ public class PollServiceTests  extends BaseTest {
 		assertEquals(17, duel.get(2, 3));
 		assertEquals( 0, duel.get(3, 3));
 		assertEquals(31, duel.get(4, 3));
+    */
 
 		Matrix strong = SchulzeMethod.calcStrongestPathMatrix(poll, ballots);
 		log.info("Strongest path matrix:\n"+strong.toString());
@@ -171,9 +173,8 @@ public class PollServiceTests  extends BaseTest {
 	 * @param voteOrderIndexes list of voteOrders (inner index is index of proposal in poll.getProposals() starting at 0)
 	 * @param numBallots How many times each voteOrder should be casted
 	 * @return the list of casted ballots
-	 * @throws LiquidoException
 	 */
-	List<BallotModel> seedBallotsQuickly(PollModel poll, int[][] voteOrderIndexes, int[] numBallots) throws LiquidoException {
+	List<BallotModel> seedBallotsQuickly(PollModel poll, int[][] voteOrderIndexes, int[] numBallots) {
 		int countBallots = Arrays.stream(numBallots).sum();
 		long numMissingUsers = countBallots - testDataCreator.countUsers();
 		if (numMissingUsers > 0) {
@@ -226,67 +227,6 @@ public class PollServiceTests  extends BaseTest {
 		PollModel poll = testDataCreator.seedPollInVotingPhase(area, cities.length);
 
 		int ll = 0;
-		for(LawModel prop : poll.getProposals()) {
-			prop.setTitle(cities[ll++]);
-		}
-		pollRepo.save(poll);
-
-		// Example data for 100 ballots
-		int[][] voteOrderIndexes = new int[4][4];
-		voteOrderIndexes[0] = new int[]{0, 1, 3, 2};  //index  0 is first proposal !
-		voteOrderIndexes[1] = new int[]{1, 3, 2, 0};
-		voteOrderIndexes[2] = new int[]{3, 2, 1, 0};
-		voteOrderIndexes[3] = new int[]{2, 3, 1, 0};
-		int[] numBallots = new int[] { 42, 26, 15, 17 };   // 100 ballots == 100%
-
-		/* This is data for the edge case when there is only one ballot
-		voteOrderIndexes[0] = new int[]{0};
-		numBallots = new int[] { 1, 0, 0, 0 };
-    */
-
-		List<BallotModel> ballots = seedBallotsQuickly(poll, voteOrderIndexes, numBallots);
-		Matrix duelMatrix = RankedPairVoting.calcDuelMatrix(poll, ballots);
-		LawModel winner = RankedPairVoting.calcRankedPairsWinner(poll, duelMatrix);
-
-		log.debug("===== Votes ");
-		for (int i = 0; i < voteOrderIndexes.length; i++) {
-			StringBuffer sb = new StringBuffer();
-			sb.append(numBallots[i]+" ballots voted ");
-			for (int j = 0; j < voteOrderIndexes[i].length; j++) {
-				sb.append(cities[voteOrderIndexes[i][j]]);
-				sb.append(" > ");
-			}
-			log.debug(sb.toString());
-		}
-
-		log.debug("===== duelMatrix");
-		log.debug(duelMatrix.toString());
-		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < duelMatrix.getRows(); i++) {
-			sb.append(cities[i] + ": [");
-			for (int j = 0; j < duelMatrix.getCols(); j++) {
-				sb.append(duelMatrix.get(i,j));
-				if (j < duelMatrix.getCols()-1) sb.append(",");
-			}
-			sb.append("]\n");
-		}
-		System.out.println(sb.toString());
-
-		log.debug("Winner: "+winner);
-		assertEquals(cities[1]+" should have won the poll", cities[1], winner.getTitle());
-
-		// We could delete the created dummy poll now.
-
-		log.info("testRankedPairs SUCCESSFUL.");
-	}
-
-	@Test
-	public void testRankedPairs2() throws LiquidoException {
-		String[] cities = new String[] {"Memphis", "Nashville", "Knoxville", "Chattanooga"};
-		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-		PollModel poll = testDataCreator.seedPollInVotingPhase(area, cities.length);
-
-		int ll = 0;
 		Map<Integer, Long> mapIndexToId = new HashMap();
 		HashMap<Long, String> mapId2Name = new HashMap<>();
 		for(LawModel prop : poll.getProposals()) {
@@ -306,8 +246,7 @@ public class PollServiceTests  extends BaseTest {
 		int[] numBallots = new int[] { 42, 26, 15, 17 };   // 100 ballots == 100%
 
 		List<BallotModel> ballots = seedBallotsQuickly(poll, voteOrderIndexes, numBallots);
-		List<Long> allIds = poll.getProposals().stream().map(p -> p.getId()).collect(Collectors.toList());
-		Long winnerId = RankedPairVoting.calcRankedPairWinner2(allIds, ballots);
+		pollService.finishVotingPhase(poll);
 
 		log.debug("===== Votes ");
 		for (int i = 0; i < voteOrderIndexes.length; i++) {
@@ -322,11 +261,46 @@ public class PollServiceTests  extends BaseTest {
 			log.debug(sb.toString());
 		}
 
-		log.debug("Winner : "+mapId2Name.get(winnerId)+"(id="+winnerId+")");
-		assertEquals(cities[1]+" should have won the poll", cities[1], mapId2Name.get(winnerId));
+		log.debug("===== duelMatrix");
+		Matrix duelMatrix = poll.getDuelMatrix();
+		log.debug(duelMatrix.toString());
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < duelMatrix.getRows(); i++) {
+			sb.append(i+": "+cities[i] + ": [");
+			for (int j = 0; j < duelMatrix.getCols(); j++) {
+				sb.append(duelMatrix.get(i,j));
+				if (j < duelMatrix.getCols()-1) sb.append(",");
+			}
+			sb.append("]\n");
+		}
+		System.out.println(sb.toString());
+
+		log.debug("Winner : "+poll.getWinner());
+		assertEquals(cities[1]+" should have won the poll", cities[1], poll.getWinner().getTitle());
 
 		log.info("testRankedPairs SUCCESSFUL.");
 	}
+
+	/**
+	 * Test edge case: Poll with no votes at all.
+	 * @throws LiquidoException
+	 */
+	@Test
+	public void testRankedPairsNoVotes() throws LiquidoException {
+		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 2);
+		// no seeded votes in this test!
+		pollService.finishVotingPhase(poll);
+
+		log.debug("===== duelMatrix");
+		Matrix duelMatrix = poll.getDuelMatrix();
+		log.debug(duelMatrix.toString());
+
+		assertTrue("Poll should not have a winner", poll.getWinner() == null);
+
+		log.info("testRankedPairs SUCCESSFUL.");
+	}
+
 
 	/**
 	 * Test effective proxy in combination with transitive and non-transitive delegations
