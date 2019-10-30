@@ -1,6 +1,6 @@
 package org.doogie.liquido.model.converter;
 
-import org.doogie.liquido.util.LongMatrix;
+import org.doogie.liquido.util.Matrix;
 
 import javax.persistence.AttributeConverter;
 
@@ -8,17 +8,17 @@ import javax.persistence.AttributeConverter;
  * Converter for 2D LongMatrix from/to Json String
  * This is used to store the duelMatrix in a {@link org.doogie.liquido.model.PollModel}
  */
-public class MatrixConverter implements AttributeConverter<LongMatrix, String> {
+public class MatrixConverter implements AttributeConverter<Matrix, String> {
 
 	@Override
-	public String convertToDatabaseColumn(LongMatrix matrix) {
+	public String convertToDatabaseColumn(Matrix matrix) {
 		if (matrix == null) return "";
 		return matrix.toJsonValue();
 	}
 
 	@Override
-	public LongMatrix convertToEntityAttribute(String json) {
-		if (json == null || json.equals("")) return new LongMatrix(0,0);
-		return LongMatrix.fromJsonValue(json);
+	public Matrix convertToEntityAttribute(String json) {
+		if (json == null || json.equals("")) return new Matrix(0,0);
+		return Matrix.fromJsonValue(json);
 	}
 }
