@@ -6,9 +6,6 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.doogie.liquido.model.converter.MatrixConverter;
 import org.doogie.liquido.util.Matrix;
-import org.hibernate.annotations.Fetch;
-import org.hibernate.annotations.FetchMode;
-import org.hibernate.annotations.SortNatural;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.lang.Nullable;
 

@@ -20,9 +20,8 @@ import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.quartz.JobBuilder.newJob;
 import static org.quartz.TriggerBuilder.newTrigger;
@@ -212,33 +211,72 @@ public class PollService {
       throw new LiquidoException(LiquidoException.Errors.CANNOT_FINISH_POLL, "Cannot finishVotingPhase: Poll must be in status VOTING.");
 
     poll.setStatus(PollModel.PollStatus.FINISHED);
-    for(LawModel proposal : poll.getProposals()) {
-      proposal.setStatus(LawModel.LawStatus.LOST);
-    }
-    poll.setVotingEndAt(LocalDateTime.now());
+		poll.setVotingEndAt(LocalDateTime.now());
+		poll.getProposals().forEach(p -> p.setStatus(LawModel.LawStatus.LOST));
 
 		//----- calc winner of poll
-		//TODO: make the method of calculating a winner configurable: LawModel winningProposal = calcSchulzeMethodWinners(poll).get(0);
-
 		List<BallotModel> ballots = ballotRepo.findByPoll(poll);
-		Matrix duelMatrix = RankedPairVoting.calcDuelMatrix(poll, ballots);
-		LawModel winningProposal = RankedPairVoting.calcRankedPairsWinner(poll, duelMatrix);
-		winningProposal.setStatus(LawModel.LawStatus.LAW);
-		poll.setDuelMatrix(duelMatrix);
-		poll.setWinner(winningProposal);
-		lawRepo.save(winningProposal);
+		LawModel winningProposal = calcWinnerOfPoll(poll, ballots);
+		log.info("Winner of Poll(id="+poll.getId()+") is "+winningProposal);
+
+		//----- save results
+		if (winningProposal != null) {
+			winningProposal.setStatus(LawModel.LawStatus.LAW);
+			poll.setWinner(winningProposal);
+			lawRepo.save(winningProposal);
+		}
 		pollRepo.save(poll);
     return winningProposal;
   }
 
+	/**
+	 * Calculate the pairwise comparision of every pair of proposals in every ballot's voteOrder.
+	 *
+	 * This method just extracts all the IDs from poll and ballots and the forwards to the
+	 * {@link RankedPairVoting#calcRankedPairWinners(Matrix)} method.
+	 *
+	 * @param poll a poll that just finished its voting phase
+	 * @param ballots the ballots casted in this poll
+	 * @return the duelMatrix, which counts the number of preferences for each pair of proposals.
+	 * @throws LiquidoException When poll is not in status FINISHED
+	 */
+	@Transactional
+	public LawModel calcWinnerOfPoll(@NonNull PollModel poll, @NonNull List<BallotModel> ballots) throws LiquidoException {
+		if (!PollModel.PollStatus.FINISHED.equals(poll.getStatus()))
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_FINISH_POLL, "Poll must be in status finished to calcDuelMatrix!");
+
+		// Ordered list of proposal IDs in poll.  (Keep in mind that the proposal in a poll are not ordered.)
+		List<Long> allIds = poll.getProposals().stream().map(p -> p.getId()).collect(Collectors.toList());
+
+		// map the vote order of each ballot to a List of ids
+		List<List<Long>> idsInBallots = ballots.stream().map(
+				ballot -> ballot.getVoteOrder().stream().map(BaseModel::getId).collect(Collectors.toList())
+		).collect(Collectors.toList());
+
+		// wizardry mathematical magic :-)
+		Matrix duelMatrix = RankedPairVoting.calcDuelMatrix(allIds, idsInBallots);
+		poll.setDuelMatrix(duelMatrix);
+
+		List<Integer> winnerIndexes = RankedPairVoting.calcRankedPairWinners(duelMatrix);
+		if (winnerIndexes.size() == 0) {
+			log.info("There is no winner in poll "+poll);  // This may happen when there are no votes at all.
+			return null;
+		}
+		if (winnerIndexes.size() > 1) log.info("There is more than one winner in "+poll);
+		long firstWinnerId = allIds.get(winnerIndexes.get(0));
+		for(LawModel prop: poll.getProposals()) {
+			if (prop.getId().longValue() == firstWinnerId)	return prop;
+		}
+		throw new RuntimeException("Couldn't find winning Id in poll.");  // This should mathematically never happen!
+	}
+
 
   public Lson calcPollResults(PollModel poll) {
-		List<BallotModel> ballots = ballotRepo.findByPoll(poll);
-		Matrix duelMatrix = RankedPairVoting.calcDuelMatrix(poll, ballots);
+	  Long ballotCount = ballotRepo.countByPoll(poll);
 		Lson lson = Lson.builder()
 				.put("winner", poll.getWinner())
-				.put("numBallots", ballots.size())
-				.put("duelMatrix", duelMatrix.getRawData())
+				.put("numBallots", ballotCount)
+				.put("duelMatrix", poll.getDuelMatrix())
 				;
 		return lson;
 	}

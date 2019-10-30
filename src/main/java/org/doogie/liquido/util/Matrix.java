@@ -3,14 +3,16 @@ package org.doogie.liquido.util;
 import java.util.function.Function;
 
 /**
- * Two dimensional array of ints.
+ * Two dimensional matrix of Long values.
+ * This Matrix is used in  {@link org.doogie.liquido.services.voting.RankedPairVoting}.
+ * It can also be stored to a DB with @{@link org.doogie.liquido.model.converter.MatrixConverter}
  */
 public class Matrix {
   // Implementation note: Be carefull not to accidentically invert the matrix.
 	// All methods with two parameters in here think of the order "row" and then "col"
 	// This different than "x" and then "y" axis!  But that may only be of importance to completely fanatic geeks :-)
 
-	private int[][] data;
+	private long[][] data;
 
 	/**
 	 * Create a new matrix. All values are 0 by default.
@@ -20,7 +22,7 @@ public class Matrix {
 	 */
 	public Matrix(int rows, int cols) {
 		if (rows < 0 || cols < 0) throw new IllegalArgumentException("rows and cols must be positive");
-		this.data = new int[rows][cols];
+		this.data = new long[rows][cols];
 	}
 
 	public int getRows() {
@@ -32,13 +34,13 @@ public class Matrix {
 		return data[0].length;
 	}
 
-	public int get(int i, int j) {
+	public long get(int i, int j) {
 		return this.data[i][j];
 	}
 
-	public int[][] getRawData() { return this.data; }
+	public long[][] getRawData() { return this.data; }
 
-	public void set(int i, int j, int val) {
+	public void set(int i, int j, long val) {
 		this.data[i][j] = val;
 	}
 
@@ -50,7 +52,7 @@ public class Matrix {
 		this.data[i][j]--;
 	}
 
-	public void add(int row, int col, int value) {
+	public void add(int row, int col, long value) {
 		this.data[row][col] += value;
 	}
 
@@ -76,7 +78,7 @@ public class Matrix {
 	 * @param mapper mapper function Int -> Int
 	 * @return the newly created Matrix
 	 */
-	public Matrix map(Function<Integer, Integer> mapper) {
+	public Matrix map(Function<Long, Long> mapper) {
 		Matrix result = new Matrix(this.getRows(), this.getCols());
 		for (int i = 0; i < getRows(); i++) {
 			for (int j = 0; j < getCols(); j++) {
@@ -93,7 +95,7 @@ public class Matrix {
 	 * @param newCols new width
 	 */
 	public void resize(int newRows, int newCols) {
-		int[][] newData = new int[newRows][newCols];
+		long[][] newData = new long[newRows][newCols];
 		for (int i = 0; i < Math.min(getRows(), newRows); i++) {
 			for (int j = 0; j < Math.min(getCols(), newCols); j++) {
 				newData[i][j] = this.get(i,j);
@@ -125,15 +127,15 @@ public class Matrix {
 		String[] parts = json.split("\\], ?\\[");
 		int rows = parts.length;
 		int cols = parts[0].split(",").length;
-		Matrix matrix = new Matrix(rows, cols);
+		Matrix duelMatrix = new Matrix(rows, cols);
 		for (int i = 0; i < parts.length; i++) {
 			String[] values = parts[i].split(",");
 			if (values.length != cols) throw new RuntimeException("Cannot parse Matrix form JSON. Invalid data for Matrix. Rows in data do not have the same width.");
 			for (int j = 0; j < cols; j++) {
-				matrix.set(i,j, Integer.valueOf(values[j]));
+				duelMatrix.set(i,j, Long.valueOf(values[j]));
 			}
 		}
-		return matrix;
+		return duelMatrix;
 	}
 
 	public String toJsonValue() {

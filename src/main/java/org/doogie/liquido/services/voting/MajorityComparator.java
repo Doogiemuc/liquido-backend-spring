@@ -12,7 +12,7 @@ import java.util.Comparator;
  * int[3] = { i, j, numPreferences_I_over_J }
  *
  */
-class MajorityComparator implements Comparator<int[]> {
+class MajorityComparator implements Comparator<long[]> {
 	Matrix duelMatrix;
 
 	public MajorityComparator(@NonNull Matrix duelMatrix) {
@@ -30,14 +30,14 @@ class MajorityComparator implements Comparator<int[]> {
 	 * a positive number IF m2 > m1
 	 */
 	@Override
-	public int compare(int[] m1, int[] m2) {
+	public int compare(long[] m1, long[] m2) {
 		if (m1 == null && m2 == null) return 0;
 		if (m1.equals(m2)) return 0;
 		if (m1 == null) return -1;
 		if (m2 == null) return 1;
-		int diff = m2[2] - m1[2];  // (1)
+		int diff = (int)(m2[2] - m1[2]);  // (1)
 		if (diff == 0) {
-			return duelMatrix.get(m2[1], m2[0]) - duelMatrix.get(m1[1], m1[0]);  // (2)
+			return (int)(duelMatrix.get((int)m2[1], (int)m2[0]) - duelMatrix.get((int)m1[1], (int)m1[0]));  // (2)
 		} else {
 			return diff;
 		}
