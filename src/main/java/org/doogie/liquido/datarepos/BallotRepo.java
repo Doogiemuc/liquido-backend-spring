@@ -25,6 +25,13 @@ public interface BallotRepo extends CrudRepository<BallotModel, Long> {
 	 */
   List<BallotModel> findByPoll(PollModel poll);
 
+	/**
+	 * Count number of ballots casted in this poll
+	 * @param poll
+	 * @return
+	 */
+  Long countByPoll(PollModel poll);
+
   /**
    * Find a ballot for a poll with a given checksumModel, ie. that was casted from a voter
 	 * who's secret voterToken hashes to this checksumModel.

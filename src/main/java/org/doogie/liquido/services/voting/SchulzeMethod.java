@@ -2,12 +2,15 @@ package org.doogie.liquido.services.voting;
 
 import lombok.NonNull;
 import org.doogie.liquido.model.BallotModel;
+import org.doogie.liquido.model.BaseModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.util.Matrix;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * dapted from https://github.com/zephyr/schulze-voting/blob/master/src/java/dh/p/schulze/Election.java
@@ -21,7 +24,16 @@ public class SchulzeMethod {
 	 * @return a two dimensional Matrix that contains the strength of the weakest links for each stongest path
 	 */
 	public static Matrix calcStrongestPathMatrix(@NonNull PollModel poll, List<BallotModel> ballots) {
-		Matrix d = RankedPairVoting.calcDuelMatrix(poll, ballots);										// number of preferences i over j
+		// Ordered list of proposal IDs in poll.  (Keep in mind that the proposal in a poll are not ordered.)
+		List<Long> allIds = poll.getProposals().stream().map(p -> p.getId()).collect(Collectors.toList());
+
+		// map the vote order of each ballot to a List of ids
+		List<List<Long>> idsInBallots = ballots.stream().map(
+				ballot -> ballot.getVoteOrder().stream().map(BaseModel::getId).collect(Collectors.toList())
+		).collect(Collectors.toList());
+
+
+		Matrix d = RankedPairVoting.calcDuelMatrix(allIds, idsInBallots);										// number of preferences i over j
 		Matrix p = new Matrix(d.getRows(), d.getCols());		// strongest path matrix
 		int C = poll.getNumCompetingProposals();
 

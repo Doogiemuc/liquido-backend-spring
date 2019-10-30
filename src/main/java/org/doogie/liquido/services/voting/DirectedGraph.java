@@ -35,7 +35,6 @@ class DirectedGraph<T> extends HashMap<T, Set<T>> {
 
 	/**
 	 * A "source" is a node that is not reachable from any other node.
-	 *
 	 * @return all sources, ie. nodes with no incoming links.
 	 */
 	public Set<T> getSources() {

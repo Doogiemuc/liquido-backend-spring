@@ -1,26 +1,86 @@
 package org.doogie.liquido.services.voting;
 
-import lombok.NonNull;
-import org.doogie.liquido.model.BallotModel;
+//Implementation note: This class is completely indipendant of any Liquido data model. It's just the algorithm
+
 import org.doogie.liquido.model.LawModel;
-import org.doogie.liquido.model.PollModel;
-import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.util.Matrix;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Ranked Pairs voting
+ * Ranked pairs (RP) or the Tideman method is an electoral system developed in 1987 by Nicolaus Tideman that selects a single winner using votes that express preferences.
+ * If there is a candidate who is preferred over the other candidates, when compared in turn with each of the others, RP guarantees that candidate will win. Because of this property, RP is, by definition, a Condorcet method.
  * https://en.wikipedia.org/wiki/Ranked_pairs
  *
- * Adapted from https://gist.github.com/asafh/a8e9af7a3e5282cbba27
+ * The code here is adapted from the JavaScript at https://gist.github.com/asafh/a8e9af7a3e5282cbba27
  */
 public class RankedPairVoting {
 
+
+
 	/**
-	 * Calculate the winning proposal(s) with the Ranked Pairs voting method.
+	 * Sum up the pairwise comparision of proposals/candidates in every ballot.
+	 *
+	 * @param allIds all proposal/candidate IDs that can be voted for
+	 * @param idsInBallots the list of ballots. Each ballot has an ordered list of proposal/candidate IDs.
+	 * @throws IllegalArgumentException when one of the required param is null
+	 * @return the duelMatrix, which is a pairwise comparision of each preference i > j
+	 */
+	public static Matrix calcDuelMatrix(List<Long> allIds, List<List<Long>> idsInBallots)  {
+		if (allIds == null || idsInBallots == null)
+			throw new IllegalArgumentException("id2index and idsInBallots params must not be null!");
+
+		// reverse map IDs to their index in allIds, so that we can use these indexes as row and col numbers in the duelMatrix
+		HashMap<Long, Integer> id2index = new HashMap<>();
+		int index = 0;
+		for (Long id : allIds) {
+			id2index.put(id, index++);
+		}
+
+		// When there are many ballots, then some will have the same vote order.
+		// This cache stores the Set of IDs that have NOT been voted for in a ballot.
+		// E.g. for voteOrder A > B  the notVotedFor Set is {C, D}
+		Map<List<Long>, Set<Long>> notVotedForMap = new HashMap<>();
+
+		// DuelMatrix is a pairwise comparision of preferences proposal1.id > proposal2.id
+		// Proposal IDs are mapped to row/col index in duelMatrix via the passed id2index map.
+		Matrix duelMatrix = new Matrix(id2index.size(), id2index.size());
+
+		// For each ballot
+		for (List<Long> votedForIds : idsInBallots) {
+
+			// calc (and cache) the proposal ids that were not voted for at all for this voteOrder
+			Set<Long> notVotedForIds = notVotedForMap.get(votedForIds);
+			if (notVotedForIds == null) {
+				notVotedForIds = id2index.keySet().stream().filter(id -> !votedForIds.contains(id)).collect(Collectors.toSet());
+				notVotedForMap.put(votedForIds, notVotedForIds);
+			}
+
+			// For each pair of votedForIds add one to the cell in the duelMatrix
+			for (int i = 0; i < votedForIds.size()-1; i++) {
+				int prefIndex = id2index.get(votedForIds.get(i));
+				for (int j = i + 1; j < votedForIds.size(); j++) {
+					// add count preferences i > j
+					duelMatrix.add(prefIndex, id2index.get(votedForIds.get(j)), 1);
+				}
+				// AND add one preference i > k  for  each notVotedForId[k]
+				// the notVotedForIds among themselves do not have any preference. They are all just simply "lower" than the votedForIds.
+				for (Long notVotedForId : notVotedForIds) {
+					duelMatrix.add(prefIndex, id2index.get(notVotedForId), 1);
+				}
+			}
+
+		}
+
+		return duelMatrix;
+	}
+
+
+
+	/**
+	 * Calculate the winner of the Ranked Pairs voting method.
 	 * 1. TALLY -   For each pair of proposals in the poll calculate the winner of the direct comparison
 	 *              Which proposal has more preferences i&lt;j compared to j&gt;i.
 	 * 2. SORT -    Sort these majorities by the number of preferences i over j
@@ -28,175 +88,105 @@ public class RankedPairVoting {
 	 *              IF this edge does not introduce a circle in the graph.
 	 * 4. WINNERS - The source of the tree, ie. the node with no incoming links is the winner of the poll.
 	 *              Unless there is a pairwise tie between two sources, then there will only be one winner.
-	 * @param poll a poll that finished his voting phase
-	 * @return Thw winner of the poll. Unless there is a pairwise tie, then this list will always only contain one winner.
-	 * @throws LiquidoException in the exceptional case when there is more than one winner in the poll
+	 * @return The (list of) winners of the poll as row/col indexes in duelMatrix.
+	 *         In nearly every case, there is only one winner.
 	 */
-	public static LawModel calcRankedPairsWinner(PollModel poll, Matrix duelMatrix) throws LiquidoException {
-
+	public static List<Integer> calcRankedPairWinners(Matrix duelMatrix) {
 		// TALLY
-		// one "majority" := (p1,p2) -> n   how often(n) was proposal p1 preferred over proposal p2
-		List<int[]> majorities = new ArrayList<>();
+		// Majority  :=  [i,j,n]  where
+		//   i  row index in duelMatrix  (actually an int)
+		//   j  col index in duelMatrix
+		//   n  number of ballots that prefer i > j   (a long)
+		// This list of majorities contains each pair only once, where i is the winner.
+		List<long[]> majorities = new ArrayList<>();
 		for (int i = 0; i < duelMatrix.getRows()-1; i++) {
 			for (int j = i+1; j < duelMatrix.getCols(); j++) {
-				int[] maj_ij = new int[] {i,j, duelMatrix.get(i,j)};
-				int[] maj_ji = new int[] {j,i, duelMatrix.get(j,i)};
+				long[] maj_ij = new long[] {i,j, duelMatrix.get(i,j)};
+				long[] maj_ji = new long[] {j,i, duelMatrix.get(j,i)};
 				if (maj_ij[2] != maj_ji[2]) {
 					majorities.add(maj_ij[2] > maj_ji[2] ? maj_ij : maj_ji);   // add the winner of this pair to the list of majorities (if there is a winner)
 				}
 			}
 		}
 
-		// SORT   majorities
+		// SORT  majorities
+		// https://en.wikipedia.org/wiki/Ranked_pairs#Sort
 		majorities.sort(new MajorityComparator(duelMatrix));
 
 		// LOCK IN
-		DirectedGraph digraph = new DirectedGraph();
-		for (int[] majority : majorities) {
-			if (!digraph.reachable(majority[1], majority[0])) {
-				digraph.addDirectedEdge(majority[0], majority[1]);
+		// The node ids in DirectedGraph are row/col indexes in the duelMatrix (int)
+		DirectedGraph<Integer> digraph = new DirectedGraph();
+		for (long[] majority : majorities) {
+			if (!digraph.reachable((int)majority[1], (int)majority[0])) {
+				digraph.addDirectedEdge((int)majority[0], (int)majority[1]);
 			}
 		}
 
 		// WINNERS
-		Set<Integer> sourceIndexes = digraph.getSources();
-		if (sourceIndexes.size() > 1) throw new LiquidoException(LiquidoException.Errors.CANNOT_CALCULATE_UNIQUE_RANKED_PAIR_WINNER, "Cannot calculate exactly one Ranked Pair winner.");
-		int winnerIndex = sourceIndexes.iterator().next();
-		int loopIndex = 0;
-		for(LawModel prop : poll.getProposals()) {
-			if (winnerIndex == loopIndex) return prop;
-			loopIndex++;
-		}
-
-		throw new RuntimeException("This is mathematically impossible! :-(");
+		// In nearly every case, there is only one winner/one source.
+		Set<Integer> sources = digraph.getSources();
+		List<Integer> winningRowIndexes = new ArrayList(sources);
+		// TODO: Sort Ranked Pair winners, if there is more than one winner;
+		return winningRowIndexes;
 	}
 
 
 
 
 
-	/**
-	 * Calculate the matrix of votes that prefer proposal i over proposal j for every i <= j
-	 * (Of course this matrix is mirror-symmetric along its diagonal.)
-	 * @param poll a poll where voting was just finished
-	 * @return a two dimensional Matrix that contains the number of voters that prefer i over j
-	 */
-	public static Matrix calcDuelMatrix(@NonNull PollModel poll, @NonNull List<BallotModel> ballots) {
-		// Map proposals in the poll to index numbers
-		//TODO: the indexes in the returned Matrix depend on the NOT GUARANTEED order of proposals in the poll. Is that a problem? Maybe not as long as the same poll is in memory. Needs to be checked!
-		Map<LawModel, Integer> proposalIdx = new HashMap<>();
-		int proposalIndex = 0;
-		for(LawModel prop : poll.getProposals()) {
-			proposalIdx.put(prop, proposalIndex++);
-		}
 
-		//----- Fill the duelMatrix that stores the number of preferences i > j
-		int n = poll.getNumCompetingProposals();
-		Matrix duelMatrix = new Matrix(n, n);
 
-		// Loop over each ballot
-		for(BallotModel ballot : ballots) {
-			List<LawModel> voteOrder = ballot.getVoteOrder();
 
-			//TODO: optimize:  the notVotedForIndexes can be cached per ballot.voteOrder
 
-			// indexes of proposals in poll that this ballot has NOT voted for at all.
-			List<Integer> notVotedForIndexes = poll.getProposals().stream()
-				.filter(prop -> !voteOrder.contains(prop))
-				.map(prop -> proposalIdx.get(prop))
-				.collect(Collectors.toList());
 
-			// for each pair of proposals in the ballot's voteOrder add one preference i>j to the duelMatrix
-			for (int i = 0; i < voteOrder.size(); i++) {
-				int prefIdx = proposalIdx.get(voteOrder.get(i));
-				for (int j = i+1; j < voteOrder.size(); j++) {
-					// add a preference i>j
-					int lessIdx = proposalIdx.get(voteOrder.get(j));
-					duelMatrix.add(prefIdx, lessIdx, 1);
-				}
-				// and add a preference i>k for each proposal k that was not voted for at all in this voteOrder
-				// the notVotedFor proposals do not have any preferences among themselves. They are all just simply "lower".
-				for (int k = 0; k < notVotedForIndexes.size(); k++) {
-					duelMatrix.add(prefIdx, notVotedForIndexes.get(k), 1);
-				}
-			}
-		}
-		return  duelMatrix;
-	}
+
+
+
+
 
 
 	// This new approach DOES NOT rely on the order of proposals in the poll  (which is a Set!!)
-	// Instead it maps preferences (= Pair of proposal Ids) to their counts.
 
 
 
-	//TODO: it doesn't  matter if you first sum up equal voteOrders and then calculate preferences
-	//      OR if you loop through each individual ballot and that way count every single preference step by step.
-	//      Its the same amount of operations!  But that way we can only work with IDs.
-	//      => Sorting should happen AFTER the preferences have been summed up.
-	public static Long calcRankedPairWinner2(@NonNull List<Long> allIds, @NonNull List<BallotModel> ballots) throws LiquidoException {
 
-		// Count how many time each voteOrder appears in the ballots.
-		// The keys in this map are the ordered list of proposal ids of a ballot's voteOrder.
-		// Keep in mind that these keys may be of different length.
-		// E.g.  10 voters may have voted A > B > C > D  and 20 voters may have voted C > A > B
-		Map<List<Long>, Long> voteOrderCount = new HashMap<>();
+	/*
+	 * Calculate the winning proposal id with the Ranked Pairs voting method.
+	 * This function is completely independent of any Liquido data model. It just looks at "IDs".
+	 *
+	 * @param allIds      ordered list of all proposal IDs in the poll.
+	 * @param duelMatrix  pairwise comparision of preferences i > j
+	 * @return the ID of the winning proposal (one element of allIds)
+	 * @throws LiquidoException In the very rare and exceptional case, when there is a tie between more than one winners.
 
-		// Map voteOrders to proposal.ids that have not been voted for in that ballot
-		// E.g. for voteOrder A > B  the notVotedFor Set is {C, D}
-		Map<List<Long>, Set<Long>> notVotedForMap = new HashMap<>();
-
-		// For each ballot
-		for (BallotModel ballot: ballots) {
-			// map the voteOrder in this ballot to an ordered list of proposals ids that the user votedFor
-			List<Long> votedForIds = ballot.getVoteOrder().stream().map(prop -> prop.getId()).collect(Collectors.toList());
-
-			// increment the counter for this votedForIds
-			Long count = voteOrderCount.getOrDefault(votedForIds, 0L);
-			voteOrderCount.put(votedForIds, count+1);
-
-			// calc and cache the proposal ids that were not for at all in this type of ballot
-			if (notVotedForMap.get(votedForIds) == null) {
-				Set<Long> notVotedForIds = allIds.stream().filter(id -> !votedForIds.contains(id)).collect(Collectors.toSet());
-				notVotedForMap.put(votedForIds, notVotedForIds);
-			}
-		}
-		long winnerId = calcPreferences(voteOrderCount, notVotedForMap);
-
-		return winnerId;
-	}
-
-	public static long calcPreferences(Map<List<Long>, Long> voteOrderCount, Map<List<Long>, Set<Long>> notVotedForMap) throws LiquidoException {
-		// ---------- from here on down we are not using any Liquido specific Models anymore. It's just IDs
-
+	public static long calcRankedPairsWinner2(List<Long> allIds, Matrix duelMatrix) throws LiquidoException {
 		// TALLY
-
-		// For each ballot sum up the pairwise preferences how often proposal_1.id was preferred over proposal_2.id
+		// Tally the vote count comparing each pair of candidates, and determine the winner of each pair (provided there is not a tie)
 		// "preferences" is actually a table with proposal.ids as names for rows and cols
 		Map<Pair<Long>, Long> preferences = new HashMap<>();
-		for (List<Long> votedForIds : voteOrderCount.keySet()) {
-			Long count = voteOrderCount.get(votedForIds);
-			// for each pair of voteOrderIds  (but only once for each pair:  i < j)
-			for (int i = 0; i < votedForIds.size()-1; i++) {
-				for (int j = i + 1; j < votedForIds.size(); j++) {
-					// add count preferences id[i] > id[j]
-					inc(preferences, votedForIds.get(i), votedForIds.get(j), count);
-				}
-				// and add one preference id[i] > id[k]  for  each notVotedForId[k]
-				for (Long notVotedForId : notVotedForMap.get(votedForIds)) {
-					inc(preferences, votedForIds.get(i), notVotedForId, count);
+		for (int i = 0; i < allIds.size()-1; i++) {
+			for (int j = i + 1; j < allIds.size(); j++) {
+				long count1 = duelMatrix.get(i, j);
+				long count2 = duelMatrix.get(j, i);
+				if (count1 > count2) {
+					preferences.put(new Pair(allIds.get(i), allIds.get(j)), count1);
+				} else if (count2 > count1) {
+					preferences.put(new Pair(allIds.get(j), allIds.get(i)), count1);
+				} else {
+					System.out.println("There is a tie between idx"+allIds.get(i)+" and "+allIds.get(j));
 				}
 			}
 		}
 
 		// SORT
+		// The pairs of winners, called the "majorities", are then sorted from the largest majority to the smallest majority.
 		// https://stackoverflow.com/questions/109383/sort-a-mapkey-value-by-values
 		List<Map.Entry<Pair<Long>, Long>> majorities =
 			preferences.entrySet().stream()
-				.sorted(Collections.reverseOrder(	Map.Entry.comparingByValue())	)
+				.sorted(new PreferenceComparator())
 				.collect(Collectors.toList());
 
-		System.out.println("======= sorted");
+		System.out.println("======= sorted preferences");
 		for(Map.Entry<Pair<Long>, Long> mapEntry : majorities) {
 			System.out.println(mapEntry.getKey() + "=> "+mapEntry.getValue());
 		}
@@ -209,16 +199,12 @@ public class RankedPairVoting {
 			}
 		}
 
-		// WINNER(s)
+		// WINNER
 		Set<Long> sourceIds = digraph.getSources();
 		if (sourceIds.size() > 1) throw new LiquidoException(LiquidoException.Errors.CANNOT_CALCULATE_UNIQUE_RANKED_PAIR_WINNER, "Cannot calculate exactly one Ranked Pair winner.");
 		return sourceIds.iterator().next();
 	}
 
-	private static void inc(Map<Pair<Long>, Long> preferences, long id1, long id2, Long count) {
-		Pair<Long> key = new Pair<>(id1, id2);
-		Long numVotes = preferences.getOrDefault(key, 0L);
-		preferences.put(key, numVotes + count);
-	}
+	*/
 
 }
