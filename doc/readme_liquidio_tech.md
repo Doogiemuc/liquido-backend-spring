@@ -1,6 +1,8 @@
-# Spring Backend for my Liquido WebApp
+# LIQUIDO - Tech Guide
 
-This is a more technical guide for developers
+This is the technical documentation of the LQIUIDO backend. The backend is is implemented in Java SPRING BOOT.
+
+# Data Model
 
 ## Process Model from an idea to a Law
 
@@ -18,6 +20,41 @@ This is a more technical guide for developers
 "idea"          := rough and short
 "proposal"      := reached its quorum
 "law"           := won a vote
+
+# Use Cases
+
+## Login
+
+##### Sequence Diagram for login flow
+```
+@startuml
+autonumber
+
+participant Mobile
+participant WebApp
+participant Backend
+
+WebApp -> Backend: /auth/requestSmsToken?mobile={mobile}
+note over Backend: create and store OneTimeToken
+Backend --> Mobile: Send 6-digit token via SMS
+
+Mobile -> WebApp: Enter token from SMS
+
+WebApp -> Backend: /auth/loginWithSmsToken?mobile={mobile}&token={token}
+note over Backend 
+  validate OneTimeToken
+  then delete it, if valid
+end note
+Backend -> WebApp: return JWT
+
+note over WebApp: storeJwt()
+
+WebApp -> Backend: send authenticated requests with JWT in header
+
+@enduml
+```
+
+
 
 
 ## Backlog / User Stories
@@ -205,7 +242,10 @@ https://www.draw.io/#LLiquido%20Architecture
  - [Baeldung Tutorial Oauth with JWT](https://www.baeldung.com/spring-security-oauth-jwt)
  - [Very nice Sprint Boot example app for JWT](https://github.com/nydiarra/springboot-jwt)
 
- ### OLD: conneetion to MongoDB
+ 
+ ----
+ 
+ Deprecated: coneetion to MongoDB
 
     # MongoDB via spring-data-mongo
     spring.data.mongodb.uri=mongodb://testuser:PASSWORD@ds019664.mlab.com:19664/liquido-test

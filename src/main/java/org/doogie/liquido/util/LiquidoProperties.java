@@ -16,8 +16,11 @@ import static org.doogie.liquido.util.LiquidoProperties.KEY.BCRYPT_SALT;
 
 /**
  * Global properties that are persisted in the DB.
- * These properties can be changed at runtime
+ * The difference to spring properties from application.properties is that
+ * these properties can be changed at runtime
  * and new values <strong>can</strong> be persisted in the DB.
+ *
+ * LiquidoProperties can be initialized from application.properties file.
  */
 @Slf4j
 @Component
@@ -57,7 +60,7 @@ public class LiquidoProperties extends HashMap<LiquidoProperties.KEY, String> /*
   }
 
 
-  /**
+  /*
    * Initialize properties. All properties are mandatory. If there is no value in the DB
    * we try to get an initial value from application.properties
    * This runs, after the bean has been constructed completely, ie. all Autowired attributes are injected and ready.

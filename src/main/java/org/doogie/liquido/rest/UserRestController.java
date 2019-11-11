@@ -8,22 +8,21 @@ import org.doogie.liquido.model.OneTimeToken;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LiquidoException;
+import org.doogie.liquido.services.MailService;
 import org.doogie.liquido.services.ProxyService;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
-import org.springframework.data.rest.webmvc.PersistentEntityResource;
-import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
-
-import static org.springframework.web.bind.annotation.RequestMethod.GET;
+import java.util.UUID;
 
 /**
  * Rest Controller for registration, login and user data
@@ -62,6 +61,8 @@ public class UserRestController {
   @Autowired
 	JwtTokenProvider jwtTokenProvider;
 
+  @Autowired
+	MailService mailService;
 
 	/**
 	 * Register as a new user
@@ -88,26 +89,29 @@ public class UserRestController {
 
 	/**
 	 * SMS login flow - step 1 - user requests login code via SMS
-	 * @param mobile users mobile phone number. MUST be a known user. Mobile numer will be cleaned.
+	 * @param mobile users mobile phone number. MUST be a known user. Mobile number will be cleaned.
 	 * @return HttpStatus.OK, when code was sent via SMS
 	 *        OR HttpStatus.NOT_FOUND when cleaned mobile phone number was not found and user must register first.
 	 */
-  @RequestMapping(value = "/auth/requestSmsCode", produces = MediaType.TEXT_PLAIN_VALUE)
-  public ResponseEntity requestSmsCode(@RequestParam("mobile") String mobile) throws LiquidoException {
-		if (DoogiesUtil.isEmpty(mobile)) throw new LiquidoException(LiquidoException.Errors.MOBILE_NOT_FOUND,  "Need mobile phone number!");
+  @RequestMapping(value = "/auth/requestSmsToken", produces = MediaType.TEXT_PLAIN_VALUE)
+  public ResponseEntity requestSmsToken(@RequestParam("mobile") String mobile) throws LiquidoException {
+		if (DoogiesUtil.isEmpty(mobile)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "Need mobile phone number!");
 		final String cleanMobile = LiquidoRestUtils.cleanMobilephone(mobile);
   	log.info("request SMS login code for mobile="+cleanMobile);
 	  UserModel user = userRepo.findByProfileMobilephone(cleanMobile)
-		  .orElseThrow(() -> new LiquidoException(LiquidoException.Errors.MOBILE_NOT_FOUND,  "No user found with mobile number "+cleanMobile+". You must register first."));
+		  .orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "No user found with mobile number "+cleanMobile+". You must register first."));
 
 	  // Create new SMS token: six random digits between [100000...999999]
-	  String smsCode = DoogiesUtil.randomDigits(6);
+	  String smsToken = DoogiesUtil.randomDigits(6);
 	  LocalDateTime validUntil = LocalDateTime.now().plusHours(1);  // login token via SMS is valid for one hour. That should be enough!
-		OneTimeToken oneTimeToken = new OneTimeToken(smsCode, user, OneTimeToken.TOKEN_TYPE.SMS, validUntil);
+		OneTimeToken oneTimeToken = new OneTimeToken(smsToken, user, OneTimeToken.TOKEN_TYPE.SMS, validUntil);
 		ottRepo.save(oneTimeToken);
 		log.info("User "+user.getEmail()+" may login. Sending code via SMS.");
+
+		//TODO: send one time token via SMS
+
 	  if (springEnv.acceptsProfiles(Profiles.of("dev", "test"))) {
-		  return ResponseEntity.ok().header("code", smsCode).build();  // when debugging, return the code in the header
+		  return ResponseEntity.ok().header("token", smsToken).build();  // when debugging, return the code in the header
 	  } else {
 	  	return ResponseEntity.ok().build();
 	  }
@@ -116,38 +120,37 @@ public class UserRestController {
 	/**
 	 * SMS login flow - step 2 - login with received SMS code
 	 * This endpoint must be public.
-	 * @param code the 4 digit code from the SMS
-	 * @return Oauth access token
+	 * @param token the 4 digit code from the SMS
+	 * @return Json Web Token (JWT) with user data encoded within it.
 	 */
-  @RequestMapping(path = "/auth/loginWithSmsCode", produces = MediaType.TEXT_PLAIN_VALUE)
-  public String loginWithSmsCode(
+  @RequestMapping(path = "/auth/loginWithSmsToken", produces = MediaType.TEXT_PLAIN_VALUE)
+  public String loginWithSmsToken(
 		  @RequestParam("mobile") String mobile,
-  		@RequestParam("code") String code
+  		@RequestParam("token") String token
   ) throws LiquidoException {
-	  log.debug("Request to login with sms code="+code);
+	  log.debug("Request to login with sms code="+token);
 
 	  // in DEV or TEST environment allow login as any use with a special code
-	  if (springEnv.acceptsProfiles(Profiles.of("dev", "test")) && code.equals(springEnv.getProperty("liquido.dev.dummySmsLoginCode"))) {
+	  if (springEnv.acceptsProfiles(Profiles.of("dev", "test")) && token.equals(springEnv.getProperty("liquido.dev.dummySmsLoginCode"))) {
 	  	UserModel user = userRepo.findByProfileMobilephone(mobile)
-					.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN, "DevLogin: user for mobile phone "+mobile+" not found."));
+					.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "DevLogin: user for mobile phone "+mobile+" not found."));
 	  	log.info("DEV Login as "+mobile+" => "+user);
 	  	user.setLastLogin(LocalDateTime.now());
 	  	userRepo.save(user);
 			return jwtTokenProvider.generateToken(user.getEmail());
 		}
 
-	  OneTimeToken oneTimeToken = ottRepo.findByToken(code);
+	  OneTimeToken oneTimeToken = ottRepo.findByToken(token);
 	  if (oneTimeToken == null || mobile == null ||
         !mobile.equals(oneTimeToken.getUser().getProfile().getMobilephone()) ||
 	      !OneTimeToken.TOKEN_TYPE.SMS.equals(oneTimeToken.getTokenType())  )
 	  {
-	  	// We deliberately DO NOT tell the user the exact error reason.
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN, "Invalid SMS login code.");
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Invalid SMS login token.");
 		}
 
 	  if (LocalDateTime.now().isAfter(oneTimeToken.getValidUntil())) {
 	  	ottRepo.delete(oneTimeToken);
-		  throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN, "This sms login code is expired.");
+		  throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "This sms login token is expired.");
 	  }
 
 	  //---- delete used one time token
@@ -158,14 +161,89 @@ public class UserRestController {
 		String jwt = jwtTokenProvider.generateToken(user.getEmail());
 		oneTimeToken.getUser().setLastLogin(LocalDateTime.now());
 		userRepo.save(user);
-		log.info("User "+user+ "logged in with valid SMS code.");
+		log.info(user+ "logged in with valid SMS token.");
 		return jwt;
   }
 
-  //TODO: login via E-Mail magic link
 
-	//TODO: clean logout: delete all pending OTPs and voterTokens
+	/**
+	 * Request a login token via email. When passed email is valid, ie. user is registered and known
+	 * then an email with a login link will be sent to his email account.
+	 * @param email must be a valid, previously registered email adress
+	 * @return HTTP OK
+	 * @throws LiquidoException when this email is not yet registered (or mail cannot be sent via SMTP)
+	 */
+	@RequestMapping(value = "/auth/requestEmailToken")
+	public ResponseEntity requestEmailToken(@RequestParam("email") String email) throws LiquidoException {
+		if (DoogiesUtil.isEmpty(email)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_EMAIL_NOT_FOUND,  "Need email!");
+		log.info("request email login code for email="+email);
+		UserModel user = userRepo.findByEmail(email)
+			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_EMAIL_NOT_FOUND,  "No user found with email "+email+". You must register first."));
 
+		// Create new email login link with a token time token in it.
+		UUID emailToken = UUID.randomUUID();
+		LocalDateTime validUntil = LocalDateTime.now().plusHours(1);  // login token via SMS is valid for one hour. That should be enough!
+		OneTimeToken oneTimeToken = new OneTimeToken(emailToken.toString(), user, OneTimeToken.TOKEN_TYPE.EMAIL, validUntil);
+		ottRepo.save(oneTimeToken);
+		log.info("User "+user.getEmail()+" may login. Sending code via EMail.");
+
+		try {
+			mailService.sendEMail(email, oneTimeToken.getToken());
+		} catch (Exception e) {
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_INTERNAL_ERROR, "Internal server error: Cannot send Email "+e.toString(), e);
+		}
+
+		if (springEnv.acceptsProfiles(Profiles.of("dev", "test"))) {
+			return ResponseEntity.ok().header("token", emailToken.toString()).build();  // when debugging, return the code in the header
+		} else {
+			return ResponseEntity.ok().build();
+		}
+	}
+
+	/**
+	 * Login via link in email.
+	 * @param email user's email that MUST match the email stored together with the token
+	 * @param token must be a valid login token
+	 * @return Json Web Token as plain text
+	 * @throws LiquidoException when token is invalid or expired
+	 */
+	@RequestMapping(path = "/auth/loginWithEmailToken", produces = MediaType.TEXT_PLAIN_VALUE)
+	public String loginWithEmailToken(
+		@RequestParam("email") String email,
+		@RequestParam("token") String token
+	) throws LiquidoException {
+		log.debug("Request to login with email token="+token);
+		if (DoogiesUtil.isEmpty(email)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_EMAIL_NOT_FOUND, "Need email to login!");
+		if (DoogiesUtil.isEmpty(token)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Need login token!");
+
+		OneTimeToken oneTimeToken = ottRepo.findByToken(token);
+		if (oneTimeToken == null || email == null ||
+			!email.equals(oneTimeToken.getUser().getEmail()) ||
+			!OneTimeToken.TOKEN_TYPE.EMAIL.equals(oneTimeToken.getTokenType())  )
+		{
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Invalid email login token.");
+		}
+
+		if (LocalDateTime.now().isAfter(oneTimeToken.getValidUntil())) {
+			ottRepo.delete(oneTimeToken);
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "This email login token is expired.");
+		}
+
+		//---- delete used one time token
+		UserModel user = oneTimeToken.getUser();
+		ottRepo.delete(oneTimeToken);
+
+		// return JWT token for this email
+		String jwt = jwtTokenProvider.generateToken(user.getEmail());
+		oneTimeToken.getUser().setLastLogin(LocalDateTime.now());
+		userRepo.save(user);
+		log.info(user+ "logged in with valid email code.");
+		return jwt;
+	}
+
+
+
+	// There is no logout here. The server is stateless! When a user want's to "log out", then he simply has to throw away his JWT
 }
 
 
