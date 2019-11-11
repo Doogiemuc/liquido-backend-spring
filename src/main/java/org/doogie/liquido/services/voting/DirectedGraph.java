@@ -4,11 +4,19 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * A directed graph with nodes. (Without node weights)
+ * A directed graph with nodes.
  * Each node has an ID of type T (e.g. Long).
  * Each node has a set of outgoing links to other nodes.
+ * This class can return the Root nodes of the tree.
+ * (This class does not implement edge weights. We don't need them here.)
+ *
+ * DirectGraph&lt;T&gt; extends HashMap
+ * Each node in this Graph is an element of this HashMap
+ * The Key is the ID
+ * and the value is a Set of outgoing edges to other nodes.
  */
 class DirectedGraph<T> extends HashMap<T, Set<T>> {
+
 	public DirectedGraph() {}
 
 	/**

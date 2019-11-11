@@ -1,8 +1,7 @@
 package org.doogie.liquido.services.voting;
 
-//Implementation note: This class is completely indipendant of any Liquido data model. It's just the algorithm
+//Implementation note: This class is completely independent of any Liquido data model. It's just the algorithm
 
-import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.util.Matrix;
 
 import java.util.*;
@@ -22,9 +21,23 @@ public class RankedPairVoting {
 
 	/**
 	 * Sum up the pairwise comparision of proposals/candidates in every ballot.
+	 * How many ballots prefere candidate i over candidate j.
+	 * The returned table is "sum symetric" along its diagonal axis. The sum of each pair of cells
+	 * along this symetry equals the number of ballots.
 	 *
-	 * @param allIds all proposal/candidate IDs that can be voted for
-	 * @param idsInBallots the list of ballots. Each ballot has an ordered list of proposal/candidate IDs.
+	 * @param allIds all proposal/candidate IDs that can be voted for in this poll.
+	 * @param idsInBallots the list of ballots. Each ballot consists of an ordered list of proposal/candidate IDs from allIds
+	 *                     A ballot does not necessarily need to contain all candidate IDs. It is also possible that
+	 *                     a voter only votes for some of the candidates. This means, that he preferes all the candidates
+	 *                     that he sorted into his ballot over the candidates that hi did not vote for at all.
+	 *                     <h3>Example</h3>
+	 *                     <ul>
+	 *                       <li>allIDs = {1,2,3,4}</li>
+	 *                     	 <li>idsInBallots[0] = { 2, 1}</li>
+	 *                     </ul>
+	 *                     This voter prefers candidate 2 over 1. And he prefers these two candidates over all the other ones
+	 *                     [ 2, 1 ] > { 3 4}   The candidates 3 and 4 do not have any preferred order within them. They
+	 *                     are all just "low".
 	 * @throws IllegalArgumentException when one of the required param is null
 	 * @return the duelMatrix, which is a pairwise comparision of each preference i > j
 	 */
@@ -115,7 +128,7 @@ public class RankedPairVoting {
 
 		// LOCK IN
 		// The node ids in DirectedGraph are row/col indexes in the duelMatrix (int)
-		DirectedGraph<Integer> digraph = new DirectedGraph();
+		DirectedGraph<Integer> digraph = new DirectedGraph<>();
 		for (long[] majority : majorities) {
 			if (!digraph.reachable((int)majority[1], (int)majority[0])) {
 				digraph.addDirectedEdge((int)majority[0], (int)majority[1]);
