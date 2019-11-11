@@ -17,6 +17,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
  * Also contains some utility methods.
  */
 @Slf4j
+@ActiveProfiles("test")			// Activate spring profile "test". Needed when run via maven. I am wondergin why this is not the default
 public class BaseTest {
 	@Autowired
 	LiquidoAuditorAware auditor;

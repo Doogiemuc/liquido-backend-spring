@@ -67,7 +67,8 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * http://www.generatedata.com/
  */
 //TODO: there would also be other ways of initializing a DB: http://www.javarticles.com/2015/01/example-of-spring-datasourceinitializer.html
-//TODO: Split this up: Use a CommandLineRunnter onyl to output some debug info after app has started. And have a seperate test data creator that creates schema.sql, data.sql, schema-H2.sql and data-H2.sql
+//TODO: Split this up: Use a CommandLineRunnter only to output some debug info after app has started. And have a seperate test data creator that creates schema.sql, data.sql, schema-H2.sql and data-H2.sql
+//TODO: Even more possibilities to create TestData. (Ok, but relies on testdata.sql script.)  https://docs.spring.io/spring/docs/current/spring-framework-reference/testing.html#testcontext-ctx-management-env-profiles
 @Component
 //@Profile("dev")    // run test data creator only during development
 @Order(Ordered.HIGHEST_PRECEDENCE)   // seed DB first, then run the other CommandLineRunners
@@ -79,7 +80,9 @@ public class TestDataCreator implements CommandLineRunner {
 	public static final String SAMPLE_DATA_FILENAME = "sampleDB-H2.sql";
 	public static final String SAMPLE_DATA_PATH     = "src/main/resources/";
 
-	@Value("${spring.data.rest.base-path}")   // value from application.properties file
+	// values from application.properties file
+
+	@Value("${spring.data.rest.base-path}")
 	String basePath;
 
 	@Value("${liquido.admin.email}")
@@ -172,7 +175,7 @@ public class TestDataCreator implements CommandLineRunner {
 			e.printStackTrace();
 		}
 
-		if (springEnv.acceptsProfiles(Profiles.of("dev"))) {
+		if (springEnv.acceptsProfiles(Profiles.of("dev", "test"))) {
 			log.info("===== Spring environment properties ");
 			MutablePropertySources propSrcs = ((AbstractEnvironment) springEnv).getPropertySources();
 			Iterator<PropertySource<?>> it = propSrcs.iterator();
