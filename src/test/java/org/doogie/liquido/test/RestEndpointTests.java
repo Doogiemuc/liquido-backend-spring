@@ -264,13 +264,13 @@ public class RestEndpointTests extends BaseTest {
 		log.debug("Successfully registered new user");
 
 		// request SMS login code
-		res = anonymousClient.getForEntity("/auth/requestSmsCode?mobile={mobile}", String.class, mobile);
-		String smsCode = res.getHeaders().get("code").get(0);   // when spring profile is TEST then backend returns code in header. That would normally be sent via SMS.
-		assertFalse("Did not receive code.", DoogiesUtil.isEmpty(smsCode));
-		log.debug("Received login code via SMS: "+smsCode);
+		res = anonymousClient.getForEntity("/auth/requestSmsToken?mobile={mobile}", String.class, mobile);
+		String smsToken = res.getHeaders().get("code").get(0);   // when spring profile is TEST then backend returns code in header. That would normally be sent via SMS.
+		assertFalse("Did not receive token.", DoogiesUtil.isEmpty(smsToken));
+		log.debug("Received login token via SMS: "+smsToken);
 
 		// login with received SMS code
-		res = anonymousClient.getForEntity("/auth/loginWithSmsCode?mobile={mobile}&code={smsCode}", String.class, mobile, smsCode);
+		res = anonymousClient.getForEntity("/auth/loginWithSmsToken?mobile={mobile}&token={smsToken}", String.class, mobile, smsToken);
 		String jwt = res.getBody();
 		log.debug("received JWT: "+jwt);
 		assertTrue("Invalid JWT: "+jwt, jwt != null && jwt.length() > 20);

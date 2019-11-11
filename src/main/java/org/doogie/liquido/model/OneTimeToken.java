@@ -8,7 +8,7 @@ import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 /**
- * One time login token. Either from SMS (4 digits) or from login email
+ * One time token that is used for login via SMS or EMail.
  */
 @Entity
 @Data
@@ -24,7 +24,6 @@ public class OneTimeToken extends BaseModel {
 	@NotNull
 	@OneToOne
 	UserModel user;
-
 
 	public enum TOKEN_TYPE {
 		EMAIL,

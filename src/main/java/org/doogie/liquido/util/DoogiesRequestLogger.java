@@ -41,7 +41,9 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
   }
 
   /**
-   * Log each request and respponse with full Request URI, content payload and duration of the request in ms.
+   * Log each request and response with full Request URI, content payload and duration of the request in ms
+	 * But only if log.isDebugEnabled()
+	 *
    * @param request the request
    * @param response the response
    * @param filterChain chain of filters
@@ -50,6 +52,11 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
    */
   @Override
   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+
+  	if (!logger.isDebugEnabled()) {
+			filterChain.doFilter(request, response);
+			return;
+		}
 
     long startTime = System.currentTimeMillis();
 

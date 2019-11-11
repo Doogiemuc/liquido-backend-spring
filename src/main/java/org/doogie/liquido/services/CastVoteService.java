@@ -65,8 +65,8 @@ public class CastVoteService {
 	@Value("${liquido.checksum.expiration.hours}")
 	int checksumExpirationHours;
 
-	//TODO: RSA Tokens  https://stackoverflow.com/questions/37722090/java-jwt-with-public-private-keys
 	//TODO: create really secure voterTokens like this: U2F  https://blog.trezor.io/why-you-should-never-use-google-authenticator-again-e166d09d4324
+	//MAYBE: RSA Tokens  https://stackoverflow.com/questions/37722090/java-jwt-with-public-private-keys
 
 	/**
 	 * A user wants to vote and therefore requests a voter token for this area. Each user has one token per area.
@@ -83,9 +83,9 @@ public class CastVoteService {
 	 *
 	 * @param voter the currently logged in and correctly authenticated user
 	 * @param area an area that the user's want's to vote in
-	 * @param voterTokenSecret  a secret that only the user knows. So no one else can create this voterToken. May be emtpy string, but then with less security.
-	 * @param becomePublicProxy true if voter wants to become (or stay) a public proxy. Voter can also decide later with {@link ProxyService#becomePublicProxy
-	 * @return  users voterToken, that only the user must know, and that will hash to the stored checksumModel.
+	 * @param voterTokenSecret  a secret that only the user knows. So no one else can create this voterToken.
+	 * @param becomePublicProxy true if voter wants to become (or stay) a public proxy. A voter can also decide this later with {@link ProxyService#becomePublicProxy
+	 * @return the user's voterToken, that only the user must know, and that will hash to the stored checksumModel. The user can cast votes with this voterToken in that area.
 	 */
 	@Transactional
 	public String createVoterTokenAndStoreChecksum(UserModel voter, AreaModel area, String voterTokenSecret, boolean becomePublicProxy) throws LiquidoException {

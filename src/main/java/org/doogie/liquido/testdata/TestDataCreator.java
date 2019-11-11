@@ -172,14 +172,32 @@ public class TestDataCreator implements CommandLineRunner {
 			e.printStackTrace();
 		}
 
-		log.info("===== Spring environment properties ");
-		// https://stackoverflow.com/questions/23506471/spring-access-all-environment-properties-as-a-map-or-properties-object
-		MutablePropertySources propSrcs = ((AbstractEnvironment) springEnv).getPropertySources();
-		StreamSupport.stream(propSrcs.spliterator(), false)
+		if (springEnv.acceptsProfiles(Profiles.of("dev"))) {
+			log.info("===== Spring environment properties ");
+			MutablePropertySources propSrcs = ((AbstractEnvironment) springEnv).getPropertySources();
+			Iterator<PropertySource<?>> it = propSrcs.iterator();
+			while (it.hasNext()) {
+				PropertySource<?> src = it.next();
+				log.debug("===== Property Source: " + src.getName());
+				if (src instanceof EnumerablePropertySource) {
+					String[] propertyNames = ((EnumerablePropertySource<?>) src).getPropertyNames();
+					for (int i = 0; i < propertyNames.length; i++) {
+						log.debug(propertyNames[i] + "=" + springEnv.getProperty(propertyNames[i]));
+					}
+				}
+			}
+
+			/*
+			// https://stackoverflow.com/questions/23506471/spring-access-all-environment-properties-as-a-map-or-properties-object
+			StreamSupport.stream(propSrcs.spliterator(), false)
+				.forEach(propSrc -> log.debug(propSrc.getName()))
 				.filter(ps -> ps instanceof EnumerablePropertySource)
 				.map(ps -> ((EnumerablePropertySource) ps).getPropertyNames())
 				.flatMap(Arrays::<String>stream)
-				.forEach(propName -> log.debug(propName+"="+springEnv.getProperty(propName)));
+				.forEach(propName -> log.debug(propName + "=" + springEnv.getProperty(propName)));
+
+			 */
+		}
 
 		boolean seedDB = "true".equalsIgnoreCase(springEnv.getProperty(SEED_DB_PARAM));
     for(String arg : args) {
