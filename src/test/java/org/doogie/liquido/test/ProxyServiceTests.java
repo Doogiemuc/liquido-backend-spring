@@ -28,8 +28,7 @@ import static org.junit.Assert.*;
 
 @Slf4j
 @RunWith(SpringRunner.class)
-@SpringBootTest		// Sets active profile to "test" and this will also load the settings  from  application-test.properties
-//@ActiveProfiles("test")  // already implicit
+@SpringBootTest
 public class ProxyServiceTests extends BaseTest {
 	@Autowired
 	UserRepo userRepo;

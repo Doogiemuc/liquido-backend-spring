@@ -51,9 +51,8 @@ import static org.springframework.http.HttpMethod.*;
  */
 @Slf4j
 @RunWith(SpringRunner.class)
-@ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)  // This automatically sets up everything and starts the server.
-//@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)       // TODO: Run tests against an already running server
+//@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)       // TODO: Run tests against an already running server, e.g. PROD
 public class RestEndpointTests extends BaseTest {
 
   /** path prefix for REST API from application.properties */
@@ -265,7 +264,7 @@ public class RestEndpointTests extends BaseTest {
 
 		// request SMS login code
 		res = anonymousClient.getForEntity("/auth/requestSmsToken?mobile={mobile}", String.class, mobile);
-		String smsToken = res.getHeaders().get("code").get(0);   // when spring profile is TEST then backend returns code in header. That would normally be sent via SMS.
+		String smsToken = res.getHeaders().get("token").get(0);   // when spring profile is TEST then backend returns token in header. That would normally be sent via SMS.
 		assertFalse("Did not receive token.", DoogiesUtil.isEmpty(smsToken));
 		log.debug("Received login token via SMS: "+smsToken);
 

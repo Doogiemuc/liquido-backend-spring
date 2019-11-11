@@ -3,11 +3,14 @@
 # Deployment Script for LIQUIDO
 #
 
+export JAVA_HOME=/d/Coding/DevApps/jdk-8.211
+
 SSH_KEY=/d/Coding/doogies_credentials/liquido-aws-SSH.pem
 
 BACKEND_SOURCE=/d/Coding/liquido/liquido-backend-spring
 BACKEND_USER=ec2-user
 BACKEND_HOST=ec2-34-255-196-76.eu-west-1.compute.amazonaws.com
+BACKEND_API=http://${BACKEND_HOST}:80/liquido/v2
 BACKEND_DEST_DIR=/home/ec2-user/liquido/liquido-int
 BACKEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:${BACKEND_DEST_DIR}
 
@@ -57,7 +60,13 @@ echo "===== Build Backend ====="
 echo
 echo "in $BACKEND_SOURCE"
 read -p "Build backend? [yes|skipTests|NO] " yn
-if [[ $yn =~ ^[Yy](es)?$ ]] ; then
+if [[ $yn =~ ^[s](kip)?$ ]] ; then
+  echo "  Skipping tests."
+  cd $BACKEND_SOURCE
+  $MAVEN clean install package -DskipTests
+  [ $? -ne 0 ] && exit 1
+  echo -e "Backend built successfully. ${GREEN_OK}"
+elif [[ $yn =~ ^[Yy](es)?$ ]] ; then
   cd $BACKEND_SOURCE
   $MAVEN clean install package
   [ $? -ne 0 ] && exit 1
@@ -69,6 +78,7 @@ fi
 JAR_NAME=`(cd ${BACKEND_SOURCE}/target; ls -1 -t *.jar | head -1)`
 JAR=${BACKEND_SOURCE}/target/${JAR_NAME}
 
+echo
 echo -n "Checking for backend JAR in $JAR ..."
 if [ ! -f $JAR ]; then
   echo -e "$RED_FAIL"
@@ -144,27 +154,43 @@ fi
 echo
 echo "===== Sanity checks ====="
 echo
-echo -n "Ping backend ... "
-HELLO_WORD=`curl -s -X GET http://${BACKEND_HOST}:8080/liquido/v2/_ping`
-if [[ ! $HELLO_WORD = '{"Hello":"World"}' ]] ; then
+echo -n "Waiting for backend to be alive ..."
+
+PING_SUCCESS=0
+for i in {1..20}; do
+	HELLO_WORD=`curl -s -X GET ${BACKEND_API}/_ping`
+	if [[ $HELLO_WORD = '{"Hello":"World"}' ]] ; then
+	    echo -e " $GREEN_OK"
+		PING_SUCCESS=1
+		break;
+	fi
+	echo -n "."
+	sleep 1
+done
+if [ $PING_SUCCESS == 0 ]; then
 	echo -e "$RED_FAIL"
 	exit 1
 fi
-echo -e "$GREEN_OK"
 
-echo -n "Login with dummy SMS token should NOT be possible in PROD ..."
+echo -n "Login with dummy SMS token should NOT be possible in PROD ... "
 
-DUMMY_LOGIN=`curl -s -X GET "http://${BACKEND_HOST}:8080/liquido/v2/auth/loginWithSmsToken?mobile=%2B491234567890&code=998877"`
+DUMMY_LOGIN=`curl -s -X GET "${BACKEND_API}/auth/loginWithSmsToken?mobile=%2B491234567890&token=998877"`
 if [[ $DUMMY_LOGIN != *'"httpStatus":401'* ]] ; then
 	echo -e "$RED_FAIL"
 	exit 1
 fi
 echo -e "$GREEN_OK"
 
-
-
-#TODO: ===== Run Cypress E2E tests against PROD =====
-
+echo
+echo "===== Run E2E Tests ====="
+echo
+read -p "Run tests against PROD? [yes|NO] " yn
+if [[ $yn =~ ^[Yy](es)?$ ]] ; then
+	cd $FRONTEND_BASE
+	$CYPRESS run --env backendBaseURL=${BACKEND_API} --spec ./cypress/integration/liquidoTests/liquidoHappyCase.js
+	[ $? -ne 0 ] && exit 1
+	echo "Tests successfull ${GREEN_OK}"
+fi
 
 
 cd $CURRENT_DIR
