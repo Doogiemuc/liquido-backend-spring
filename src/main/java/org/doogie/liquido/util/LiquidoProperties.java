@@ -5,14 +5,9 @@ import org.doogie.liquido.datarepos.KeyValueRepo;
 import org.doogie.liquido.model.KeyValueModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
-import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
 import java.util.HashMap;
-import java.util.Map;
-
-import static org.doogie.liquido.util.LiquidoProperties.KEY.BCRYPT_SALT;
 
 /**
  * Global properties that are persisted in the DB.
