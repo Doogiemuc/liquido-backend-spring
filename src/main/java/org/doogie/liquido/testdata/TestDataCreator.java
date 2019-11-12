@@ -320,8 +320,8 @@ public class TestDataCreator implements CommandLineRunner {
 			while ((currentLine = reader.readLine()) != null) {
 				currentLine = currentLine.trim();
 				//log.trace("Checking line "+currentLine);
-				if (currentLine.matches("(ALTER|CREATE).*TABLE PUBLIC\\.QRTZ.*\\(")) removeBlock = true;
-				if (currentLine.matches("INSERT INTO PUBLIC\\.QRTZ.*VALUES")) removeBlock = true;
+				if (currentLine.matches("(ALTER|CREATE).*TABLE \"PUBLIC\"\\.\"QRTZ.*\\(")) removeBlock = true;
+				if (currentLine.matches("INSERT INTO \"PUBLIC\"\\.\"QRTZ.*VALUES")) removeBlock = true;
 				if (removeBlock && currentLine.matches(".*\\); *")) {
 					//log.trace("Remove end of block      );");
 					removeBlock = false;
@@ -331,7 +331,7 @@ public class TestDataCreator implements CommandLineRunner {
 					//log.trace("Removing line from block "+currentLine);
 					continue;
 				}
-				if (currentLine.matches("(ALTER|CREATE).*TABLE PUBLIC\\.QRTZ.*;")) {
+				if (currentLine.matches("(ALTER|CREATE).*TABLE \"PUBLIC\"\\.\"QRTZ.*;")) {
 					//log.trace("Removing single line:    "+currentLine);
 					continue;
 				}
