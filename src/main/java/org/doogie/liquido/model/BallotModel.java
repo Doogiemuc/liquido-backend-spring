@@ -81,7 +81,7 @@ public class BallotModel {
   @NonNull
   @NotNull
   @ManyToMany(fetch = FetchType.EAGER)   //(cascade = CascadeType.MERGE, orphanRemoval = false)
-  @OrderColumn  // keep order in DB
+  @OrderColumn(name="LawModel_Order")  // keep order in DB
   public List<LawModel> voteOrder;   		//proposals in voteOrder must not be duplicate! This is checked in VoteRestController.
 
 	public void setVoteOrder(List<LawModel> voteOrder) {

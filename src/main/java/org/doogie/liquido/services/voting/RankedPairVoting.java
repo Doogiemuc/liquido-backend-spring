@@ -72,7 +72,7 @@ public class RankedPairVoting {
 			}
 
 			// For each pair of votedForIds add one to the cell in the duelMatrix
-			for (int i = 0; i < votedForIds.size()-1; i++) {
+			for (int i = 0; i < votedForIds.size(); i++) {					//BUGFIX: Must loop over all votedForIds. We could skip the last for preference i > j, but I need this last loop iteration for counting the preferences over notVotedForIds
 				int prefIndex = id2index.get(votedForIds.get(i));
 				for (int j = i + 1; j < votedForIds.size(); j++) {
 					// add count preferences i > j
