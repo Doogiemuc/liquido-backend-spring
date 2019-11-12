@@ -259,10 +259,10 @@ public class PollService {
 
 		List<Integer> winnerIndexes = RankedPairVoting.calcRankedPairWinners(duelMatrix);
 		if (winnerIndexes.size() == 0) {
-			log.info("There is no winner in poll "+poll);  // This may happen when there are no votes at all.
+			log.warn("There is no winner in poll "+poll);  // This may for example happen when there are no votes at all.
 			return null;
 		}
-		if (winnerIndexes.size() > 1) log.info("There is more than one winner in "+poll);
+		if (winnerIndexes.size() > 1) log.warn("There is more than one winner in "+poll);
 		long firstWinnerId = allIds.get(winnerIndexes.get(0));
 		for(LawModel prop: poll.getProposals()) {
 			if (prop.getId().longValue() == firstWinnerId)	return prop;
