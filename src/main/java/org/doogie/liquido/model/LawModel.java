@@ -173,9 +173,10 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 	 * @param description the new description (HTML)
 	 */
   public void setDescription(String description) {
-    if (this.getStatus() == null ||
-        LawStatus.IDEA.equals(this.getStatus()) ||
-        LawStatus.PROPOSAL.equals(this.getStatus())) {
+    if (LawStatus.IDEA.equals(this.getStatus()) ||
+        LawStatus.PROPOSAL.equals(this.getStatus()) ||
+				LawStatus.ELABORATION.equals(this.getStatus())
+		) {
       this.description = description;
     } else {
       throw new RuntimeException("Must not change description in status "+this.getStatus());
