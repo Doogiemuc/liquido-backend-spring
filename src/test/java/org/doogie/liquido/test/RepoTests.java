@@ -69,13 +69,14 @@ public class RepoTests extends BaseTest {
     auditorAware.setMockAuditor(null);    // BUGFIX: Must remove any previously set mock auditor
 
     UserModel user2 = userRepo.findByEmail(TestFixtures.USER2_EMAIL).get();
-    AreaModel area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+    Optional<AreaModel> area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+    assertTrue("Need Area1", area1.isPresent());
 
     Optional<UserModel> currentAuditor = auditorAware.getCurrentAuditor();
     assertTrue(currentAuditor.isPresent());
     assertEquals(user2, currentAuditor.get());
 
-    LawModel newIdea = new LawModel("Idea from test"+System.currentTimeMillis(), "Very nice description from test", area1);
+    LawModel newIdea = new LawModel("Idea from test"+System.currentTimeMillis(), "Very nice description from test", area1.get());
 
     //auditorAware.setMockAuditor(user1);     //not necessary anymore. Replaced by @WithUserDetails annotation.     // have to mock the currently logged in user for the @CreatedBy annotation in LawModel to work
     LawModel insertedIdea = lawRepo.save(newIdea);
@@ -90,10 +91,10 @@ public class RepoTests extends BaseTest {
   //@WithUserDetails("testuser1@liquido.de")
   public void testUpdate() {
     long count1 = areaRepo.count();
-    AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-    assertNotNull("Did not find area 1 by title", area);
+    Optional<AreaModel> areaOpt = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+    assertTrue("Did not find area 1 by title", areaOpt.isPresent());
+    AreaModel area = areaOpt.get();
     area.setDescription("Description from Test");
-
     areaRepo.save(area);
 
     long count2 = areaRepo.count();
@@ -103,10 +104,10 @@ public class RepoTests extends BaseTest {
 
   @Test
   public void testSaveDuplicateArea() {
-    AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-    assertNotNull("Did not find area 1 by title", area);
+    Optional<AreaModel> areaOpt = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+    assertTrue("Did not find area 1 by title", areaOpt.isPresent());
 
-    AreaModel areaDuplicate = new AreaModel(area.getTitle(), "This is a duplicate", area.getCreatedBy());
+    AreaModel areaDuplicate = new AreaModel(areaOpt.get().getTitle(), "This is a duplicate", areaOpt.get().getCreatedBy());
     try {
       areaRepo.save(areaDuplicate);  // should throw DuplicateKeyException
       fail("Did not receive expected DuplicateKeyException");

@@ -55,7 +55,6 @@ public class LiquidoUserDetailsService implements UserDetailsService {
   @Override
   public LiquidoAuthUser loadUserByUsername(String email) throws UsernameNotFoundException {
     log.trace("loading user "+email+" from DB for authentication");
-
     UserModel userModel = userRepo.findByEmail(email)
      .orElseThrow(()-> new UsernameNotFoundException("Could not find user '"+email+"'"));
     if (DoogiesUtil.isEmpty(userModel.getEmail()))

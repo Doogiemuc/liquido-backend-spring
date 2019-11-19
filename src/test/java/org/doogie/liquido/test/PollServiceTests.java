@@ -87,7 +87,7 @@ public class PollServiceTests  extends BaseTest {
 		log.info("=========== testSchulzeMethode");
 
 		// We need 45 voters
-		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE).orElseThrow(() -> new RuntimeException("need Area1 in test"));;
 		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 5);
 
 		// These numbers are from the example on wikipedia https://de.wikipedia.org/wiki/Schulze-Methode
@@ -155,9 +155,8 @@ public class PollServiceTests  extends BaseTest {
 	BallotModel quickNdirtyCastVote(String voterToken, PollModel poll, List<LawModel> voteOrder) {
 		String proposalIds = voteOrder.stream().map(law->law.getId().toString()).collect(Collectors.joining(","));
 		log.debug("quickNDirtyCastVote(voterToken="+voterToken+", poll.id="+poll.getId()+" voteOrder(proposal.ids)=["+proposalIds+"]");
-		String tokenChecksum = "dummyChecksumFor "+voterToken;   //castVoteService.calcChecksumFromVoterToken(voterToken);
-  	AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-		ChecksumModel checksumModel = new ChecksumModel(tokenChecksum, area);
+		String tokenChecksum = "dummyChecksumFor "+voterToken;   // this replaces  castVoteService.calcChecksumFromVoterToken(voterToken);  which is too slow.
+		ChecksumModel checksumModel = new ChecksumModel(tokenChecksum, poll.getArea());
 		checksumRepo.save(checksumModel);   // must save
 		int level = 0;
 		BallotModel ballot = new BallotModel(poll, level, voteOrder, checksumModel);
@@ -223,7 +222,7 @@ public class PollServiceTests  extends BaseTest {
 	@Test
 	public void testRankedPairs() throws LiquidoException {
 		String[] cities = new String[] {"Memphis", "Nashville", "Knoxville", "Chattanooga"};
-		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE).orElseThrow(() -> new RuntimeException("need Area1 in test"));;
 		PollModel poll = testDataCreator.seedPollInVotingPhase(area, cities.length);
 
 		int ll = 0;
@@ -287,7 +286,7 @@ public class PollServiceTests  extends BaseTest {
 	 */
 	@Test
 	public void testRankedPairsNoVotes() throws LiquidoException {
-		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
+		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE).orElseThrow(() -> new RuntimeException("need Area1 in test"));;
 		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 2);
 		// no seeded votes in this test!
 		pollService.finishVotingPhase(poll);
@@ -315,7 +314,7 @@ public class PollServiceTests  extends BaseTest {
 		UserModel expectedProxy;
 
 		// GIVEN a poll in voting
-		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA_FOR_DELEGATIONS);
+		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA_FOR_DELEGATIONS).orElseThrow(() -> new RuntimeException("need Area for delegations in test"));;
 		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 3);
 		String pollURI = basePath + "/polls/" + poll.getId();
 
@@ -374,7 +373,7 @@ public class PollServiceTests  extends BaseTest {
 	@Test
 	public void testFinishVotingPhaseWithoutVotes() throws LiquidoException {
 		// GIVEN a poll in voting phase
-		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA0_TITLE);
+		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA0_TITLE).orElseThrow(() -> new RuntimeException("need Area0 in test"));;
 		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 2);
 
 		// WHEN we finish the voting phase of this poll
@@ -393,7 +392,7 @@ public class PollServiceTests  extends BaseTest {
 	@Test
 	public void deletePollTest() throws LiquidoException {
 		// GIVEN a poll with votes in it
-		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA0_TITLE);
+		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA0_TITLE).orElseThrow(() -> new RuntimeException("need Area0 in test"));;
 		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 2);
 		testDataCreator.seedVotes(poll, 3);
 

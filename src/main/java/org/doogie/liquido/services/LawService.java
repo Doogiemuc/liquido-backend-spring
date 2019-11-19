@@ -15,10 +15,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.querydsl.binding.QuerydslPredicateBuilder;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.JoinType;
+import javax.persistence.criteria.Predicate;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -179,9 +181,9 @@ public class LawService {
     return (Specification<LawModel>) (law, query, builder) -> builder.equal(law.get(LAW_STATUS), status);
   }
 
-  /** matches LawModels that have a status which is contained in the passed list of statuus */
+  /** matches LawModels that have a status which is contained in the passed statusList */
   public static Specification<LawModel> matchesStatusList(List<LawModel.LawStatus> statusList) {
-    return (Specification<LawModel>) (law, query, builder) -> law.get("status").in(statusList);
+    return (Specification<LawModel>) (law, query, builder) -> law.get(LAW_STATUS).in(statusList);
   }
 
   public static Specification<LawModel> supportedBy(UserModel supporter) {
@@ -232,43 +234,60 @@ public class LawService {
     };
   }
 
+  /** This Specification returns a Predicate that never matches anything. */
+  public static Specification<LawModel> matchesNothing() {
+    return (law, query, cb) -> cb.equal(law.get(LAW_STATUS),"DOES_NEVER_MATCH_YXCVSDF");
+  }
+
   /**
    * Match a LawModel against a set of query parameters. All query parameters are optional.
-   * If more are given they are AND'ed.
-   * @param lawQuery
-   * @return
+   * If more then one is given then the search parameters are AND'ed.
+   * If one parameters does not match at all (e.g. the area title is not found at all), then
+   * a specification that matches nothing is returned.
+   *
+   * @param lawQuery the query paramertes for the search
+   * @return a Specification that matches this set of query parameters.
    */
   public Specification<LawModel> matchesQuery(LawQuery lawQuery) {
     List<Specification<LawModel>> specs = new ArrayList<>();
 
     // created by
-    lawQuery.getCreatedByEmail().ifPresent((email) ->
-      userRepo.findByEmail(email.toLowerCase()).ifPresent((creator) ->
-        specs.add(createdBy(creator))));
+    if (lawQuery.getCreatedByEmail().isPresent()) {
+      Optional<UserModel> createdBy = userRepo.findByEmail(lawQuery.getCreatedByEmail().get().toLowerCase());
+      if (!createdBy.isPresent()) return matchesNothing();    // if creator is not found return empty match.
+      specs.add(createdBy(createdBy.get()));
+    }
 
     // supported by
-    lawQuery.getSupportedByEMail().ifPresent((email) ->       // Now Java 8 finally looks like javascript! :-)
-      userRepo.findByEmail(email.toLowerCase()).ifPresent((supporter) ->
-        specs.add(supportedBy(supporter))));
+    if (lawQuery.getSupportedByEMail().isPresent()) {
+      Optional<UserModel> supportedBy = userRepo.findByEmail(lawQuery.getSupportedByEMail().get().toLowerCase());
+      if (!supportedBy.isPresent()) return matchesNothing();
+      specs.add(supportedBy(supportedBy.get()));
+    }
 
     // status
-    lawQuery.getStatusList().ifPresent((statusList) ->
-      specs.add(matchesStatusList(statusList)));
+    lawQuery.getStatusList().ifPresent(statusList ->
+      specs.add(matchesStatusList(statusList))
+    );
 
     // free text search
-    lawQuery.getSearchText().ifPresent((searchText) ->
-      specs.add(freeTextSearch(searchText)));
+    lawQuery.getSearchText().ifPresent(searchText ->
+      specs.add(freeTextSearch(searchText))
+    );
 
     // area title
-    lawQuery.getAreaTitle().ifPresent((areaTitle) -> {
-      AreaModel area = areaRepo.findByTitle(areaTitle);
-      specs.add(matchesArea(area));
-    });
+    if (lawQuery.getAreaTitle().isPresent()) {
+      Optional<AreaModel> area = areaRepo.findByTitle(lawQuery.getAreaTitle().get());
+      if (!area.isPresent()) return matchesNothing();
+      specs.add(matchesArea(area.get()));
+    }
 
     // area Id
-    lawQuery.getAreaId().ifPresent((areaId) ->
-      areaRepo.findById(areaId).ifPresent(area ->
-        specs.add(matchesArea(area))));
+    if (lawQuery.getAreaId().isPresent()) {
+      Optional<AreaModel> area = areaRepo.findById(lawQuery.getAreaId().get());
+      if (!area.isPresent()) return matchesNothing();
+      specs.add(matchesArea(area.get()));
+    }
 
     // updated after
     lawQuery.getUpdatedAfter().ifPresent((after) ->
@@ -279,7 +298,7 @@ public class LawService {
       specs.add(updatedBefore(before)));
 
 
-    if (specs.size() == 0) return null;   // empty query
+    if (specs.size() == 0) return null;   // empty query => match everything
 
     Specification<LawModel> spec = specs.get(0);    // there is no way to build an empty specification that always matches
     for (int i = 1; i < specs.size(); i++) {

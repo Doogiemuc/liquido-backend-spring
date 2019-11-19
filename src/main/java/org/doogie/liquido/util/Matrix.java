@@ -1,5 +1,6 @@
 package org.doogie.liquido.util;
 
+import java.util.Arrays;
 import java.util.function.Function;
 
 /**
@@ -154,4 +155,18 @@ public class Matrix {
 		return sb.toString();
 	}
 
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+
+		Matrix matrix = (Matrix) o;
+
+		return Arrays.deepEquals(data, matrix.data);
+	}
+
+	@Override
+	public int hashCode() {
+		return Arrays.deepHashCode(data);
+	}
 }

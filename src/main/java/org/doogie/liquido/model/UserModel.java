@@ -28,6 +28,16 @@ public class UserModel extends BaseModel {
 
   //NO PASSWORD!  Passwords are soooo old fashioned :-)
 
+	public UserModel(String email, String name, String mobilephone, String website, String picture) {
+		if (email == null || email.length() == 0) throw new IllegalArgumentException("Need at least an email to create a UserModel");
+		this.email = email;
+		this.profile = new UserProfileModel();
+		this.profile.setName(name);
+		this.profile.setMobilephone(mobilephone);
+		this.profile.setWebsite(website);
+		this.profile.setPicture(picture);
+	}
+
 	@Embedded
 	public UserProfileModel profile;
 

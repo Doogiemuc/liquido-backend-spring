@@ -1,6 +1,7 @@
 package org.doogie.liquido.testdata;
 
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
@@ -8,13 +9,11 @@ import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.*;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoProperties;
-import org.h2.jdbc.JdbcSQLException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.*;
@@ -32,7 +31,6 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import static org.doogie.liquido.model.LawModel.LawStatus;
 
@@ -65,20 +63,19 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * https://docs.spring.io/spring-boot/docs/current/reference/html/howto-database-initialization.html
  * http://www.sureshpw.com/2014/05/importing-json-with-references-into.html
  * http://www.generatedata.com/
+ * https://docs.spring.io/spring/docs/current/spring-framework-reference/testing.html#testcontext-ctx-management-env-profiles
  */
-//TODO: there would also be other ways of initializing a DB: http://www.javarticles.com/2015/01/example-of-spring-datasourceinitializer.html
-//TODO: Split this up: Use a CommandLineRunnter only to output some debug info after app has started. And have a seperate test data creator that creates schema.sql, data.sql, schema-H2.sql and data-H2.sql
-//TODO: Even more possibilities to create TestData. (Ok, but relies on testdata.sql script.)  https://docs.spring.io/spring/docs/current/spring-framework-reference/testing.html#testcontext-ctx-management-env-profiles
-@Component
-//@Profile("dev")    // run test data creator only during development
-@Order(Ordered.HIGHEST_PRECEDENCE)   // seed DB first, then run the other CommandLineRunners
-public class TestDataCreator implements CommandLineRunner {
-  private Logger log = LoggerFactory.getLogger(this.getClass());
 
-  public static final String SEED_DB_PARAM = "createSampleData";
-  public static final String LOAD_SAMPLE_DB_PARAM = "loadSampleDB";
-	public static final String SAMPLE_DATA_FILENAME = "sampleDB-H2.sql";
-	public static final String SAMPLE_DATA_PATH     = "src/main/resources/";
+@Slf4j
+@Component
+@Profile({"dev", "test"})    						// run test data creator only during development or when running tests!
+@Order(Ordered.HIGHEST_PRECEDENCE)   		// seed DB first, then run the other CommandLineRunners
+public class TestDataCreator implements CommandLineRunner {
+
+  static final String SEED_DB_PARAM        = "createSampleData";
+  static final String LOAD_SAMPLE_DB_PARAM = "loadSampleDB";
+	static final String SAMPLE_DATA_FILENAME = "sampleDB-H2.sql";
+	static final String SAMPLE_DATA_PATH     = "src/main/resources/";
 
 	// values from application.properties file
 
@@ -145,7 +142,7 @@ public class TestDataCreator implements CommandLineRunner {
   LiquidoAuditorAware auditorAware;
 
   @Autowired
-  Environment springEnv;   		// load settings from application-test.properties
+  Environment springEnv;
 
 	@Autowired
 	ApplicationContext appContext;
@@ -212,13 +209,9 @@ public class TestDataCreator implements CommandLineRunner {
 	    try {
 		    List<UserModel> users = jdbcTemplate.queryForList("SELECT * FROM USERS LIMIT 10", UserModel.class);
 	    } catch (Exception e) {
-		    if (e.getCause() instanceof JdbcSQLException) {
-		    	log.error("Cannot find table USERS! Did you create a DB schema at all?");
-		    } else {
-		    	throw e;
-		    }
+	    	log.error("Cannot find table USERS! Did you create a DB schema at all?");
+		    throw e;
 	    }
-
 
 	    log.debug("Create test data from scratch via spring-data for DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
@@ -276,19 +269,19 @@ public class TestDataCreator implements CommandLineRunner {
 			}
 		}
 
-		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA_FOR_DELEGATIONS);
+		Optional<AreaModel> area = areaRepo.findByTitle(TestFixtures.AREA_FOR_DELEGATIONS);
 		Optional<UserModel> topProxyOpt = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
-  	if (area != null && topProxyOpt.isPresent()) {
+  	if (area.isPresent() && topProxyOpt.isPresent()) {
 			UserModel topProxy = topProxyOpt.get();
 			log.debug("====== TestDataCreator: Proxy tree =====");
-			utils.printProxyTree(area, topProxy);
+			utils.printProxyTree(area.get(), topProxy);
 
 			log.debug("====== TestDataCreator: Tree of delegations =====");
-			utils.printDelegationTree(area, topProxy);
+			utils.printDelegationTree(area.get(), topProxy);
 
 			try {
 				log.debug("====== TestDataCreator: Proxy tree (checksums) =====");
-				ChecksumModel checksum = castVoteService.getExistingChecksum(topProxy, TestFixtures.USER_TOKEN_SECRET, area);
+				ChecksumModel checksum = castVoteService.getExistingChecksum(topProxy, TestFixtures.USER_TOKEN_SECRET, area.get());
 				utils.printChecksumTree(checksum);
 			} catch (LiquidoException e) {
 				log.error("Cannot get checksum of " + topProxy + ": " + e.getMessage());
@@ -417,10 +410,10 @@ public class TestDataCreator implements CommandLineRunner {
       String areaTitle = "Area " + i;
       AreaModel newArea = new AreaModel(areaTitle, "Nice description for test area #"+i, createdBy);
 
-      AreaModel existingArea = areaRepo.findByTitle(areaTitle);
-      if (existingArea != null) {
-        log.debug("Updating existing area with id=" + existingArea.getId());
-        newArea.setId(existingArea.getId());
+      Optional<AreaModel> existingArea = areaRepo.findByTitle(areaTitle);
+      if (existingArea.isPresent()) {
+        log.debug("Updating existing area with id=" + existingArea.get().getId());
+        newArea.setId(existingArea.get().getId());
       } else {
         log.debug("Creating new area " + newArea);
       }
@@ -739,7 +732,7 @@ public class TestDataCreator implements CommandLineRunner {
       String lawTitle = "Law " + i;
       LawModel realLaw = createProposal(lawTitle, getLoremIpsum(100,400), area, createdBy, 12, 10);
 			realLaw = addSupportersToIdea(realLaw, props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)+5);
-      //TODO: reaLaw actually needs to have been part of a (finished) poll with alternative proposals
+      //TODO: realLaw actually needs to have been part of a (finished) poll with alternative proposals
 			//realLaw.setPoll(poll);
       realLaw.setReachedQuorumAt(DoogiesUtil.daysAgo(24));
       realLaw.setStatus(LawStatus.LAW);
@@ -755,10 +748,10 @@ public class TestDataCreator implements CommandLineRunner {
    * @return the saved proposal
    */
   private LawModel upsertLawModel(LawModel lawModel, int ageInDays) {
-    LawModel existingLaw = lawRepo.findByTitle(lawModel.getTitle());  // may return null!
-    if (existingLaw != null) {
-      log.trace("Updating existing proposal with id=" + existingLaw.getId());
-      lawModel.setId(existingLaw.getId());
+    Optional<LawModel> existingLaw = lawRepo.findByTitle(lawModel.getTitle());  // may return null!
+    if (existingLaw.isPresent()) {
+      log.trace("Updating existing proposal with id=" + existingLaw.get().getId());
+      lawModel.setId(existingLaw.get().getId());
     } else {
       log.trace("Creating new proposal " + lawModel);
     }

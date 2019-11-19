@@ -30,6 +30,10 @@ import java.util.*;
 @Table(name = "polls")
 public class PollModel extends BaseModel {
 
+	public PollModel(String title) {
+		this.title = title;
+	}
+
 	/** The title of a poll can be edited by anyone who has a proposal in this poll. */
 	@Nullable
 	String title;
