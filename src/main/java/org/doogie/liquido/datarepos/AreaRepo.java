@@ -5,6 +5,8 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
+import java.util.Optional;
+
 @RepositoryRestResource(collectionResourceRel = "areas", path = "areas", itemResourceRel = "area")
 public interface AreaRepo extends CrudRepository<AreaModel, Long> {
 
@@ -15,5 +17,5 @@ public interface AreaRepo extends CrudRepository<AreaModel, Long> {
    * @param title title of the area
    * @return one AreaModel or null if no area with that title was found
    */
-  AreaModel findByTitle(@Param("title") String title);
+  Optional<AreaModel> findByTitle(@Param("title") String title);
 }

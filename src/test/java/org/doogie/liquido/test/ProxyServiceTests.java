@@ -65,7 +65,7 @@ public class ProxyServiceTests extends BaseTest {
 		//GIVEN
 		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL).get();
 		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL).get();
-		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
+		AreaModel area = areaRepo.findByTitle(AREA1_TITLE).orElseThrow(() -> new RuntimeException("need Area1 in test"));
 
 		//Make sure that toProxy is a public proxy
 		String proxyVoterToken = castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, USER_TOKEN_SECRET, true);
@@ -94,7 +94,7 @@ public class ProxyServiceTests extends BaseTest {
 	@WithUserDetails(USER1_EMAIL)
 	public void testGetNumVotes() throws LiquidoException {
 		log.trace("ENTER: testGetNumVotes");
-		AreaModel area  = areaRepo.findByTitle(AREA0_TITLE);
+		AreaModel area = areaRepo.findByTitle(AREA0_TITLE).orElseThrow(() -> new RuntimeException("need Area0 in test"));;
 
 		UserModel proxy = userRepo.findByEmail(USER1_EMAIL).get();
 		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(proxy, area, USER_TOKEN_SECRET, true);
@@ -124,7 +124,7 @@ public class ProxyServiceTests extends BaseTest {
 	public void findTopProxy() {
 		log.trace("testGetTopmostProxy");
 		// all this data must match TestFixtures.java !!!
-		AreaModel area      			  = areaRepo.findByTitle(AREA0_TITLE);
+		AreaModel area = areaRepo.findByTitle(AREA0_TITLE).orElseThrow(() -> new RuntimeException("need Area0 in test"));;
 		UserModel voter;
 		UserModel expectedTopProxy;
 		Optional<UserModel> topProxy;
@@ -173,7 +173,7 @@ public class ProxyServiceTests extends BaseTest {
 		//GIVEN
 		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL).get();
 		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL).get();
-		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
+		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE).orElseThrow(() -> new RuntimeException("need Area1 in test"));;
 		//String proxyVoterToken = castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, toProxy.getPasswordHash(), true);
 
 		//WHEN
@@ -197,7 +197,7 @@ public class ProxyServiceTests extends BaseTest {
 		//GIVEN
 		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL).get();
 		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL).get();
-		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE);
+		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE).orElseThrow(() -> new RuntimeException("need Area1 in test"));;
 
 		//WHEN
 		String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, USER_TOKEN_SECRET, true);

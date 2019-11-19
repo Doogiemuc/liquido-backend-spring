@@ -15,6 +15,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 // https://docs.spring.io/spring-data/rest/docs/current/reference/html/
 //DONE:   implement queries with offset+count param: https://gist.github.com/tcollins/0ebd1dfa78028ecdef0b
@@ -32,7 +33,7 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>
 
 {
 
-  LawModel findByTitle(@Param("title") String title);   // title is unique!
+  Optional<LawModel> findByTitle(@Param("title") String title);   // title is unique!
 
   /** can for example be used to find all with status=IDEA. Supports paging */
   Page<LawModel> findByStatus(@Param("status") LawModel.LawStatus status, Pageable p);
