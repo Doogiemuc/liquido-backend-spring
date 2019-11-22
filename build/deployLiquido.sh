@@ -116,7 +116,9 @@ fi
 echo
 echo "===== Restart Backend ====="
 echo
+
 BACKEND_START_CMD="${BACKEND_DEST_DIR}/runLiquido.sh ${BACKEND_DEST_DIR}/${JAR_NAME}"
+
 echo "with script: ${BACKEND_USER}@${BACKEND_HOST} ${BACKEND_START_CMD}"
 read -p "Restart backend? [yes|NO] " yn
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
