@@ -1,6 +1,5 @@
 package org.doogie.liquido.data;
 
-import com.amazonaws.services.xray.model.ErrorRootCauseService;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
@@ -26,14 +25,14 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
- * Create nice example data about a school where pupils can vote for certain things.
+ * Create nice real world example data about a school where pupils can vote for certain things.
  * Wouldn't that be a nice world in pupils could take part in democratic decisions at their own school!
  */
 @Slf4j
 @Component
 public class SchoolExampleData implements CommandLineRunner {
 
-	private static final String SEED_DB_PARAM = "--seedPoliticalPartyData";
+	private static final String SEED_DB_PARAM = "--seedSchoolExampleData";
 
 	@Value("${liquido.admin.email}")
 	String adminEmail;
@@ -103,6 +102,12 @@ public class SchoolExampleData implements CommandLineRunner {
 	@Autowired
 	ApplicationContext appContext;
 
+	/**
+	 * When the command line parameter <pre>seedSchoolExampleData</pre> is given,
+	 * then add data into the db.
+	 * @param args command line args passed from CommandLineRunner
+	 * @throws LiquidoException when creation of data fails
+	 */
 	@Override
 	public void run(String... args) throws LiquidoException {
 
@@ -111,11 +116,16 @@ public class SchoolExampleData implements CommandLineRunner {
 			if (SEED_DB_PARAM.equalsIgnoreCase(arg)) { seedDB = true; }
 		}
 		if (seedDB) {
-			this.seedPoliticalPartyData();
+			this.seedSchoolExampleData();
 		}
 	}
 
-	public void seedPoliticalPartyData() throws LiquidoException {
+	/**
+	 * Seed some real live example data. The examples are from the context of a school
+	 * where pupils may take part in the organization of the school.
+	 * @throws LiquidoException
+	 */
+	public void seedSchoolExampleData() throws LiquidoException {
 		log.info("===== Creating school example data =====");
 		try {
 			String dbURL = jdbcTemplate.getDataSource().getConnection().getMetaData().getURL();
@@ -135,6 +145,7 @@ public class SchoolExampleData implements CommandLineRunner {
 		seedUsers();
 		seedAreas();
 		seedIdeas();
+		seedProposals();
 		seedPollInElaboration();
 		seedPollInVoting();
 		auditorAware.setMockAuditor(null);
@@ -142,7 +153,7 @@ public class SchoolExampleData implements CommandLineRunner {
 		log.info("Create school example data: DONE");
 	}
 
-	public void seedUsers() {
+	void seedUsers() {
 		log.debug("seedUsers");
 		this.user1 = upsert(new UserModel("fritz@liquido.de",   "Fritz Cool",      "+49 22234501", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX+"1.png"));
 		auditorAware.setMockAuditor(user1);
@@ -162,6 +173,7 @@ public class SchoolExampleData implements CommandLineRunner {
 		upsert(new UserModel("jody@liquido.de",    "Jody Hanson",     "+49 22234515", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX+"15.png"));
 		upsert(new UserModel("mark@liquido.de",    "Mark Hardy",      "+49 22234516", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX+"16.png"));
 
+		// MUST also add the admin user. This is for example used for DEV login
 		this.adminUser = upsert(new UserModel(adminEmail,adminName,adminMobilephone, "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX+"1.png"));
 
 		userRepo.findAll().forEach(user -> {
@@ -170,9 +182,9 @@ public class SchoolExampleData implements CommandLineRunner {
 		});
 	}
 
-	public void seedAreas() {
+	void seedAreas() {
 		log.debug("seedAreas");
-		this.areaTimetable  = upsert(new AreaModel("Timetable", "Everything about planning our timetable for the classes", this.adminUser));
+		this.areaTimetable  = upsert(new AreaModel("Timetable", "Planning the timetable for all classes", this.adminUser));
 		this.areaExcursions = upsert(new AreaModel("Excursions", "Planning our adventurous excursions", this.adminUser));
 		this.areaCanteen    = upsert(new AreaModel("Canteen", "Healthy food in our school", this.adminUser));
 		areaRepo.findAll().forEach(area -> {
@@ -180,7 +192,7 @@ public class SchoolExampleData implements CommandLineRunner {
 		});
 	}
 
-	public void seedIdeas() {
+	void seedIdeas() {
 		log.debug("seedIdeas");
 		auditorAware.setMockAuditor(this.users.get(0));
 		upsert(new LawModel("More vegetarian meals", "We need more vegetarian meals in our canteen.", areaCanteen));
@@ -190,7 +202,25 @@ public class SchoolExampleData implements CommandLineRunner {
 		upsert(new LawModel("More Salad", "The canteen should offer a healthy salad more often.", areaCanteen));
 	}
 
-	public void seedPollInElaboration() throws LiquidoException {
+	void seedProposals() {
+		log.debug("seedPollInElaboration");
+		LawModel prop1 = createProposal("No classes on friday", "I want no classes on friday! Yeaah long weekend!", areaTimetable, this.users.get(4), 10, 5);   // prop1 by user4 can join poll in elaboration
+		LawModel prop2 = createProposal("Hiking", "We should do more sports. The next excursion should go into the hills and we should climb a mountain.", areaExcursions, this.users.get(1), 20, 3);
+
+		auditorAware.setMockAuditor(users.get(5));
+		CommentModel comment = new CommentModel(prop1, "I really like this idea, but who will pay for this?", null);
+		CommentModel reply   = new CommentModel(prop1, "We could request financial support from the parent council", comment);
+		//commentRepo.save(reply);
+		prop1.getComments().add(comment);
+
+		auditorAware.setMockAuditor(this.users.get(0));
+		upsert(prop1);
+		auditorAware.setMockAuditor(this.users.get(1));
+		upsert(prop2);
+
+	}
+
+	void seedPollInElaboration() throws LiquidoException {
 		log.debug("seedPollInElaboration");
 		LawModel sports1 = createProposal("No Sport in the morning", "Sport classes should not be in the morning. Just think about having math after sports. It is not possible to concentrate at all", areaTimetable, this.users.get(0), 10, 5);
 		LawModel sports2 = createProposal("No sports on friday", "We should not schedule sports on a friday, because on that day there is no bus, so we have to carry our sport bags the whole long way.", areaTimetable, this.users.get(1), 20, 3);
@@ -207,7 +237,7 @@ public class SchoolExampleData implements CommandLineRunner {
 		log.debug("Created poll in elaboration phase: "+poll);
 	}
 
-	public PollModel seedPollInVoting() throws LiquidoException {
+	PollModel seedPollInVoting() throws LiquidoException {
 		log.debug("seedPollInVoting");
 		LawModel prop1 = createProposal("Go to Disneyland", "We want our next excursion to go to Disneyland", areaExcursions, this.users.get(0), 2, 1);
 		LawModel prop2 = createProposal("City Library", "We want our next excursion to go to the city library, so that we can read more books", areaExcursions, this.users.get(1), 9, 7);
@@ -295,23 +325,25 @@ public class SchoolExampleData implements CommandLineRunner {
 	}
 
 
-
+	/**
+	 * Create a new idea, then add enough supporters, so that it becomes a proposal. Then fake the createdAt and updatedAt dates
+	 * so that they lie in the past.
+	 */
 	private LawModel createProposal(String title, String description, AreaModel area, UserModel createdBy, int ageInDays, int reachedQuorumDaysAgo) {
 		if (ageInDays < reachedQuorumDaysAgo) throw new RuntimeException("Proposal cannot reach its quorum before it was created.");
 		auditorAware.setMockAuditor(createdBy);
-		LawModel proposal = new LawModel(title, description, area);
-		lawRepo.save(proposal);
+		LawModel proposal = upsert(new LawModel(title, description, area));
 
 		proposal = addSupportersToIdea(proposal, props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
 		Date reachQuorumAt = DoogiesUtil.daysAgo(reachedQuorumDaysAgo);
 		proposal.setReachedQuorumAt(reachQuorumAt);			// fake reachQuorumAt date to be in the past
 
 		lawRepo.save(proposal);
-
 		fakeCreateAt(proposal,  ageInDays);
 		fakeUpdatedAt(proposal, ageInDays > 1 ? ageInDays - 1 : 0);
 		return proposal;
 	}
+
 
 	/**
 	 * Fake the created at date to be n days in the past

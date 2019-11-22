@@ -14,9 +14,7 @@ import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
@@ -27,7 +25,6 @@ import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.Resources;
 import org.springframework.hateoas.mvc.ControllerLinkBuilder;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -183,6 +180,8 @@ public class PollRestController {
 	) throws LiquidoException {
 		BallotModel ownBallot = pollService.getBallotForVoterToken(poll, voterToken)
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_BALLOT, "No ballot found. You did not vote in this poll yet."));   // this is not an error
+
+		//TODO: Having no ballot is quite normal. Do not throw an exception. Instead return HTTP 204 with emtpy body
 
 		//FIXME: Throws failed to lazily initialize a collection of role: org.doogie.liquido.model.LawModel.comments, could not initialize proxy - no Session;    because of lazily loaded comments
 		//       WHY IS BalloModelPollJsonSerializer   not called ?????
