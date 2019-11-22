@@ -9,6 +9,8 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -59,6 +61,9 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
   @Override
   protected void configure(HttpSecurity http) throws Exception {
     log.debug("Configuring HttpSecurity for "+ basePath);
+
+    //TODO: I need a central place for URL pathes.  LiquidoUrlPathes.java
+
 	  http
 			//.antMatcher(basePath).authenticationProvider(new LiquidoTokenAuthProvider()) // can I add my token auth that way?
 			.authorizeRequests()
