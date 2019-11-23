@@ -62,17 +62,18 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
   protected void configure(HttpSecurity http) throws Exception {
     log.debug("Configuring HttpSecurity for "+ basePath);
 
-    //TODO: I need a central place for URL pathes.  LiquidoUrlPathes.java
+    //TODO: I need a central place for URL pathes: LiquidoUrlPathes.java
 
 	  http
 			//.antMatcher(basePath).authenticationProvider(new LiquidoTokenAuthProvider()) // can I add my token auth that way?
 			.authorizeRequests()
 			  .antMatchers(basePath+"/_ping").permitAll()        			// allow is alive
-				.antMatchers(basePath+"/globalProperties").permitAll()  // allow fetching properties
+				.antMatchers(basePath+"/globalProperties").permitAll()		// allow fetching properties
 			  .antMatchers(basePath+"/auth/**").permitAll()      			// allow login via one time token
 				.antMatchers(basePath+"/castVote").permitAll()   				// allow anonymous voting
-			  .anyRequest().authenticated()
-			.and()
+			  .anyRequest().authenticated()																				// everything else must be authenticated
+			//TODO: .and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);   Do I need this?
+			.and()									//TODO: remove httpBasic auth
 				.httpBasic()
 			.and()
 			  .csrf().disable();   //TODO: reenable CSRF
