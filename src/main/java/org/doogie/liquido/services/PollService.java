@@ -406,10 +406,10 @@ public class PollService {
 	@PreAuthorize("hasRole('ROLE_ADMIN')")  // only the admin may delete polls.  See application.properties for admin name and email
 	@Transactional
 	public void deletePoll(@NonNull PollModel poll) {
-		log.info("DELETE Poll "+poll);
+		log.info("DELETE "+poll);
 		if (poll == null) return;
 
-		// unlink laws from poll
+		// unlink proposals/laws from poll
 		for (LawModel prop : poll.getProposals()) {
 			prop.setPoll(null);
 			lawRepo.save(prop);
