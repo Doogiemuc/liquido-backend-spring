@@ -148,7 +148,7 @@ public class SchoolExampleData implements CommandLineRunner {
 		seedProposals();
 		seedPollInElaboration();
 		seedPollInVoting();
-		auditorAware.setMockAuditor(null);
+		auditorAware.setMockAuditor(null);			// Important: After creating test data, no one is logged in!
 
 		log.info("Create school example data: DONE");
 	}

@@ -4,28 +4,47 @@ import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.BallotRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
+import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
+import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
+import org.springframework.core.env.Environment;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
+import org.springframework.hateoas.Resources;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Arrays;
+import java.util.Optional;
+
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 
 /**
  * This controller is only available for development and testing
  */
 @Slf4j
-@BasePathAwareController
+@RestController
+@RequestMapping("${spring.data.rest.base-path}")
 @Profile({"dev", "test"})			// This controller is only available in dev or test environment
 public class DevRestController {
+
+	@Autowired
+	UserRepo userRepo;
+
 	@Autowired
 	LawRepo lawRepo;
 
@@ -38,6 +57,39 @@ public class DevRestController {
 	@Autowired
 	PollService pollService;
 
+	@RequestMapping(value = "/dev/users")
+	// This must be public, because during DEV I need this without beeing logged in.
+	public @ResponseBody Resources<UserModel> devGetAllUsers()  {
+		return new Resources<>(userRepo.findAll(), linkTo(methodOn(DevRestController.class).devGetAllUsers()).withRel("self"));
+	}
+
+	/**
+	 * Spring Web Security: Make /dev/users endpoint publicly available.  But just this one resource! The other /dev/**
+	 * endpoints need authentication in ROLE_ADMIN
+   */
+	@Configuration
+	@Order(20)   // MUST be smaller than 100  to be first!
+  public class DevEndpointSecurityConfigurationAdapter extends WebSecurityConfigurerAdapter {
+		@Value("${spring.data.rest.base-path}")
+		String basePath;
+
+		@Autowired
+		Environment springEnv;
+
+		/**
+		 * Allow anonymous access to <pre>/dev/users</pre> in DEV or TEST environment
+     */
+		protected void configure(HttpSecurity http) throws Exception {
+			log.info("Configuring WebSecurity for Development api endpoint " + basePath + "/dev in env=" + Arrays.toString(springEnv.getActiveProfiles()));
+
+			//nice stackoverflow question about this nasty confusing fluid syntax of HttpSecurity:  https://stackoverflow.com/questions/28907030/spring-security-authorize-request-for-url-method-using-httpsecurity
+			http.antMatcher(basePath + "/dev/*").authorizeRequests()
+				.antMatchers(basePath + "/dev/users").permitAll()
+				.anyRequest().authenticated();
+		}
+	}
+
+
 	/**
 	 * Manually start the voting phase of a poll via REST call. Poll MUTS be in ELABORATION phase.
 	 * This is used in tests, because wraping time is so complicated.
@@ -46,11 +98,11 @@ public class DevRestController {
 	 * @throws LiquidoException for example when voting phase cannot be started because of wrong status in poll
 	 */
 	@RequestMapping(value = "/dev/polls/{pollId}/startVotingPhase")
+	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	public @ResponseBody Lson devStartVotingPhase(@PathVariable(name="pollId") PollModel poll) throws LiquidoException {
 		if (poll == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Cannot find poll with that id");
-		log.debug("DEV: Starting voting phase of "+poll);
-		//TODO: cancel the scheduled  Quartz trigger for starting the poll.
+		log.info("DEV: Starting voting phase of "+poll);
 		pollService.startVotingPhase(poll);
 		return new Lson().put("ok", "Started voting phase of poll.id="+poll.id);
 	}
@@ -62,15 +114,20 @@ public class DevRestController {
 	 * @throws LiquidoException for example when poll is not in correct status
 	 */
 	@RequestMapping(value = "/dev/polls/{pollId}/finishVotingPhase")
+	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	public @ResponseBody Lson devFinishVotingPhase(@PathVariable(name="pollId") PollModel poll) throws LiquidoException {
 		if (poll == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Cannot find poll with that id");
-		log.debug("DEV: Finish voting phase of "+poll);
+		log.info("DEV: Finish voting phase of "+poll);
 		LawModel winner = pollService.finishVotingPhase(poll);
+		//TODO: cancel the scheduled Quartz trigger for starting the poll.
 		return new Lson()
 			.put("ok", "Finished voting phase of poll.id="+poll.id)
 			.put("winner", winner);
 	}
+
+	@Autowired
+	LiquidoAuditorAware liquidoAuditorAware;
 
 	/**
 	 * Completely delete poll and all casted ballots in this poll. Will NOT delete any proposals
@@ -80,9 +137,12 @@ public class DevRestController {
 	 */
 	@RequestMapping(value = "/dev/polls/{pollId}", method = RequestMethod.DELETE)
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
-	public ResponseEntity deletePoll(@PathVariable(name="pollId") PollModel poll) {
+	public @ResponseBody Lson deletePoll(@PathVariable(name="pollId") PollModel poll) throws LiquidoException {
+		UserModel currentAuditor = liquidoAuditorAware.getCurrentAuditor()
+			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Admin must be logged in to delete a poll."));
+		log.info("DELETE "+poll+ " by "+currentAuditor.toStringShort());
 		pollService.deletePoll(poll);
-		return ResponseEntity.ok().build();
+		return new Lson("ok", "Poll(id="+poll.id+") has been DELETED");
 	}
 
 

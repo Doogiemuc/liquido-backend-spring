@@ -23,6 +23,7 @@ import org.springframework.web.context.request.WebRequest;
 public class LiquidoGeneralExceptionHandler {
 
 	//TODO: Now also Resource not found is a 500 instead of 404 :-(  TODO: only call my really generalException Method  AFTER RepositoryRestExceptionHandler has done its job.
+	//TODO: AccessDeniedException should also not be a 500
 
 	//TODO: This is normally handeld by RepositoryRestExceptionHandler.  But I want to catch EVERY exception below => MAYBE check Order
 	@ExceptionHandler(DataIntegrityViolationException.class)
@@ -34,6 +35,8 @@ public class LiquidoGeneralExceptionHandler {
 		log.debug("LIQUIDO Data Integrity Violation Exception\n"+body.toPrettyString());
 		return new ResponseEntity<>(body, new HttpHeaders(), HttpStatus.CONFLICT);
 	}
+
+
 
 	@ExceptionHandler(Exception.class)
 	@ResponseBody

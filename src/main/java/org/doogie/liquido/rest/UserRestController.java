@@ -20,7 +20,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -159,7 +158,7 @@ public class UserRestController {
 
     // return JWT token for this email
 		String jwt = jwtTokenProvider.generateToken(user.getEmail());
-		oneTimeToken.getUser().setLastLogin(LocalDateTime.now());
+		user.setLastLogin(LocalDateTime.now());
 		userRepo.save(user);
 		log.info(user+ "logged in with valid SMS token.");
 		return jwt;
