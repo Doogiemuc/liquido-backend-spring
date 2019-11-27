@@ -8,7 +8,6 @@ import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.*;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
-import org.doogie.liquido.util.LiquidoProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -42,6 +41,9 @@ public class SchoolExampleData implements CommandLineRunner {
 
 	@Value("${liquido.admin.mobilephone}")
 	String adminMobilephone;
+	
+	@Autowired
+	LiquidoProperties prop;
 
 	@Autowired
 	UserRepo userRepo;
@@ -86,9 +88,6 @@ public class SchoolExampleData implements CommandLineRunner {
 
 	@Autowired
 	ProxyService proxyService;
-
-	@Autowired
-	LiquidoProperties props;
 
 	@Autowired
 	JdbcTemplate jdbcTemplate;
@@ -232,8 +231,8 @@ public class SchoolExampleData implements CommandLineRunner {
 		pollService.addProposalToPoll(sports3, poll);
 
 		PollModel savedPoll = pollRepo.save(poll);
-		fakeCreateAt(savedPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
-		fakeUpdatedAt(savedPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
+		fakeCreateAt(savedPoll, prop.daysUntilVotingStarts/2);
+		fakeUpdatedAt(savedPoll, prop.daysUntilVotingStarts/2);
 		log.debug("Created poll in elaboration phase: "+poll);
 	}
 
@@ -249,14 +248,14 @@ public class SchoolExampleData implements CommandLineRunner {
 		pollService.addProposalToPoll(prop3, poll);
 
 		PollModel savedPoll = pollRepo.save(poll);
-		fakeCreateAt(savedPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
-		fakeUpdatedAt(savedPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
+		fakeCreateAt(savedPoll, prop.daysUntilVotingStarts/2);
+		fakeUpdatedAt(savedPoll, prop.daysUntilVotingStarts/2);
 
 		//===== Start the voting phase of this poll
 		pollService.startVotingPhase(savedPoll);
 		LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
 		savedPoll.setVotingStartAt(yesterday);
-		savedPoll.setVotingEndAt(yesterday.truncatedTo(ChronoUnit.DAYS).plusDays(props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE)));     //voting ends in n days at midnight
+		savedPoll.setVotingEndAt(yesterday.truncatedTo(ChronoUnit.DAYS).plusDays(prop.durationOfVotingPhase));     // voting ends in n days at midnight
 		savedPoll = pollRepo.save(savedPoll);
 
 		log.debug("Created poll in voting phase: "+poll);
@@ -334,7 +333,7 @@ public class SchoolExampleData implements CommandLineRunner {
 		auditorAware.setMockAuditor(createdBy);
 		LawModel proposal = upsert(new LawModel(title, description, area));
 
-		proposal = addSupportersToIdea(proposal, props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
+		proposal = addSupportersToIdea(proposal, prop.supportersForProposal);
 		Date reachQuorumAt = DoogiesUtil.daysAgo(reachedQuorumDaysAgo);
 		proposal.setReachedQuorumAt(reachQuorumAt);			// fake reachQuorumAt date to be in the past
 

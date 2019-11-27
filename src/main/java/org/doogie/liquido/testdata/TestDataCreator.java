@@ -2,13 +2,13 @@ package org.doogie.liquido.testdata;
 
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.data.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.*;
 import org.doogie.liquido.util.DoogiesUtil;
-import org.doogie.liquido.util.LiquidoProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -77,20 +77,6 @@ public class TestDataCreator implements CommandLineRunner {
 	static final String SAMPLE_DATA_FILENAME = "sampleDB-H2.sql";
 	static final String SAMPLE_DATA_PATH     = "src/main/resources/";
 
-	// values from application.properties file
-
-	@Value("${spring.data.rest.base-path}")
-	String basePath;
-
-	@Value("${liquido.admin.email}")
-	String adminEmail;
-
-	@Value("${liquido.admin.name}")
-	String adminName;
-
-	@Value("${liquido.admin.mobilephone}")
-	String adminMobilephone;
-
 	// TestDataCreator pretty much depends on any Model, Repo and Service that we have. Which proves that we have a nice code coverage :-)
 
   @Autowired
@@ -133,7 +119,7 @@ public class TestDataCreator implements CommandLineRunner {
 	ProxyService proxyService;
 
   @Autowired
-  LiquidoProperties props;
+	LiquidoProperties prop;
 
   @Autowired
   JdbcTemplate jdbcTemplate;
@@ -141,7 +127,11 @@ public class TestDataCreator implements CommandLineRunner {
   @Autowired
   LiquidoAuditorAware auditorAware;
 
-  @Autowired
+	// value from application.properties file
+	@Value("${spring.data.rest.base-path}")
+	String basePath;
+
+	@Autowired
   Environment springEnv;
 
 	@Autowired
@@ -388,10 +378,10 @@ public class TestDataCreator implements CommandLineRunner {
 	 * Create the admin user with the values from application.properties
 	 */
 	public void seedAdminUser() {
-  	UserModel admin = new UserModel(adminEmail);
+  	UserModel admin = new UserModel(prop.admin.email);
   	UserProfileModel adminProfile = new UserProfileModel();
-  	adminProfile.setMobilephone(adminMobilephone);
-  	adminProfile.setName(adminName);
+  	adminProfile.setMobilephone(prop.admin.mobilephone);
+  	adminProfile.setName(prop.admin.name);
   	admin.setProfile(adminProfile);
 		log.debug("Create admin "+admin);
   	userRepo.save(admin);
@@ -470,7 +460,7 @@ public class TestDataCreator implements CommandLineRunner {
       lawRepo.save(newIdea);
 
 	    // add some supporters, but not enough to become a proposal
-      int numSupporters = rand.nextInt(props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)-1);
+      int numSupporters = rand.nextInt(prop.supportersForProposal-1);
       //log.debug("adding "+numSupporters+" supporters to idea "+newIdea);
       addSupportersToIdea(newIdea, numSupporters);
 
@@ -488,7 +478,7 @@ public class TestDataCreator implements CommandLineRunner {
     LawModel proposal = new LawModel(title, description, area);
 		lawRepo.save(proposal);
 
-    proposal = addSupportersToIdea(proposal, props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL));
+    proposal = addSupportersToIdea(proposal, prop.supportersForProposal);
 		Date reachQuorumAt = DoogiesUtil.daysAgo(reachedQuorumDaysAgo);
     proposal.setReachedQuorumAt(reachQuorumAt);			// fake reachQuorumAt date to be in the past
 
@@ -633,8 +623,8 @@ public class TestDataCreator implements CommandLineRunner {
         newPoll = pollService.addProposalToPoll(altProp, newPoll);
       }
 
-      fakeCreateAt(newPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
-      fakeUpdatedAt(newPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
+      fakeCreateAt(newPoll, prop.daysUntilVotingStarts/2);
+      fakeUpdatedAt(newPoll, prop.daysUntilVotingStarts/2);
       log.trace("Created poll in elaboration phase: "+newPoll);
       return newPoll;
     } catch (Exception e) {
@@ -659,14 +649,14 @@ public class TestDataCreator implements CommandLineRunner {
         i++;
       }
       PollModel savedPoll = pollRepo.save(poll);
-      fakeCreateAt(savedPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)+1);
-      fakeUpdatedAt(savedPoll, props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS)/2);
+      fakeCreateAt(savedPoll, prop.daysUntilVotingStarts+1);
+      fakeUpdatedAt(savedPoll, prop.daysUntilVotingStarts/2);
 
       //===== Start the voting phase of this poll
       pollService.startVotingPhase(savedPoll);
       LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
       savedPoll.setVotingStartAt(yesterday);
-			savedPoll.setVotingEndAt(yesterday.truncatedTo(ChronoUnit.DAYS).plusDays(props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE)));     //voting ends in n days at midnight
+			savedPoll.setVotingEndAt(yesterday.truncatedTo(ChronoUnit.DAYS).plusDays(prop.durationOfVotingPhase));     //voting ends in n days at midnight
 			savedPoll.setTitle("Poll in voting phase "+System.currentTimeMillis()%10000);
       savedPoll = pollRepo.save(savedPoll);
 
@@ -690,8 +680,8 @@ public class TestDataCreator implements CommandLineRunner {
 
 			//---- fake some dates to be in the past
 			int daysFinished = 5;  // poll was finished 5 days ago
-			int daysVotingStarts = props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS);
-			int durationVotingPhase = props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE);
+			int daysVotingStarts = prop.daysUntilVotingStarts;
+			int durationVotingPhase = prop.durationOfVotingPhase;
 			LocalDateTime votingStartAt = LocalDateTime.now().minusDays(durationVotingPhase+daysFinished);
 			poll.setVotingStartAt(votingStartAt);
 			LocalDateTime votingEndAt = LocalDateTime.now().minusDays(daysFinished).truncatedTo(ChronoUnit.DAYS);  // voting ends at midnight
@@ -731,7 +721,7 @@ public class TestDataCreator implements CommandLineRunner {
     for (int i = 0; i < TestFixtures.NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
       LawModel realLaw = createProposal(lawTitle, getLoremIpsum(100,400), area, createdBy, 12, 10);
-			realLaw = addSupportersToIdea(realLaw, props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL)+5);
+			realLaw = addSupportersToIdea(realLaw, prop.supportersForProposal+5);
       //TODO: realLaw actually needs to have been part of a (finished) poll with alternative proposals
 			//realLaw.setPoll(poll);
       realLaw.setReachedQuorumAt(DoogiesUtil.daysAgo(24));

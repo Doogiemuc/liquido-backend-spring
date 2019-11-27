@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.data.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.jwt.JwtTokenProvider;
 import org.doogie.liquido.model.*;
@@ -14,7 +15,6 @@ import org.doogie.liquido.test.testUtils.JwtAuthInterceptor;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
-import org.doogie.liquido.util.LiquidoProperties;
 import org.doogie.liquido.util.Lson;
 import org.junit.Assert;
 import org.junit.Before;
@@ -28,7 +28,6 @@ import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.*;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
@@ -89,7 +88,7 @@ public class RestEndpointTests extends BaseTest {
   CastVoteService castVoteService;
 
   @Autowired
-  LiquidoProperties props;
+	LiquidoProperties prop;
 
   @Autowired
   RepositoryEntityLinks entityLinks;
@@ -464,8 +463,7 @@ public class RestEndpointTests extends BaseTest {
     assertEquals(0, idea.getNumSupporters());
 
     //===== add Supporters via JSON, so that idea reaches its quorum
-    int supportersForProposal = props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL);
-    Assert.assertTrue("Need at least "+supportersForProposal+" users to run this test", this.users.size() >= supportersForProposal);
+    Assert.assertTrue("Need at least "+prop.supportersForProposal+" users to run this test", this.users.size() >= prop.supportersForProposal);
     for (int j = 0; j < this.users.size(); j++) {
       if (!this.users.get(j).getEmail().equals(TestFixtures.USER1_EMAIL)) {   // creator is implicitly already a supporter
 				String supporterURI = basePath + "/users/" + this.users.get(j).getId();

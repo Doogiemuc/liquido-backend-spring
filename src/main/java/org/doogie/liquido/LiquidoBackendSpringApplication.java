@@ -1,6 +1,9 @@
 package org.doogie.liquido;
 
+import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.data.LiquidoProperties;
 import org.quartz.SchedulerException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -15,6 +18,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 @SpringBootApplication
 @EnableScheduling
+@Slf4j
 public class LiquidoBackendSpringApplication {
 
 	@Value("${server.port}")
@@ -23,6 +27,9 @@ public class LiquidoBackendSpringApplication {
 	/** path prefix for REST API from application.properties */
 	@Value(value = "${spring.data.rest.base-path}")
 	String basePath;
+
+	@Autowired
+	LiquidoProperties ppp;
 
   /**
    * Main entry point for Liquido Spring backend.
@@ -39,16 +46,18 @@ public class LiquidoBackendSpringApplication {
 			throw e;
 		}
 		*/
-
 		SpringApplication.run(LiquidoBackendSpringApplication.class, args);
 	}
 
 	@EventListener(ApplicationReadyEvent.class)
 	public void applicationStarted() {
-		System.out.println("=====================================================");
-		System.out.println("=== LIQUIDO backend is up and running at");
-		System.out.println("=== http://localhost:"+this.serverPort+this.basePath);
-		System.out.println("=======================================================");
+
+		log.info(ppp.toString());
+
+		log.info("=====================================================");
+		log.info("=== LIQUIDO backend is up and running at");
+		log.info("=== http://localhost:"+this.serverPort+this.basePath);
+		log.info("=======================================================");
 	}
 
   //TODO: package-by-feature  http://www.javapractices.com/topic/TopicAction.do?Id=205

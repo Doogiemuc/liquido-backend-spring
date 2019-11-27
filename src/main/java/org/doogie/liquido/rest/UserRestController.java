@@ -1,6 +1,7 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.data.LiquidoProperties;
 import org.doogie.liquido.datarepos.OneTimeTokenRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.jwt.JwtTokenProvider;
@@ -44,6 +45,9 @@ public class UserRestController {
 
 	@Autowired
 	Environment springEnv;
+
+	@Autowired
+	LiquidoProperties prop;
 
   @Autowired
   LiquidoAuditorAware liquidoAuditorAware;
@@ -129,8 +133,9 @@ public class UserRestController {
   ) throws LiquidoException {
 	  log.debug("Request to login with sms code="+token);
 
+	  /* moved to DevRestController
 	  // in DEV or TEST environment allow login as any use with a special code
-	  if (springEnv.acceptsProfiles(Profiles.of("dev", "test")) && token.equals(springEnv.getProperty("liquido.dev.dummySmsLoginCode"))) {
+	  if (springEnv.acceptsProfiles(Profiles.of("dev", "test")) && token.equals(prop.devLoginSmsToken)) {
 	  	UserModel user = userRepo.findByProfileMobilephone(mobile)
 					.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "DevLogin: user for mobile phone "+mobile+" not found."));
 	  	log.info("DEV Login as "+mobile+" => "+user);
@@ -138,6 +143,8 @@ public class UserRestController {
 	  	userRepo.save(user);
 			return jwtTokenProvider.generateToken(user.getEmail());
 		}
+		*/
+
 
 	  OneTimeToken oneTimeToken = ottRepo.findByToken(token);
 	  if (oneTimeToken == null || mobile == null ||

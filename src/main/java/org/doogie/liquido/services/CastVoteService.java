@@ -1,13 +1,13 @@
 package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.data.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,23 +47,9 @@ public class CastVoteService {
 	@Autowired
 	LiquidoRestUtils restUtils;
 
-	/**
-	 * This salt is initialized from application.properties
-	 * and then stored into the DB by {@link org.doogie.liquido.util.LiquidoProperties}.
-	 * We must use the same salt for re-generating tokens and checksums
-	 */
-	@Value("${liquido.bcrypt.salt}")
-	String bcryptSalt;
+	@Autowired
+	LiquidoProperties prop;
 
-	/**
-	 * This secret is only known to the liquido server. That way we ensure
-	 * that only this class can create voterTokens and checksums.
-	 */
-	@Value("${liquido.bcrypt.secret}")
-	String serverSecret;
-
-	@Value("${liquido.checksum.expiration.hours}")
-	int checksumExpirationHours;
 
 	//TODO: create really secure voterTokens like this: U2F  https://blog.trezor.io/why-you-should-never-use-google-authenticator-again-e166d09d4324
 	//MAYBE: RSA Tokens  https://stackoverflow.com/questions/37722090/java-jwt-with-public-private-keys
@@ -155,7 +141,7 @@ public class CastVoteService {
 	 * @param checksum
 	 */
 	public void refreshChecksum(ChecksumModel checksum) {
-		checksum.setExpiresAt(LocalDateTime.now().plusHours(checksumExpirationHours));
+		checksum.setExpiresAt(LocalDateTime.now().plusHours(prop.checksumExpirationHours));
 		checksumRepo.save(checksum);
 	}
 
@@ -347,20 +333,26 @@ public class CastVoteService {
 
 	//====================== private methods ========================
 
+	/**
+	 * Calculate the voter token for a user in this area.
+	 * @param userId Users's identification
+	 * @param userTokenSecret secret that is only known to this user
+	 * @param areaId ID of the area that this token is valid for
+	 * @return the BCrypt hashed voterToken.
+	 */
 	private String calcVoterToken(Long userId, String userTokenSecret, Long areaId) {
-		return BCrypt.hashpw(userId + userTokenSecret + areaId + serverSecret, bcryptSalt);
+		return BCrypt.hashpw(userId + userTokenSecret + areaId + prop.bcrypt.secret, prop.bcrypt.salt);
 	}
 
 	/**
-	 * Calculate the checksum value for the given voterToken.
+	 * Calculate the checksum of the passed voterToken.
 	 * The checksum is not stored or validated! This is just the mathematical calculation.
-	 *
 	 * @param voterToken token passed from user
 	 * @return checksum = BCrypt.hashpw(voterToken + serverSecret, bcryptSalt)
 	 */
 	private String calcChecksumFromVoterToken(String voterToken) {
 		//log.trace("calcChecksumFromVoterToken");
-		return BCrypt.hashpw(voterToken + serverSecret, bcryptSalt);
+		return BCrypt.hashpw(voterToken + prop.bcrypt.secret, prop.bcrypt.salt);
 	}
 
 }
