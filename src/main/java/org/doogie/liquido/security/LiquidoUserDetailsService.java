@@ -1,6 +1,7 @@
 package org.doogie.liquido.security;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.data.LiquidoProperties;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.util.DoogiesUtil;
@@ -24,6 +25,9 @@ public class LiquidoUserDetailsService implements UserDetailsService {
   @Autowired
   UserRepo userRepo;
 
+  @Autowired
+  LiquidoProperties prop;
+
   // TODO: Cache autenticated users, because loadUserByUsername is called very often! MAYBE simply extend CachingUserDetailsService ?
   /*See:
    @Cacheable("authenticedUsers")
@@ -32,15 +36,6 @@ public class LiquidoUserDetailsService implements UserDetailsService {
    https://docs.spring.io/spring/docs/current/spring-framework-reference/html/cache.html#cache-store-configuration-caffeine
    Do not forget to @CacheEvict the cache elem, when a user or its roles & rights change
   */
-
-  @Value("${liquido.admin.email}")
-  String adminEmail;
-
-  @Value("${liquido.admin.name}")
-  String adminName;
-
-  @Value("${liquido.admin.mobilephone}")
-  String adminMobilephone;
 
   /**
    * load a user by its email and return it as a LiquidoAuthUser class. This class will be used as
@@ -67,9 +62,10 @@ public class LiquidoUserDetailsService implements UserDetailsService {
   private List<GrantedAuthority> getGrantedAuthorities(UserModel userModel) {
     if (userModel == null) throw new RuntimeException("Cannot getGrantedAuthorities for null user!");
     List<GrantedAuthority> authorities = new ArrayList<>();
-    if (adminEmail != null && adminEmail.equals(userModel.getEmail()) &&
-        adminName  != null && adminName.equals(userModel.getProfile().getName()) &&
-        adminMobilephone != null && adminMobilephone.equals(userModel.getProfile().getMobilephone())
+    if (prop.admin != null &&
+        prop.admin.email != null && prop.admin.email.equals(userModel.getEmail()) &&
+        prop.admin.name  != null && prop.admin.name.equals(userModel.getProfile().getName()) &&
+        prop.admin.mobilephone != null && prop.admin.mobilephone.equals(userModel.getProfile().getMobilephone())
     ) {
       authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
       log.info("The ADMIN logged in!");

@@ -1,6 +1,8 @@
 package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.data.LiquidoProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -21,26 +23,8 @@ public class MailService {
 
 	//MAYBE: this could also be done via spring https://www.baeldung.com/spring-email   SimpleMailMessage.java
 
-	@Value("${smtp.host}")
-	String SMTP_HOST;
-
-	@Value("${smtp.from}")
-	String SMTP_FROM;
-
-	@Value("${smtp.fromname}")
-	String FROMNAME;
-
-	@Value("${smtp.username}")
-	String SMTP_USERNAME;
-
-	@Value("${smtp.pass}")
-	String SMTP_PASSWORD;
-
-	// The port you will connect to on the Amazon SES SMTP endpoint.
-	static final int PORT = 587;
-
-	@Value("${liquido.frontendURL}")
-	String frontendURL;
+	@Autowired
+	LiquidoProperties prop;
 
 	String SUBJECT = "[LIQUIDO] One time login token";
 
@@ -51,7 +35,7 @@ public class MailService {
 			"<h1>Liquido Login Token</h1>",
 			"<h3>Hello "+recepientEMail+"</h3>",
 			"<p>With this link you can login to Liquido.</p>",
-			"<a href='"+frontendURL+"/#/login?email="+recepientEMail+"&token="+emailToken+"'>LIQUIDO Login</a>",
+			"<a href='"+prop.frontendUrl+"/#/login?email="+recepientEMail+"&token="+emailToken+"'>LIQUIDO Login</a>",
 			"<p>&nbsp;</p>",
 			"<p>This login link can only be used once!</p>",
 			"<p><small>You received this email, because you (or someone) requested a login token for the <a href='https://www.liquido.net'>LIQUIDO</a> eVoting webapp. If you did not request a login yourself, than you may simply ignore this message.</small></p>"
@@ -60,7 +44,7 @@ public class MailService {
 		// Create a Properties object to contain connection configuration information.
 		Properties props = System.getProperties();
 		props.put("mail.transport.protocol", "smtp");
-		props.put("mail.smtp.port", PORT);
+		props.put("mail.smtp.port", prop.smtp.port);
 		props.put("mail.smtp.starttls.enable", "true");
 		props.put("mail.smtp.auth", "true");
 
@@ -69,7 +53,7 @@ public class MailService {
 
 		// Create a message with the specified information.
 		MimeMessage msg = new MimeMessage(session);
-		msg.setFrom(new InternetAddress(SMTP_FROM, FROMNAME));
+		msg.setFrom(new InternetAddress(prop.smtp.from, prop.smtp.fromName));
 		msg.setRecipient(Message.RecipientType.TO, new InternetAddress(recepientEMail));
 		msg.setSubject(SUBJECT);
 		msg.setContent(BODY,"text/html");
@@ -81,7 +65,7 @@ public class MailService {
 		Transport transport = session.getTransport();
 		try	{
 			log.debug("Sending email via SMTP to "+recepientEMail);
-			transport.connect(SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD);
+			transport.connect(prop.smtp.host, prop.smtp.username, prop.smtp.pass);
 			transport.sendMessage(msg, msg.getAllRecipients());
 		}	catch (Exception ex) {
 			log.error("Cannot send email: "+ex.toString());

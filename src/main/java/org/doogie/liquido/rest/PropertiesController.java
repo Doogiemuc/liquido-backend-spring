@@ -1,40 +1,42 @@
 package org.doogie.liquido.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.util.LiquidoProperties;
+import org.doogie.liquido.data.LiquidoProperties;
+import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.http.MediaType;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 /**
- * REST service for global configuration values that are loaded from the DB
- * (and not from environment)
+ * REST service for global configuration values
  */
 @Slf4j
-@BasePathAwareController  // only works when methods have the @ResponseBody annotation
+@BasePathAwareController                  // only works when methods have the @ResponseBody annotation
 public class PropertiesController {
 
   @Autowired
-  LiquidoProperties props;
+  LiquidoProperties prop;
 
   /**
-   * @return all properties as JSON
+   * Get the global Liquido Properties that the client needs
+   * This is a subset from the values in application.properties
+   *
+   * This endpoint is public and can be accessed without authentication!
+   *
+   * @return Properties for client as JSON
    */
   @RequestMapping(value = "/globalProperties", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	//@PreAuthorize("hasAuthority('ROLE_USER')")
-  public @ResponseBody ObjectNode getGlobalProperties() {
-    ObjectMapper mapper = new ObjectMapper();
-    ObjectNode json = mapper.createObjectNode().putObject("properties");
-    for (LiquidoProperties.KEY key: LiquidoProperties.KEY.values()) {
-      json.put(key.toString(), props.get(key));
-    }
-    return json;
+  public @ResponseBody String getGlobalProperties() {
+    return new Lson()
+      .put("supportersForProposal", prop.supportersForProposal)
+      .put("daysUntilVotingStarts", prop.daysUntilVotingStarts)
+      .put("durationOfVotingPhase", prop.durationOfVotingPhase)
+      .put("checksumExpirationHours", prop.checksumExpirationHours)
+      .toString();
+
   }
 
 }

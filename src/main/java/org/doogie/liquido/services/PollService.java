@@ -1,11 +1,11 @@
 package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.data.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.services.scheduler.FinishPollJob;
 import org.doogie.liquido.services.voting.RankedPairVoting;
-import org.doogie.liquido.util.LiquidoProperties;
 import org.doogie.liquido.util.Lson;
 import org.doogie.liquido.util.Matrix;
 import org.quartz.*;
@@ -36,7 +36,7 @@ import static org.quartz.TriggerBuilder.newTrigger;
 public class PollService {
 
   @Autowired
-  LiquidoProperties props;
+	LiquidoProperties prop;
 
   @Autowired
   PollRepo pollRepo;
@@ -86,9 +86,9 @@ public class PollService {
     PollModel poll = new PollModel();
     poll.setTitle(title);
     // voting starts n days in the future (at midnight)
-    LocalDateTime votingStart = LocalDateTime.now().truncatedTo(ChronoUnit.DAYS).plusDays(props.getInt(LiquidoProperties.KEY.DAYS_UNTIL_VOTING_STARTS));
+    LocalDateTime votingStart = LocalDateTime.now().truncatedTo(ChronoUnit.DAYS).plusDays(prop.daysUntilVotingStarts);
     poll.setVotingStartAt(votingStart);
-    poll.setVotingEndAt(votingStart.plusDays(props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE)));
+    poll.setVotingEndAt(votingStart.plusDays(prop.durationOfVotingPhase));
     //LawModel proposalInDB = lawRepo.findByTitle(proposal.getTitle());  //BUGFIX: I have to load the proposal from DB, otherwise: exception "Detached entity passed to persist" => Fixed by setting cascade = CascadeType.MERGE in PollModel
     poll = addProposalToPoll(proposal, poll);
     PollModel savedPoll = pollRepo.save(poll);
@@ -142,7 +142,7 @@ public class PollService {
     poll.setStatus(PollModel.PollStatus.VOTING);
     LocalDateTime votingStart = LocalDateTime.now();			// LocalDateTime is without a timezone
     poll.setVotingStartAt(votingStart);   //record the exact datetime when the voting phase started.
-    poll.setVotingEndAt(votingStart.truncatedTo(ChronoUnit.DAYS).plusDays(props.getInt(LiquidoProperties.KEY.DURATION_OF_VOTING_PHASE)));     //voting ends in n days at midnight
+    poll.setVotingEndAt(votingStart.truncatedTo(ChronoUnit.DAYS).plusDays(prop.durationOfVotingPhase));     //voting ends in n days at midnight
 		pollRepo.save(poll);
 
 		//----- schedule a Quartz Job that will finish the voting phase at poll.votingEndAt() date
