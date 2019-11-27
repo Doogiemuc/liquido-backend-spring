@@ -16,10 +16,12 @@ BACKEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:${BACKEND_DEST_DIR}
 
 FRONTEND_BASE=/d/Coding/liquido/liquido-vue-frontend
 FRONTEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:/var/www/html
+FRONTEND_URL=http://$BACKEND_HOST
 
 CURRENT_DIR=$PWD
 NPM=npm
 MAVEN=./mvnw
+CYPRESS=/d/Coding/liquido/liquido-vue-frontend/node_modules/cypress/bin/cypress
 
 # ===== BASH colors
 DEFAULT="\e[39m"
@@ -105,8 +107,8 @@ echo "from: $JAR"
 echo "to:   $BACKEND_DEST"
 read -p "Deploy Backend? [yes|NO] " yn
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
-  echo "scp -i $SSH_KEY $JAR $BACKEND_DEST"
-  scp -i $SSH_KEY $JAR $BACKEND_DEST
+  echo "scp -i $SSH_KEY --progress $JAR $BACKEND_DEST"
+  scp -i $SSH_KEY --progress $JAR $BACKEND_DEST
   [ $? -ne 0 ] && exit 1
   echo -e "Backend deployed successfully. ${GREEN_OK}"
 else
@@ -142,10 +144,10 @@ echo "from: $FRONTEND_BASE/dist"
 echo "to:   $FRONTEND_DEST"
 read -p "Deploy WebApp? [yes|NO] " yn
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
-  echo "scp -i $SSH_KEY -r $FRONTEND_BASE/dist/. $FRONTEND_DEST"
-  scp -i $SSH_KEY -r $FRONTEND_BASE/dist/. $FRONTEND_DEST
+  echo "scp -i $SSH_KEY -r $FRONTEND_BASE/dist/* $FRONTEND_DEST"
+  scp -i $SSH_KEY -r $FRONTEND_BASE/dist/* $FRONTEND_DEST
   [ $? -ne 0 ] && exit 1
-  echo "OK, frontend deployed to $FRONTEND_DEST"
+  echo "Webapp deployed to $FRONTEND_DEST ${GREEN_OK}"
 else
   echo "WebApp will NOT be deployed."
 fi
@@ -189,7 +191,8 @@ echo
 read -p "Run tests against PROD? [yes|NO] " yn
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
 	cd $FRONTEND_BASE
-	$CYPRESS run --env backendBaseURL=${BACKEND_API} --spec ./cypress/integration/liquidoTests/liquidoHappyCase.js
+	echo "$CYPRESS run --config baseUrl=$FRONTEND_URL --env backendBaseURL=$BACKEND_API --spec ./cypress/integration/liquidoTests/liquidoHappyCase.js"
+	$CYPRESS run --config baseUrl=$FRONTEND_URL --env backendBaseURL=$BACKEND_API --spec ./cypress/integration/liquidoTests/liquidoHappyCase.js
 	[ $? -ne 0 ] && exit 1
 	echo "Tests successfull ${GREEN_OK}"
 fi

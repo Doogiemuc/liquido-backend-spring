@@ -1,6 +1,7 @@
 package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.data.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.CommentModel;
@@ -8,19 +9,16 @@ import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.LawQuery;
 import org.doogie.liquido.security.LiquidoAuditorAware;
-import org.doogie.liquido.util.LiquidoProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.data.querydsl.binding.QuerydslPredicateBuilder;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.JoinType;
-import javax.persistence.criteria.Predicate;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -50,7 +48,7 @@ public class LawService {
   AreaRepo areaRepo;
 
   @Autowired
-  LiquidoProperties props;
+  LiquidoProperties prop;
 
 
   /**
@@ -94,7 +92,7 @@ public class LawService {
   public LawModel checkQuorum(LawModel idea) {
     if (idea != null &&
         idea.getStatus().equals(LawModel.LawStatus.IDEA) &&
-        idea.getNumSupporters() >= props.getInt(LiquidoProperties.KEY.SUPPORTERS_FOR_PROPOSAL) ) {
+        idea.getNumSupporters() >= prop.supportersForProposal) {
       log.info("Idea (id="+idea.getId()+") '"+idea.getTitle()+"' reached its quorum with "+idea.getNumSupporters()+" supporters.");
       idea.setStatus(LawModel.LawStatus.PROPOSAL);
       idea.setReachedQuorumAt(new Date());

@@ -1,6 +1,7 @@
 package org.doogie.liquido.test;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.data.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
@@ -70,10 +71,10 @@ public class PollServiceTests  extends BaseTest {
 	LiquidoRestUtils restUtils;
 
 	@Autowired
-	Environment springEnv;
+	LiquidoProperties prop;
 
-	@Value("${liquido.admin.email}")
-	String adminEmail;
+	@Autowired
+	Environment springEnv;
 
 	@Value("spring.data.rest.base-path")
 	public String basePath;
@@ -399,14 +400,14 @@ public class PollServiceTests  extends BaseTest {
 		Long firstProposalId = poll.getProposals().iterator().next().getId();
 
 		// WHEN login as ADMIN
-		this.loginUser(adminEmail);
+		this.loginUser(prop.admin.email);
 
 		//  AND poll is deleted
 		pollService.deletePoll(poll);
 
 		// THEN the proposals from the former poll still exist
 		Optional<LawModel> prop = lawRepo.findById(firstProposalId);
-		assertTrue("Proposal from former poll should still extist.", prop.isPresent());
+		assertTrue("Proposal from former poll should still exist.", prop.isPresent());
 	}
 
 }
