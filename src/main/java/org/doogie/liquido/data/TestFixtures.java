@@ -1,4 +1,4 @@
-package org.doogie.liquido.testdata;
+package org.doogie.liquido.data;
 
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.UserModel;
@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * Fixed test data.
- * All tests may rely on the data that is created in {@link org.doogie.liquido.testdata.TestDataCreator}
+ * All tests may rely on the data that is created in {@link TestDataCreator}
  * These test fixtures are IDs, keys and attribute values that were created there.
  */
 public class TestFixtures {

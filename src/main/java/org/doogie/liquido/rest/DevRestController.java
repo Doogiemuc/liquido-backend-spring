@@ -20,20 +20,18 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
-import org.springframework.data.rest.webmvc.BasePathAwareController;
-import org.springframework.hateoas.Resources;
-import org.springframework.http.HttpMethod;
+import org.springframework.hateoas.mvc.ControllerLinkBuilder;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Optional;
+import java.util.Iterator;
+import java.util.List;
 
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
@@ -44,8 +42,7 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 @Slf4j
 @RestController
 @RequestMapping("${spring.data.rest.base-path}")    //TODO: add /dev prefix here!
-@Profile({"dev", "test"})			// This controller is only available in dev or test environment
-//TODO: If I want to run automated tests against prod, then I also need this in PROD.  How to secure it?
+//@Profile({"dev", "test"})			// For security reasons this controller should not be available in PROD. But I need it when I want to run tests against prod!
 public class DevRestController {
 
 	@Autowired
@@ -69,30 +66,54 @@ public class DevRestController {
 	@Autowired
 	LiquidoProperties prop;
 
+	/**
+	 * Get list of users for the quick login at the top right of the UI.
+	 * This endpoint must be public, because the web app needs it during very early application start. (See main.js) But client must at least provide devLoginSmsToken.
+	 * This is only available in dev and test environment!
+	 * @param token dev login sms token
+	 * @return UserModel HATEOAS resource
+	 */
+	@Profile({"dev", "test"})
 	@RequestMapping(value = "/dev/users")
-	// This must be public, because during DEV I need this without beeing logged in.
-	public @ResponseBody Resources<UserModel> devGetAllUsers()  {
-		return new Resources<>(userRepo.findAll(), linkTo(methodOn(DevRestController.class).devGetAllUsers()).withRel("self"));
+	// This must be public, because during DEV we need the list of users for the quick DevLogin drop down.
+	public @ResponseBody Lson devGetAllUsers(@RequestParam("token") String token) throws LiquidoException {
+		log.debug("GET /dev/users");
+		if (!token.equals(prop.devLoginSmsToken))
+			throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Invalid token for GET /dev/users");
+		Iterator<UserModel> it = userRepo.findAll().iterator();
+		List<UserModel> first10Users = new ArrayList<UserModel>();
+		for (int i = 0; i < 20; i++) {
+			if (it.hasNext()) first10Users.add(it.next());
+		}
+
+		ControllerLinkBuilder controllerLinkBuilder = linkTo(methodOn(DevRestController.class).devGetAllUsers(null));
+		return Lson.builder()
+			.put("_embedded.users", first10Users)  // Always return at least an empty array! Be nice to your clients!
+			.put("_link.self.href", controllerLinkBuilder.toUri());
+
+		//return new Resources<>(userRepo.findAll(), linkTo(methodOn(DevRestController.class).devGetAllUsers()).withRel("self"));
 	}
 
 	/**
-	 * Allow login as any user.  (Only in DEV and TEST environment. And client must still provide valid devLoginSmsToken from application.properties
+	 * Receive a Json Web Token for authentication. This for example allows tests to login as <b>any</b> user.
+	 * But the client must still provide the valid devLoginSmsToken from application.properties
+	 * Then authentication for further requests is handled normally in {@link org.doogie.liquido.security.LiquidoUserDetailsService#loadUserByUsername(String)}
+	 *
 	 * @param mobile mobilephone of existing user
 	 * @param token  devLoginSmsToken from application.properties
 	 * @return Json Web Token for this user
 	 * @throws LiquidoException when token is invalid or no user with that mobile is phone
 	 */
-	@RequestMapping(path = "/dev/loginWithSmsToken", produces = MediaType.TEXT_PLAIN_VALUE)
+	@RequestMapping(path = "/dev/getJWT", produces = MediaType.TEXT_PLAIN_VALUE)
 	public String loginWithSmsToken(
 		@RequestParam("mobile") String mobile,
 		@RequestParam("token") String token
 	) throws LiquidoException {
-		log.info("Dev Login mobile"+mobile);
 		if (!token.equals(prop.devLoginSmsToken))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Dev Login failed. Token for mobile="+mobile+" is invalid!");
 		UserModel user = userRepo.findByProfileMobilephone(mobile)
 			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "DevLogin: user for mobile phone " + mobile + " not found."));
-		log.debug("DEV Login as " + mobile + " => " + user);
+		log.info("DEV Login: " + user);
 		user.setLastLogin(LocalDateTime.now());
 		userRepo.save(user);
 		return jwtTokenProvider.generateToken(user.getEmail());
@@ -117,10 +138,10 @@ public class DevRestController {
      */
 		protected void configure(HttpSecurity http) throws Exception {
 			log.info("Configuring WebSecurity for Development api endpoint " + basePath + "/dev in env=" + Arrays.toString(springEnv.getActiveProfiles()));
-
 			//nice stackoverflow question about this nasty confusing fluid syntax of HttpSecurity:  https://stackoverflow.com/questions/28907030/spring-security-authorize-request-for-url-method-using-httpsecurity
 			http.antMatcher(basePath + "/dev/*").authorizeRequests()
 				.antMatchers(basePath + "/dev/users").permitAll()
+				.antMatchers(basePath + "/dev/getJWT").permitAll()
 				.anyRequest().authenticated();
 		}
 	}
