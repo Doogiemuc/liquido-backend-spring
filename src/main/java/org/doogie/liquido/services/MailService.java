@@ -28,14 +28,14 @@ public class MailService {
 
 	String SUBJECT = "[LIQUIDO] One time login token";
 
-	public void sendEMail(String recepientEMail, String emailToken) throws Exception {
+	public void sendEMail(String recipientEMail, String emailToken) throws Exception {
 
 		String BODY = String.join(
 			System.getProperty("line.separator"),
 			"<h1>Liquido Login Token</h1>",
-			"<h3>Hello "+recepientEMail+"</h3>",
+			"<h3>Hello "+recipientEMail+"</h3>",
 			"<p>With this link you can login to Liquido.</p>",
-			"<a href='"+prop.frontendUrl+"/#/login?email="+recepientEMail+"&token="+emailToken+"'>LIQUIDO Login</a>",
+			"<a href='"+prop.frontendUrl+"/#/login?email="+recipientEMail+"&token="+emailToken+"'>LIQUIDO Login</a>",
 			"<p>&nbsp;</p>",
 			"<p>This login link can only be used once!</p>",
 			"<p><small>You received this email, because you (or someone) requested a login token for the <a href='https://www.liquido.net'>LIQUIDO</a> eVoting webapp. If you did not request a login yourself, than you may simply ignore this message.</small></p>"
@@ -54,7 +54,7 @@ public class MailService {
 		// Create a message with the specified information.
 		MimeMessage msg = new MimeMessage(session);
 		msg.setFrom(new InternetAddress(prop.smtp.from, prop.smtp.fromName));
-		msg.setRecipient(Message.RecipientType.TO, new InternetAddress(recepientEMail));
+		msg.setRecipient(Message.RecipientType.TO, new InternetAddress(recipientEMail));
 		msg.setSubject(SUBJECT);
 		msg.setContent(BODY,"text/html");
 
@@ -64,7 +64,7 @@ public class MailService {
 
 		Transport transport = session.getTransport();
 		try	{
-			log.debug("Sending email via SMTP to "+recepientEMail);
+			log.debug("Sending email via SMTP to "+recipientEMail);
 			transport.connect(prop.smtp.host, prop.smtp.username, prop.smtp.pass);
 			transport.sendMessage(msg, msg.getAllRecipients());
 		}	catch (Exception ex) {

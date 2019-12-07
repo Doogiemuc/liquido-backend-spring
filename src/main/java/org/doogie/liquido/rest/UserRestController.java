@@ -131,7 +131,7 @@ public class UserRestController {
 		  @RequestParam("mobile") String mobile,
   		@RequestParam("token") String token
   ) throws LiquidoException {
-	  log.debug("Request to login with sms code="+token);
+	  log.debug("Request to login with sms token="+token);
 
 	  /* moved to DevRestController
 	  // in DEV or TEST environment allow login as any use with a special code

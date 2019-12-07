@@ -1,7 +1,5 @@
 package org.doogie.liquido.util;
 
-import org.doogie.liquido.testdata.TestUtils;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
