@@ -1,4 +1,4 @@
-package org.doogie.liquido.testdata;
+package org.doogie.liquido.data;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.ChecksumRepo;
@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-public class TestUtils {
+public class TestDataUtils {
 
 	@Autowired
 	DelegationRepo delegationRepo;

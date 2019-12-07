@@ -1,8 +1,7 @@
-package org.doogie.liquido.testdata;
+package org.doogie.liquido.data;
 
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.data.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
@@ -14,8 +13,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Profile;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.core.env.*;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -69,7 +66,7 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
 @Slf4j
 @Component
 @Profile({"dev", "test"})    						// run test data creator only during development or when running tests!
-@Order(Ordered.HIGHEST_PRECEDENCE)   		// seed DB first, then run the other CommandLineRunners
+//@Order(Ordered.HIGHEST_PRECEDENCE)   		// seed DB first, then run the other CommandLineRunners
 public class TestDataCreator implements CommandLineRunner {
 
   static final String SEED_DB_PARAM        = "createSampleData";
@@ -138,7 +135,7 @@ public class TestDataCreator implements CommandLineRunner {
 	ApplicationContext appContext;
 
 	@Autowired
-	TestUtils utils;
+	TestDataUtils utils;
 
   // very simple random number generator
   Random rand;
@@ -155,40 +152,6 @@ public class TestDataCreator implements CommandLineRunner {
    * @param args command line args
    */
   public void run(String... args) {
-		try {
-			String dbURL = jdbcTemplate.getDataSource().getConnection().getMetaData().getURL();
-			log.info("===== Connecting to DB at "+dbURL);
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-		if (springEnv.acceptsProfiles(Profiles.of("dev", "test"))) {
-			log.info("===== Spring environment properties ");
-			MutablePropertySources propSrcs = ((AbstractEnvironment) springEnv).getPropertySources();
-			Iterator<PropertySource<?>> it = propSrcs.iterator();
-			while (it.hasNext()) {
-				PropertySource<?> src = it.next();
-				log.debug("===== Property Source: " + src.getName());
-				if (src instanceof EnumerablePropertySource) {
-					String[] propertyNames = ((EnumerablePropertySource<?>) src).getPropertyNames();
-					for (int i = 0; i < propertyNames.length; i++) {
-						log.debug(propertyNames[i] + "=" + springEnv.getProperty(propertyNames[i]));
-					}
-				}
-			}
-
-			/*
-			// https://stackoverflow.com/questions/23506471/spring-access-all-environment-properties-as-a-map-or-properties-object
-			StreamSupport.stream(propSrcs.spliterator(), false)
-				.forEach(propSrc -> log.debug(propSrc.getName()))
-				.filter(ps -> ps instanceof EnumerablePropertySource)
-				.map(ps -> ((EnumerablePropertySource) ps).getPropertyNames())
-				.flatMap(Arrays::<String>stream)
-				.forEach(propName -> log.debug(propName + "=" + springEnv.getProperty(propName)));
-
-			 */
-		}
-
 		boolean seedDB = "true".equalsIgnoreCase(springEnv.getProperty(SEED_DB_PARAM));
     for(String arg : args) {
       if (("--"+ SEED_DB_PARAM).equalsIgnoreCase(arg)) { seedDB = true; }
@@ -277,7 +240,7 @@ public class TestDataCreator implements CommandLineRunner {
 				log.error("Cannot get checksum of " + topProxy + ": " + e.getMessage());
 			}
 		}
-		log.info("===== TestDataCreator FINISHED");
+
   }
 
 	/**

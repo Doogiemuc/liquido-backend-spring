@@ -6,14 +6,12 @@ import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.*;
-import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
-import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -29,19 +27,11 @@ import java.util.*;
  */
 @Slf4j
 @Component
+@Order(2000)   // DB Schema must be created, then we can seed data into it.
 public class SchoolExampleData implements CommandLineRunner {
 
 	private static final String SEED_DB_PARAM = "--seedSchoolExampleData";
 
-	@Value("${liquido.admin.email}")
-	String adminEmail;
-
-	@Value("${liquido.admin.name}")
-	String adminName;
-
-	@Value("${liquido.admin.mobilephone}")
-	String adminMobilephone;
-	
 	@Autowired
 	LiquidoProperties prop;
 
@@ -49,8 +39,6 @@ public class SchoolExampleData implements CommandLineRunner {
 	UserRepo userRepo;
 	private List<UserModel> users = new ArrayList<>();
 	private Map<String, UserModel> usersMap = new HashMap<>();
-	private UserModel user1;
-	private UserModel adminUser;
 
 	@Autowired
 	AreaRepo areaRepo;
@@ -109,7 +97,6 @@ public class SchoolExampleData implements CommandLineRunner {
 	 */
 	@Override
 	public void run(String... args) throws LiquidoException {
-
 		boolean seedDB = false;
 		for(String arg : args) {
 			if (SEED_DB_PARAM.equalsIgnoreCase(arg)) { seedDB = true; }
@@ -134,13 +121,6 @@ public class SchoolExampleData implements CommandLineRunner {
 			throw new LiquidoException(LiquidoException.Errors.INTERNAL_ERROR, "Cannot connect to DB!");
 		}
 
-		try {
-			List<UserModel> users = jdbcTemplate.queryForList("SELECT * FROM USERS LIMIT 10", UserModel.class);
-		} catch (DataAccessException e) {
-			log.error("Cannot find users table. Does your database has a schema?");
-			throw e;
-		}
-
 		seedUsers();
 		seedAreas();
 		seedIdeas();
@@ -154,7 +134,7 @@ public class SchoolExampleData implements CommandLineRunner {
 
 	void seedUsers() {
 		log.debug("seedUsers");
-		this.user1 = upsert(new UserModel("fritz@liquido.de",   "Fritz Cool",      "+49 22234501", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX+"1.png"));
+		UserModel user1 = upsert(new UserModel("fritz@liquido.de",   "Fritz Cool",      "+49 22234501", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX+"1.png"));
 		auditorAware.setMockAuditor(user1);
 		upsert(new UserModel("peter@liido.de",     "Peter Newman",    "+49 22234502", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX+"2.png"));
 		upsert(new UserModel("sarah@liquido.de",   "Sarah Connor",    "+49 22234503", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX+"3.png"));
@@ -172,9 +152,6 @@ public class SchoolExampleData implements CommandLineRunner {
 		upsert(new UserModel("jody@liquido.de",    "Jody Hanson",     "+49 22234515", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX+"15.png"));
 		upsert(new UserModel("mark@liquido.de",    "Mark Hardy",      "+49 22234516", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX+"16.png"));
 
-		// MUST also add the admin user. This is for example used for DEV login
-		this.adminUser = upsert(new UserModel(adminEmail,adminName,adminMobilephone, "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX+"1.png"));
-
 		userRepo.findAll().forEach(user -> {
 			this.usersMap.put(user.getEmail(), user);
 			this.users.add(user);
@@ -183,9 +160,11 @@ public class SchoolExampleData implements CommandLineRunner {
 
 	void seedAreas() {
 		log.debug("seedAreas");
-		this.areaTimetable  = upsert(new AreaModel("Timetable", "Planning the timetable for all classes", this.adminUser));
-		this.areaExcursions = upsert(new AreaModel("Excursions", "Planning our adventurous excursions", this.adminUser));
-		this.areaCanteen    = upsert(new AreaModel("Canteen", "Healthy food in our school", this.adminUser));
+		UserModel admin = this.usersMap.get(prop.admin.email);
+		if (admin == null) throw new RuntimeException("ERROR: Need admin user to seed areas!");
+		this.areaTimetable  = upsert(new AreaModel("Timetable", "Planning the timetable for all classes", admin));
+		this.areaExcursions = upsert(new AreaModel("Excursions", "Planning our adventurous excursions", admin));
+		this.areaCanteen    = upsert(new AreaModel("Canteen", "Healthy food in our school", admin));
 		areaRepo.findAll().forEach(area -> {
 			this.areaMap.put(area.getTitle(), area);
 		});

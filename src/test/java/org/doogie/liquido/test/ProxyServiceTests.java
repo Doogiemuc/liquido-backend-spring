@@ -12,8 +12,8 @@ import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
-import org.doogie.liquido.testdata.TestFixtures;
-import org.doogie.liquido.testdata.TestUtils;
+import org.doogie.liquido.data.TestFixtures;
+import org.doogie.liquido.data.TestDataUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +23,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.Optional;
 
-import static org.doogie.liquido.testdata.TestFixtures.*;
+import static org.doogie.liquido.data.TestFixtures.*;
 import static org.junit.Assert.*;
 
 @Slf4j
@@ -49,7 +49,7 @@ public class ProxyServiceTests extends BaseTest {
 	ChecksumRepo checksumRepo;
 
 	@Autowired
-	TestUtils utils;
+	TestDataUtils utils;
 
 	/**
 	 * GIVEN a public proxy P
