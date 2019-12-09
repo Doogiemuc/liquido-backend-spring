@@ -9,7 +9,10 @@ import org.springframework.data.rest.core.annotation.RestResource;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.util.*;
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 
 /**
  * <h3>Data model for an idea, proposal or law</h3>
@@ -111,7 +114,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
    * Date when this proposal reached its quorum.
    * Will be set, when enough likes are added.
    */
-  Date reachedQuorumAt;
+  LocalDateTime reachedQuorumAt;
 
 	/** The user that initially created the idea */
 	@CreatedBy  // automatically handled by spring data jpa auditing

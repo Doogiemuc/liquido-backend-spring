@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.JoinType;
 import javax.validation.constraints.NotNull;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -95,7 +96,7 @@ public class LawService {
         idea.getNumSupporters() >= prop.supportersForProposal) {
       log.info("Idea (id="+idea.getId()+") '"+idea.getTitle()+"' reached its quorum with "+idea.getNumSupporters()+" supporters.");
       idea.setStatus(LawModel.LawStatus.PROPOSAL);
-      idea.setReachedQuorumAt(new Date());
+      idea.setReachedQuorumAt(LocalDateTime.now());
       return lawRepo.save(idea);
     }
     return idea;

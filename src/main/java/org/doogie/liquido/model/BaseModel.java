@@ -32,7 +32,7 @@ public abstract class BaseModel implements Identifiable<Long> {
 
   @CreatedDate
   @NotNull
-  //  I am not going to use joda time although it would be cool   @Type(type="org.jadira.usertype.dateandtime.joda.PersistentDateTime")
+  // MAYBE: Use LocalDateTime   => but then need to watch out for converting correctly everyhwere ...
   public Date createdAt = new Date();
 
   @LastModifiedDate

@@ -2,27 +2,32 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.data.LiquidoProperties;
-import org.doogie.liquido.datarepos.OneTimeTokenRepo;
-import org.doogie.liquido.datarepos.UserRepo;
+import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.jwt.JwtTokenProvider;
-import org.doogie.liquido.model.OneTimeToken;
-import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.model.*;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.MailService;
 import org.doogie.liquido.services.ProxyService;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoRestUtils;
+import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.sql.Date;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Rest Controller for registration, login and user data
@@ -54,6 +59,15 @@ public class UserRestController {
 
   @Autowired
 	UserRepo userRepo;
+
+  @Autowired
+	AreaRepo areaRepo;
+
+  @Autowired
+	LawRepo lawRepo;
+
+  @Autowired
+	DelegationRepo delegationRepo;
 
   @Autowired
 	ProxyService proxyService;
@@ -247,10 +261,44 @@ public class UserRestController {
 		return jwt;
 	}
 
+	@RequestMapping(path = "/my/newsfeed", produces = MediaType.APPLICATION_JSON_VALUE)
+	public Lson getMyNewsfeed() throws LiquidoException {
+
+		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Must be logged in to get newsfeed!"));
+
+		LocalDateTime twoWeeksAgo = LocalDateTime.now().minusWeeks(2);
+		List<LawModel> reachedQuorum = lawRepo.findByReachedQuorumAtGreaterThanEqualAndCreatedBy(twoWeeksAgo, currentUser);
+
+		Page<LawModel> page = lawRepo.findByStatus(LawModel.LawStatus.VOTING, new OffsetLimitPageable(0, 10));
+		List<LawModel> proposalsInVoting = page.get().collect(Collectors.toList());
+
+		List<LawModel> supportedByYou = new ArrayList<>();
+		lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.IDEA, currentUser);
+		lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.PROPOSAL, currentUser);
+		lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.ELABORATION, currentUser);
+		lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.VOTING, currentUser);
+
+		List<LawModel> recentlyDiscussed = lawRepo.getRecentlyDiscussed(java.sql.Timestamp.valueOf(twoWeeksAgo));
+
+		List<DelegationModel> delegationRequests = new ArrayList<>();
+		for (AreaModel area: areaRepo.findAll()) {
+			delegationRequests.addAll(delegationRepo.findDelegationRequests(area, currentUser));
+		}
+
+		return new Lson()
+				.put("reachedQuorum", reachedQuorum)
+				.put("recentlyDiscussedProposals", recentlyDiscussed)
+				.put("proposalsInVoting", proposalsInVoting)
+				.put("supportedByYou", supportedByYou)
+				.put("delegationRequests", delegationRequests);
+
+	}
 
 
 	// There is no logout here. The server is stateless! When a user want's to "log out", then he simply has to throw away his JWT
 }
+
 
 
 
