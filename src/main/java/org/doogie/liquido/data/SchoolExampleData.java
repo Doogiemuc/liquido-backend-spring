@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import javax.persistence.Table;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -313,7 +314,7 @@ public class SchoolExampleData implements CommandLineRunner {
 		LawModel proposal = upsert(new LawModel(title, description, area));
 
 		proposal = addSupportersToIdea(proposal, prop.supportersForProposal);
-		Date reachQuorumAt = DoogiesUtil.daysAgo(reachedQuorumDaysAgo);
+		LocalDateTime reachQuorumAt = LocalDateTime.now().minusDays(reachedQuorumDaysAgo);
 		proposal.setReachedQuorumAt(reachQuorumAt);			// fake reachQuorumAt date to be in the past
 
 		lawRepo.save(proposal);
