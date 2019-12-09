@@ -3,6 +3,7 @@ package org.doogie.liquido.data;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.ChecksumRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
+import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.ChecksumModel;
 import org.doogie.liquido.model.DelegationModel;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -21,6 +23,9 @@ public class TestDataUtils {
 
 	@Autowired
 	DelegationRepo delegationRepo;
+
+	@Autowired
+	UserRepo userRepo;
 
 	@Autowired
 	ChecksumRepo checksumRepo;
@@ -45,6 +50,14 @@ public class TestDataUtils {
 		if (checksum == null) return;
 		Function<ChecksumModel, List<ChecksumModel>> getChildrenFunc = c -> checksumRepo.findByDelegatedTo(c);
 		DoogiesUtil.printTreeRec(checksum, getChildrenFunc);
+	}
+
+	public UserModel upsert(UserModel user) {
+		Optional<UserModel> existingUser = userRepo.findByEmail(user.getEmail());
+		if (existingUser.isPresent()) {
+			user.setId(existingUser.get().getId());
+		}
+		return userRepo.save(user);
 	}
 
 }
