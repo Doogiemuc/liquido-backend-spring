@@ -2,6 +2,7 @@ package org.doogie.liquido.test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -389,7 +390,7 @@ public class RestEndpointTests extends BaseTest {
   }
 
   /*
-  //TODO: Test duplicate vote (with differenet faked voterToken
+  //TODO: Test duplicate vote (with differenet faked voterToken)
   @Test
   public void testPostDuplicateVote() throws JSONException {
     log.trace("TEST postDuplicateVote");
@@ -478,6 +479,30 @@ public class RestEndpointTests extends BaseTest {
 
     log.trace("TEST ideaReachesQuorum SUCCESSFUL");
   }
+
+  @Test
+	public void testGetMyNewsfeed() {
+  	// GIVEN user1 is logged in
+		loginUserJWT(TestFixtures.USER1_EMAIL);
+
+		// WHEN fetching current user's newsfeed
+		ResponseEntity<String> res = client.getForEntity("/my/newsfeed", String.class);
+		log.debug("Newsfeed: "+res.getBody());
+
+		// THEN the newsfeed should not be empty
+		assertTrue("Newsfeed should not be empty", res != null);
+		DocumentContext ctx = JsonPath.parse(res.getBody());
+		String recentlyDiscussedId = ctx.read("$.recentlyDiscussedProposals[1].id");
+		assertNotNull(recentlyDiscussedId);
+
+
+
+	}
+
+
+
+
+
 
 
 	/**

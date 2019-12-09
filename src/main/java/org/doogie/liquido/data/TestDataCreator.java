@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.persistence.Table;
 import java.io.*;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -443,7 +444,7 @@ public class TestDataCreator implements CommandLineRunner {
 		lawRepo.save(proposal);
 
     proposal = addSupportersToIdea(proposal, prop.supportersForProposal);
-		Date reachQuorumAt = DoogiesUtil.daysAgo(reachedQuorumDaysAgo);
+		LocalDateTime reachQuorumAt = LocalDateTime.now().minusDays(reachedQuorumDaysAgo);
     proposal.setReachedQuorumAt(reachQuorumAt);			// fake reachQuorumAt date to be in the past
 
 		lawRepo.save(proposal);
@@ -678,17 +679,17 @@ public class TestDataCreator implements CommandLineRunner {
     UserModel createdBy = this.usersMap.get(TestFixtures.USER1_EMAIL);
     auditorAware.setMockAuditor(createdBy);
 
-    // These laws are not linked to a poll.      At the moment I do not need that yet...
+		//TODO: realLaw actually needs to have been part of a (finished) poll with alternative proposals
     //PollModel poll = new PollModel();
     //pollRepo.save(poll);
 
     for (int i = 0; i < TestFixtures.NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
       LawModel realLaw = createProposal(lawTitle, getLoremIpsum(100,400), area, createdBy, 12, 10);
-			realLaw = addSupportersToIdea(realLaw, prop.supportersForProposal+5);
-      //TODO: realLaw actually needs to have been part of a (finished) poll with alternative proposals
+			realLaw = addSupportersToIdea(realLaw, prop.supportersForProposal+2);
 			//realLaw.setPoll(poll);
-      realLaw.setReachedQuorumAt(DoogiesUtil.daysAgo(24));
+			LocalDateTime reachQuorumAt = LocalDateTime.now().minusDays(10);
+      realLaw.setReachedQuorumAt(reachQuorumAt);
       realLaw.setStatus(LawStatus.LAW);
       upsertLawModel(realLaw, 20+i);
     }

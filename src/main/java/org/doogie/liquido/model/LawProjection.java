@@ -3,8 +3,8 @@ package org.doogie.liquido.model;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.rest.core.config.Projection;
 
+import java.time.LocalDateTime;
 import java.util.Date;
-import java.util.Set;
 
 /**
  * This Spring <a href="http://docs.spring.io/spring-data/rest/docs/current/reference/html/#projections-excerpts.excerpting-commonly-accessed-data">projection</a>
@@ -35,7 +35,7 @@ public interface LawProjection {
   // To fetch comments user CommentProjection of CommentModel
   //Set<CommentModel> getComments();
 
-  Date getReachedQuorumAt();
+  LocalDateTime getReachedQuorumAt();
 
   Date getCreatedAt();
 

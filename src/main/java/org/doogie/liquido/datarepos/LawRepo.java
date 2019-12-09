@@ -13,6 +13,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.data.rest.core.annotation.RestResource;
 import org.springframework.format.annotation.DateTimeFormat;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -71,11 +72,11 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>
    * Query for proposals that reached their quorum since a given date<br/>
    * Usage: <pre>/laws/search/reachedQuorumSince?since=2017-09-01</pre>
    *
-   * @param since date how long ago. Format of URL parameter: <pre>?since=yyyy-MM-dd</pre>
+   * @param since date how long ago. Format of URL parameter: <pre>?since=yyyy-MM-ddThh:mm:sss.millis</pre>, e.g <pre>since=2018-11-21T11:13:13.247</pre>
    * @return list of proposals that recently reached their quorum.  Most recent one is first in list. List may be empty.
    */
   @Query("select l from LawModel l where l.status = 1 and reachedQuorumAt > :since order by reachedQuorumAt desc")
-  List<LawModel> reachedQuorumSince(@DateTimeFormat(pattern = "yyyy-MM-dd") @Param("since") Date since);
+  List<LawModel> reachedQuorumSince(@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime since);
 
   /**
    * Query for proposals that reach their quorum since a given date <b>and</b> that were created by a given user.
@@ -84,7 +85,7 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>
    * @return list of proposals that match the query
    */
   @RestResource(path = "reachedQuorumSinceAndCreatedBy")
-  List<LawModel> findByReachedQuorumAtGreaterThanEqualAndCreatedBy(@DateTimeFormat(pattern = "yyyy-MM-dd") @Param("since") Date since, @Param("createdBy") UserModel createdBy);
+  List<LawModel> findByReachedQuorumAtGreaterThanEqualAndCreatedBy(@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime since, @Param("createdBy") UserModel createdBy);  // Do I need a @DateTimeFormat(pattern = "yyyy-MM-dd") @Param("since")  for HTTP GET?
 
   /**
    * Find ideas or proposals that were created by a given user
@@ -105,7 +106,12 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>
   @RestResource(path = "findSupportedBy")
   List<LawModel> findDistinctByStatusAndSupportersContains(@Param("status") LawModel.LawStatus status, @Param("user") UserModel user);
 
-
-  //@Query("SELECT l FROM LawModel l JOIN CommentModel c ON c.  WHERE l.status = 1 ")
-  //List<LawModel> getRecentlyDiscussed();
+  /**
+   * Get proposals that have a comment newer than the passed ate
+   * @param since a day in the past. Format <pre>yyyy-MM-dd</pre>
+   * @return list of LawModels (they will at least be in status PROPOSAL because they have comments)
+   */
+  @RestResource(path = "recentlyDiscussed")
+  @Query("SELECT l FROM LawModel l JOIN CommentModel c ON c.proposal = l WHERE l.status = 1 AND c.createdAt > :since order by c.createdAt desc")
+  List<LawModel> getRecentlyDiscussed(@DateTimeFormat(pattern = "yyyy-MM-dd") @Param("since") Date since);
 }
