@@ -24,7 +24,7 @@ import java.util.*;
 @Data
 @Entity
 @NoArgsConstructor
-@EqualsAndHashCode(of="id", callSuper = true)
+@EqualsAndHashCode(callSuper = true)
 //@RequiredArgsConstructor(suppressConstructorProperties = true)
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "polls")

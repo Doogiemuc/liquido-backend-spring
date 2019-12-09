@@ -3,7 +3,7 @@
 # Deployment Script for LIQUIDO
 #
 
-export JAVA_HOME=/d/Coding/DevApps/jdk-8.211
+# export JAVA_HOME=/d/Coding/DevApps/jdk-8.211
 
 SSH_KEY=/d/Coding/doogies_credentials/liquido-aws-SSH.pem
 
@@ -188,7 +188,7 @@ echo -e "$GREEN_OK"
 echo
 echo "===== Run E2E Tests ====="
 echo
-read -p "Run tests against PROD? [yes|NO] " yn
+read -p "Run tests againsts ${BACKEND_API} ? [yes|NO] " yn
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
 	cd $FRONTEND_BASE
 	echo "$CYPRESS run --config baseUrl=$FRONTEND_URL --env backendBaseURL=$BACKEND_API --spec ./cypress/integration/liquidoTests/liquidoHappyCase.js"
