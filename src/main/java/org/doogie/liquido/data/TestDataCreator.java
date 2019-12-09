@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.env.*;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -66,13 +67,13 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
 @Slf4j
 @Component
 @Profile({"dev", "test"})    						// run test data creator only during development or when running tests!
-//@Order(Ordered.HIGHEST_PRECEDENCE)   		// seed DB first, then run the other CommandLineRunners
+@Order(100)   		                                // seed DB first, then run the other CommandLineRunners
 public class TestDataCreator implements CommandLineRunner {
 
-  static final String SEED_DB_PARAM        = "createSampleData";
-  static final String LOAD_SAMPLE_DB_PARAM = "loadSampleDB";
-	static final String SAMPLE_DATA_FILENAME = "sampleDB-H2.sql";
-	static final String SAMPLE_DATA_PATH     = "src/main/resources/";
+  static final String RECREATE_TEST_DATA     = "recreateTestData";
+  static final String LOAD_TEST_DATA         = "loadTestData";   // load test data from SAMPLE_DATA_FILE
+	static final String TEST_DATA_FILENAME   = "sampleDB-H2.sql";
+	static final String TEST_DATA_PATH       = "src/main/resources/";
 
 	// TestDataCreator pretty much depends on any Model, Repo and Service that we have. Which proves that we have a nice code coverage :-)
 
@@ -152,21 +153,21 @@ public class TestDataCreator implements CommandLineRunner {
    * @param args command line args
    */
   public void run(String... args) {
-		boolean seedDB = "true".equalsIgnoreCase(springEnv.getProperty(SEED_DB_PARAM));
+		boolean seedDB = "true".equalsIgnoreCase(springEnv.getProperty(RECREATE_TEST_DATA));
     for(String arg : args) {
-      if (("--"+ SEED_DB_PARAM).equalsIgnoreCase(arg)) { seedDB = true; }
+      if (("--"+ RECREATE_TEST_DATA).equalsIgnoreCase(arg)) { seedDB = true; }
     }
     if (seedDB) {
-			log.info("===== START TestDataCreator");
-			// Sanity check: Is there a schema with tables?
-	    try {
-		    List<UserModel> users = jdbcTemplate.queryForList("SELECT * FROM USERS LIMIT 10", UserModel.class);
-	    } catch (Exception e) {
-	    	log.error("Cannot find table USERS! Did you create a DB schema at all?");
-		    throw e;
-	    }
+        log.info("===== START TestDataCreator");
+        // Sanity check: Is there a schema with tables?
+        try {
+            List<UserModel> users = jdbcTemplate.queryForList("SELECT * FROM USERS LIMIT 10", UserModel.class);
+        } catch (Exception e) {
+            log.error("Cannot find table USERS! Did you create a DB schema at all?");
+            throw e;
+        }
 
-	    log.debug("Create test data from scratch via spring-data for DB: "+ jdbcTemplate.getDataSource().toString());
+        log.debug("Create test data from scratch via spring-data for DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
       seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX);
       seedAdminUser();
@@ -184,17 +185,17 @@ public class TestDataCreator implements CommandLineRunner {
       seedLaws();
       auditorAware.setMockAuditor(null);
 
-			log.info("===== TestDataCreator: Store sample data in file: "+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME);
-			jdbcTemplate.execute("SCRIPT TO '"+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME+"'");				//TODO: export schema only with  SCRIPT NODATA TO ...   and export MySQL compatible script!!!
+			log.info("===== TestDataCreator: Store sample data in file: "+ TEST_DATA_PATH + TEST_DATA_FILENAME);
+			jdbcTemplate.execute("SCRIPT TO '"+ TEST_DATA_PATH + TEST_DATA_FILENAME +"'");				//TODO: export schema only with  SCRIPT NODATA TO ...   and export MySQL compatible script!!!
 			removeQartzSchema();
-			log.info("===== TestDataCreator: Sample data stored successfully in file: "+SAMPLE_DATA_PATH+SAMPLE_DATA_FILENAME);
+			log.info("===== TestDataCreator: Sample data stored successfully in file: "+ TEST_DATA_PATH + TEST_DATA_FILENAME);
     }
 
-    boolean loadSampleDataFromSqlScript = Boolean.parseBoolean(springEnv.getProperty(LOAD_SAMPLE_DB_PARAM));
+    boolean loadSampleDataFromSqlScript = Boolean.parseBoolean(springEnv.getProperty(LOAD_TEST_DATA));
     if (loadSampleDataFromSqlScript) {
 			try {
-				log.info("===== TestDataCreator: Loading schema and sample data from "+ SAMPLE_DATA_FILENAME);
-				Resource resource = appContext.getResource(ResourceLoader.CLASSPATH_URL_PREFIX + SAMPLE_DATA_FILENAME);
+				log.info("===== TestDataCreator: Loading schema and sample data from "+ TEST_DATA_FILENAME);
+				Resource resource = appContext.getResource(ResourceLoader.CLASSPATH_URL_PREFIX + TEST_DATA_FILENAME);
 				ScriptUtils.executeSqlScript(jdbcTemplate.getDataSource().getConnection(), resource);
 
 				// Fill userMap as cache
@@ -214,9 +215,9 @@ public class TestDataCreator implements CommandLineRunner {
 				log.info("Loaded {} checksums.", checksumRepo.count());
 				log.info("Loaded {} comments.", commentRepo.count());
 
-				log.info("TestDataCreator: Loading schema and sample data from "+ SAMPLE_DATA_FILENAME +" => DONE");
+				log.info("TestDataCreator: Loading schema and sample data from "+ TEST_DATA_FILENAME +" => DONE");
 			} catch (SQLException e) {
-				String errMsg = "ERROR: Cannot load schema and sample data from "+ SAMPLE_DATA_FILENAME;
+				String errMsg = "ERROR: Cannot load schema and sample data from "+ TEST_DATA_FILENAME;
 				log.error(errMsg);
 				throw new RuntimeException(errMsg, e);
 			}
@@ -258,7 +259,7 @@ public class TestDataCreator implements CommandLineRunner {
 	private void removeQartzSchema() {
 		log.trace("removeQartzSchema from SQL script: start");
 		try {
-			File sqlScript = new File(SAMPLE_DATA_PATH + SAMPLE_DATA_FILENAME);
+			File sqlScript = new File(TEST_DATA_PATH + TEST_DATA_FILENAME);
 			BufferedReader reader = new BufferedReader(new FileReader(sqlScript));
 			List<String> lines = new ArrayList<>();
 			String currentLine;

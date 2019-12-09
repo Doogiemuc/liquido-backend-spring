@@ -16,8 +16,6 @@ import java.util.Optional;
 
 /**
  * Run some jobs for startup
- *  - Make sure that there is an admin user
- *  - Log stuff in DEV
  */
 @Slf4j
 @Component
@@ -36,15 +34,17 @@ public class StartupJobs implements CommandLineRunner {
 	Environment springEnv;
 
 	/**
-	 * Make sure that there always is an admin user in the DB.
+	 * Some sanity checks
 	 */
 	@Override
 	public void run(String... args) throws Exception {
 		try {
 			String dbURL = jdbcTemplate.getDataSource().getConnection().getMetaData().getURL();
 			log.info("===== Connecting to DB at "+dbURL);
-		} catch (SQLException e) {
-			e.printStackTrace();
+			//Keep in mind that at this stage the DB might not be filled with a schmea or data yet
+		} catch (Exception e) {
+			log.error("There is something worong with the database: "+e.toString());
+			throw e;
 		}
 
 		if (springEnv.acceptsProfiles(Profiles.of("dev", "test"))) {
@@ -74,17 +74,9 @@ public class StartupJobs implements CommandLineRunner {
 			 */
 		}
 
-		UserModel admin = new UserModel(prop.admin.email, prop.admin.name, prop.admin.mobilephone, "", prop.admin.picture);
-		log.info("Creating Admin User in DB. "+admin.toStringShort());
-		upsert(admin);
+
 	}
 
 
-	private UserModel upsert(UserModel user) {
-		Optional<UserModel> existingUser = userRepo.findByEmail(user.getEmail());
-		if (existingUser.isPresent()) {
-			user.setId(existingUser.get().getId());
-		}
-		return userRepo.save(user);
-	}
+
 }
