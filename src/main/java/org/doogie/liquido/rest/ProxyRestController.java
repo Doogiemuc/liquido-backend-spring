@@ -55,7 +55,7 @@ public class ProxyRestController {
 	@RequestMapping(value = "/my/user", method = GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public @ResponseBody
 	PersistentEntityResource getMyUser(PersistentEntityResourceAssembler resourceAssembler) throws LiquidoException {
-		// This method MUST be implemented in a @RepositoryRestController! Therefore it isi in ProxyRestController and not in UserRestController
+		// This method MUST be implemented in a @RepositoryRestController when we want to return the user as a HATEOAS resource! Therefore it isi in ProxyRestController and not in UserRestController
 		log.trace("GET /my/user");
 		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
 			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your own user info."));

@@ -32,9 +32,14 @@ import org.springframework.http.*;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.DefaultUriBuilderFactory;
+import org.springframework.web.util.UriBuilder;
+import org.springframework.web.util.UriComponents;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.net.URI;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -46,13 +51,14 @@ import static org.springframework.http.HttpMethod.*;
  * Integration test for Liquiodo REST endpoint.
  *
  * These test cases test the Liquido Java backend via its REST interface.
+ * All these tests run against the test data defined in {@link TestFixtures} !
  * Keep in mind, that these tests run from the point of view of an HTTP client.
  * We CAN use Autowired spring components here. But the tests should assert just the HTTP responses.
  */
 @Slf4j
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)  // This automatically sets up everything and starts the server.
-//@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)       // TODO: Run tests against an already running server, e.g. PROD
+//@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)       // Theoretically we coul tun tests against an already running server, e.g. PROD   But that's a lot of work. Instead our Cypress E2E tests can do this much better.
 public class RestEndpointTests extends BaseTest {
 
   /** path prefix for REST API from application.properties */
@@ -191,21 +197,23 @@ public class RestEndpointTests extends BaseTest {
     this.rootUri = "http://localhost:"+localServerPort+basePath;
     log.trace("====== configuring RestTemplate HTTP client for "+rootUri+ " with user "+TestFixtures.USER1_EMAIL);
 
-	  //this.basicAuthInterceptor = new LiquidoBasicAuthInterceptor(TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD);
+		// neet to manually configure Encoding of URL query parameters
+		// https://docs.spring.io/spring-framework/docs/current/spring-framework-reference/web.html#web-uri-encoding
+		DefaultUriBuilderFactory uriBuilderFactory = new DefaultUriBuilderFactory();
+		uriBuilderFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.VALUES_ONLY);
 
 	  this.client = new RestTemplateBuilder()
-      //.basicAuthorization(TestFixtures.USER1_EMAIL, TestFixtures.TESTUSER_PASSWORD)
-		  //.additionalInterceptors(basicAuthInterceptor)
-      //TODO:  .errorHandler(new LiquidoTestErrorHandler())     // the DefaultResponseErrorHandler throws exceptions
+      //TODO: .errorHandler(new LiquidoTestErrorHandler())     // the DefaultResponseErrorHandler throws exceptions
 		  //TODO: need to add CSRF header https://stackoverflow.com/questions/32029780/json-csrf-interceptor-for-resttemplate
-      //.additionalInterceptors(this.getOauthInterceptor())
       .additionalInterceptors(new LogClientRequestInterceptor())
 			.additionalInterceptors(this.jwtAuthInterceptor)
+			//.uriTemplateHandler(uriBuilderFactory)
       .rootUri(rootUri)
       .build();
 
 		this.anonymousClient = new RestTemplateBuilder()
 				.additionalInterceptors(new LogClientRequestInterceptor())
+				.uriTemplateHandler(uriBuilderFactory)
 				.rootUri(rootUri)
 				.build();
 	}
@@ -247,15 +255,15 @@ public class RestEndpointTests extends BaseTest {
 
   //===================== Register and login ============================
 
-
 	@Test
 	public void testRegisterAndLoginViaSms() {
-		String mobile = "004915112345999998";
+		String mobile = "+4912345"+ DoogiesUtil.randomDigits(5);
 		HttpEntity<String> entity = Lson.builder()
 				.put("email", "userFromTest-" + System.currentTimeMillis())
-				.put("picture", "/static/img/avatars/Avatar1.png")
-				.put("profile", Lson.builder("mobilephone", mobile))
-				.toHttpEntity();
+				.put("profile", new Lson()
+						.put("mobilephone", mobile)
+						.put("picture", "/static/img/avatars/Avatar1.png")
+				).toHttpEntity();
 
 		// register
 		ResponseEntity<String> res = anonymousClient.postForEntity("/auth/register", entity, String.class);
@@ -492,10 +500,8 @@ public class RestEndpointTests extends BaseTest {
 		// THEN the newsfeed should not be empty
 		assertTrue("Newsfeed should not be empty", res != null);
 		DocumentContext ctx = JsonPath.parse(res.getBody());
-		String recentlyDiscussedId = ctx.read("$.recentlyDiscussedProposals[1].id");
+		Long recentlyDiscussedId = ctx.read("$.recentlyDiscussedProposals[0].id", Long.class);
 		assertNotNull(recentlyDiscussedId);
-
-
 
 	}
 
@@ -663,7 +669,7 @@ public class RestEndpointTests extends BaseTest {
     assertNotNull(responseJSON);
   }
 
-	/**
+  /**
 	 * Search a poll by its status.
 	 * Precondition: This test expects at least on poll in status ELABORATION (which is created by TestDataCreator)
 	 */
