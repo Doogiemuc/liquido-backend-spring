@@ -1,12 +1,11 @@
 package org.doogie.liquido.security;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.data.LiquidoProperties;
+import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;

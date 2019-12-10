@@ -67,12 +67,16 @@ if [[ $yn =~ ^[s](kip)?$ ]] ; then
   cd $BACKEND_SOURCE
   $MAVEN clean install package -DskipTests
   [ $? -ne 0 ] && exit 1
+  echo
   echo -e "Backend built successfully. ${GREEN_OK}"
+  echo
 elif [[ $yn =~ ^[Yy](es)?$ ]] ; then
   cd $BACKEND_SOURCE
   $MAVEN clean install package
   [ $? -ne 0 ] && exit 1
+  echo
   echo -e "Backend built successfully. ${GREEN_OK}"
+  echo
 else
 	echo "Backend will NOT be built."
 fi
@@ -107,8 +111,8 @@ echo "from: $JAR"
 echo "to:   $BACKEND_DEST"
 read -p "Deploy Backend? [yes|NO] " yn
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
-  echo "scp -i $SSH_KEY --progress $JAR $BACKEND_DEST"
-  scp -i $SSH_KEY --progress $JAR $BACKEND_DEST
+  echo "scp -i $SSH_KEY $JAR $BACKEND_DEST"
+  scp -i $SSH_KEY $JAR $BACKEND_DEST
   [ $? -ne 0 ] && exit 1
   echo -e "Backend deployed successfully. ${GREEN_OK}"
 else
@@ -147,7 +151,7 @@ if [[ $yn =~ ^[Yy](es)?$ ]] ; then
   echo "scp -i $SSH_KEY -r $FRONTEND_BASE/dist/* $FRONTEND_DEST"
   scp -i $SSH_KEY -r $FRONTEND_BASE/dist/* $FRONTEND_DEST
   [ $? -ne 0 ] && exit 1
-  echo "Webapp deployed to $FRONTEND_DEST ${GREEN_OK}"
+  echo -e "Webapp deployed to $FRONTEND_DEST ${GREEN_OK}"
 else
   echo "WebApp will NOT be deployed."
 fi
@@ -158,7 +162,7 @@ fi
 echo
 echo "===== Sanity checks ====="
 echo
-echo -n "Waiting for backend to be alive ..."
+echo -n "Waiting (max 20 secs) for backend to be alive ..."
 
 PING_SUCCESS=0
 for i in {1..20}; do
@@ -186,17 +190,19 @@ fi
 echo -e "$GREEN_OK"
 
 echo
-echo "===== Run E2E Tests ====="
+echo "===== End-2-End Tests ====="
 echo
-read -p "Run tests againsts ${BACKEND_API} ? [yes|NO] " yn
+echo Frontend: $FRONTEND_URL
+echo Backend:  $BACKEND_API
+echo
+read -p "Run Cypress Happy Case test? [yes|NO] " yn
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
 	cd $FRONTEND_BASE
 	echo "$CYPRESS run --config baseUrl=$FRONTEND_URL --env backendBaseURL=$BACKEND_API --spec ./cypress/integration/liquidoTests/liquidoHappyCase.js"
 	$CYPRESS run --config baseUrl=$FRONTEND_URL --env backendBaseURL=$BACKEND_API --spec ./cypress/integration/liquidoTests/liquidoHappyCase.js
 	[ $? -ne 0 ] && exit 1
-	echo "Tests successfull ${GREEN_OK}"
+	fecho -e "Tests successfull ${GREEN_OK}"
 fi
-
 
 cd $CURRENT_DIR
 echo

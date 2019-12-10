@@ -8,7 +8,7 @@ import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.LawQuery;
 import org.doogie.liquido.services.LawService;
-import org.doogie.liquido.data.TestFixtures;
+import org.doogie.liquido.testdata.TestFixtures;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;

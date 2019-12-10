@@ -1,4 +1,4 @@
-package org.doogie.liquido.data;
+package org.doogie.liquido.testdata;
 
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.persistence.Table;
 import java.io.*;
 import java.sql.SQLException;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
