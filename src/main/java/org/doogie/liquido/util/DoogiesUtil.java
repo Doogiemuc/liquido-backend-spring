@@ -13,8 +13,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 /**
- * Handy little utility functions.
+ * Handy little utility functions that you <b>always</b> need.
  * See also spring.core.util.*
+ * or Google Guava
  */
 public class DoogiesUtil {
 
@@ -25,7 +26,7 @@ public class DoogiesUtil {
 	public static boolean isNotEmpty(String s) { return !isEmpty(s);	}
 
   //http://stackoverflow.com/questions/309424/read-convert-an-inputstream-to-a-string
-  public static String _stream2String(InputStream inputStream) throws IOException {
+  public static String stream2String(InputStream inputStream) throws IOException {
     ByteArrayOutputStream result = new ByteArrayOutputStream();
     byte[] buffer = new byte[1024];
     int length;
@@ -130,6 +131,15 @@ public class DoogiesUtil {
 		printTreeRec("", node, printer, getChildrenFunc, false);
 	}
 
+	/**
+	 * Recursively print a tree structure
+	 * @param indent the current indendation with branch graphics
+	 * @param node the current node (of type T)
+	 * @param printer This function is used to print. It will get two parameters: The prefix to print and the current node
+	 * @param getChildrenFunc Must return  the list of child nodes for a give node
+	 * @param isTail true if node is the last leaf of its parent
+	 * @param <T> type of nodes. Nodes may be anything. The only requirement is that the printer function can print the node.
+	 */
 	public static <T> void printTreeRec(String indent, T node, BiConsumer<String, T> printer, Function<T, List<T>> getChildrenFunc, boolean isTail) {
 		String nodeConnection = isTail ? "└─ " : "├─ ";
 		printer.accept(indent + nodeConnection, node);		// print the current node with that prefix
@@ -140,7 +150,5 @@ public class DoogiesUtil {
 		}
 	}
 
-
-
-	//FUNCTIONAL programming complete overkill:   skip first parameter indent.  Instead curry the printer function in each recursion level *G*
+	// We could also apply some FUNCTIONAL programming wizardry: Skip the first parameter "indent".  Instead curry the printer function in each recursion level *G*
 }

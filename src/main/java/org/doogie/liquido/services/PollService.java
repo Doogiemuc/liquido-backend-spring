@@ -400,19 +400,23 @@ public class PollService {
 
 	/**
 	 * Delete a poll and all ballots casted in it.
-	 * This will not delete any Proposals.
 	 * @param poll The poll to delete
+	 * @param deleteProposals wether to delete the porposals in the poll
 	 */
 	@PreAuthorize("hasRole('ROLE_ADMIN')")  // only the admin may delete polls.  See application.properties for admin name and email
 	@Transactional
-	public void deletePoll(@NonNull PollModel poll) {
+	public void deletePoll(@NonNull PollModel poll, boolean deleteProposals) {
 		log.info("DELETE "+poll);
 		if (poll == null) return;
 
-		// unlink proposals/laws from poll
+		// unlink proposals/laws from poll and then (optionally) delete them
 		for (LawModel prop : poll.getProposals()) {
 			prop.setPoll(null);
-			lawRepo.save(prop);
+			if (deleteProposals) {
+				lawRepo.delete(prop);
+			} else {
+				lawRepo.save(prop);
+			}
 		}
 
 		// Delete casted Ballots in poll
