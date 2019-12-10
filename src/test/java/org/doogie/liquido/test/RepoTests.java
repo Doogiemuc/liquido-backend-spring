@@ -7,7 +7,7 @@ import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
-import org.doogie.liquido.data.TestFixtures;
+import org.doogie.liquido.testdata.TestFixtures;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;

@@ -1,4 +1,4 @@
-package org.doogie.liquido.config;
+package org.doogie.liquido.security;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;

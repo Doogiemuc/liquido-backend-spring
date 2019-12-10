@@ -1,5 +1,6 @@
 package org.doogie.liquido.model;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -75,8 +76,8 @@ public class PollModel extends BaseModel {
   PollStatus status = PollStatus.ELABORATION;
 
   /** Date when the voting phase started. Will be set in PollService */
-  //TODO: LocalDateTime (without timezone)  or ZonedDateTime (with timezone)?
-  LocalDateTime votingStartAt;
+  @JsonSerialize(converter = )
+  LocalDateTime votingStartAt;			// LocalDateTime is serialized as Array: [year, month, day, hour, minute, second, millisecond]
 
   /** Date when the voting phase will end. Will be set in PollService */
 	LocalDateTime votingEndAt;

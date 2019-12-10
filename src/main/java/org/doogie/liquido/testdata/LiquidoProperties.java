@@ -1,4 +1,4 @@
-package org.doogie.liquido.data;
+package org.doogie.liquido.testdata;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;

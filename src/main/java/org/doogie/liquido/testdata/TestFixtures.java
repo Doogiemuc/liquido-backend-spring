@@ -1,4 +1,4 @@
-package org.doogie.liquido.data;
+package org.doogie.liquido.testdata;
 
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.UserModel;

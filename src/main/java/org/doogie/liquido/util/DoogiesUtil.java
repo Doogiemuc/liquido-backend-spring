@@ -150,5 +150,17 @@ public class DoogiesUtil {
 		}
 	}
 
+	/**
+	 * Null safe equals()
+	 * @param o1 any object, may be null
+	 * @param o2 any object, may be null
+	 * @eturn true if o1.equals(o2) and false otherwise (specifically when o1, o2 or both of them are null)
+	 */
+	public static boolean equals(Object o1, Object o2) {
+		//if (o1 == null && o2 == null) return true;    Mmmmhhhh ...
+		if (o1 == null || o2 == null) return false;
+		return o1.equals(o2);
+	}
+
 	// We could also apply some FUNCTIONAL programming wizardry: Skip the first parameter "indent".  Instead curry the printer function in each recursion level *G*
 }
