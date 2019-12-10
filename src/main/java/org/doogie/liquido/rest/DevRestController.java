@@ -194,13 +194,19 @@ public class DevRestController {
 	 */
 	@RequestMapping(value = "/dev/polls/{pollId}", method = RequestMethod.DELETE)
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
-	public @ResponseBody Lson deletePoll(@PathVariable(name="pollId") PollModel poll) throws LiquidoException {
+	public @ResponseBody Lson deletePoll(
+		@PathVariable(name="pollId") PollModel poll,
+		@RequestParam(name="deleteProposals") boolean deleteProposals
+	) throws LiquidoException {
 		UserModel currentAuditor = liquidoAuditorAware.getCurrentAuditor()
 			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Admin must be logged in to delete a poll."));
-		log.info("DELETE "+poll+ " by "+currentAuditor.toStringShort());
-		pollService.deletePoll(poll);
-		return new Lson("ok", "Poll(id="+poll.id+") has been DELETED");
+		log.info("DELETE " + poll + (deleteProposals ? " and all its proposals" : "") + " by "+currentAuditor.toStringShort());
+		pollService.deletePoll(poll, deleteProposals);
+		return new Lson()
+			.put("ok", "Poll(id="+poll.id+") has been DELETED")
+			.put("deleteProposals", deleteProposals);
 	}
+
 
 
 }

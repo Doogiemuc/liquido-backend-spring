@@ -31,7 +31,7 @@ import java.util.*;
 @Order(2000)   // DB Schema must be created, then we can seed data into it.
 public class SchoolExampleData implements CommandLineRunner {
 
-	private static final String SEED_DB_PARAM = "--seedSchoolExampleData";
+	private static final String SEED_DB_PARAM = "seedSchoolExampleData";
 
 	@Autowired
 	LiquidoProperties prop;
@@ -98,9 +98,9 @@ public class SchoolExampleData implements CommandLineRunner {
 	 */
 	@Override
 	public void run(String... args) throws LiquidoException {
-		boolean seedDB = false;
+		boolean seedDB = "true".equalsIgnoreCase(springEnv.getProperty(SEED_DB_PARAM));;
 		for(String arg : args) {
-			if (SEED_DB_PARAM.equalsIgnoreCase(arg)) { seedDB = true; }
+			if (("--"+SEED_DB_PARAM).equalsIgnoreCase(arg)) { seedDB = true; }
 		}
 		if (seedDB) {
 			this.seedSchoolExampleData();
@@ -113,15 +113,7 @@ public class SchoolExampleData implements CommandLineRunner {
 	 * @throws LiquidoException
 	 */
 	public void seedSchoolExampleData() throws LiquidoException {
-		log.info("===== Creating school example data =====");
-		try {
-			String dbURL = jdbcTemplate.getDataSource().getConnection().getMetaData().getURL();
-			log.info("Checking connecting to DB at "+dbURL);
-		} catch (SQLException e) {
-			log.error("Cannot connect to DB ", e);
-			throw new LiquidoException(LiquidoException.Errors.INTERNAL_ERROR, "Cannot connect to DB!");
-		}
-
+		log.info("===== Create school example data: START");
 		seedUsers();
 		seedAreas();
 		seedIdeas();
@@ -129,8 +121,7 @@ public class SchoolExampleData implements CommandLineRunner {
 		seedPollInElaboration();
 		seedPollInVoting();
 		auditorAware.setMockAuditor(null);			// Important: After creating test data, no one is logged in!
-
-		log.info("Create school example data: DONE");
+		log.info("===== Create school example data: DONE");
 	}
 
 	void seedUsers() {

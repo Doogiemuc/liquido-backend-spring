@@ -385,7 +385,7 @@ public class PollServiceTests  extends BaseTest {
 
 
 	/**
-	 * Test for {@link PollService#deletePoll(PollModel)} that a poll can be deleted.
+	 * Test for {@link PollService#deletePoll(PollModel, boolean)} that a poll can be deleted.
 	 * WHEN a poll is deleted, THEN its casted ballots are also removed, but not the proposals in it.
 	 * @throws LiquidoException when admin user is not available in DB
 	 */
@@ -402,7 +402,7 @@ public class PollServiceTests  extends BaseTest {
 		this.loginUser(prop.admin.email);
 
 		//  AND poll is deleted
-		pollService.deletePoll(poll);
+		pollService.deletePoll(poll, false);
 
 		// THEN the proposals from the former poll still exist
 		Optional<LawModel> prop = lawRepo.findById(firstProposalId);
