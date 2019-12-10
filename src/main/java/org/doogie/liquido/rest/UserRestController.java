@@ -1,7 +1,7 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.data.LiquidoProperties;
+import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.jwt.JwtTokenProvider;
 import org.doogie.liquido.model.*;
@@ -16,12 +16,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.data.domain.Page;
+import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.sql.Date;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +66,9 @@ public class UserRestController {
 	LawRepo lawRepo;
 
   @Autowired
+	PollRepo pollRepo;
+
+  @Autowired
 	DelegationRepo delegationRepo;
 
   @Autowired
@@ -74,6 +76,9 @@ public class UserRestController {
 
   @Autowired
   OneTimeTokenRepo ottRepo;
+
+	@Autowired
+	ProjectionFactory factory;
 
   @Autowired
 	JwtTokenProvider jwtTokenProvider;
@@ -137,7 +142,7 @@ public class UserRestController {
 	/**
 	 * SMS login flow - step 2 - login with received SMS code
 	 * This endpoint must be public.
-	 * @param token the 4 digit code from the SMS
+	 * @param token the 6 digit code from the SMS
 	 * @return Json Web Token (JWT) with user data encoded within it.
 	 */
   @RequestMapping(path = "/auth/loginWithSmsToken", produces = MediaType.TEXT_PLAIN_VALUE)
@@ -147,9 +152,8 @@ public class UserRestController {
   ) throws LiquidoException {
 	  log.debug("Request to login with sms token="+token);
 
-	  /* moved to DevRestController
-	  // in DEV or TEST environment allow login as any use with a special code
-	  if (springEnv.acceptsProfiles(Profiles.of("dev", "test")) && token.equals(prop.devLoginSmsToken)) {
+	  /** The admin, and only the admin is allowed to login with a secret static token */
+	  if (DoogiesUtil.equals(prop.devLoginSmsToken, token) && DoogiesUtil.equals(prop.admin.mobilephone, mobile)) {
 	  	UserModel user = userRepo.findByProfileMobilephone(mobile)
 					.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "DevLogin: user for mobile phone "+mobile+" not found."));
 	  	log.info("DEV Login as "+mobile+" => "+user);
@@ -157,9 +161,8 @@ public class UserRestController {
 	  	userRepo.save(user);
 			return jwtTokenProvider.generateToken(user.getEmail());
 		}
-		*/
 
-
+	  // Check if OTT is known and matches with mobilephone.
 	  OneTimeToken oneTimeToken = ottRepo.findByToken(token);
 	  if (oneTimeToken == null || mobile == null ||
         !mobile.equals(oneTimeToken.getUser().getProfile().getMobilephone()) ||
@@ -168,12 +171,13 @@ public class UserRestController {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Invalid SMS login token.");
 		}
 
+	  // Check if OTT is expired
 	  if (LocalDateTime.now().isAfter(oneTimeToken.getValidUntil())) {
 	  	ottRepo.delete(oneTimeToken);
 		  throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "This sms login token is expired.");
 	  }
 
-	  //---- delete used one time token
+	  // delete used one time token, because it is "one time only" :-)
 		UserModel user = oneTimeToken.getUser();
 		ottRepo.delete(oneTimeToken);
 
@@ -270,8 +274,8 @@ public class UserRestController {
 		LocalDateTime twoWeeksAgo = LocalDateTime.now().minusWeeks(2);
 		List<LawModel> reachedQuorum = lawRepo.findByReachedQuorumAtGreaterThanEqualAndCreatedBy(twoWeeksAgo, currentUser);
 
-		Page<LawModel> page = lawRepo.findByStatus(LawModel.LawStatus.VOTING, new OffsetLimitPageable(0, 10));
-		List<LawModel> proposalsInVoting = page.get().collect(Collectors.toList());
+		List<LawModel> ownProposalsInVoting = lawRepo.findDistinctByStatusAndCreatedBy(LawModel.LawStatus.VOTING, currentUser);
+		List<LawProjection> ownPropsInVotingProjected = ownProposalsInVoting.stream().map(p -> factory.createProjection(LawProjection.class, p)).collect(Collectors.toList());
 
 		List<LawModel> supportedByYou = new ArrayList<>();
 		lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.IDEA, currentUser);
@@ -287,11 +291,18 @@ public class UserRestController {
 		}
 
 		return new Lson()
+				// users own stuff
+				.put("delegationRequests", delegationRequests)
 				.put("reachedQuorum", reachedQuorum)
-				.put("recentlyDiscussedProposals", recentlyDiscussed)
-				.put("proposalsInVoting", proposalsInVoting)
 				.put("supportedByYou", supportedByYou)
-				.put("delegationRequests", delegationRequests);
+				.put("ownProposalsInVoting", ownPropsInVotingProjected)   // return LawProjection with info about poll
+				// recently won polls :-)
+			  //stuff by others
+				.put("recentlyDiscussedProposals", recentlyDiscussed)
+
+			;
+
+
 
 	}
 

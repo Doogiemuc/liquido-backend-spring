@@ -1,4 +1,4 @@
-package org.doogie.liquido.data;
+package org.doogie.liquido.testdata;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.ChecksumRepo;

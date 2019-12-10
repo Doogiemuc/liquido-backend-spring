@@ -1,4 +1,4 @@
-package org.doogie.liquido.data;
+package org.doogie.liquido.testdata;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.UserRepo;
@@ -6,13 +6,7 @@ import org.doogie.liquido.model.UserModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
-import org.springframework.core.env.*;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-
-import java.sql.SQLException;
-import java.util.Iterator;
-import java.util.Optional;
 
 /**
  * Run some jobs for startup

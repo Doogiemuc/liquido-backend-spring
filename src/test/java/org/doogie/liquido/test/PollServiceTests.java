@@ -1,7 +1,7 @@
 package org.doogie.liquido.test;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.data.LiquidoProperties;
+import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
@@ -10,8 +10,8 @@ import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.services.ProxyService;
 import org.doogie.liquido.services.voting.SchulzeMethod;
-import org.doogie.liquido.data.TestDataCreator;
-import org.doogie.liquido.data.TestFixtures;
+import org.doogie.liquido.testdata.TestDataCreator;
+import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Matrix;
 import org.junit.Test;
