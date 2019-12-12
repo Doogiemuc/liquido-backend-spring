@@ -125,6 +125,7 @@ public class LawService {
    * @return most discussed proposals sorted by their number of recent comments
    */
   public List<LawModel> getRecentlyDiscussed(int max) {
+    // Remark: There is also a lawRepo.getRecentlyDiscussed.  This method here could be elaborated to return "trending" proposals, whatever "trending" may mean.
     Map<Long, Long> numRecentComments = new HashMap<>();
     Set<LawModel> mostDiscussedProposals = new HashSet<>();
     //Iterable<CommentModel> recentComments = commentRepo.findAll(Sort.by(Sort.Order.desc("createdAt")));   // newest comments first

@@ -50,9 +50,18 @@ public class CastVoteService {
 	@Autowired
 	LiquidoProperties prop;
 
-
+  // SOme more resources around secure authentication with tokens:
 	//TODO: create really secure voterTokens like this: U2F  https://blog.trezor.io/why-you-should-never-use-google-authenticator-again-e166d09d4324
-	//MAYBE: RSA Tokens  https://stackoverflow.com/questions/37722090/java-jwt-with-public-private-keys
+	//TODO: RSA Tokens  https://stackoverflow.com/questions/37722090/java-jwt-with-public-private-keys
+  // OpenID Nice article  https://connect2id.com/learn/openid-connect#id-token
+
+	//TODO: ARGL. my voting logic still needs a bigger bugfix: user's voterToken is per area. So is his checksum. It must be so that a proxy can vote FOR the user in every poll in that area.
+	// But the BallotsChecksum should be "per poll". When the same user votes in different polls then these ballots must have different ballotChecksums
+	// Need to rename:
+	// 1. voterToken     = hash(userSecret, serverSecret, area)    =>   returned to user
+	// 2. rightToVote    = hash(voterToken, serverSecret)          =>   only stored, may be delegated to a proxy,  user must present voterToken to be allowed to cast a vote with his rightToVote
+	// 3. ballotChecksum = hash(rightToVote, poll, ballot)         =>   checksum that vote was casted in this poll
+
 
 	/**
 	 * A user wants to vote and therefore requests a voter token for this area. Each user has one token per area.
@@ -125,11 +134,10 @@ public class CastVoteService {
 		refreshChecksum(checksum);
 		checksumRepo.save(checksum);
 
-		//   IF wants to become a public proxy
-		//  AND voter is not yet the public proxy of his checksum
+		//   IF user wants to become a public proxy
 		// THEN stores his username with his checksum
-		//  AND automatically accept all pending delegations
-		if (becomePublicProxy && !voter.equals(checksum.getPublicProxy())) {
+		//  AND automatically accept all pending delegationRequests
+		if (becomePublicProxy) {
 			proxyService.becomePublicProxy(voter, area, voterToken);
 		}
 
@@ -164,11 +172,13 @@ public class CastVoteService {
 	/**
 	 * Get the already existing checksum of this user in that area.
 	 * This method will not create a new voterToken or store any checksum.
-	 *
-	 * This is mainly used for tests
+	 * When there is no checksum, that is an error. Normally a valid voterToken and its stored checksum should always exist together.
+	 * So therefore we throw an exception when voterToken is invalid and/or its checksum is not found (instead of returning an Optional)
+	 * This method is also used for tests.
 	 *
 	 * @param user a voter
-	 * @param area an area
+	 * @param userTokenSecret the voter's private token secret, only known to him. This is used to create the voterToken
+	 * @param area area of voterToken and checksum
 	 * @return the existing checksum of that user in that area
 	 * @throws LiquidoException when user does not yet have checksum in that area
 	 */
@@ -335,6 +345,8 @@ public class CastVoteService {
 
 	/**
 	 * Calculate the voter token for a user in this area.
+	 * Each user has one voterToken for every area.
+	 *
 	 * @param userId Users's identification
 	 * @param userTokenSecret secret that is only known to this user
 	 * @param areaId ID of the area that this token is valid for
@@ -347,11 +359,14 @@ public class CastVoteService {
 	/**
 	 * Calculate the checksum of the passed voterToken.
 	 * The checksum is not stored or validated! This is just the mathematical calculation.
+	 * Each user has one voterToken per area. So the checksum is also specific to this area.
+	 * A checksum is hashed from the voterToken together with a secret.
+	 *
 	 * @param voterToken token passed from user
 	 * @return checksum = BCrypt.hashpw(voterToken + serverSecret, bcryptSalt)
 	 */
 	private String calcChecksumFromVoterToken(String voterToken) {
-		//log.trace("calcChecksumFromVoterToken");
+		//TODO: [SECURITY] should there be only one checksum per poll?
 		return BCrypt.hashpw(voterToken + prop.bcrypt.secret, prop.bcrypt.salt);
 	}
 
