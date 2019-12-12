@@ -27,6 +27,7 @@ import org.springframework.hateoas.mvc.ControllerLinkBuilder;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -276,9 +277,11 @@ public class PollRestController {
 	}
 
 
-	//TODO: Move getRecentlyDiscussed() method to LawRestController (There was something about URL pathes????
+	//TODO: Move getRecentlyDiscussed() method to LawRestController (There was something about URL pathes????)
 	/**
 	 * Get recently discussed proposals.
+	 *
+	 * @see LawRepo#getRecentlyDiscussed(Date)
 	 * @return a sorted list of (max 10) proposals with recent comments.
 	 *   The list will contain LawProjections as Spring HATEOAS JSON
 	 */

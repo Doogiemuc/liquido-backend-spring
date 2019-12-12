@@ -2,7 +2,10 @@ package org.doogie.liquido.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.*;
+import org.doogie.liquido.rest.converters.PollAsLinkJsonSerializer;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.data.rest.core.annotation.RestResource;
@@ -102,6 +105,10 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
   @ManyToOne(optional = true)
   //@JoinColumn(name="poll_id")  this column name is already the default
   @JsonBackReference  // necessary to prevent endless cycle when (de)serializing to/from JSON: http://stackoverflow.com/questions/20218568/direct-self-reference-leading-to-cycle-exception
+
+	//TODO: serialize LawModel.poll as HATEOAS link  => this has consequences for the client that in some places needs the information of the proposal's poll, eg. in LawPanel!
+	//@JsonProperty("_links")   															// JSON will contain "_links.poll.href"
+	//@JsonSerialize(using = PollAsLinkJsonSerializer.class)  // We only return an HATEOS link to the poll
   public PollModel poll = null;
 
   /** Comments and suggestions for improvement for this proposal*/

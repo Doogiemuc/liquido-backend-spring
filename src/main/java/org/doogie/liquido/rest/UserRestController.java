@@ -1,22 +1,23 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.jwt.JwtTokenProvider;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.MailService;
 import org.doogie.liquido.services.ProxyService;
+import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
-import org.springframework.data.domain.Page;
 import org.springframework.data.projection.ProjectionFactory;
+import org.springframework.hateoas.ResourceAssembler;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -85,6 +86,12 @@ public class UserRestController {
 
   @Autowired
 	MailService mailService;
+
+  @Autowired
+	CastVoteService castVoteService;
+
+  @Autowired
+	BallotRepo ballotRepo;
 
 	/**
 	 * Register as a new user
@@ -265,42 +272,79 @@ public class UserRestController {
 		return jwt;
 	}
 
-	@RequestMapping(path = "/my/newsfeed", produces = MediaType.APPLICATION_JSON_VALUE)
-	public Lson getMyNewsfeed() throws LiquidoException {
+	@Autowired
+	ResourceAssembler resourceAssembler;
 
+	@RequestMapping(path = "/my/newsfeed", produces = MediaType.APPLICATION_JSON_VALUE)
+	public Lson getMyNewsfeed(@RequestParam("tokenSecret") Optional<String> userTokenSecret) throws LiquidoException {
 		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Must be logged in to get newsfeed!"));
 
 		LocalDateTime twoWeeksAgo = LocalDateTime.now().minusWeeks(2);
+
+		// users ideas that recently reached their quorum and became a proposal
 		List<LawModel> reachedQuorum = lawRepo.findByReachedQuorumAtGreaterThanEqualAndCreatedBy(twoWeeksAgo, currentUser);
 
+		// own proposals that are in a poll which is in voting phase
 		List<LawModel> ownProposalsInVoting = lawRepo.findDistinctByStatusAndCreatedBy(LawModel.LawStatus.VOTING, currentUser);
-		List<LawProjection> ownPropsInVotingProjected = ownProposalsInVoting.stream().map(p -> factory.createProjection(LawProjection.class, p)).collect(Collectors.toList());
+		List<PollModel> pollsInVotingWithOwnProposals = ownProposalsInVoting.stream().map(p -> p.getPoll()).collect(Collectors.toList());
 
+		//List<LawProjection> ownPropsInVotingProjected = ownProposalsInVoting.stream().map(p -> factory.createProjection(LawProjection.class, p)).collect(Collectors.toList());
+
+		// ideas and proposals that are supported by current user
 		List<LawModel> supportedByYou = new ArrayList<>();
-		lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.IDEA, currentUser);
-		lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.PROPOSAL, currentUser);
-		lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.ELABORATION, currentUser);
-		lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.VOTING, currentUser);
+		supportedByYou.addAll(lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.IDEA, currentUser));
+		supportedByYou.addAll(lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.PROPOSAL, currentUser));
+		supportedByYou.addAll(lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.ELABORATION, currentUser));
+		supportedByYou.addAll(lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.VOTING, currentUser));
+		List<LawModel> supportedByYouSorted = supportedByYou.stream()
+				.sorted((p1, p2) -> (int) (p1.getUpdatedAt().getTime() - p2.getUpdatedAt().getTime()))
+				.limit(10)
+				.collect(Collectors.toList());
 
-		List<LawModel> recentlyDiscussed = lawRepo.getRecentlyDiscussed(java.sql.Timestamp.valueOf(twoWeeksAgo));
 
+		// Own proposals that have recent comments
+		List<LawModel> recentlyDiscussed = lawRepo.getRecentlyDiscussed(java.sql.Timestamp.valueOf(twoWeeksAgo), currentUser);
+
+		// Delegation requests in all areas
 		List<DelegationModel> delegationRequests = new ArrayList<>();
 		for (AreaModel area: areaRepo.findAll()) {
 			delegationRequests.addAll(delegationRepo.findDelegationRequests(area, currentUser));
 		}
 
-		return new Lson()
-				// users own stuff
+		// Polls where user voted (if voterToken is given)
+		List<BallotModel> ballotsInVoting = new ArrayList<>();
+		if (userTokenSecret.isPresent()) {
+			List<PollModel> pollsInVoting = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
+			for (PollModel poll : pollsInVoting) {
+				// check if user has already voted in this poll (this needs user's voterToken that we generate from the passed secret)
+				try {
+					ChecksumModel existingChecksum = castVoteService.getExistingChecksum(currentUser, userTokenSecret.get(), poll.getArea());
+					Optional<BallotModel> ballotOpt = ballotRepo.findByPollAndChecksum(poll, existingChecksum);
+					if (ballotOpt.isPresent()) {
+						ballotsInVoting.add(ballotOpt.get());
+					}
+				} catch (LiquidoException lqe) {
+					// If an INVALID_VOTER_TOKEN Error is thrown from getExistingChecksum() call, this means the user has not voted yet in this poll. He does not yet have a checksum. That's ok here.
+				}
+			}
+		}
+
+		Lson result = new Lson()
 				.put("delegationRequests", delegationRequests)
 				.put("reachedQuorum", reachedQuorum)
-				.put("supportedByYou", supportedByYou)
-				.put("ownProposalsInVoting", ownPropsInVotingProjected)   // return LawProjection with info about poll
-				// recently won polls :-)
-			  //stuff by others
-				.put("recentlyDiscussedProposals", recentlyDiscussed)
+				.put("supportedByYou", supportedByYouSorted)							// This only returns the Model. No HATEOAS links! But entities are projected, with createdBy and are info expanded.
+				.put("pollsInVotingWithOwnProposals", pollsInVotingWithOwnProposals)
+				.put("recentlyDiscussedProposals", recentlyDiscussed);
 
-			;
+		// polls where user vote or a proxy voted for him (see ballotModel.level)
+		if (userTokenSecret.isPresent())
+			result.put("ballotsInVoting", ballotsInVoting);
+
+	  //stuff by others
+		//result.put("trendingProposals", trendingProposals)    //TODO: what are "trendingProposals"=> improve lawService.getRecentlyDiscussed ? :-)
+
+		return result;
 
 
 

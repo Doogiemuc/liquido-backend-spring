@@ -11,6 +11,9 @@ import java.util.Collection;
  * Result of a /laws/search/findByQuery call that holds
  * the list of matching LawModels as content and
  * the original query parameters of this search.
+ *
+ * This class holds a list of spring HATOAS Resources
+ *
  * @see  LawRestController#searchForLaw(LawQuery)
  * @param <T> one LawModel  (NOT a collection of LawModels!)
  */
@@ -32,7 +35,7 @@ public class LawQueryResult<T> extends Resources<T> {
 
 	public long getTotalElements() { return this.totalElements; }
 
-	// at least always include the _embedded: {} attribute. But it might still be empty. No emtpy array as with @RepositoryRestResource
+	// at least always include the _embedded: {} attribute. But it might still be empty. No empty array as with @RepositoryRestResource
 	// https://stackoverflow.com/questions/30286795/how-to-force-spring-hateoas-resources-to-render-an-empty-embedded-array
 	@JsonInclude
 	@Override

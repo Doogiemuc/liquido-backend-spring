@@ -40,4 +40,6 @@ public interface BallotRepo extends CrudRepository<BallotModel, Long> {
    * @return the ballot for this (still anonymous) checksum
    */
   Optional<BallotModel> findByPollAndChecksum(PollModel poll, ChecksumModel checksum);
+
+  //TODO: findByChecksum  is already unique, because BallotModel ---1:1---> ChecksumModle
 }

@@ -190,10 +190,13 @@ public class ProxyService {
 	/**
 	 * When a user opts-in to become a public proxy, then his username is stored to together with his checksum,
 	 * so that other users can delegate their right to vote to this "public" checksum.
+	 *
+	 * This will also accept all pending delegation requests. (User may already be a public proxy.)
+	 *
 	 * @param publicProxy the voter that wants to become a public proxy
-	 * @param area voter is a proxy in an area
-	 * @param proxyVoterToken the voters token
-	 * @return the proxy's public checksum
+	 * @param area voter will become a public proxy in an area
+	 * @param proxyVoterToken the users secret voterToken
+	 * @return the proxy's new public checksum
 	 * @throws LiquidoException when voterToken is invalid
 	*/
 	@Transactional
