@@ -112,6 +112,10 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>
    * @return list of LawModels (they will at least be in status PROPOSAL because they have comments)
    */
   @RestResource(path = "recentlyDiscussed")
-  @Query("SELECT l FROM LawModel l JOIN CommentModel c ON c.proposal = l WHERE l.status = 1 AND c.createdAt > :since order by c.createdAt desc")
+  @Query("SELECT distinct l FROM LawModel l JOIN CommentModel c ON c.proposal = l WHERE l.status = 1 AND c.createdAt > :since")  // Cannot order by c.createdAt desc   :-(
   List<LawModel> getRecentlyDiscussed(@DateTimeFormat(pattern = "yyyy-MM-dd") @Param("since") Date since);
+
+  @Query("SELECT distinct l FROM LawModel l JOIN CommentModel c ON c.proposal = l WHERE l.status = 1 AND c.createdAt > :since AND l.createdBy = :createdBy")  // Cannot order by c.createdAt desc   :-(
+  List<LawModel> getRecentlyDiscussed(@DateTimeFormat(pattern = "yyyy-MM-dd") @Param("since") Date since, UserModel createdBy);
+
 }

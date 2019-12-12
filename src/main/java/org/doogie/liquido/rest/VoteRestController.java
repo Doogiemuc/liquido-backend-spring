@@ -1,10 +1,9 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.BallotModel;
-import org.doogie.liquido.model.DelegationModel;
-import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.datarepos.BallotRepo;
+import org.doogie.liquido.datarepos.PollRepo;
+import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.CastVoteService;
@@ -15,11 +14,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
 import org.springframework.hateoas.EntityLinks;
 import org.springframework.hateoas.Link;
+import org.springframework.hateoas.Resources;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 
 /**
  * REST controller for voting
@@ -53,7 +57,7 @@ public class VoteRestController {
 	 * @param area Area for the token
 	 * @param becomePublicProxy (optional) boolean if user immediately wants to become a public proxy. Can also do so later.
 	 *                          User may already be a public proxy. Even when you pass "false" he then will stay a public proxy.
-	 * @return JSON with voterToken and delegationCount
+	 * @return JSON with voterToken and info about delegations and delegation requests in this area
 	 * @throws LiquidoException when not logged in
 	 */
 	@RequestMapping(value = "/my/voterToken/{areaId}")  // when you add produces = MediaType.APPLICATION_JSON_VALUE  then client MUST send accept header. Without it Json is returned by default
@@ -126,12 +130,43 @@ public class VoteRestController {
 		Lson result = Lson.builder()
 			.put("msg", "OK, your vote was counted successfully.")
 			.put("poll", castVoteRequest.getPoll())                  // return URI of poll
-			.put("checksum", ballot.getChecksum().getChecksum())     // Ballots are NOT exposed as RepositoryRestResource, therefore we return just the checksum.
-			.put("voteCount", ballot.getVoteCount());									// ballot was counted this number of times.
+			.put("checksum", ballot.getChecksum().getChecksum())     // BallotModel is NOT exposed as RepositoryRestResource, therefore we return just the checksum.
+			.put("voteCount", ballot.getVoteCount());								 // ballot was counted this number of times.
     return result;
-   }
+  }
 
+  @Autowired
+	PollRepo pollRepo;
 
+  @Autowired
+	BallotRepo ballotRepo;
+
+	/**
+	 * Fetch all ballots of the currently logged in user
+	 * @param voterToken a users's secret voterToken. Must be a validVotertoken that hashes to a known Checksum. Area is already encoded in voterToken
+	 * @return List of BallotModels in area of voterToken
+	 */
+	@RequestMapping(value = "/my/ballots")
+	public @ResponseBody Resources<BallotModel> myBallotsInArea(
+			@RequestParam("voterToken") String voterToken			//TODO: [SECURITY] should I pass checksum? Anyone's checksum?
+	) {
+		List<BallotModel> ballotsInVoting = new ArrayList<>();
+		List<PollModel> pollsInVoting = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
+		for (PollModel poll : pollsInVoting) {
+			// check if user has already voted in this poll (this needs user's voterToken that we generate from the passed secret)
+			try {
+				ChecksumModel checksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
+				Optional<BallotModel> ballotOpt = ballotRepo.findByPollAndChecksum(poll, checksum);
+				if (ballotOpt.isPresent()) {
+					ballotsInVoting.add(ballotOpt.get());
+				}
+			} catch (LiquidoException lqe) {
+				// If an INVALID_VOTER_TOKEN Error is thrown from getExistingChecksum() call, this means the user has not voted yet in this poll. He does not yet have a checksum. That's ok here.
+			}
+		}
+
+		return new Resources<>(ballotsInVoting, linkTo(methodOn(VoteRestController.class).myBallotsInArea(null)).withRel("self"));
+	}
 
 
 

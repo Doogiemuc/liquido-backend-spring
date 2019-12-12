@@ -14,25 +14,26 @@ import java.io.IOException;
  * Custom Jackson serializer for the poll link inside a BallotModel.
  * I don't need the fully serialized HATEOAS info about a poll in the BallotModel. Just the href is enough.
  */
-public class BalloModelPollJsonSerializer extends StdSerializer<PollModel> {
+public class PollAsLinkJsonSerializer extends StdSerializer<PollModel> {
 	@Autowired
 	EntityLinks entityLinks;
 
-	protected BalloModelPollJsonSerializer() {
+	protected PollAsLinkJsonSerializer() {
 		super(PollModel.class);
 	}
 
 	/**
+	 * Serialize a PollModel into a HATEOAS _link
 	 * <pre>
-	 *     "_links": {    <= key is named in BallotModel
+	 *     "_links": {    <= this json key ("_links") is set in attribute of parent entity
 	 *         "poll": {
-	 *             "href": "my demo link"
+	 *             "href": "http://domain.tld/api/poll/4711"   <= link to poll entity resource
 	 *         }
 	 *     }
 	 * </pre>
-	 * @param poll
-	 * @param gen
-	 * @param provider
+	 * @param poll the poll that we link to
+	 * @param gen jackson JsonGenerator that is used to generate JSON further objects and fields during serialization
+	 * @param provider (not used)
 	 * @throws IOException
 	 */
 	@Override

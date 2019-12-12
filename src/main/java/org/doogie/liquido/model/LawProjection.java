@@ -8,12 +8,11 @@ import java.util.Date;
 
 /**
  * This Spring <a href="http://docs.spring.io/spring-data/rest/docs/current/reference/html/#projections-excerpts.excerpting-commonly-accessed-data">projection</a>
- * inlines the creatdBy user information into the returned JSON for every proposal
- * and adds some more date fields relevant for a proposal or proposal.
+ * inlines the createdBy user information into the returned JSON for every proposal
+ * and adds some more date fields relevant for an idea or proposal.
  *
  * Keep in mind that projections are only used, when a LawModel is returned inside a list, e.g. in "_embedded" array.
- * When exactly one LawModel is returned e.g. by GET /laws/4711 ,
- * then Spring Data REST will always show the original LawModel as JSON. Because only then can the client send PUT requests with this data.
+ * When exactly one LawModel is returned e.g. by GET /laws/4711 , then Spring Data REST will always show the original LawModel as JSON. Because only then can the client send PUT requests with this data.
  */
 @Projection(name = "lawProjection", types = { LawModel.class })
 public interface LawProjection {
@@ -53,4 +52,5 @@ public interface LawProjection {
 
   int getNumSupporters();
 
+  //MAYBE: int getNumComments();
 }

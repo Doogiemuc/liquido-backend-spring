@@ -76,8 +76,7 @@ public class PollModel extends BaseModel {
   PollStatus status = PollStatus.ELABORATION;
 
   /** Date when the voting phase started. Will be set in PollService */
-  @JsonSerialize(converter = )
-  LocalDateTime votingStartAt;			// LocalDateTime is serialized as Array: [year, month, day, hour, minute, second, millisecond]
+  LocalDateTime votingStartAt;
 
   /** Date when the voting phase will end. Will be set in PollService */
 	LocalDateTime votingEndAt;

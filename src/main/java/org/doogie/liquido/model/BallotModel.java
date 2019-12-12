@@ -1,14 +1,12 @@
 package org.doogie.liquido.model;
 
 import com.fasterxml.jackson.annotation.*;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.doogie.liquido.rest.converters.BalloModelPollJsonSerializer;
-import org.springframework.data.jpa.mapping.JpaPersistentEntity;
+import org.doogie.liquido.rest.converters.PollAsLinkJsonSerializer;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -25,7 +23,7 @@ import java.util.stream.Collectors;
  * Only the voter knows his own voterToken. So only he can check that this actually is his ballot.
  * This way a voter can even update his ballot as long as the voting phase is still open.
  *
- * BallotRepo is not exposed as REST resource. BallotModel is serialized to JSON manually. See {@link BalloModelPollJsonSerializer}
+ * BallotRepo is not exposed as REST resource. BallotModel is serialized to JSON manually. See {@link PollAsLinkJsonSerializer}
  */
 @Data
 @Entity
@@ -51,7 +49,7 @@ public class BallotModel {
   @NonNull
   @ManyToOne
 	@JsonProperty("_links")   // JSON will contain "_links.poll.href"
-	@JsonSerialize(using = BalloModelPollJsonSerializer.class)  // a ballot can only be fetched when the caller already knows the poll. So we only return a simple ref to the poll
+	@JsonSerialize(using = PollAsLinkJsonSerializer.class)  // a ballot can only be fetched when the caller already knows the poll. So we only return a simple ref to the poll
   public PollModel poll;
 
   /**
