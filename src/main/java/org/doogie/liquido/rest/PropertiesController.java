@@ -34,7 +34,7 @@ public class PropertiesController {
       .put("supportersForProposal", prop.supportersForProposal)
       .put("daysUntilVotingStarts", prop.daysUntilVotingStarts)
       .put("durationOfVotingPhase", prop.durationOfVotingPhase)
-      .put("checksumExpirationHours", prop.checksumExpirationHours)
+      .put("checksumExpirationHours", prop.rightToVoteExpirationHours)
       .toString();
 
   }

@@ -64,7 +64,7 @@ public class PollServiceTests  extends BaseTest {
 	BallotRepo ballotRepo;
 
 	@Autowired
-	ChecksumRepo checksumRepo;
+	RightToVoteRepo rightToVoteRepo;
 
 	@Autowired
 	LiquidoRestUtils restUtils;
@@ -156,10 +156,10 @@ public class PollServiceTests  extends BaseTest {
 		String proposalIds = voteOrder.stream().map(law->law.getId().toString()).collect(Collectors.joining(","));
 		log.debug("quickNDirtyCastVote(voterToken="+voterToken+", poll.id="+poll.getId()+" voteOrder(proposal.ids)=["+proposalIds+"]");
 		String tokenChecksum = "dummyChecksumFor "+voterToken;   // this replaces  castVoteService.calcChecksumFromVoterToken(voterToken);  which is too slow.
-		ChecksumModel checksumModel = new ChecksumModel(tokenChecksum, poll.getArea());
-		checksumRepo.save(checksumModel);   // must save
+		RightToVoteModel rightToVoteModel = new RightToVoteModel(tokenChecksum, poll.getArea());
+		rightToVoteRepo.save(rightToVoteModel);   // must save
 		int level = 0;
-		BallotModel ballot = new BallotModel(poll, level, voteOrder, checksumModel);
+		BallotModel ballot = new BallotModel(poll, level, voteOrder, rightToVoteModel);
 		return ballotRepo.save(ballot);
 		//
 	}
@@ -326,20 +326,20 @@ public class PollServiceTests  extends BaseTest {
 
 		// WHEN USER1_EMAIL casts his vote with a dummy voteOrder (the topProxy)
 		voter = testDataCreator.getUser(TestFixtures.USER1_EMAIL);
-		voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
+		voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
 		castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
 		castVoteService.castVote(castVoteRequest);
 
 		//  AND a USER4_EMAIL casts his vote with a dummy voteOrder (a proxy in the middle)
 		voter = testDataCreator.getUser(TestFixtures.USER4_EMAIL);
-		voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
+		voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
 		castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
 		castVoteService.castVote(castVoteRequest);
 
 		// THEN the effective proxy of USER10_EMAIL should be USER4_EMAIL (this proxy in the middle)
 		voter = testDataCreator.getUser(TestFixtures.USER10_EMAIL);
 		expectedProxy = testDataCreator.getUser(TestFixtures.USER4_EMAIL);
-		voterToken= castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
+		voterToken= castVoteService.createVoterTokenAndStoreRightToVote(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
 		effectiveProxy = pollService.findEffectiveProxy(poll, voter, voterToken);
 		assertTrue(voter + " should have an effective proxy", effectiveProxy.isPresent());
 		assertEquals(expectedProxy.toStringShort() + "should be the effective proxy of "+voter.toStringShort(), expectedProxy, effectiveProxy.get());
@@ -347,21 +347,21 @@ public class PollServiceTests  extends BaseTest {
 
 		// AND USER12_EMAIL should NOT have an effective proxy (because his delegation is non-transitive)
 		voter = testDataCreator.getUser(TestFixtures.USER12_EMAIL);
-		voterToken= castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
+		voterToken= castVoteService.createVoterTokenAndStoreRightToVote(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
 		effectiveProxy = pollService.findEffectiveProxy(poll, voter, voterToken);
 		assertFalse(voter + " should not have an effective proxy", effectiveProxy.isPresent());
 		log.info("SUCCESS: " + voter  + " should not yet have an effective proxy, because his non-transitive direct proxy did not vote yet in poll.id="+poll.getId());
 
 		// WHEN VOTER7_EMAIL casts his vote with a dummy voteOrder
 		voter = testDataCreator.getUser(TestFixtures.USER7_EMAIL);
-		voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
+		voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
 		castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
 		castVoteService.castVote(castVoteRequest);
 
 		// THEN the effective proxy of USER12_EMAIL should be USER7_EMAIL (his non-transitive direct proxy)
 		voter = testDataCreator.getUser(TestFixtures.USER12_EMAIL);
 		expectedProxy = testDataCreator.getUser(TestFixtures.USER7_EMAIL);
-		voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
+		voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
 		effectiveProxy = pollService.findEffectiveProxy(poll, voter, voterToken);
 		assertTrue(voter + " should now have an effective proxy", effectiveProxy.isPresent());
 		assertEquals(expectedProxy.toStringShort() + "should be the effective proxy of "+voter.toStringShort(), expectedProxy, effectiveProxy.get());

@@ -133,7 +133,7 @@ public class DoogiesUtil {
 
 	/**
 	 * Recursively print a tree structure
-	 * @param indent the current indendation with branch graphics
+	 * @param indent the current indentation with ASCII art branch
 	 * @param node the current node (of type T)
 	 * @param printer This function is used to print. It will get two parameters: The prefix to print and the current node
 	 * @param getChildrenFunc Must return  the list of child nodes for a give node

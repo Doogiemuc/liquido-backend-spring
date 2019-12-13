@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @RequiredArgsConstructor  //BUGFIX: https://jira.spring.io/browse/DATAREST-884
 @Table(name = "ballots", uniqueConstraints= {
-  @UniqueConstraint(columnNames = {"POLL_ID", "CHECKSUM"} )   // a voter is only allowed to vote once per poll with his checksum!
+  @UniqueConstraint(columnNames = {"POLL_ID", "hashedVoterToken"} )   // a voter is only allowed to vote once per poll with his hashedVoterToken!
 })
 public class BallotModel {
 	//BallotModel deliberately does NOT extend BaseModel!
@@ -97,8 +97,8 @@ public class BallotModel {
   @NotNull
   @NonNull
 	@OneToOne
-	@JoinColumn(name = "CHECKSUM")		// The @Id of a ChecksumModel is the checksum String itself
-  public ChecksumModel checksum;
+	@JoinColumn(name = "hashedVoterToken")		// The @Id of a RightToVoteModel is the hashedVoterToken itself
+  public RightToVoteModel rightToVote;
 
 	@Override
 	public String toString() {
@@ -108,7 +108,7 @@ public class BallotModel {
 				", poll.id=" + poll.getId() +
 				", level=" + level +
 				", voteOrder(proposalIds)=[" + proposalIds +"]"+
-				", checksum="+checksum +
+				", rightToVote="+ rightToVote +
 				"}";
 	}
 }

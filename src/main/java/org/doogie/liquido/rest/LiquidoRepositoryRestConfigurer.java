@@ -14,7 +14,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.support.ConfigurableConversionService;
 import org.springframework.data.jpa.projection.CollectionAwareProjectionFactory;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
-import org.springframework.data.projection.SpelAwareProxyProjectionFactory;
 import org.springframework.data.rest.core.config.RepositoryRestConfiguration;
 import org.springframework.data.rest.core.mapping.RepositoryDetectionStrategy;
 import org.springframework.data.rest.webmvc.config.RepositoryRestConfigurer;
@@ -68,7 +67,7 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
     config.exposeIdsFor(LawModel.class);          // actually LawModel has its own LawProjection which exposes IDs.
     config.exposeIdsFor(PollModel.class);
 		config.exposeIdsFor(BallotModel.class);
-    config.exposeIdsFor(ChecksumModel.class);
+    config.exposeIdsFor(RightToVoteModel.class);
     //TODO: config.getCorsRegistry().addMapping("").allowedOrigins("*/*");   //when available in future version of spring: config.getCorsRegistry()
 
   }
