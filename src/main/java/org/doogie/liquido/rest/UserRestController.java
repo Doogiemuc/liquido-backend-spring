@@ -276,7 +276,7 @@ public class UserRestController {
 	ResourceAssembler resourceAssembler;
 
 	@RequestMapping(path = "/my/newsfeed", produces = MediaType.APPLICATION_JSON_VALUE)
-	public Lson getMyNewsfeed(@RequestParam("tokenSecret") Optional<String> userTokenSecret) throws LiquidoException {
+	public Lson getMyNewsfeed(@RequestParam("voterToken") Optional<String> voterToken) throws LiquidoException {
 		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Must be logged in to get newsfeed!"));
 
@@ -307,23 +307,22 @@ public class UserRestController {
 		List<LawModel> recentlyDiscussed = lawRepo.getRecentlyDiscussed(java.sql.Timestamp.valueOf(twoWeeksAgo), currentUser);
 
 		// Delegation requests in all areas
+		Iterable<AreaModel> areas = areaRepo.findAll();
 		List<DelegationModel> delegationRequests = new ArrayList<>();
-		for (AreaModel area: areaRepo.findAll()) {
+		for (AreaModel area: areas) {
 			delegationRequests.addAll(delegationRepo.findDelegationRequests(area, currentUser));
 		}
 
-		// Polls where user voted (if voterToken is given)
+		// Ballots of currentUser that can still be changed, because they are in polls that are still in VOTING.
+		// This includes ballots that were casted by proxies. See BallotModel.level
 		List<BallotModel> ballotsInVoting = new ArrayList<>();
-		if (userTokenSecret.isPresent()) {
-			List<PollModel> pollsInVoting = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
-			for (PollModel poll : pollsInVoting) {
-				// check if user has already voted in this poll (this needs user's voterToken that we generate from the passed secret)
+		if (voterToken.isPresent()) {
+			// check if user has already voted in this area
+			for (AreaModel area: areas) {
 				try {
-					ChecksumModel existingChecksum = castVoteService.getExistingChecksum(currentUser, userTokenSecret.get(), poll.getArea());
-					Optional<BallotModel> ballotOpt = ballotRepo.findByPollAndChecksum(poll, existingChecksum);
-					if (ballotOpt.isPresent()) {
-						ballotsInVoting.add(ballotOpt.get());
-					}
+					RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken.get());
+					List<BallotModel> ballots = ballotRepo.findByRightToVote(rightToVote);
+					ballotsInVoting.addAll(ballots.stream().filter(ballot -> ballot.getPoll().getStatus().equals(PollModel.PollStatus.VOTING)).collect(Collectors.toList()));
 				} catch (LiquidoException lqe) {
 					// If an INVALID_VOTER_TOKEN Error is thrown from getExistingChecksum() call, this means the user has not voted yet in this poll. He does not yet have a checksum. That's ok here.
 				}
@@ -338,7 +337,7 @@ public class UserRestController {
 				.put("recentlyDiscussedProposals", recentlyDiscussed);
 
 		// polls where user vote or a proxy voted for him (see ballotModel.level)
-		if (userTokenSecret.isPresent())
+		if (voterToken.isPresent())
 			result.put("ballotsInVoting", ballotsInVoting);
 
 	  //stuff by others

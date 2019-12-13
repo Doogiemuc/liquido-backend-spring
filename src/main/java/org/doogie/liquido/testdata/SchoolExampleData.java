@@ -62,7 +62,7 @@ public class SchoolExampleData implements CommandLineRunner {
 	PollRepo pollRepo;
 
 	@Autowired
-	ChecksumRepo checksumRepo;
+	RightToVoteRepo rightToVoteRepo;
 
 	@Autowired
 	PollService pollService;

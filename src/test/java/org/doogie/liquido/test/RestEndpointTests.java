@@ -82,7 +82,7 @@ public class RestEndpointTests extends BaseTest {
   PollRepo pollRepo;
 
   @Autowired
-	ChecksumRepo checksumRepo;
+	RightToVoteRepo rightToVoteRepo;
 
   @Autowired
 	BallotRepo ballotRepo;
@@ -718,14 +718,14 @@ public class RestEndpointTests extends BaseTest {
 		loginUserJWT(TestFixtures.USER1_EMAIL);  // user1 is our topProxy with 7 delegations
 		//Mock: String voterToken  = castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
 		String voterToken = getVoterToken(poll.getArea().getId());
-		ChecksumModel checksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
+		RightToVoteModel checksum = castVoteService.isVoterTokenValid(voterToken);
 		log.trace("with voterToken: "+voterToken+ " => "+checksum);
 
 		//----- print already casted votes of our delegees BEFORE we cast the proxies vote
-		Function<ChecksumModel, List<ChecksumModel>> getChildrenFunc = c -> checksumRepo.findByDelegatedTo(c);
+		Function<RightToVoteModel, List<RightToVoteModel>> getChildrenFunc = c -> rightToVoteRepo.findByDelegatedTo(c);
 		final PollModel finalPoll = poll;									//BUGFIX: Variables in lambda must be (effectively) final
-		BiConsumer<String, ChecksumModel> printerFunc = (prefix, c) -> {
-			Optional<BallotModel> ballotOpt = ballotRepo.findByPollAndChecksum(finalPoll, c);
+		BiConsumer<String, RightToVoteModel> printerFunc = (prefix, c) -> {
+			Optional<BallotModel> ballotOpt = ballotRepo.findByPollAndRightToVote(finalPoll, c);
 			if (ballotOpt.isPresent()) {
 				log.debug(ballotOpt.get().toString());
 			} else {

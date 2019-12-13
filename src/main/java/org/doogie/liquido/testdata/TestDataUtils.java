@@ -1,11 +1,11 @@
 package org.doogie.liquido.testdata;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.datarepos.ChecksumRepo;
+import org.doogie.liquido.datarepos.RightToVoteRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.ChecksumModel;
+import org.doogie.liquido.model.RightToVoteModel;
 import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.util.DoogiesUtil;
@@ -28,7 +28,7 @@ public class TestDataUtils {
 	UserRepo userRepo;
 
 	@Autowired
-	ChecksumRepo checksumRepo;
+	RightToVoteRepo rightToVoteRepo;
 
 	public void printProxyTree(AreaModel area, UserModel proxy) {
 		if (proxy == null) return;
@@ -46,10 +46,10 @@ public class TestDataUtils {
 		DoogiesUtil.printTreeRec(dummyTopProxyDel, getChildrenFunc);
 	}
 
-	public void printChecksumTree(ChecksumModel checksum) {
-		if (checksum == null) return;
-		Function<ChecksumModel, List<ChecksumModel>> getChildrenFunc = c -> checksumRepo.findByDelegatedTo(c);
-		DoogiesUtil.printTreeRec(checksum, getChildrenFunc);
+	public void printRightToVoteTree(RightToVoteModel rightToVote) {
+		if (rightToVote == null) return;
+		Function<RightToVoteModel, List<RightToVoteModel>> getChildrenFunc = c -> rightToVoteRepo.findByDelegatedTo(c);
+		DoogiesUtil.printTreeRec(rightToVote, getChildrenFunc);
 	}
 
 	public UserModel upsert(UserModel user) {

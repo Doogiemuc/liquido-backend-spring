@@ -2,7 +2,7 @@ package org.doogie.liquido.datarepos;
 
 import org.doogie.liquido.model.BallotModel;
 import org.doogie.liquido.model.PollModel;
-import org.doogie.liquido.model.ChecksumModel;
+import org.doogie.liquido.model.RightToVoteModel;
 import org.doogie.liquido.rest.VoteRestController;
 import org.springframework.data.repository.CrudRepository;
 
@@ -15,7 +15,6 @@ import java.util.Optional;
  * Ballots are not exposed as RepositoryRestResource at all.
  * Posting a ballot (ie. cast a vote) is handled in our custom {@link VoteRestController}
  */
-//We do not expose Ballots as rest resource. Clients must use VoteRestController!
 public interface BallotRepo extends CrudRepository<BallotModel, Long> {
 
 	/**
@@ -32,14 +31,20 @@ public interface BallotRepo extends CrudRepository<BallotModel, Long> {
 	 */
   Long countByPoll(PollModel poll);
 
-  /**
-   * Find a ballot for a poll with a given checksumModel, ie. that was casted from a voter
-	 * who's secret voterToken hashes to this checksumModel.
-   * @param poll a PollModel
-   * @param checksum a valid and stored checksum
-   * @return the ballot for this (still anonymous) checksum
-   */
-  Optional<BallotModel> findByPollAndChecksum(PollModel poll, ChecksumModel checksum);
+	/**
+	 * Find all ballots that a user has casted with this rightToVote.
+	 * These are all his ballots in one area.
+	 * @param rightToVote a voters rightToVote
+	 * @return list of ballots that were casted with this rightToVote (in one area)
+	 */
+  List<BallotModel> findByRightToVote(RightToVoteModel rightToVote);
 
-  //TODO: findByChecksum  is already unique, because BallotModel ---1:1---> ChecksumModle
+  /**
+   * Find the ballot in a poll that was casted from a voter
+	 * who's secret voterToken hashes to this rightToVote.
+   * @param poll a PollModel
+   * @param rightToVote a user's right to vote
+   * @return the ballot that was casted with this this (still anonymous) rightToVote
+   */
+  Optional<BallotModel> findByPollAndRightToVote(PollModel poll, RightToVoteModel rightToVote);
 }

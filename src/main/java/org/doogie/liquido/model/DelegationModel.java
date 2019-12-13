@@ -63,7 +63,7 @@ public class DelegationModel extends BaseModel {
 	 */
 	@OneToOne
 	@JsonIgnore  // do not include this field in REST responses. Checksums are confidential
-  ChecksumModel requestedDelegationFromChecksum = null;
+		RightToVoteModel requestedDelegationFromChecksum = null;
 
   /** When was the delegation to that proxy requested */
   LocalDateTime requestedDelegationAt = null;
@@ -78,17 +78,17 @@ public class DelegationModel extends BaseModel {
 	 * @param fromUser
 	 * @param proxy
 	 * @param transitive
-	 * @param voterChecksumModel
+	 * @param rightToVoteModel
 	 * @return
 	 */
-	public static DelegationModel buildDelegationRequest(AreaModel area, UserModel fromUser, UserModel proxy, boolean transitive, ChecksumModel voterChecksumModel) {
+	public static DelegationModel buildDelegationRequest(AreaModel area, UserModel fromUser, UserModel proxy, boolean transitive, RightToVoteModel rightToVoteModel) {
 		//Implementation note: This is my first try for builders. Inside the model class itself. Let's see how that works out.
 		//PRO: Easy, local.   CON(?)  Should models only be data models without any business logic.   But why?  This is just java code?
 		//Separation of concerns: More complicated business logic should be inside a Service class.
 		//A "builder" only creates a new object and sets some additional values, that the default RequiredArgs constructor does not set.
 		DelegationModel delegationRequest = new DelegationModel(area, fromUser, proxy);
 		delegationRequest.setTransitive(transitive);
-		delegationRequest.setRequestedDelegationFromChecksum(voterChecksumModel);
+		delegationRequest.setRequestedDelegationFromChecksum(rightToVoteModel);
 		delegationRequest.setRequestedDelegationAt(LocalDateTime.now());
 		return delegationRequest;
 	}

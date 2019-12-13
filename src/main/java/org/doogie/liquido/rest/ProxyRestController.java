@@ -2,7 +2,7 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.ChecksumModel;
+import org.doogie.liquido.model.RightToVoteModel;
 import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.AssignProxyRequest;
@@ -149,7 +149,7 @@ public class ProxyRestController {
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get delegation requests"));
 		List<DelegationModel> acceptedDelegations = proxyService.findAcceptedDirectDelegations(area, proxy);
 		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, proxy);
-		Optional<ChecksumModel> checksumOfPublicProxy = proxyService.getChecksumOfPublicProxy(area, proxy);
+		Optional<RightToVoteModel> checksumOfPublicProxy = proxyService.getChecksumOfPublicProxy(area, proxy);
 		long delegationCount = proxyService.getRealDelegationCount(voterToken);
 		return Lson.builder()
 				.put("acceptedDirectDelegations", acceptedDelegations)
@@ -183,7 +183,7 @@ public class ProxyRestController {
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to become a public proxy."));
 		String voterToken = (String)(bodyMap.get("voterToken"));
 		if (voterToken == null) throw new IllegalArgumentException("Need voter token to become a public proxy");
-		ChecksumModel checksumOfProxy = proxyService.becomePublicProxy(proxy, area, voterToken);
+		RightToVoteModel checksumOfProxy = proxyService.becomePublicProxy(proxy, area, voterToken);
 		// ChecksomRepo is not exposed as REST endpoint. So we build our own HATEOAS Resource.
 		Resource checksumResource = new Resource<>(checksumOfProxy);
 		checksumResource.add(entityLinks.linkToSingleResource(area));
@@ -199,7 +199,7 @@ public class ProxyRestController {
 		if (proxy == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "User with that id not found.");
 		if (area == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "Area with that id not found.");
 		log.trace("=> /users/{userId}/publicChecksum?area="+area+"&proxy="+proxy);
-		Optional<ChecksumModel> checksumOfPublicProxy = proxyService.getChecksumOfPublicProxy(area, proxy);
+		Optional<RightToVoteModel> checksumOfPublicProxy = proxyService.getChecksumOfPublicProxy(area, proxy);
 		if (!checksumOfPublicProxy.isPresent())
 			throw new LiquidoException(LiquidoException.Errors.PUBLIC_CHECKSUM_NOT_FOUND, "User is not yet a public proxy.");
 		return ResponseEntity.of(checksumOfPublicProxy);  // This would also return 404 when publicChecksum is not present.  But without any error message
