@@ -21,7 +21,7 @@ public class LiquidoProperties {
 	public Integer supportersForProposal;
 	public Integer daysUntilVotingStarts;
 	public Integer durationOfVotingPhase;
-	public Integer checksumExpirationHours;
+	public Integer rightToVoteExpirationHours;
 	public String  frontendUrl;
 	public String  devLoginSmsToken;
 

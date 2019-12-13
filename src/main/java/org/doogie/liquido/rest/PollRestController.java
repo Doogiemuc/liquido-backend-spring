@@ -2,7 +2,7 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.BallotRepo;
-import org.doogie.liquido.datarepos.ChecksumRepo;
+import org.doogie.liquido.datarepos.RightToVoteRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.model.*;
@@ -63,7 +63,7 @@ public class PollRestController {
 	BallotRepo ballotRepo;
 
   @Autowired
-	ChecksumRepo checksumRepo;
+	RightToVoteRepo rightToVoteRepo;
 
   @Autowired
   Environment springEnv;

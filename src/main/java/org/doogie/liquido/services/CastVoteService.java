@@ -20,7 +20,7 @@ import java.util.Optional;
 
 /**
  * This service contains all the voting logic for casting a vote.
- * Here we implement all the security around voterTokens and their checksums.
+ * Here we implement all the security around voterTokens.
  */
 @Slf4j
 @Service
@@ -39,7 +39,7 @@ public class CastVoteService {
 	BallotRepo ballotRepo;
 
 	@Autowired
-	ChecksumRepo checksumRepo;
+	RightToVoteRepo rightToVoteRepo;
 
 	@Autowired
 	ProxyService proxyService;
@@ -50,41 +50,42 @@ public class CastVoteService {
 	@Autowired
 	LiquidoProperties prop;
 
-  // SOme more resources around secure authentication with tokens:
+  // Some more resources around secure authentication with tokens:
 	//TODO: create really secure voterTokens like this: U2F  https://blog.trezor.io/why-you-should-never-use-google-authenticator-again-e166d09d4324
 	//TODO: RSA Tokens  https://stackoverflow.com/questions/37722090/java-jwt-with-public-private-keys
   // OpenID Nice article  https://connect2id.com/learn/openid-connect#id-token
 
-	//TODO: ARGL. my voting logic still needs a bigger bugfix: user's voterToken is per area. So is his checksum. It must be so that a proxy can vote FOR the user in every poll in that area.
-	// But the BallotsChecksum should be "per poll". When the same user votes in different polls then these ballots must have different ballotChecksums
-	// Need to rename:
-	// 1. voterToken     = hash(userSecret, serverSecret, area)    =>   returned to user
-	// 2. rightToVote    = hash(voterToken, serverSecret)          =>   only stored, may be delegated to a proxy,  user must present voterToken to be allowed to cast a vote with his rightToVote
-	// 3. ballotChecksum = hash(rightToVote, poll, ballot)         =>   checksum that vote was casted in this poll
-
-
 	/**
-	 * A user wants to vote and therefore requests a voter token for this area. Each user has one token per area.
-	 * The hash value of the voterToken is its checksum. The checksumModel is stored in the DB.
+	 * When a user wants to cast a vote in LIQUIDO, then he requests a voterToken for that area.
 	 *
-	 * <h3>Implementation notes</h3>
-	 * <pre>
-	 *   voterToken = hash(user.id + voterTokenSecret + area.id + serverSecret)
-	 *   checksum   = hash(voterToken + serverSecret)
-	 * </pre>
+	 * In the backend two values are calculated:
+	 *
+	 * (1) The voterToken which will be returned to the voter. It is secret and must only be known to him.
+	 *     With this voterToken the voter will later be able to anonymously cast a vote.
+	 *     The voterToken is calculated from several seeds, including a serverSecret, so that we can be sure
+	 *     only "we" create valid voterTokens. Each user has one voter Token per area.
+	 * <pre>voterToken = hash(user.id + voterTokenSecret + area.id + serverSecret)</pre>
+	 *
+	 * (2) The hashed voterToken is the digital representation of the user's right to vote. Only that user knows his voterToken,
+	 *     so only he can prove that this is his rightToVote. The rightToVote is only stored on the server and not returned.
+	 * <pre>rightToVote = hash(voterToken + serverSecret)</pre>
 	 *
 	 * When creating new voterTokens, then we do not calculate a new BCrypt salt. Because a voter might request his voterToken
 	 * multiple times. And we have to return the same voterToken every time.
 	 *
+	 * When a user requests a new voterToken, he may immediately decide to become a public proxy. Then his rightToVote
+	 * is associated with his username, so that other voters can immediately delegate their right to vote to his.
+	 * A voter may also later decide to become a public proxy.
+	 *
 	 * @param voter the currently logged in and correctly authenticated user
 	 * @param area an area that the user's want's to vote in
-	 * @param voterTokenSecret  a secret that only the user knows. So no one else can create this voterToken.
+	 * @param voterTokenSecret  a secret that only the user knows. So no one else can create his voterToken.
 	 * @param becomePublicProxy true if voter wants to become (or stay) a public proxy. A voter can also decide this later with {@link ProxyService#becomePublicProxy
-	 * @return the user's voterToken, that only the user must know, and that will hash to the stored checksumModel. The user can cast votes with this voterToken in that area.
+	 * @return the user's voterToken, that only the user must know, and that will hash to the stored rightToVote. The user can cast votes with this voterToken in that area.
 	 */
 	@Transactional
-	public String createVoterTokenAndStoreChecksum(UserModel voter, AreaModel area, String voterTokenSecret, boolean becomePublicProxy) throws LiquidoException {
-		log.debug("createVoterTokenAndStoreChecksum: for "+voter+" in "+area + ", becomePublicProxy="+becomePublicProxy);
+	public String createVoterTokenAndStoreRightToVote(UserModel voter, AreaModel area, String voterTokenSecret, boolean becomePublicProxy) throws LiquidoException {
+		log.debug("createVoterTokenAndStoreRightToVote: for "+voter+" in "+area + ", becomePublicProxy="+becomePublicProxy);
  		if (voter == null || DoogiesUtil.isEmpty(voter.getEmail()))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need voter to build a voterToken!");
 		if (area == null)
@@ -94,19 +95,19 @@ public class CastVoteService {
 
 		// Create a new voterToken for this user in that area with the BCRYPT hashing algorithm
 		// Remark: Bcrypt prepends the salt into the returned token value!!!
-		String voterToken =    calcVoterToken(voter.getId(), voterTokenSecret, area.getId());   // voterToken that only this user must know
-		String tokenChecksum = calcChecksumFromVoterToken(voterToken);                          // checksum of voterToken that can only be generated from the users voterToken and only by the server.
+		String voterToken =       calcVoterToken(voter.getId(), voterTokenSecret, area.getId());   // voterToken that only this user must know
+		String hashedVoterToken = calcHashedVoterToken(voterToken);                                // hash of voterToken that can only be generated from the users voterToken and only by the server.
 
-		//   IF there is a an already existing checksum for that voter as public proxy
-		//  AND there is NO existing checksum for that voterToken OR one that does not match the public proxies checksum,
+		//   IF there is a an already existing rightToVote for that voter as public proxy
+		//  AND there is NO existing rightToVote for that voterToken OR one that does not match the public proxies rightToVote,
 		// THEN the user has changed his voterTokenSecret
-		//  AND we must invalidate (delete) the old checksum.
+		//  AND we must invalidate (delete) the old rightToVote.
 		 //  AND we must delete all delegations.
-		Optional<ChecksumModel> checksumOpt = checksumRepo.findByChecksum(tokenChecksum);
-		Optional<ChecksumModel> existingChecksumOfPublicProxyOpt = checksumRepo.findByAreaAndPublicProxy(area, voter);
-		if (existingChecksumOfPublicProxyOpt.isPresent() &&
-				!existingChecksumOfPublicProxyOpt.equals(checksumOpt)) {
-			log.trace("Voter changed his voterTokenSecret. Replacing old checksum of former public proxy with new one.");
+		Optional<RightToVoteModel> rightToVoteOpt = rightToVoteRepo.findByHashedVoterToken(hashedVoterToken);
+		Optional<RightToVoteModel> rightToVoteOfPublicProxyOpt = rightToVoteRepo.findByAreaAndPublicProxy(area, voter);
+		if (rightToVoteOfPublicProxyOpt.isPresent() &&
+				!rightToVoteOfPublicProxyOpt.equals(rightToVoteOpt)) {
+			log.trace("Voter changed his voterTokenSecret. Replacing old rightToVote of former public proxy with new one.");
 
 			throw new RuntimeException("Change of voterTokenSecret is NOT YET IMPLEMENTED!");
 			/*
@@ -128,52 +129,53 @@ public class CastVoteService {
 			*/
 		}
 
-		// ----- upsert checksum (BUGFIX: must be done BEFORE becomePublicProxy)
-		if (checksumOpt.isPresent()) { log.trace("  Update existing checksum");	}
-		ChecksumModel checksum = checksumOpt.orElse(new ChecksumModel(tokenChecksum, area));
-		refreshChecksum(checksum);
-		checksumRepo.save(checksum);
+		// ----- upsert rightToVote (BUGFIX: must be done BEFORE becomePublicProxy)
+		if (rightToVoteOpt.isPresent()) { log.trace("  Update existing rightToVote");	}
+		RightToVoteModel rightToVote = rightToVoteOpt.orElse(new RightToVoteModel(hashedVoterToken, area));
+		refreshRightToVote(rightToVote);
+		rightToVoteRepo.save(rightToVote);
 
 		//   IF user wants to become a public proxy
-		// THEN stores his username with his checksum
+		// THEN stores his username with his rightToVote
 		//  AND automatically accept all pending delegationRequests
 		if (becomePublicProxy) {
 			proxyService.becomePublicProxy(voter, area, voterToken);
 		}
 
-		return voterToken;		// IMPORTANT! return the voterToken and not the checksum. The checksum is only stored on the server.
+		return voterToken;		// IMPORTANT! return the voterToken and not the rightToVote. The rightToVote is only stored on the server.
 	}
 
 	/**
-	 * refresh the expiration time of this valid checksum. You must save the update yourself!
-	 * @param checksum
+	 * refresh the expiration time of this valid rightToVote. You must save the update yourself!
+	 * @param rightToVote
 	 */
-	public void refreshChecksum(ChecksumModel checksum) {
-		checksum.setExpiresAt(LocalDateTime.now().plusHours(prop.checksumExpirationHours));
-		checksumRepo.save(checksum);
+	public void refreshRightToVote(RightToVoteModel rightToVote) {
+		rightToVote.setExpiresAt(LocalDateTime.now().plusHours(prop.rightToVoteExpirationHours));
+		rightToVoteRepo.save(rightToVote);
 	}
 
 	/**
-	 * Very thoroughly check if the passed voterToken is valid, ie. its checksum=hash(voterToken) is already known.
-	 * This method will not create a checksum.
+	 * Very thoroughly check if the passed voterToken is valid, ie. its rightToVote=hash(voterToken) is already known.
+	 * This method will not create a new rightToVote. createVoterTokenAndStoreRightToVote() must have been called before.
 	 * @param voterToken the token to check
-	 * @return the existing ChecksumModel
-	 * @throws LiquidoException when voterToken is invalid itself or its checksum is not known.
+	 * @return the voter's rightToVote if voterToken is valid
+	 * @throws LiquidoException when voterToken is invalid or its corresponding rightToVote is not known.
 	 */
-	public ChecksumModel isVoterTokenValidAndGetChecksum(String voterToken) throws LiquidoException {
+	public RightToVoteModel isVoterTokenValid(String voterToken) throws LiquidoException {
 		if (voterToken == null || !voterToken.startsWith("$2") || voterToken.length() < 10)
 			throw new LiquidoException(LiquidoException.Errors.INVALID_VOTER_TOKEN, "Voter token is empty or has wrong format");  // BCRYPT hashes start with $2$ or $2
-		String tokenChecksum = calcChecksumFromVoterToken(voterToken);
-		ChecksumModel existingChecksum = checksumRepo.findByChecksum(tokenChecksum)
-				.orElseThrow(() -> (new LiquidoException(LiquidoException.Errors.INVALID_VOTER_TOKEN, "Voter token is invalid. It's checksum is not known as valid.")));
-		return existingChecksum;
+		String hashedVoterToken = calcHashedVoterToken(voterToken);
+		RightToVoteModel rightToVote = rightToVoteRepo.findByHashedVoterToken(hashedVoterToken)
+				.orElseThrow(() -> (new LiquidoException(LiquidoException.Errors.INVALID_VOTER_TOKEN, "Voter token is invalid. It has not right to vote.")));
+		return rightToVote;
 	}
 
-	/**
+	/*
 	 * Get the already existing checksum of this user in that area.
 	 * This method will not create a new voterToken or store any checksum.
 	 * When there is no checksum, that is an error. Normally a valid voterToken and its stored checksum should always exist together.
 	 * So therefore we throw an exception when voterToken is invalid and/or its checksum is not found (instead of returning an Optional)
+	 *
 	 * This method is also used for tests.
 	 *
 	 * @param user a voter
@@ -181,11 +183,12 @@ public class CastVoteService {
 	 * @param area area of voterToken and checksum
 	 * @return the existing checksum of that user in that area
 	 * @throws LiquidoException when user does not yet have checksum in that area
-	 */
-	public ChecksumModel getExistingChecksum(UserModel user, String userTokenSecret, AreaModel area) throws LiquidoException {
+
+	public RightToVoteModel getExistingRightToVote(UserModel user, String userTokenSecret, AreaModel area) throws LiquidoException {
 		String voterToken = calcVoterToken(user.getId(), userTokenSecret, area.getId());
 		return isVoterTokenValidAndGetChecksum(voterToken);
 	}
+	*/
 
 
 	/**
@@ -202,8 +205,8 @@ public class CastVoteService {
 		if (castVoteRequest.getVoteOrder() == null || castVoteRequest.getVoteOrder().size() == 0)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Empty voteOrder");
 
-		ChecksumModel checksumModel = isVoterTokenValidAndGetChecksum(castVoteRequest.getVoterToken());
-		if (checksumModel == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Your voter token seems to be invalid!");
+		RightToVoteModel rightToVoteModel = isVoterTokenValid(castVoteRequest.getVoterToken());
+		if (rightToVoteModel == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Your voter token seems to be invalid!");
 
 		// load models for URIs in castVoteRequst
 		//TODO: use *Deserializers as in AssignProxyRequest
@@ -219,8 +222,8 @@ public class CastVoteService {
 			voteOrder.add(law);
 		}
 
-		BallotModel newBallot = new BallotModel(poll, 0, voteOrder, checksumModel);  //MAYBE: BallotModelBuilder.createFromVoteRequest(...)   or would that be a bit of overengeneering
-		BallotModel savedBallot = storeBallot(newBallot);		// checksum will be validated inside storeBallot() -> checkBallot()
+		BallotModel newBallot = new BallotModel(poll, 0, voteOrder, rightToVoteModel);  //MAYBE: BallotModelBuilder.createFromVoteRequest(...)   or would that be a bit of overengeneering
+		BallotModel savedBallot = storeBallot(newBallot);		// rightToVote will be validated inside storeBallot() -> checkBallot()
 
 		return savedBallot;
 	}
@@ -228,68 +231,70 @@ public class CastVoteService {
 	/**
 	 * This method calls itself recursively. The <b>upsert</b> algorithm for storing a ballot:
 	 *
-	 * 1) Check the integrity of the passed newBallot. Especially check the validity of its ChecksumModel.
-	 *    The checksum must be known.
+	 * 1) Check the integrity of the passed newBallot. Especially check the validity of its RightToVoteModel.
+	 *    The rightToVote must be known.
 	 *
-	 * 2) IF there is NO existing ballot for this poll with that checksum yet,
+	 * 2) IF there is NO existing ballot for this poll yet,
 	 *    THEN save a new ballot
-	 *    ELSE // a ballot with that checksum already exists
+	 *    ELSE // a ballot already exists
 	 *      IF the level of the existing ballot is SMALLER then the passed newBallot.level
-	 *      THEN do NOT update the existing ballot, because it was casted by a lower proxy or the user himself
+	 *      THEN do NOT update the existing ballot, because it was casted by a lower proxy or the voter himself
 	 *      ELSE update the existing ballot's level and vote order
 	 *
-	 *  3) FOR EACH directly delegated ChecksumModel
-	 *              builder a childBallot and recursively try to store this childBallot.
+	 *  3) FOR EACH directly delegated RightToVote
+	 *              build a childBallot and recursively store this childBallot.
 	 *
 	 *  Remark: The child ballot might not be stored when there already is one with a smaller level. This is
 	 *          our recursion limit.
 	 *
-	 * @param newBallot the ballot that shall be stored. The ballot will be checked very thoroughly. Especially if the ballot's checksum is valid.
+	 * @param newBallot the ballot that shall be stored. The ballot will be checked very thoroughly. Especially if the ballot's right to vote is valid.
 	 * @return the newly created or updated existing ballot  OR
 	 *         null if the ballot wasn't stored due to an already existing ballot with a smaller level.
 	 */
 	//@Transactional   //Do not open a transaction for each recursion!
 	private BallotModel storeBallot(BallotModel newBallot) throws LiquidoException {
-		log.debug("storeBallot("+newBallot+") checksum="+newBallot.getChecksum().getChecksum());
+		log.debug("storeBallot("+newBallot+") rightToVote.hashedVoterToken="+newBallot.getRightToVote().getHashedVoterToken());
 
 		//----- check validity of the ballot
 		checkBallot(newBallot);
 
-		//----- If there is no existing ballot yet with that checksum, then builder a completely new one.
-		Optional<BallotModel> existingBallotOpt = ballotRepo.findByPollAndChecksum(newBallot.getPoll(), newBallot.getChecksum());
-		BallotModel existingBallot;
+		Optional<BallotModel> existingBallotOpt = ballotRepo.findByPollAndRightToVote(newBallot.getPoll(), newBallot.getRightToVote());
+		BallotModel ballot;
+		//----- If there is no existing ballot yet with that rightToVote, then builder a completely new one.
 		if (!existingBallotOpt.isPresent()) {
 			log.trace("  Insert new ballot");
-			existingBallot = ballotRepo.save(newBallot);
+			ballot = ballotRepo.save(newBallot);
 		} else {
+			//----- Update existing ballot
+			ballot = existingBallotOpt.get();
+			if (!ballot.getRightToVote().equals(newBallot.getRightToVote()))
+				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Something is really wrong here!!! Right to vote hashes do not match");  // This should never happen
+
 			//----- Proxy must not overwrite a voter's own vote  OR  a vote from a proxy below him
-			existingBallot = existingBallotOpt.get();
-			if (existingBallot.getLevel() < newBallot.getLevel()) {
-				log.trace("  Will not overwrite existing ballot with smaller level " + existingBallot);
+			if (ballot.getLevel() < newBallot.getLevel()) {
+				log.trace("  Will not overwrite existing ballot with smaller level " + ballot);
 				return null;
 			}
 
-			log.trace("  Update existing ballot "+existingBallot.getId());
-			existingBallot.setVoteOrder(newBallot.getVoteOrder());
-			existingBallot.setLevel(newBallot.getLevel());
-			if (!existingBallot.getChecksum().equals(newBallot.getChecksum()))
-				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Something is really wrong here!!! Checksums do not match");  // This should never happen
+			log.trace("  Update existing ballot "+ballot.getId());
+			ballot.setVoteOrder(newBallot.getVoteOrder());
+			ballot.setLevel(newBallot.getLevel());
 		}
 
-		//----- recursively cast a vote for each delegated checksumModel
+		//----- recursively cast a vote for each delegated rightToVote
 		long voteCount = 1;   // first vote is for the ballot itself.
-		List<ChecksumModel> delegatedChecksums = checksumRepo.findByDelegatedTo(existingBallot.getChecksum());
-		for (ChecksumModel delegatedChecksum : delegatedChecksums) {
+		List<RightToVoteModel> delegatedRights = rightToVoteRepo.findByDelegatedTo(ballot.getRightToVote());
+		for (RightToVoteModel delegatedRightToVote : delegatedRights) {
 			List<LawModel> voteOrderClone = new ArrayList<>(newBallot.getVoteOrder());   // BUGFIX for org.hibernate.HibernateException: Found shared references to a collection
-			BallotModel childBallot = new BallotModel(newBallot.getPoll(), newBallot.getLevel() + 1, voteOrderClone, delegatedChecksum);
+			BallotModel childBallot = new BallotModel(newBallot.getPoll(), newBallot.getLevel() + 1, voteOrderClone, delegatedRightToVote);
 			log.trace("checking delegated childBallot "+childBallot);
-			if (newBallot.getLevel() == 0 || delegatedChecksum.isTransitive()) {
+			if (newBallot.getLevel() == 0 || delegatedRightToVote.isTransitive()) {
 				BallotModel savedChildBallot = storeBallot(childBallot);  // will return null when level of an existing childBallot is smaller then the childBallot that the proxy would cast. => this ends the recursion
 				if (savedChildBallot != null) voteCount = voteCount + savedChildBallot.getVoteCount();
 			}
 		}
-		existingBallot.setVoteCount(voteCount);
-		return ballotRepo.save(existingBallot);
+		ballot.setVoteCount(voteCount);
+		return ballotRepo.save(ballot);
 	}
 
 	/**
@@ -330,14 +335,14 @@ public class CastVoteService {
 			}
 		}
 
-		// check that there is a checksum
-		if (ballot.getChecksum() == null || ballot.getChecksum().getChecksum().length() < 5) {
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Invalid voterToken. It's checksum must be at least 5 chars!");
+		// check that voter has a right to vote
+		if (ballot.getRightToVote() == null || ballot.getRightToVote().getHashedVoterToken().length() < 5) {
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Invalid rightToVote. HashedVoterToken must be at least 5 chars!");
 		}
 
-		// Passed checksumModel in ballot MUST already exists in ChecksumRepo to be valid
-		ChecksumModel existingChecksum = checksumRepo.findByChecksum(ballot.getChecksum().getChecksum())
-				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Ballot's checksum is invalid. (It cannot be found in ChecksumModel.)"));
+		// Passed rightToVote in ballot MUST already exists in DB
+		RightToVoteModel rightToVote = rightToVoteRepo.findByHashedVoterToken(ballot.getRightToVote().getHashedVoterToken())
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Passed rightToVote is not known."));
 
 	}
 
@@ -357,16 +362,14 @@ public class CastVoteService {
 	}
 
 	/**
-	 * Calculate the checksum of the passed voterToken.
-	 * The checksum is not stored or validated! This is just the mathematical calculation.
-	 * Each user has one voterToken per area. So the checksum is also specific to this area.
-	 * A checksum is hashed from the voterToken together with a secret.
+	 * Calculate the hashed voterToken. This is just the mathematical calculation. No validation is done here.
+	 * Each user has one voterToken per area. So the rightToVote is also specific to this area.
+	 * A rightToVote is hashed from the voterToken together with a secret.
 	 *
 	 * @param voterToken token passed from user
-	 * @return checksum = BCrypt.hashpw(voterToken + serverSecret, bcryptSalt)
+	 * @return hashedVoterToken = BCrypt.hashpw(voterToken + serverSecret, bcryptSalt)
 	 */
-	private String calcChecksumFromVoterToken(String voterToken) {
-		//TODO: [SECURITY] should there be only one checksum per poll?
+	private String calcHashedVoterToken(String voterToken) {
 		return BCrypt.hashpw(voterToken + prop.bcrypt.secret, prop.bcrypt.salt);
 	}
 

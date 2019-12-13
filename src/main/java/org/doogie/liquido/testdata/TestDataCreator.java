@@ -102,7 +102,7 @@ public class TestDataCreator implements CommandLineRunner {
   PollRepo pollRepo;
 
   @Autowired
-	ChecksumRepo checksumRepo;
+	RightToVoteRepo rightToVoteRepo;
 
   @Autowired
   PollService pollService;
@@ -212,7 +212,7 @@ public class TestDataCreator implements CommandLineRunner {
 				log.info("Loaded {} ideas, proposals and laws.", lawRepo.count());
 				log.info("Loaded {} polls.", pollRepo.count());
 				log.info("Loaded {} delegations.", delegationRepo.count());
-				log.info("Loaded {} checksums.", checksumRepo.count());
+				log.info("Loaded {} checksums.", rightToVoteRepo.count());
 				log.info("Loaded {} comments.", commentRepo.count());
 
 				log.info("TestDataCreator: Loading schema and sample data from "+ TEST_DATA_FILENAME +" => DONE");
@@ -224,7 +224,7 @@ public class TestDataCreator implements CommandLineRunner {
 		}
 
 		Optional<AreaModel> area = areaRepo.findByTitle(TestFixtures.AREA_FOR_DELEGATIONS);
-		Optional<UserModel> topProxyOpt = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
+		Optional<UserModel> topProxyOpt = userRepo.findByEmail(TestFixtures.USER1_EMAIL);			// user1 is the topmost proxy in TestFixtures.java
   	if (area.isPresent() && topProxyOpt.isPresent()) {
 			UserModel topProxy = topProxyOpt.get();
 			log.debug("====== TestDataCreator: Proxy tree =====");
@@ -235,8 +235,9 @@ public class TestDataCreator implements CommandLineRunner {
 
 			try {
 				log.debug("====== TestDataCreator: Proxy tree (checksums) =====");
-				ChecksumModel checksum = castVoteService.getExistingChecksum(topProxy, TestFixtures.USER_TOKEN_SECRET, area.get());
-				utils.printChecksumTree(checksum);
+				String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(topProxy, area.get(), TestFixtures.USER_TOKEN_SECRET, false);
+				RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken);
+				utils.printRightToVoteTree(rightToVote);
 			} catch (LiquidoException e) {
 				log.error("Cannot get checksum of " + topProxy + ": " + e.getMessage());
 			}
@@ -393,11 +394,11 @@ public class TestDataCreator implements CommandLineRunner {
       boolean   transitive = "true".equalsIgnoreCase(delegationData[2]);
       try {
 	      if (TestFixtures.shouldBePublicProxy(area, toProxy)) {
-					castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, TestFixtures.USER_TOKEN_SECRET, true);
+					castVoteService.createVoterTokenAndStoreRightToVote(toProxy, area, TestFixtures.USER_TOKEN_SECRET, true);
 					log.debug("publicProxyChecksum = ", proxyService.getChecksumOfPublicProxy(area, toProxy));
 				}
 
-				String userVoterToken = castVoteService.createVoterTokenAndStoreChecksum(fromUser, area, TestFixtures.USER_TOKEN_SECRET, TestFixtures.shouldBePublicProxy(area, fromUser));
+				String userVoterToken = castVoteService.createVoterTokenAndStoreRightToVote(fromUser, area, TestFixtures.USER_TOKEN_SECRET, TestFixtures.shouldBePublicProxy(area, fromUser));
 	      DelegationModel delegation = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, transitive);
       } catch (LiquidoException e) {
         log.error("Cannot seedProxies: error Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId()+": "+e);
@@ -778,7 +779,7 @@ public class TestDataCreator implements CommandLineRunner {
 			// Now we use the original CastVoteService to get a voterToken and cast our vote.
 			try {
 				auditorAware.setMockAuditor(voter);
-				String voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, pollInVoting.getArea(), TestFixtures.USER_TOKEN_SECRET, TestFixtures.shouldBePublicProxy(pollInVoting.getArea(), voter));
+				String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, pollInVoting.getArea(), TestFixtures.USER_TOKEN_SECRET, TestFixtures.shouldBePublicProxy(pollInVoting.getArea(), voter));
 				auditorAware.setMockAuditor(null); // MUST cast vote anonymously!
 				CastVoteRequest castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
 				BallotModel ballotModel = castVoteService.castVote(castVoteRequest);

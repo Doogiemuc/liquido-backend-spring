@@ -8,26 +8,28 @@ import javax.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * When a voter requests a voterToken for an area , then the server calculates two values:
- * 1. voterToken = hash(user.email, user.passwordHash, area.id)
- * 2. checksumModel = hash(voterToken, secretSeed)
+ * This entity is the digital representation of a voters right to vote.
+ * Only the voter knows his secret voterToken that he received via {@link org.doogie.liquido.rest.VoteRestController#getVoterToken(AreaModel, String, Boolean)}.
+ * Only that voter can proof that he has a right to vote by presenting his voterToken which hashes to
+ * the stored value.
  *
- * Only the checksumModel is (anonomously) stored on the server. And
- * only the user knows the voterToken that the checksumModel is created from.
+ * When a voter requests a voterToken for an area , then the server calculates two values:
+ * 1. voterToken  = hash(user.email, userSecret, serverSecret, area)   This voterToken is returned to the voter.
+ * 2. rightToVote = hash(voterToken, serverSecret)    The rightToVote is anonymously stored on the server.
  *
  * When a user wants to cast a vote, then he sends his voterToken for this area.
- * Then the server checks if he already knows the corresponding checksumModel.
+ * Then the server checks if he already knows the corresponding rightToVote value.
  * If yes, then the casted vote is valid and will be counted.
  */
 @Data
 @NoArgsConstructor  				// Lombok Data does NOT include a NoArgsConstructor!
 @RequiredArgsConstructor		// And RequiredArgsConstructor does not work when not mentioned explicitly
-@EqualsAndHashCode(of = "checksum")
+@EqualsAndHashCode(of = "hashedVoterToken")
 @Entity
-@Table(name = "checksums", uniqueConstraints= {
+@Table(name = "rightToVote", uniqueConstraints= {
 	@UniqueConstraint(columnNames = {"area_id", "public_proxy_id"})  // A proxy cannot be public proxy more than once in one area.
 })
-public class ChecksumModel {
+public class RightToVoteModel {
 
 	/**
 	 * A checksum validates a voter token.
@@ -36,11 +38,11 @@ public class ChecksumModel {
 	 */
 	@Id
 	@NonNull
-	public String checksum;
+	public String hashedVoterToken;
 
 	/**
 	 * The area is actually already encoded in the voterToken.
-	 * So that means that the area in this ChecksumModel must correspond to the area of the voterToken
+	 * So that means that the area in this RightToVoteModel must correspond to the area of the voterToken
 	 */
 	@OneToOne
 	@NonNull
@@ -57,7 +59,7 @@ public class ChecksumModel {
 	@ManyToOne
 	@JsonIgnore    										// Do not reveal to whom a checksum is delegated
 	@RestResource(exported = false)   // And also do not expose via Spring Data Rest
-	ChecksumModel delegatedTo;
+	RightToVoteModel delegatedTo;
 
 	// only expose WHETHER a checksum is delegated or not
 	public boolean isDelegated() {
@@ -86,11 +88,11 @@ public class ChecksumModel {
 
 	public String toString() {
 		StringBuffer buf = new StringBuffer();
-		buf.append("Checksum[");
-		buf.append("checksum="+this.getChecksum());
+		buf.append("RightToVote[");
+		buf.append("hashedVoterToken="+this.getHashedVoterToken());
 		buf.append(", transitive="+this.isTransitive());
 		buf.append(", publicProxy="+ (this.getPublicProxy() != null ? this.getPublicProxy().toStringShort() : "<null>"));
-		buf.append(", delegatedTo.checksum="+ (this.getDelegatedTo() != null ? this.getDelegatedTo().getChecksum() : "<null>"));
+		buf.append(", delegatedTo.checksum="+ (this.getDelegatedTo() != null ? this.getDelegatedTo().getHashedVoterToken() : "<null>"));
 		buf.append("]");
 		return buf.toString();
 	}

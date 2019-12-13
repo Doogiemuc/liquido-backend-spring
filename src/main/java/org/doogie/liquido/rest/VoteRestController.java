@@ -71,7 +71,7 @@ public class VoteRestController {
 				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get voterToken!"));			// [SECURITY]  This check is extremely important! Only valid users are allowed to get a voterToken
 		//UserModel voter = ((LiquidoAuthUser) auth.getPrincipal()).getLiquidoUserModel();   // This also works. But I kinda like getCurrentAuditor(), because it support mock auditor so nicely
 		log.trace("Request voterToken for " + voter.toStringShort() + " in " + area);
-		String voterToken = castVoteService.createVoterTokenAndStoreChecksum(voter, area, tokenSecret, becomePublicProxy);   // preconditions are checked inside castVoteService
+		String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, area, tokenSecret, becomePublicProxy);   // preconditions are checked inside castVoteService
 		long delegationCount = proxyService.getRealDelegationCount(voterToken);
 		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, voter);
 
@@ -130,7 +130,7 @@ public class VoteRestController {
 		Lson result = Lson.builder()
 			.put("msg", "OK, your vote was counted successfully.")
 			.put("poll", castVoteRequest.getPoll())                  // return URI of poll
-			.put("checksum", ballot.getChecksum().getChecksum())     // BallotModel is NOT exposed as RepositoryRestResource, therefore we return just the checksum.
+			.put("checksum", ballot.getRightToVote().getHashedVoterToken())     // BallotModel is NOT exposed as RepositoryRestResource, therefore we return just the checksum.
 			.put("voteCount", ballot.getVoteCount());								 // ballot was counted this number of times.
     return result;
   }
@@ -155,8 +155,8 @@ public class VoteRestController {
 		for (PollModel poll : pollsInVoting) {
 			// check if user has already voted in this poll (this needs user's voterToken that we generate from the passed secret)
 			try {
-				ChecksumModel checksum = castVoteService.isVoterTokenValidAndGetChecksum(voterToken);
-				Optional<BallotModel> ballotOpt = ballotRepo.findByPollAndChecksum(poll, checksum);
+				RightToVoteModel checksum = castVoteService.isVoterTokenValid(voterToken);
+				Optional<BallotModel> ballotOpt = ballotRepo.findByPollAndRightToVote(poll, checksum);
 				if (ballotOpt.isPresent()) {
 					ballotsInVoting.add(ballotOpt.get());
 				}
