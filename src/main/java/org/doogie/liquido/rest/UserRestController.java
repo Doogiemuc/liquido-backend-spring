@@ -313,32 +313,12 @@ public class UserRestController {
 			delegationRequests.addAll(delegationRepo.findDelegationRequests(area, currentUser));
 		}
 
-		// Ballots of currentUser that can still be changed, because they are in polls that are still in VOTING.
-		// This includes ballots that were casted by proxies. See BallotModel.level
-		List<BallotModel> ballotsInVoting = new ArrayList<>();
-		if (voterToken.isPresent()) {
-			// check if user has already voted in this area
-			for (AreaModel area: areas) {
-				try {
-					RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken.get());
-					List<BallotModel> ballots = ballotRepo.findByRightToVote(rightToVote);
-					ballotsInVoting.addAll(ballots.stream().filter(ballot -> ballot.getPoll().getStatus().equals(PollModel.PollStatus.VOTING)).collect(Collectors.toList()));
-				} catch (LiquidoException lqe) {
-					// If an INVALID_VOTER_TOKEN Error is thrown from getExistingChecksum() call, this means the user has not voted yet in this poll. He does not yet have a checksum. That's ok here.
-				}
-			}
-		}
-
 		Lson result = new Lson()
 				.put("delegationRequests", delegationRequests)
 				.put("reachedQuorum", reachedQuorum)
 				.put("supportedByYou", supportedByYouSorted)							// This only returns the Model. No HATEOAS links! But entities are projected, with createdBy and are info expanded.
 				.put("pollsInVotingWithOwnProposals", pollsInVotingWithOwnProposals)
 				.put("recentlyDiscussedProposals", recentlyDiscussed);
-
-		// polls where user vote or a proxy voted for him (see ballotModel.level)
-		if (voterToken.isPresent())
-			result.put("ballotsInVoting", ballotsInVoting);
 
 	  //stuff by others
 		//result.put("trendingProposals", trendingProposals)    //TODO: what are "trendingProposals"=> improve lawService.getRecentlyDiscussed ? :-)

@@ -20,18 +20,22 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
+import org.springframework.hateoas.Resources;
+import org.springframework.hateoas.TemplateVariable;
+import org.springframework.hateoas.TemplateVariables;
 import org.springframework.hateoas.mvc.ControllerLinkBuilder;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.util.UriComponents;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
@@ -44,6 +48,9 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 @RequestMapping("${spring.data.rest.base-path}")    //TODO: add /dev prefix here!
 //@Profile({"dev", "test"})			// For security reasons this controller should not be available in PROD. But I need it when I want to run tests against prod!
 public class DevRestController {
+
+	@Value(value = "${spring.data.rest.base-path}")
+	String basePath;
 
 	@Autowired
 	UserRepo userRepo;
@@ -67,7 +74,8 @@ public class DevRestController {
 	LiquidoProperties prop;
 
 	/**
-	 * Get list of users for the quick login at the top right of the UI.
+	 * Get list of users for the quick login at the top right of the UI. Admin is first element (if configured) and
+	 * then 10 more users.
 	 * This endpoint must be public, because the web app needs it during very early application start. (See main.js) But client must at least provide devLoginSmsToken.
 	 * This is only available in dev and test environment!
 	 * @param token dev login sms token
@@ -76,22 +84,35 @@ public class DevRestController {
 	@Profile({"dev", "test"})
 	@RequestMapping(value = "/dev/users")
 	// This must be public, because during DEV we need the list of users for the quick DevLogin drop down.
-	public @ResponseBody Lson devGetAllUsers(@RequestParam("token") String token) throws LiquidoException {
+	public @ResponseBody Lson devGetAllUsers(
+		@RequestParam("token") String token,
+		HttpServletRequest request
+	) throws LiquidoException {
 		log.debug("GET /dev/users");
 		if (!token.equals(prop.devLoginSmsToken))
 			throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Invalid token for GET /dev/users");
+		List<UserModel> users = new ArrayList<UserModel>();
+		Optional<UserModel> adminOpt = userRepo.findByEmail(prop.admin.email);
+		if (adminOpt.isPresent()) users.add(adminOpt.get());
 		Iterator<UserModel> it = userRepo.findAll().iterator();
-		List<UserModel> first10Users = new ArrayList<UserModel>();
 		for (int i = 0; i < 20; i++) {
-			if (it.hasNext()) first10Users.add(it.next());
+			if (it.hasNext()) users.add(it.next());
 		}
 
-		ControllerLinkBuilder controllerLinkBuilder = linkTo(methodOn(DevRestController.class).devGetAllUsers(null));
-		return Lson.builder()
-			.put("_embedded.users", first10Users)  // Always return at least an empty array! Be nice to your clients!
-			.put("_link.self.href", controllerLinkBuilder.toUri());
+		/* non of those work :-/
+		TemplateVariables variables = new TemplateVariables(new TemplateVariable("spring.data.rest.base-path", TemplateVariable.VariableType.PATH_VARIABLE));
+		ControllerLinkBuilder controllerLinkBuilder = linkTo(methodOn(DevRestController.class, variables).devGetAllUsers(null, null));
+		UriComponents build = UriComponentsBuilder.fromPath("/dev/users").build();
+		ServletUriComponentsBuilder servletUriComponentsBuilder = ServletUriComponentsBuilder.fromCurrentRequestUri();
+		// to return a Resource like this
+		return new Resources<>(users, linkTo(methodOn(DevRestController.class).devGetAllUsers(null)).withRel("self"));
+		 */
+		String selfUrl = request.getRequestURL().toString() + "?token={token}";   // let's do a quick hack to to create selfUrl
 
-		//return new Resources<>(userRepo.findAll(), linkTo(methodOn(DevRestController.class).devGetAllUsers()).withRel("self"));
+		return Lson.builder()
+			.put("_embedded.users", users)  // Always return at least an empty array! Be nice to your clients!
+			.put("_link.self.href", selfUrl);
+
 	}
 
 	/**

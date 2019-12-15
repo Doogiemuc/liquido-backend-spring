@@ -2,7 +2,6 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.BallotRepo;
-import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.security.LiquidoAuditorAware;
@@ -12,15 +11,16 @@ import org.doogie.liquido.services.ProxyService;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
-import org.springframework.hateoas.EntityLinks;
-import org.springframework.hateoas.Link;
-import org.springframework.hateoas.Resources;
+import org.springframework.data.rest.webmvc.PersistentEntityResource;
+import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
+import org.springframework.hateoas.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
@@ -36,6 +36,8 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 //@EnableHypermediaSupport(type = EnableHypermediaSupport.HypermediaType.HAL)      //not necessary?
 //@PreAuthorize("isAuthenticated()")    => possible but not necessary. Auth is already checked in JwtAuthenticationFilter
 public class VoteRestController {
+	@Autowired
+	BallotRepo ballotRepo;
 
 	@Autowired
 	CastVoteService castVoteService;
@@ -114,7 +116,7 @@ public class VoteRestController {
 	 *   {
 	 *     "msg": "OK, your ballot was counted.",
 	 *     "delegees": "0",
-	 *     "checksumModel": "$2a$10$1IdrGrRAN2Wp3U7QI.JIzueBtPrEreWk1ktFJ3l61Tyv4TC6ICLp2",
+	 *     "checksum": "$2a$10$1IdrGrRAN2Wp3U7QI.JIzueBtPrEreWk1ktFJ3l61Tyv4TC6ICLp2",
 	 *     "poll": "/polls/253"
 	 *   }
 	 */
@@ -130,27 +132,61 @@ public class VoteRestController {
 		Lson result = Lson.builder()
 			.put("msg", "OK, your vote was counted successfully.")
 			.put("poll", castVoteRequest.getPoll())                  // return URI of poll
+			//TODO:  Return ballot.hashCode()  !!!!  The checksum of the complete ballot  => But then alos need to store this value to lookup ballots by their checksum!
 			.put("checksum", ballot.getRightToVote().getHashedVoterToken())     // BallotModel is NOT exposed as RepositoryRestResource, therefore we return just the checksum.
 			.put("voteCount", ballot.getVoteCount());								 // ballot was counted this number of times.
     return result;
   }
 
-  @Autowired
-	PollRepo pollRepo;
-
-  @Autowired
-	BallotRepo ballotRepo;
 
 	/**
-	 * Fetch all ballots of the currently logged in user
-	 * @param voterToken a users's secret voterToken. Must be a validVotertoken that hashes to a known Checksum. Area is already encoded in voterToken
+	 * Fetch Ballots of a voter. Caller <b>must</b>> provide a valid voterToken.
+	 *
+	 * This REST endpoint supports search criterias:
+	 * When poll is given we lookup the one ballot that the voter may already have casted in this specific poll.
+	 * When pollStatus is given then we only search for ballots in polls with this status. This can be used
+	 * to fetch ballots that can still be changed, because the poll is still in VOTING phase.
+	 *
+	 * Keep in mind, that a voter has one voterToken per area. So this query searches for ballots in that area only.
+	 * voterToken's area must match poll's area or you won't find anything.
+	 * If poll and pollStatus are both given then filter by pollStatus is ignored.
+	 *
+	 * @param voterToken a users's secret voterToken. Must be a validVotertoken that hashes to a known Checksum.
 	 * @return List of BallotModels in area of voterToken
+	 * @see PollRestController#getOwnBallot(PollModel, String)  There we fetch a voter's ballot in one specific poll.
 	 */
 	@RequestMapping(value = "/my/ballots")
-	public @ResponseBody Resources<BallotModel> myBallotsInArea(
-			@RequestParam("voterToken") String voterToken			//TODO: [SECURITY] should I pass checksum? Anyone's checksum?
-	) {
-		List<BallotModel> ballotsInVoting = new ArrayList<>();
+	public @ResponseBody Lson myBallotsInArea(
+			@RequestParam("voterToken") String voterToken,
+			@RequestParam("poll") Optional<PollModel> poll,
+			@RequestParam("pollStatus") Optional<PollModel.PollStatus> pollStatus
+	) throws LiquidoException {
+		RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken);  // throws exception if voterToken is invalid!
+
+		List<BallotModel> ballots = new ArrayList<>();
+		if (poll.isPresent()) {
+			// if poll is given, then find the one ballot of this voter in this poll. If voter casted a ballot yet.
+			Optional<BallotModel> ballotInPoll = ballotRepo.findByPollAndRightToVote(poll.get(), rightToVote);
+			if (ballotInPoll.isPresent()) ballots.add(ballotInPoll.get());
+		} else {
+			// otherwise find all ballots of this voter in the voterTokens area.
+			ballots = ballotRepo.findByRightToVote(rightToVote);
+			// and optionally filter by pollStatus, e.g. only find ballots in polls in VOTING, that can still be changed
+			if (pollStatus.isPresent()) {
+				ballots.removeIf(ballot -> !ballot.getPoll().getStatus().equals(pollStatus.get()));
+			}
+		}
+
+		//Keep in mind that BallotModel is not exposed as RepositoryRestResource! Therefore we must build our own HATEOAS response format.  new Resource(..) does not work here!
+		Link self = linkTo(methodOn(VoteRestController.class).myBallotsInArea("", null, null)).withRel("self");
+		return new Lson()
+			.put("_embedded", ballots)
+			.put("_links.self.href", self.getHref())
+		  .put("_links.self.templated", self.isTemplated());
+
+
+
+		/*   old version starting from polls in voting.  Performance should not be an issue either way.
 		List<PollModel> pollsInVoting = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
 		for (PollModel poll : pollsInVoting) {
 			// check if user has already voted in this poll (this needs user's voterToken that we generate from the passed secret)
@@ -164,8 +200,10 @@ public class VoteRestController {
 				// If an INVALID_VOTER_TOKEN Error is thrown from getExistingChecksum() call, this means the user has not voted yet in this poll. He does not yet have a checksum. That's ok here.
 			}
 		}
-
 		return new Resources<>(ballotsInVoting, linkTo(methodOn(VoteRestController.class).myBallotsInArea(null)).withRel("self"));
+		*/
+
+
 	}
 
 

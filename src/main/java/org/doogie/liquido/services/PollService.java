@@ -289,10 +289,10 @@ public class PollService {
 	 * @thows LiquidoException when poll is in status elaboration or voterToken or is invalid.
 	 */
 	public Optional<BallotModel> getBallotForVoterToken(PollModel poll, String voterToken) throws LiquidoException {
-		RightToVoteModel checksum = castVoteService.isVoterTokenValid(voterToken);
+		RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken);
 	 	if (PollModel.PollStatus.ELABORATION.equals(poll.getStatus()))
   		throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Cannot get ballot of poll in ELABORATION");
-		return ballotRepo.findByPollAndRightToVote(poll, checksum);
+		return ballotRepo.findByPollAndRightToVote(poll, rightToVote);
 	}
 
 	/**
