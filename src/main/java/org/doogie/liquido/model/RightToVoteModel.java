@@ -82,6 +82,7 @@ public class RightToVoteModel {
 	/**
 	 * If a user want's to be a public proxy, then he CAN store his user together with his checksum.
 	 * Then voters can automatically delegate their vote to this proxy.
+	 * Then the proxy does not need to accept delegations. They can automatically be delegated.
 	 */
 	@OneToOne
 	UserModel publicProxy = null;		// by default no username is stored together with a checksum!!!
@@ -89,7 +90,7 @@ public class RightToVoteModel {
 	public String toString() {
 		StringBuffer buf = new StringBuffer();
 		buf.append("RightToVote[");
-		buf.append("hashedVoterToken="+this.getHashedVoterToken());
+		buf.append("hashedVoterToken="+this.getHashedVoterToken());			//MAYBE: do not expose sensible hashedVoterToken  ?
 		buf.append(", transitive="+this.isTransitive());
 		buf.append(", publicProxy="+ (this.getPublicProxy() != null ? this.getPublicProxy().toStringShort() : "<null>"));
 		buf.append(", delegatedTo.checksum="+ (this.getDelegatedTo() != null ? this.getDelegatedTo().getHashedVoterToken() : "<null>"));
