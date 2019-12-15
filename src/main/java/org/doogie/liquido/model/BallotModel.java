@@ -34,16 +34,15 @@ import java.util.stream.Collectors;
 })
 public class BallotModel {
 	//BallotModel deliberately does NOT extend BaseModel!
-	//No @CreatedDate, @LastModifiedDate or @CreatedBy here.
-	//When voting it is confidential who casted this ballot and when.
+	//No @CreatedDate, No @LastModifiedDate !  This could lead to timing attacks.
+	//No @CreatedBy ! When voting it is confidential who casted this ballot and when.
 
 	@Id
 	@GeneratedValue(strategy= GenerationType.AUTO)
 	public Long id;
 
   /**
-	 * Reference to poll
-	 * The poll would actually already be coded into the checksum. But we also store the reference for simplicity.
+	 * Reference to the poll this this ballot was casted in.
 	 */
   @NotNull
   @NonNull
@@ -51,6 +50,17 @@ public class BallotModel {
 	@JsonProperty("_links")   // JSON will contain "_links.poll.href"
 	@JsonSerialize(using = PollAsLinkJsonSerializer.class)  // a ballot can only be fetched when the caller already knows the poll. So we only return a simple ref to the poll
   public PollModel poll;
+
+	/**
+	 * Get current status of poll that this ballot was casted in.
+	 * This will expose the PollStatus in the JSON response.
+	 * If the poll is still in its voting phase (poll.status == VOTING),
+	 * then the ballot can still be changed by the voter.
+	 * @return PollStatus, e.g. VOTING or FINISHED
+	 */
+  public PollModel.PollStatus getPollStatus() {
+  	return this.poll != null ? poll.getStatus() : null;
+	}
 
   /**
 	 * level = 0: user voted for himself
@@ -91,13 +101,14 @@ public class BallotModel {
   /**
    * Encrypted and anonymous information about the voter that casted this vote into the ballot.
 	 * Only the voter knows the voterToken that this checksumModel was created from as
-	 *   checksum = hash(voterToken)
+	 *   rightToVote.hashedVoterToken = hash(voterToken)
 	 * If a vote was casted by a proxy, this is still the voters (delegated) checksum.
    */
   @NotNull
   @NonNull
 	@OneToOne
 	@JoinColumn(name = "hashedVoterToken")		// The @Id of a RightToVoteModel is the hashedVoterToken itself
+	@JsonIgnore																// [SECURITY] Do not expose voter's private right to vote
   public RightToVoteModel rightToVote;
 
 	@Override
@@ -105,7 +116,8 @@ public class BallotModel {
 		String proposalIds = voteOrder.stream().map(law->law.getId().toString()).collect(Collectors.joining(","));
 		return "BallotModel{" +
 				"id=" + id +
-				", poll.id=" + poll.getId() +
+				", poll(id=" + poll.getId() +
+			  ", status="+poll.getStatus() + ")" +
 				", level=" + level +
 				", voteOrder(proposalIds)=[" + proposalIds +"]"+
 				", rightToVote="+ rightToVote +

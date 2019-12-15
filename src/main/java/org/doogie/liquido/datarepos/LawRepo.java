@@ -18,21 +18,19 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
-// https://docs.spring.io/spring-data/rest/docs/current/reference/html/
-//DONE:   implement queries with offset+count param: https://gist.github.com/tcollins/0ebd1dfa78028ecdef0b
-
-
 /**
  * This Spring-data repository is a database abstraction layer for "laws".
+ * By default LawModels are returned as {@link LawProjection}
  */
 @RepositoryRestResource(collectionResourceRel = "laws", path = "laws", itemResourceRel = "proposal", excerptProjection = LawProjection.class)
 public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>
     //, LawRepoCustom
-    , JpaSpecificationExecutor<LawModel>
-    //, QueryByExampleExecutor<LawModel>
+    , JpaSpecificationExecutor<LawModel>       // DONE: implement queries with offset+count param: https://gist.github.com/tcollins/0ebd1dfa78028ecdef0b
+    //, QueryByExampleExecutor<LawModel>       // would also have been another option :-)
     //, QuerydslPredicateExecutor<LawModel>
-
 {
+  // Spring Data reference Doc: https://docs.spring.io/spring-data/rest/docs/current/reference/html/
+
 
   Optional<LawModel> findByTitle(@Param("title") String title);   // title is unique!
 
