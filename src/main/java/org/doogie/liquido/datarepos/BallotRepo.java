@@ -18,16 +18,16 @@ import java.util.Optional;
 public interface BallotRepo extends CrudRepository<BallotModel, Long> {
 
 	/**
-	 * find all ballots in a poll
-	 * @param poll
-	 * @return list of ballots that have been casted so far
+	 * Find all ballots in a poll.
+	 * @param poll a poll
+	 * @return list of ballots that have been casted in this ppoll (so far)
 	 */
   List<BallotModel> findByPoll(PollModel poll);
 
 	/**
 	 * Count number of ballots casted in this poll
-	 * @param poll
-	 * @return
+	 * @param poll a poll
+	 * @return number of ballots in this poll
 	 */
   Long countByPoll(PollModel poll);
 
@@ -44,7 +44,8 @@ public interface BallotRepo extends CrudRepository<BallotModel, Long> {
 	 * who's secret voterToken hashes to this rightToVote.
    * @param poll a PollModel
    * @param rightToVote a user's right to vote
-   * @return the ballot that was casted with this this (still anonymous) rightToVote
+   * @return the ballot that was casted with this this (still anonymous) rightToVote or
+	 *         Optional.empty() when this voter did not cast a vote in this poll yet.
    */
   Optional<BallotModel> findByPollAndRightToVote(PollModel poll, RightToVoteModel rightToVote);
 }
