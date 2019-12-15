@@ -166,8 +166,8 @@ public class PollRestController {
 	}
 
 	/**
-	 * Get voter's own ballot. This ballot has a "level", where  the user can see if
-	 * a proxy n levels above him has already voted for him.
+	 * Get voter's own ballot in a poll. With {@link BallotModel#level} shows
+	 * if this ballot was casted by the voter himself, or by a proxy n levels above him.
 	 *
 	 * @param poll a poll in status VOTING or FINISHED
 	 * @param voterToken the users own voterToken
@@ -180,18 +180,10 @@ public class PollRestController {
 			@RequestParam("voterToken") String voterToken
 	) throws LiquidoException {
 		BallotModel ownBallot = pollService.getBallotForVoterToken(poll, voterToken)
-				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_BALLOT, "No ballot found. You did not vote in this poll yet."));   // this is not an error
-
-		//TODO: Having no ballot is quite normal. Do not throw an exception. Instead return HTTP 204 with emtpy body
-
-		//FIXME: Throws failed to lazily initialize a collection of role: org.doogie.liquido.model.LawModel.comments, could not initialize proxy - no Session;    because of lazily loaded comments
-		//       WHY IS BalloModelPollJsonSerializer   not called ?????
-
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_BALLOT, "No ballot found. You did not vote in this poll yet."));   // this is not an error. HttpStatus.NO_CONTENT
+		//TODO: Having no ballot is quite normal. Do not throw an exception. Instead return HTTP 204 with empty body    => Ok, now needs a test.
 
 		return ownBallot;  // includes some tweaking of JSON serialization  in
-
-		// This would return the full HATEOAS resource. But since BallotModel is not exposed as RepositoryRestResource, it contains ugly links to .../BallotModels/4711  :-(
-		//return assembler.toResource(ownBallot);
 
 		/*
 		// This was a try to build our response JSON here. But has now been moved to BallotModelPollJsonSerializer.java
