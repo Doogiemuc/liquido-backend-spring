@@ -14,7 +14,6 @@ import java.util.Optional;
  * see https://spring.io/guides/gs/accessing-mongodb-data-rest/
  */
 //@CrossOrigin(origins = "*")
-//TODO: @PreAuthorize("hasRole('ROLE_VOTER')")   TODO: externalize string ROLE_VOTER to central place
 @RepositoryRestResource(collectionResourceRel = "users", path = "users", itemResourceRel = "user")
 public interface UserRepo extends CrudRepository<UserModel, Long> {
 

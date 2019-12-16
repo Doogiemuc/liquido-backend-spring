@@ -187,9 +187,7 @@ public class PollRestController {
 	) throws LiquidoException {
 		BallotModel ownBallot = pollService.getBallotForVoterToken(poll, voterToken)
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_BALLOT, "No ballot found. You did not vote in this poll yet."));   // this is not an error. HttpStatus.NO_CONTENT
-		//TODO: Having no ballot is quite normal. Do not throw an exception. Instead return HTTP 204 with empty body    => Ok, now needs a test.
-
-		return ownBallot;  // includes some tweaking of JSON serialization  in
+		return ownBallot;  // This ballot has no current voteCount!
 
 		/*
 		// This was a try to build our response JSON here. But has now been moved to BallotModelPollJsonSerializer.java

@@ -234,10 +234,11 @@ public class ProxyService {
 	}
 
 	/**
-	 * Get the delegation to this voter's proxy.
+	 * Get the delegation from this voter to his proxy in this area.
+	 * This MAY also be a requested delegation.
 	 * @param area an area
 	 * @param voter a voter that may have a proxy assigned in area
-	 * @return (optionally) the delegation to this voter's proxy. This MAY also be a requested delegation.
+	 * @return (optionally) the delegation from this voter to his proxy.
 	 */
 	public Optional<DelegationModel> getDelegationToDirectProxy(AreaModel area, UserModel voter) {
 		return delegationRepo.findByAreaAndFromUser(area, voter);
@@ -264,7 +265,7 @@ public class ProxyService {
 			log.trace("Accepting delegation request from "+delegation.getFromUser()+" to proxy "+delegation.getToProxy());
 			this.assignProxy(area, delegation.getFromUser(), proxy,	delegation.getRequestedDelegationFrom(), proxyChecksum, delegation.isTransitive());
 		}
-		long delegationCount = getRealDelegationCount(proxyVoterToken);
+		long delegationCount = getRecursiveDelegationCount(proxyVoterToken);
 		log.info("<= accepted "+delegationRequests.size()+" delegation requests for proxy "+proxy.toStringShort()+" in area.id="+area.getId()+ ", new delegationCount="+delegationCount);
 		return delegationCount;
 	}
@@ -331,7 +332,7 @@ public class ProxyService {
 	 * @param voterToken the voterToken of a voter who might be a proxy.
 	 * @return the number of delegations that this proxy has.
 	 */
-	public long getRealDelegationCount(String voterToken) throws LiquidoException {
+	public long getRecursiveDelegationCount(String voterToken) throws LiquidoException {
 		RightToVoteModel proxyChecksum = castVoteService.isVoterTokenValid(voterToken);
 		return countDelegationsRec(proxyChecksum, true, 0);
 	}
