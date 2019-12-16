@@ -129,7 +129,7 @@ public class ProxyService {
 				throw new LiquidoException(LiquidoException.Errors.CANNOT_ASSIGN_CIRCULAR_PROXY, "Cannot assign proxy. This would lead to a circular delegation of the checksum which cannot be allowed.");
 
 			delegation.setToProxy(proxy);								// this may overwrite any previous assignment
-			delegation.setRequestedDelegationFromChecksum(null);
+			delegation.setRequestedDelegationFrom(null);
 			delegation.setRequestedDelegationAt(null);
 			delegation.setTransitive(transitive);
 			voterChecksum.setTransitive(transitive);
@@ -143,7 +143,7 @@ public class ProxyService {
 			// The ChecksumModel has delegatedTo set to null. This will be set when the request is being accepted.
 			//
 			delegation.setToProxy(proxy);										// a requested delegation already contains the toProxy!
-			delegation.setRequestedDelegationFromChecksum(voterChecksum);
+			delegation.setRequestedDelegationFrom(voterChecksum);
 			delegation.setRequestedDelegationAt(LocalDateTime.now());
 			delegation.setTransitive(transitive);
 			voterChecksum.setTransitive(transitive);
@@ -262,7 +262,7 @@ public class ProxyService {
 		Optional<RightToVoteModel> proxyChecksum = Optional.of(castVoteService.isVoterTokenValid(proxyVoterToken));
 		for(DelegationModel delegation: delegationRequests) {
 			log.trace("Accepting delegation request from "+delegation.getFromUser()+" to proxy "+delegation.getToProxy());
-			this.assignProxy(area, delegation.getFromUser(), proxy,	delegation.getRequestedDelegationFromChecksum(), proxyChecksum, delegation.isTransitive());
+			this.assignProxy(area, delegation.getFromUser(), proxy,	delegation.getRequestedDelegationFrom(), proxyChecksum, delegation.isTransitive());
 		}
 		long delegationCount = getRealDelegationCount(proxyVoterToken);
 		log.info("<= accepted "+delegationRequests.size()+" delegation requests for proxy "+proxy.toStringShort()+" in area.id="+area.getId()+ ", new delegationCount="+delegationCount);
@@ -341,18 +341,18 @@ public class ProxyService {
 	 * This recursive method is meant to be called with includeNonTransitiveDelegations = true and depth = 0, because non transitive delegations
 	 * do count on depth == 0. They are direct delegations. On deeper levels, only transitive delegations are added up.
 	 *
-	 * @param checksum a checksum that may have delegations to it
+	 * @param rightToVote a rightToVote that may have delegations to it
 	 * @param includeNonTransitiveDelegations weather to include non transitive delegations in the count.
 	 * @param depth current recursion depth
 	 * @return the number of delegations to this proxy (without the proxies own vote)
 	 */
-	private long countDelegationsRec(RightToVoteModel checksum, boolean includeNonTransitiveDelegations, long depth) {
-		if (checksum == null) return 0;
-		if (depth > Long.MAX_VALUE - 10) throw new RuntimeException("There seems to be a circular delegation with checksum: "+checksum.getHashedVoterToken());
+	private long countDelegationsRec(RightToVoteModel rightToVote, boolean includeNonTransitiveDelegations, long depth) {
+		if (rightToVote == null) return 0;
+		if (depth > Long.MAX_VALUE - 10) throw new RuntimeException("There seems to be a circular delegation with rightToVote: "+rightToVote.getHashedVoterToken());
 		long numVotes = 0;
-		List<RightToVoteModel> delegations = rightToVoteRepo.findByDelegatedToAndTransitive(checksum, true);
+		List<RightToVoteModel> delegations = rightToVoteRepo.findByDelegatedToAndTransitive(rightToVote, true);
 		if (includeNonTransitiveDelegations) {
-			delegations.addAll(rightToVoteRepo.findByDelegatedToAndTransitive(checksum, false));
+			delegations.addAll(rightToVoteRepo.findByDelegatedToAndTransitive(rightToVote, false));
 		}
 		for (RightToVoteModel delegatedChecksum: delegations) {
 			numVotes += 1 + countDelegationsRec(delegatedChecksum, false, depth+1);

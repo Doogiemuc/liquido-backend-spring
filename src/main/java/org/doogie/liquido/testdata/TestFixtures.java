@@ -53,7 +53,7 @@ public class TestFixtures {
    * This secret is used when a test needs to create a voter token
    * This must only be used in tests!
    */
-	public static final String USER_TOKEN_SECRET = "userTokenSecret";
+	public static final String 	USER_TOKEN_SECRET = "userTokenSecret";
 
 
 	/** dynamic method as TestFixture.  Mmhh nice! */
@@ -72,25 +72,51 @@ public class TestFixtures {
       		                      /    \           /   |  (\)    <---- 12->7  non-transitive delegation
       		                 user8    user9  user10 user11 user12
 
- └── UserModel[id=1, email='testuser1@liquido.de', profile.mobilephone=+49123451, profile.picture=/static/img/photos/1.png]
-     ├── UserModel[id=2, email='testuser2@liquido.de', profile.mobilephone=+49123452, profile.picture=/static/img/photos/2.png]
-     │   └── UserModel[id=5, email='testuser5@liquido.de', profile.mobilephone=+49123455, profile.picture=/static/img/photos/2.png]
-     ├── UserModel[id=3, email='testuser3@liquido.de', profile.mobilephone=+49123453, profile.picture=/static/img/photos/3.png]
-     │   └── UserModel[id=6, email='testuser6@liquido.de', profile.mobilephone=+49123456, profile.picture=/static/img/photos/3.png]
-     └── UserModel[id=4, email='testuser4@liquido.de', profile.mobilephone=+49123454, profile.picture=/static/img/photos/1.png]
-         └── UserModel[id=7, email='testuser7@liquido.de', profile.mobilephone=+49123457, profile.picture=/static/img/photos/1.png]
-             ├── UserModel[id=10, email='testuser10@liquido.de', profile.mobilephone=+491234510, profile.picture=/static/img/photos/1.png]
-             ├── UserModel[id=11, email='testuser11@liquido.de', profile.mobilephone=+491234511, profile.picture=/static/img/photos/2.png]
-             └── UserModel[id=12, email='testuser12@liquido.de', profile.mobilephone=+491234512, profile.picture=/static/img/photos/3.png]
+DEBUG .(TestDataCreator.java:230).run()                                      | ====== TestDataCreator: Proxy tree =====
+├─ UserModel[id=1, email='testuser1@liquido.de', profile.mobilephone=+49123451, profile.picture=/static/img/avatars/Avatar1.png]
+│  ├─ UserModel[id=2, email='testuser2@liquido.de', profile.mobilephone=+49123452, profile.picture=/static/img/avatars/Avatar2.png]
+│  │  └─ UserModel[id=5, email='testuser5@liquido.de', profile.mobilephone=+49123455, profile.picture=/static/img/avatars/Avatar5.png]
+│  ├─ UserModel[id=3, email='testuser3@liquido.de', profile.mobilephone=+49123453, profile.picture=/static/img/avatars/Avatar3.png]
+│  │  └─ UserModel[id=6, email='testuser6@liquido.de', profile.mobilephone=+49123456, profile.picture=/static/img/avatars/Avatar6.png]
+│  └─ UserModel[id=4, email='testuser4@liquido.de', profile.mobilephone=+49123454, profile.picture=/static/img/avatars/Avatar4.png]
+│     └─ UserModel[id=7, email='testuser7@liquido.de', profile.mobilephone=+49123457, profile.picture=/static/img/avatars/Avatar7.png]
+│        ├─ UserModel[id=10, email='testuser10@liquido.de', profile.mobilephone=+491234510, profile.picture=/static/img/avatars/Avatar10.png]
+│        ├─ UserModel[id=11, email='testuser11@liquido.de', profile.mobilephone=+491234511, profile.picture=/static/img/avatars/Avatar11.png]
+│        └─ UserModel[id=12, email='testuser12@liquido.de', profile.mobilephone=+491234512, profile.picture=/static/img/avatars/Avatar12.png]
 
+DEBUG .(TestDataCreator.java:233).run()                                      | ====== TestDataCreator: Tree of delegations =====
+├─ DelegationModel[id=null, area=Area 0(id=22), fromUser=UserModel[id=1, email='testuser1@liquido.de'], toProxy=UserModel[id=null, email='aboveTopProxy@dummy.org'], transitive=true, requestedDelegationFromChecksum=null, requestedDelegationAt=null]
+│  ├─ DelegationModel[id=226, area=Area 0(id=22), fromUser=UserModel[id=2, email='testuser2@liquido.de'], toProxy=UserModel[id=1, email='testuser1@liquido.de'], transitive=true, requestedDelegationFromChecksum=null, requestedDelegationAt=null]
+│  │  └─ DelegationModel[id=229, area=Area 0(id=22), fromUser=UserModel[id=5, email='testuser5@liquido.de'], toProxy=UserModel[id=2, email='testuser2@liquido.de'], transitive=true, requestedDelegationFromChecksum=RightToVote[hashedVoterToken=$2a$10$1IdrGrRAN2Wp3U7QI.JIzuNX3Ud6yFocoawh8dxtXS6Xinvh2wN8O, transitive=true, publicProxy=UserModel[id=5, email='testuser5@liquido.de'], delegatedTo.checksum=<null>], requestedDelegationAt=2019-12-16T11:10:32.106]
+│  ├─ DelegationModel[id=227, area=Area 0(id=22), fromUser=UserModel[id=3, email='testuser3@liquido.de'], toProxy=UserModel[id=1, email='testuser1@liquido.de'], transitive=true, requestedDelegationFromChecksum=null, requestedDelegationAt=null]
+│  │  └─ DelegationModel[id=230, area=Area 0(id=22), fromUser=UserModel[id=6, email='testuser6@liquido.de'], toProxy=UserModel[id=3, email='testuser3@liquido.de'], transitive=true, requestedDelegationFromChecksum=null, requestedDelegationAt=null]
+│  └─ DelegationModel[id=228, area=Area 0(id=22), fromUser=UserModel[id=4, email='testuser4@liquido.de'], toProxy=UserModel[id=1, email='testuser1@liquido.de'], transitive=true, requestedDelegationFromChecksum=null, requestedDelegationAt=null]
+│     └─ DelegationModel[id=231, area=Area 0(id=22), fromUser=UserModel[id=7, email='testuser7@liquido.de'], toProxy=UserModel[id=4, email='testuser4@liquido.de'], transitive=true, requestedDelegationFromChecksum=null, requestedDelegationAt=null]
+│        ├─ DelegationModel[id=232, area=Area 0(id=22), fromUser=UserModel[id=10, email='testuser10@liquido.de'], toProxy=UserModel[id=7, email='testuser7@liquido.de'], transitive=true, requestedDelegationFromChecksum=null, requestedDelegationAt=null]
+│        ├─ DelegationModel[id=233, area=Area 0(id=22), fromUser=UserModel[id=11, email='testuser11@liquido.de'], toProxy=UserModel[id=7, email='testuser7@liquido.de'], transitive=true, requestedDelegationFromChecksum=null, requestedDelegationAt=null]
+│        └─ DelegationModel[id=234, area=Area 0(id=22), fromUser=UserModel[id=12, email='testuser12@liquido.de'], toProxy=UserModel[id=7, email='testuser7@liquido.de'], transitive=false, requestedDelegationFromChecksum=null, requestedDelegationAt=null]
 
+DEBUG .(TestDataCreator.java:237).run()                                      | ====== TestDataCreator: RightToVotes =====
+DEBUG .(CastVoteService.java:88).createVoterTokenAndStoreRightToVote()       | createVoterTokenAndStoreRightToVote: for UserModel[id=1, email='testuser1@liquido.de', profile.mobilephone=+49123451, profile.picture=/static/img/avatars/Avatar1.png] in AreaModel[title='Area 0', id=22], becomePublicProxy=false
+├─ RightToVote[hashedVoterToken=$2a$10$1IdrGrRAN2Wp3U7QI.JIzuccBk8DrXNh0KtYIUb4eNp.t52wOn6W2, transitive=true, publicProxy=UserModel[id=1, email='testuser1@liquido.de'], delegatedTo.checksum=<null>]
+│  ├─ RightToVote[hashedVoterToken=$2a$10$1IdrGrRAN2Wp3U7QI.JIzuL7lV2QCtsOcieHmoCH6Frx3m0Y2gHDy, transitive=true, publicProxy=<null>, delegatedTo.checksum=$2a$10$1IdrGrRAN2Wp3U7QI.JIzuccBk8DrXNh0KtYIUb4eNp.t52wOn6W2]
+│  ├─ RightToVote[hashedVoterToken=$2a$10$1IdrGrRAN2Wp3U7QI.JIzuEtxLCwrNT9pKlY1rgxYhl3RtaNJEQW., transitive=true, publicProxy=UserModel[id=3, email='testuser3@liquido.de'], delegatedTo.checksum=$2a$10$1IdrGrRAN2Wp3U7QI.JIzuccBk8DrXNh0KtYIUb4eNp.t52wOn6W2]
+│  │  └─ RightToVote[hashedVoterToken=$2a$10$1IdrGrRAN2Wp3U7QI.JIzulyuC.ir27zjCKynm/ef4Gp77Z9XU9UC, transitive=true, publicProxy=UserModel[id=6, email='testuser6@liquido.de'], delegatedTo.checksum=$2a$10$1IdrGrRAN2Wp3U7QI.JIzuEtxLCwrNT9pKlY1rgxYhl3RtaNJEQW.]
+│  └─ RightToVote[hashedVoterToken=$2a$10$1IdrGrRAN2Wp3U7QI.JIzuZjktzIdpQANYKKzwjQ2AG3JLRied3ZC, transitive=true, publicProxy=UserModel[id=4, email='testuser4@liquido.de'], delegatedTo.checksum=$2a$10$1IdrGrRAN2Wp3U7QI.JIzuccBk8DrXNh0KtYIUb4eNp.t52wOn6W2]
+│     └─ RightToVote[hashedVoterToken=$2a$10$1IdrGrRAN2Wp3U7QI.JIzu4HeueVNdaHPs3H5dOkHoKyKmOv2LOTy, transitive=true, publicProxy=UserModel[id=7, email='testuser7@liquido.de'], delegatedTo.checksum=$2a$10$1IdrGrRAN2Wp3U7QI.JIzuZjktzIdpQANYKKzwjQ2AG3JLRied3ZC]
+│        ├─ RightToVote[hashedVoterToken=$2a$10$1IdrGrRAN2Wp3U7QI.JIzuYBfqBJ8KRURXGBEFD1NIy8BIUtxNH8i, transitive=true, publicProxy=UserModel[id=10, email='testuser10@liquido.de'], delegatedTo.checksum=$2a$10$1IdrGrRAN2Wp3U7QI.JIzu4HeueVNdaHPs3H5dOkHoKyKmOv2LOTy]
+│        ├─ RightToVote[hashedVoterToken=$2a$10$1IdrGrRAN2Wp3U7QI.JIzuj.6MAo8TWBWCw/Az7uRlus4mRiLJh/i, transitive=true, publicProxy=UserModel[id=11, email='testuser11@liquido.de'], delegatedTo.checksum=$2a$10$1IdrGrRAN2Wp3U7QI.JIzu4HeueVNdaHPs3H5dOkHoKyKmOv2LOTy]
+│        └─ RightToVote[hashedVoterToken=$2a$10$1IdrGrRAN2Wp3U7QI.JIzukLk9n0nP/KZdEWe.TYbRMKT7d5wS9rm, transitive=false, publicProxy=UserModel[id=12, email='testuser12@liquido.de'], delegatedTo.checksum=$2a$10$1IdrGrRAN2Wp3U7QI.JIzu4HeueVNdaHPs3H5dOkHoKyKmOv2LOTy]
 
 	 */
+
+
   // This test data must match RestEndpointTests.testGetProxyMap()  and ProxyServiceTests.testGetNumVotes !!!
   public static List<String[]> delegations = new ArrayList<>();
 	public static final String AREA_FOR_DELEGATIONS = AREA0_TITLE;
 	public static final String TOP_PROXY_EMAIL = USER1_EMAIL;
-	public static final int USER1_DELEGATIONS = 7;     // testuser1@liquido.de  has 7 delegations to him (the non-transitive one 12-7 is not counted for him!)
+	// Number of delegations.  (without the voter's own one. This would be votecCount)
+	public static final int USER1_DELEGATIONS = 7;     // testuser1@liquido.de  has 7 delegations to him (5-2 and below is still only requested. And the non-transitive one 12-7 is not counted for him!)
 	public static final int USER2_DELEGATIONS = 0;		 // testuser2@liquido.de  has a requested delegation. He has no accepted delegations yet.
 	public static final int USER4_DELEGATIONS = 3;     // testuser4@liquido.de  has 3 direct delegations
 	static {

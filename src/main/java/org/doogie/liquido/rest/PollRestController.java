@@ -151,16 +151,22 @@ public class PollRestController {
 		return pollResultsJson;
 	}
 
+	/**
+	 * Verify that a ballot has been casted and counted correctly in a poll.
+	 * @param poll the poll
+	 * @param checksum the ballot's checksum that was returned to the voter when casting his ballot
+	 * @return true when ballot could be verified
+	 */
 	@RequestMapping(value = "/polls/{pollId}/verifyChecksum")
 	@ResponseBody
 	public Lson verifyChecksum(
 		@PathVariable("pollId") PollModel poll,
-		@RequestParam("checksum") String checksumStr
+		@RequestParam("checksum") String checksum
 	) {
-  	boolean valid = pollService.verifyChecksum(poll, checksumStr);
+  	boolean valid = pollService.verifyBallot(poll, checksum);
 		Link pollLink = entityLinks.linkToSingleResource(PollModel.class, poll.getId());
   	return new Lson()
-			.put("checksum", checksumStr)
+			.put("checksum", checksum)
 			.put("poll", pollLink.getHref())
 			.put("valid", valid);
 	}
@@ -173,7 +179,7 @@ public class PollRestController {
 	 * @param voterToken the users own voterToken
 	 * @return voter's own ballot (200)  or HTTP 204 NO_CONTENT if user has no ballot yet
 	 */
-	@RequestMapping(value = "/polls/{pollId}/ballot/my")
+	@RequestMapping(value = "/polls/{pollId}/myballot")
 	@ResponseBody
 	public BallotModel getOwnBallot(
 			@PathVariable(name="pollId") PollModel poll,			// To use pollId as @PathVariable this needs its own conversionService in LiquidoRepositoryRestConfigurer.java !

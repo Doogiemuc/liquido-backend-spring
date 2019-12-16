@@ -37,7 +37,7 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 //@PreAuthorize("isAuthenticated()")    => possible but not necessary. Auth is already checked in JwtAuthenticationFilter
 public class VoteRestController {
 	@Autowired
-	BallotRepo ballotRepo;
+	BallotRepo ballotRepo;			//TODO: Rest Controllers should not directly access Repos. Go via service
 
 	@Autowired
 	CastVoteService castVoteService;
@@ -115,7 +115,6 @@ public class VoteRestController {
 	 * @return on success JSON:
 	 *   {
 	 *     "msg": "OK, your ballot was counted.",
-	 *     "delegees": "0",
 	 *     "checksum": "$2a$10$1IdrGrRAN2Wp3U7QI.JIzueBtPrEreWk1ktFJ3l61Tyv4TC6ICLp2",
 	 *     "poll": "/polls/253"
 	 *   }
@@ -131,10 +130,9 @@ public class VoteRestController {
 
 		Lson result = Lson.builder()
 			.put("msg", "OK, your vote was counted successfully.")
-			.put("poll", castVoteRequest.getPoll())                  // return URI of poll
-			//TODO:  Return ballot.hashCode()  !!!!  The checksum of the complete ballot  => But then alos need to store this value to lookup ballots by their checksum!
-			.put("checksum", ballot.getRightToVote().getHashedVoterToken())     // BallotModel is NOT exposed as RepositoryRestResource, therefore we return just the checksum.
-			.put("voteCount", ballot.getVoteCount());								 // ballot was counted this number of times.
+			.put("poll", castVoteRequest.getPoll())                 // return URI of poll
+			.put("checksum", ballot.getChecksum())   								// Checksum of the whole ballot, incl. its voterOrder
+			.put("voteCount", ballot.getVoteCount());								// ballot was counted this number of times.
     return result;
   }
 

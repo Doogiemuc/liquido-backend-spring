@@ -6,10 +6,21 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.doogie.liquido.rest.converters.PollAsLinkJsonSerializer;
+import org.doogie.liquido.testdata.LiquidoProperties;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
+import javax.xml.bind.DatatypeConverter;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -72,13 +83,12 @@ public class BallotModel {
   public Integer level;
 
 	/**
-	 * By default a ballot stands for one vote.
-	 * But if other voters delegated their vote to a proxy, then this proxy may vote for that many times.
-	 * The voteCount is the sum of all delegated votes plus the vote of the proxy himself.
-	 *
-	 * IMPORTANT: There are separate ballots for all these delegated votes. The voteCount is just for info. Do not sum it up.
+	 * Number of times that his vote was counted because of delegations.
+	 * This value is not stored, since it may change when the tree of delegations changes.
+	 * It is only valid at the time when the ballot is casted.
 	 */
-	public long voteCount = 1;
+	@Transient
+  public Long voteCount;
 
   /**
    * One vote puts some proposals of this poll into his personally preferred order.
@@ -110,6 +120,23 @@ public class BallotModel {
 	@JoinColumn(name = "hashedVoterToken")		// The @Id of a RightToVoteModel is the hashedVoterToken itself
 	@JsonIgnore																// [SECURITY] Do not expose voter's private right to vote
   public RightToVoteModel rightToVote;
+
+	/**
+	 * The MD5 checksum of a ballot uniquely identifies this ballot.
+	 * The checksum is calculated from the voteOrder, poll.id and rightToVote.hashedVoterToken.
+	 * It deliberately does not depend on level or rightToVote.delegatedTo !
+	 */
+	public String checksum;
+
+	@PreUpdate
+	@PrePersist
+	public void calcMD5Checksum() {
+		this.checksum =  DigestUtils.md5Hex(
+				// Cannot include ID. Its not not present when saving a new Ballot!
+				this.getVoteOrder().hashCode() +
+				this.getPoll().hashCode() +
+				this.getRightToVote().hashedVoterToken);
+	}
 
 	@Override
 	public String toString() {

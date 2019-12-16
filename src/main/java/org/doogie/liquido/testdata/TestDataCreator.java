@@ -234,12 +234,12 @@ public class TestDataCreator implements CommandLineRunner {
 			utils.printDelegationTree(area.get(), topProxy);
 
 			try {
-				log.debug("====== TestDataCreator: Proxy tree (checksums) =====");
+				log.debug("====== TestDataCreator: RightToVotes =====");
 				String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(topProxy, area.get(), TestFixtures.USER_TOKEN_SECRET, false);
 				RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken);
 				utils.printRightToVoteTree(rightToVote);
 			} catch (LiquidoException e) {
-				log.error("Cannot get checksum of " + topProxy + ": " + e.getMessage());
+				log.error("Cannot get rightToVote of " + topProxy + ": " + e.getMessage());
 			}
 		}
 

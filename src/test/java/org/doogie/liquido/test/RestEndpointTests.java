@@ -6,6 +6,7 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.jwt.JwtTokenProvider;
@@ -14,6 +15,7 @@ import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.testUtils.JwtAuthInterceptor;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
+import org.doogie.liquido.testdata.TestDataUtils;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.Lson;
@@ -39,6 +41,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 import static org.springframework.http.HttpMethod.*;
@@ -92,6 +95,9 @@ public class RestEndpointTests extends BaseTest {
 
   @Autowired
 	LiquidoProperties prop;
+
+  @Autowired
+	TestDataUtils testDataUtils;
 
   @Autowired
   RepositoryEntityLinks entityLinks;
@@ -562,7 +568,7 @@ public class RestEndpointTests extends BaseTest {
 		return addSupporterResponse;
 	}
 
-  /** helper to get the currently logged in user's voterToken */
+  /** helper to get the currently logged in user's voterToken via REST*/
   private String getVoterToken(long areaId) {
 		String tokenJson = client.getForObject("/my/voterToken/{areaId}?tokenSecret={tokenSecret}", String.class, areaId, TestFixtures.USER_TOKEN_SECRET);
 		return JsonPath.read(tokenJson, "$.voterToken");
@@ -683,25 +689,17 @@ public class RestEndpointTests extends BaseTest {
 
 	/**
 	 * Cast a vote via real REST requests.
-	 * This test needs one poll that is in its voting phase <b>AND</b> that has no (randomly) casted votes yet.
-	 * Because only then can we deterministically test the delegation of the proxies vote down the tree.
+	 * This is THE most important test case in LIQUIDO.
 	 */
   @Test
-  public void testCastVoteProxy() throws LiquidoException {
-		//----- find poll that is in voting and has not votes casted yet
+  public void testCastVote() throws LiquidoException {
+		// GIVEN a poll that is in voting
 		List<PollModel> pollsInVoting = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
-		PollModel poll = null;
-		for(PollModel p: pollsInVoting) {
-			List<BallotModel> ballots = ballotRepo.findByPoll(p);
-			if (ballots.size() == 0) {
-				poll = p;
-				break;
-			}
-		}
-		assertNotNull("Need at least one poll in voting that has no votes yet!", poll);
+		assertNotNull("Need at least one poll in voting!", pollsInVoting.size() > 0);
+		PollModel poll = pollsInVoting.get(0);
+		log.trace("Cast vote in "+poll);
 
-
-		/*  old version via plain REST
+		/*  old version: via poll in Voting via plain REST
 		String pollsJson = client.getForObject("/polls/search/findByStatus?status=VOTING", String.class);
 		DocumentContext ctx = JsonPath.parse(pollsJson);
 		String pollURI       = ctx.read("$._embedded.polls[0]._links.self.href", String.class);
@@ -712,31 +710,18 @@ public class RestEndpointTests extends BaseTest {
 		proposal2_URI = LiquidoRestUtils.cleanURI(proposal2_URI);
 		*/
 
-		log.trace("Cast vote in "+poll);
-
-		//----- get voterToken
+		// WHEN getting voterToken
 		loginUserJWT(TestFixtures.USER1_EMAIL);  // user1 is our topProxy with 7 delegations
 		//Mock: String voterToken  = castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
 		String voterToken = getVoterToken(poll.getArea().getId());
-		RightToVoteModel checksum = castVoteService.isVoterTokenValid(voterToken);
-		log.trace("with voterToken: "+voterToken+ " => "+checksum);
+		RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken);
+		log.trace("with voterToken: "+voterToken+ " => "+rightToVote);
 
-		//----- print already casted votes of our delegees BEFORE we cast the proxies vote
-		Function<RightToVoteModel, List<RightToVoteModel>> getChildrenFunc = c -> rightToVoteRepo.findByDelegatedTo(c);
-		final PollModel finalPoll = poll;									//BUGFIX: Variables in lambda must be (effectively) final
-		BiConsumer<String, RightToVoteModel> printerFunc = (prefix, c) -> {
-			Optional<BallotModel> ballotOpt = ballotRepo.findByPollAndRightToVote(finalPoll, c);
-			if (ballotOpt.isPresent()) {
-				log.debug(ballotOpt.get().toString());
-			} else {
-				log.debug("No ballot for "+c.toString());
-			}
-		};
 		log.debug("============== existing ballots ===========");
-		DoogiesUtil.printTreeRec("", checksum, printerFunc, getChildrenFunc, true);
+		testDataUtils.printRightToVoteTree(rightToVote);
 		log.debug("============== existing ballots ===========");
 
-		//----- cast vote anonymously
+		// AND cast vote via REST
 		Iterator<LawModel> iterator = poll.getProposals().iterator();
 		HttpEntity entity = Lson.builder()
 		  .put("poll", "/polls/"+poll.getId())
@@ -745,44 +730,28 @@ public class RestEndpointTests extends BaseTest {
 			.toHttpEntity();
 		ResponseEntity<String> castVoteRes = anonymousClient.postForEntity("/castVote", entity, String.class);
 
+		// THEN ballot is created successfully
 		assertEquals(HttpStatus.CREATED, castVoteRes.getStatusCode());
-		int voteCount = JsonPath.read(castVoteRes.getBody(), "$.voteCount");
-		assertEquals("Vote of "+TestFixtures.USER1_EMAIL+" should have been counted "+(TestFixtures.USER1_DELEGATIONS+1)+" times", TestFixtures.USER1_DELEGATIONS+1, voteCount);
+		String checksum = JsonPath.read(castVoteRes.getBody(), "$.checksum");
+
+		// AND voteCount is correct
+		int voteCount = JsonPath.read(castVoteRes.getBody(), "$.voteCount");   // vote count is delegations + 1 (user's own vote)
+		assertEquals("Vote should have been counted " + TestFixtures.USER1_DELEGATIONS+1 + " times!", TestFixtures.USER1_DELEGATIONS+1, voteCount);
+
+		//  AND ballots checksum is valid in poll
+		ResponseEntity<String> res = client.getForEntity("/polls/" + poll.getId() + "/verifyChecksum?checksum=" + checksum, String.class);
+		Boolean valid = JsonPath.read(res.getBody(), "$.valid");
+		assertTrue("Checksum should be valid", valid);
+
+
+
+
+
+
+
+		// CLEANUP: remove casted Ballot
+		ballotRepo.findByPollAndChecksum(poll, checksum).ifPresent(ballot -> ballotRepo.delete(ballot));
 	}
 
-
-
-
-
-
-
-
-
-
-
-
-	/*==================
-	// MockMvc is nice. But it only mocks the HTTP requests (via a mocked DispatcherServlet)
-	// Rest Template does really send requests (via network)
-	// https://stackoverflow.com/questions/25901985/difference-between-mockmvc-and-resttemplate-in-integration-tests
-
-	@Autowired
-	private WebApplicationContext wac;
-
-	@Autowired
-	private FilterChainProxy springSecurityFilterChain;
-
-	// Moch HTTP client configured for Oauth
-	private MockMvc mockMvc;
-
-	@Before
-	public void setupMockMvc() {
-
-		this.mockMvc = MockMvcBuilders
-				.webAppContextSetup(wac)
-				.addFilter(springSecurityFilterChain)
-				.build();
-	}
-  */
 
 }
