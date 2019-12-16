@@ -710,7 +710,7 @@ public class RestEndpointTests extends BaseTest {
 		proposal2_URI = LiquidoRestUtils.cleanURI(proposal2_URI);
 		*/
 
-		// WHEN getting voterToken
+		// AND users voterToken
 		loginUserJWT(TestFixtures.USER1_EMAIL);  // user1 is our topProxy with 7 delegations
 		//Mock: String voterToken  = castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
 		String voterToken = getVoterToken(poll.getArea().getId());
@@ -721,7 +721,16 @@ public class RestEndpointTests extends BaseTest {
 		testDataUtils.printRightToVoteTree(rightToVote);
 		log.debug("============== existing ballots ===========");
 
-		// AND cast vote via REST
+
+
+		// ------------------------------------
+		// WHEN getting own ballot
+		ResponseEntity<String> noBallotYet = client.getForEntity("/polls/" + poll.getId() + "/myballot?voterToken="+voterToken, String.class);
+		// THEN 404 is returned
+	  assertEquals("User should not yet have a ballot in this poll", HttpStatus.NO_CONTENT, noBallotYet.getStatusCode());
+
+		// ------------------------------------
+		// WHEN cast vote via REST
 		Iterator<LawModel> iterator = poll.getProposals().iterator();
 		HttpEntity entity = Lson.builder()
 		  .put("poll", "/polls/"+poll.getId())
@@ -739,17 +748,33 @@ public class RestEndpointTests extends BaseTest {
 		assertEquals("Vote should have been counted " + TestFixtures.USER1_DELEGATIONS+1 + " times!", TestFixtures.USER1_DELEGATIONS+1, voteCount);
 
 		//  AND ballots checksum is valid in poll
-		ResponseEntity<String> res = client.getForEntity("/polls/" + poll.getId() + "/verifyChecksum?checksum=" + checksum, String.class);
-		Boolean valid = JsonPath.read(res.getBody(), "$.valid");
+		ResponseEntity<String> verifyChecksumRes = client.getForEntity("/polls/" + poll.getId() + "/verifyChecksum?checksum=" + checksum, String.class);
+		Boolean valid = JsonPath.read(verifyChecksumRes.getBody(), "$.valid");
 		assertTrue("Checksum should be valid", valid);
 
+		//  AND we can retrieve user's ballot with correct level and voteCount
+		ResponseEntity<String> hasBallotRes = client.getForEntity("/polls/" + poll.getId() + "/myballot?voterToken="+voterToken, String.class);
+		assertEquals("User should now have a ballot in this poll", HttpStatus.OK, hasBallotRes.getStatusCode());
+		int level = JsonPath.read(hasBallotRes.getBody(), "$.level");
+		assertEquals("Ballot should have level 0", 0, level);
+		int voteCountInBallot = JsonPath.read(hasBallotRes.getBody(), "$.voteCount");
+		assertEquals("Ballot should have voteCount "+TestFixtures.USER1_DELEGATIONS+1, TestFixtures.USER1_DELEGATIONS+1, voteCountInBallot);
+
+
+		//----------------
+		// GIVEN an already casted ballot by a proxy
+
+		// WHEN proxy at lower level casts a vote
+
+		// THEN this vote counts only for him and his delegees
+
+		//  ANd this vote does not count for proxies above him
+
+		//  AND user's ballot is updated
 
 
 
-
-
-
-		// CLEANUP: remove casted Ballot
+		// CLEANUP: remove casted Ballots
 		ballotRepo.findByPollAndChecksum(poll, checksum).ifPresent(ballot -> ballotRepo.delete(ballot));
 	}
 

@@ -150,7 +150,7 @@ public class ProxyRestController {
 		List<DelegationModel> acceptedDelegations = proxyService.findAcceptedDirectDelegations(area, proxy);
 		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, proxy);
 		Optional<RightToVoteModel> checksumOfPublicProxy = proxyService.getChecksumOfPublicProxy(area, proxy);
-		long delegationCount = proxyService.getRealDelegationCount(voterToken);
+		long delegationCount = proxyService.getRecursiveDelegationCount(voterToken);
 		return Lson.builder()
 				.put("acceptedDirectDelegations", acceptedDelegations)
 				.put("isPublicProxy", checksumOfPublicProxy.isPresent())

@@ -76,7 +76,6 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 	 * This bean is needed in {@link PollRestController#getOwnBallot(PollModel, String)}   to manually create the projection
 	 * https://stackoverflow.com/questions/33288486/using-a-spring-data-rest-projection-as-a-representation-for-a-resource-in-a-cus
 	 */
-
 	@Bean public CollectionAwareProjectionFactory projectionFactory() { return new CollectionAwareProjectionFactory(); }
 
   // see also LiquidoAuditorAware for handling @CreatedBy   https://jaxenter.com/rest-api-spring-java-8-112289.html

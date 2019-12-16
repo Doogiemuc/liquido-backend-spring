@@ -106,7 +106,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
   //@JoinColumn(name="poll_id")  this column name is already the default
   @JsonBackReference  // necessary to prevent endless cycle when (de)serializing to/from JSON: http://stackoverflow.com/questions/20218568/direct-self-reference-leading-to-cycle-exception
 
-	//TODO: serialize LawModel.poll as HATEOAS link  => this has consequences for the client that in some places needs the information of the proposal's poll, eg. in LawPanel!
+	//TODO: serialize LawModel.poll as HATEOAS link  => this has consequences for the client that in some places needs the information of the proposal's poll, eg. in LawPanel!  Solution: Add poll.numCompeting proposals as @Transient attribute
 	//@JsonProperty("_links")   															// JSON will contain "_links.poll.href"
 	//@JsonSerialize(using = PollAsLinkJsonSerializer.class)  // We only return an HATEOS link to the poll
   public PollModel poll = null;
