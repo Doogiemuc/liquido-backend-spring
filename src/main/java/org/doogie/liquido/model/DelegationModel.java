@@ -62,14 +62,17 @@ public class DelegationModel extends BaseModel {
 	 * the delegation request, the voters checksum can also be delegated to the proxies checksum.
 	 */
 	@OneToOne
-	@JsonIgnore  // do not include this field in REST responses. Checksums are confidential
-		RightToVoteModel requestedDelegationFromChecksum = null;
+	@JsonIgnore  // do not include this field in REST responses. RightToVotes are confidential
+  RightToVoteModel requestedDelegationFrom = null;
 
   /** When was the delegation to that proxy requested */
   LocalDateTime requestedDelegationAt = null;
 
+	/**
+	 * @return true if this delegation is requested. Proxy must still confirm.
+	 */
   public boolean isDelegationRequest() {
-  	return this.requestedDelegationFromChecksum != null;
+  	return this.requestedDelegationFrom != null;
 	}
 
 	/**
@@ -88,7 +91,7 @@ public class DelegationModel extends BaseModel {
 		//A "builder" only creates a new object and sets some additional values, that the default RequiredArgs constructor does not set.
 		DelegationModel delegationRequest = new DelegationModel(area, fromUser, proxy);
 		delegationRequest.setTransitive(transitive);
-		delegationRequest.setRequestedDelegationFromChecksum(rightToVoteModel);
+		delegationRequest.setRequestedDelegationFrom(rightToVoteModel);
 		delegationRequest.setRequestedDelegationAt(LocalDateTime.now());
 		return delegationRequest;
 	}
@@ -106,7 +109,7 @@ public class DelegationModel extends BaseModel {
 		sb.append(", fromUser=").append(fromUser.toStringShort());
 		sb.append(", toProxy=").append(toProxy.toStringShort());
 		sb.append(", transitive=").append(transitive);
-		sb.append(", requestedDelegationFromChecksum=").append(requestedDelegationFromChecksum);
+		sb.append(", requestedDelegationFrom=").append(requestedDelegationFrom);
 		sb.append(", requestedDelegationAt=").append(requestedDelegationAt);
 		sb.append(']');
 		return sb.toString();

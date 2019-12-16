@@ -25,6 +25,14 @@ public interface BallotRepo extends CrudRepository<BallotModel, Long> {
   List<BallotModel> findByPoll(PollModel poll);
 
 	/**
+	 * Find a casted ballot by its checksum
+	 * @param checksum a ballots checksum, ie. its hashCode
+	 * @param poll the poll with that ballot
+	 * @return the ballot or Optional.emtpy() if not found
+	 */
+  Optional<BallotModel> findByPollAndChecksum(PollModel poll, String checksum);
+
+	/**
 	 * Count number of ballots casted in this poll
 	 * @param poll a poll
 	 * @return number of ballots in this poll

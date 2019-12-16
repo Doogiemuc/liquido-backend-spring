@@ -92,6 +92,11 @@ public class Lson extends HashMap<String, Object> {
 		return this;
 	}
 
+	public  Lson putArray(String key, Iterable values) {
+		super.put(key, values);
+		return this;
+	}
+
 	public HttpEntity<String> toHttpEntity() {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
