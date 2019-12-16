@@ -7,21 +7,21 @@
 
 SSH_KEY=/d/Coding/doogies_credentials/liquido-aws-SSH.pem
 
-BACKEND_SOURCE=/d/Coding/liquido/liquido-backend-spring
+BACKEND_SOURCE=/c/Doogie//CodingDoogie/liquido/liquido-backend-spring
 BACKEND_USER=ec2-user
 BACKEND_HOST=ec2-52-208-204-181.eu-west-1.compute.amazonaws.com
 BACKEND_API=http://${BACKEND_HOST}:80/liquido/v2
 BACKEND_DEST_DIR=/home/ec2-user/liquido/liquido-int
 BACKEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:${BACKEND_DEST_DIR}
 
-FRONTEND_BASE=/d/Coding/liquido/liquido-vue-frontend
+FRONTEND_BASE=/c/Doogie/CodingDoogie/liquido/liquido-vue-frontend
 FRONTEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:/var/www/html
 FRONTEND_URL=http://$BACKEND_HOST
 
 CURRENT_DIR=$PWD
 NPM=npm
 MAVEN=./mvnw
-CYPRESS=/d/Coding/liquido/liquido-vue-frontend/node_modules/cypress/bin/cypress
+CYPRESS=/c/Doogie/CodingDoogie/liquido/liquido-vue-frontend/node_modules/cypress/bin/cypress
 
 # ===== BASH colors
 DEFAULT="\e[39m"

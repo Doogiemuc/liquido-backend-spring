@@ -225,6 +225,7 @@ public class CastVoteService {
 		BallotModel newBallot = new BallotModel(poll, 0, voteOrder, rightToVoteModel);  //MAYBE: BallotModelBuilder.createFromVoteRequest(...)   or would that be a bit of overengeneering
 		BallotModel savedBallot = storeBallot(newBallot);		// rightToVote will be validated inside storeBallot() -> checkBallot()
 
+		//MAYBE: also return the voteCount for how many votes the ballot was casted
 		return savedBallot;
 	}
 
@@ -293,6 +294,7 @@ public class CastVoteService {
 				if (savedChildBallot != null) voteCount = voteCount + savedChildBallot.getVoteCount();
 			}
 		}
+
 		ballot.setVoteCount(voteCount);
 		return ballotRepo.save(ballot);
 	}

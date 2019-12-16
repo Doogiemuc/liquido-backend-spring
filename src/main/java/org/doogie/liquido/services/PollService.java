@@ -324,16 +324,13 @@ public class PollService {
 	}
 
 	/**
-	 * Checks if a given checksum was counted in that poll
+	 * Checks if a ballot with that checksum was counted in that poll
 	 * @param poll SHOULD have status == FINISHED
-	 * @param checksumStr a checksum string
+	 * @param checksum a ballot's checksum
 	 * @return true if a ballot with that checksum was counted in that poll
 	 */
-	public boolean verifyChecksum(@NotNull PollModel poll, @NotNull String checksumStr) {
-		Optional<RightToVoteModel> checksumOpt = rightToVoteRepo.findByHashedVoterToken(checksumStr);
-		if (!checksumOpt.isPresent()) return false;
-		Optional<BallotModel> ballotOpt = ballotRepo.findByPollAndRightToVote(poll, checksumOpt.get());
-		return ballotOpt.isPresent() && ballotOpt.get().getPoll().equals(poll);
+	public boolean verifyBallot(@NotNull PollModel poll, String checksum) {
+		return ballotRepo.findByPollAndChecksum(poll, checksum).isPresent();
 	}
 
 	/**

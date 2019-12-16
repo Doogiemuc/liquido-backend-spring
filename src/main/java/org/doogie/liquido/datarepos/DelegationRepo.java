@@ -48,10 +48,10 @@ public interface DelegationRepo extends CrudRepository<DelegationModel, Long> {
   Optional<DelegationModel> findByAreaAndFromUser(AreaModel area, UserModel fromUser);
 
 
-  @Query("select d from DelegationModel d where d.area = ?1 and d.toProxy = ?2 and d.requestedDelegationFromChecksum != null")
+  @Query("select d from DelegationModel d where d.area = ?1 and d.toProxy = ?2 and d.requestedDelegationFrom != null")
   List<DelegationModel> findDelegationRequests(AreaModel area, UserModel proxy);
 
-  @Query("select d from DelegationModel d where d.area = ?1 and d.toProxy = ?2 and d.requestedDelegationFromChecksum = null")
+  @Query("select d from DelegationModel d where d.area = ?1 and d.toProxy = ?2 and d.requestedDelegationFrom = null")
   List<DelegationModel> findAcceptedDelegations(AreaModel area, UserModel proxy);
 
   /*
