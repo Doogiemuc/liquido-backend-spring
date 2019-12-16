@@ -292,7 +292,13 @@ public class PollService {
 		RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken);
 	 	if (PollModel.PollStatus.ELABORATION.equals(poll.getStatus()))
   		throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Cannot get ballot of poll in ELABORATION");
-		return ballotRepo.findByPollAndRightToVote(poll, rightToVote);
+		Optional<BallotModel> ballot = ballotRepo.findByPollAndRightToVote(poll, rightToVote);
+		if (ballot.isPresent()) {
+			// update voteCount with current value according to current state of delegations
+			long delegationCount = proxyService.getRecursiveDelegationCount(voterToken);
+			ballot.get().setVoteCount(delegationCount+1);
+		}
+		return ballot;
 	}
 
 	/**

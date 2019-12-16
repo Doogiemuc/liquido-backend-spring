@@ -21,7 +21,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.util.List;
 import java.util.Optional;
 
 import static org.doogie.liquido.testdata.TestFixtures.*;
@@ -101,14 +100,14 @@ public class ProxyServiceTests extends BaseTest {
 		String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(proxy, area, USER_TOKEN_SECRET, true);
 		RightToVoteModel proxyChecksum = castVoteService.isVoterTokenValid(voterToken);
 		utils.printRightToVoteTree(proxyChecksum);
-		long delegationCount = proxyService.getRealDelegationCount(voterToken);
+		long delegationCount = proxyService.getRecursiveDelegationCount(voterToken);
 		assertEquals(USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegations", TestFixtures.USER1_DELEGATIONS, delegationCount);
 
 		proxy = userRepo.findByEmail(USER4_EMAIL).get();
 		voterToken = castVoteService.createVoterTokenAndStoreRightToVote(proxy, area, USER_TOKEN_SECRET, true);
 		proxyChecksum = castVoteService.isVoterTokenValid(voterToken);
 		utils.printRightToVoteTree(proxyChecksum);
-		delegationCount = proxyService.getRealDelegationCount(voterToken);
+		delegationCount = proxyService.getRecursiveDelegationCount(voterToken);
 		assertEquals(USER4_EMAIL+" should have "+TestFixtures.USER4_DELEGATIONS +" delegations", TestFixtures.USER4_DELEGATIONS, delegationCount);
 
 		log.trace("SUCCESS: testGetNumVotes");

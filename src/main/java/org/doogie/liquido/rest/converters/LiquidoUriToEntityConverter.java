@@ -61,7 +61,7 @@ public class LiquidoUriToEntityConverter<T> implements Converter<String, T>, Con
 	@Override
 	public T convert(String sourceUri) {
 		Long id = LiquidoRestUtils.getIdFromURI(this.pathSegment, sourceUri);
-		T entity = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Cannot find entity "+clazz.getTypeName()+" with id="+id));  //TODO: Cannot simply throw a LiquidoException when Entity is not found
+		T entity = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Cannot find entity "+clazz.getTypeName()+" with id="+id));  //Cannot simply throw a LiquidoException when Entity is not found
 		return entity;
 	}
 
