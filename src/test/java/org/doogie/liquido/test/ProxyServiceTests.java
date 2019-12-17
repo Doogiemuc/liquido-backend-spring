@@ -73,7 +73,7 @@ public class ProxyServiceTests extends BaseTest {
 
 		//WHEN
 		String userVoterToken = castVoteService.createVoterTokenAndStoreRightToVote(fromUser, area, USER_TOKEN_SECRET, true);
-		DelegationModel delegation = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, true);
+		DelegationModel delegation = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);
 
 		//THEN
 		RightToVoteModel usersRightToVote = castVoteService.isVoterTokenValid(userVoterToken);
@@ -138,15 +138,6 @@ public class ProxyServiceTests extends BaseTest {
 		assertTrue(topProxy.isPresent());
 		assertEquals(expectedTopProxy, topProxy.get());
 
-		//GIVEN   - proxy 12 -> 7 because delegation is non transitive
-		voter             = userRepo.findByEmail(USER12_EMAIL).get();
-		expectedTopProxy  = userRepo.findByEmail(USER7_EMAIL).get();
-		//WHEN
-		topProxy = proxyService.findTopProxy(area, voter);
-		//THEN
-		assertTrue(topProxy.isPresent());
-		assertEquals(expectedTopProxy, topProxy.get());
-
 		//GIVEN   - voter 5 -> no proxy, because delegation is only requested
 		voter             = userRepo.findByEmail(USER5_EMAIL).get();
 		//WHEN
@@ -178,13 +169,13 @@ public class ProxyServiceTests extends BaseTest {
 
 		//WHEN
 		String userVoterToken = castVoteService.createVoterTokenAndStoreRightToVote(fromUser, area, USER_TOKEN_SECRET, true);
-		proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, true);
+		proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);
 
 		//THEN
 		assertFalse("Normal delegation should be allowed", proxyService.thisWouldBeCircularDelegation(area, fromUser, toProxy));
 		assertTrue("Circular delegation should be forbidden", proxyService.thisWouldBeCircularDelegation(area, toProxy, fromUser));
 		try {
-			proxyService.assignProxy(area, toProxy, fromUser, userVoterToken, true);
+			proxyService.assignProxy(area, toProxy, fromUser, userVoterToken);
 			fail("Trying to assign a proxy which leads to a circular delegation should have thrown a LiquidoException!");
 		} catch(LiquidoException e) {
 			if (e.getError() != LiquidoException.Errors.CANNOT_ASSIGN_CIRCULAR_PROXY)
@@ -208,6 +199,6 @@ public class ProxyServiceTests extends BaseTest {
 		assertFalse("Delegation to proxy should not exist anymore", delegation.isPresent());
 
 		//Cleanup
-		proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, true);
+		proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);
 	}
 }

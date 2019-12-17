@@ -31,6 +31,9 @@ import java.io.IOException;
  * </pre>
  *
  * @param <T> your JPA entity class
+ *
+ * https://www.baeldung.com/spring-boot-jsoncomponent
+ * https://stackoverflow.com/questions/37186417/resolving-entity-uri-in-custom-controller-spring-hateoas
  */
 @Slf4j
 public class EntityDeserializer<T> extends StdDeserializer<T> {

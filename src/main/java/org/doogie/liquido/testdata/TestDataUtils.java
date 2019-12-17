@@ -4,16 +4,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.RightToVoteRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.UserRepo;
-import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.RightToVoteModel;
-import org.doogie.liquido.model.DelegationModel;
-import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.model.*;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -58,6 +56,18 @@ public class TestDataUtils {
 			user.setId(existingUser.get().getId());
 		}
 		return userRepo.save(user);
+	}
+
+
+	/** create a random vote Order with at least one proposal */
+	public static List<LawModel> randVoteOrder(PollModel poll) {
+		Random rand = new Random(System.currentTimeMillis());
+		List<LawModel> voteOrder = poll.getProposals().stream()
+			.filter(p -> rand.nextInt(10) > 0)					// keep 90% of the candidates
+			.sorted((p1, p2) -> rand.nextInt(2)*2 - 1)  // compare randomly  -1 or +1
+			.collect(Collectors.toList());
+		if (voteOrder.size() == 0) voteOrder.add(poll.getProposals().iterator().next());
+		return voteOrder;
 	}
 
 }

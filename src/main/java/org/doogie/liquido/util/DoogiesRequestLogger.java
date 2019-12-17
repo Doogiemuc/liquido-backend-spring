@@ -24,7 +24,7 @@ import java.util.Enumeration;
  */
 public class DoogiesRequestLogger extends OncePerRequestFilter {
 
-  private boolean includeResponsePayload = false;
+  private boolean includeResponsePayload = true;
   private boolean logRequestHeaders = false;
   private int maxPayloadLength = 1000;
 

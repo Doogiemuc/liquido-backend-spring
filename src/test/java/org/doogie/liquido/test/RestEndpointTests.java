@@ -6,8 +6,6 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.rest.dto.CastVoteRequest;
-import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.jwt.JwtTokenProvider;
 import org.doogie.liquido.model.*;
@@ -15,10 +13,13 @@ import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.testUtils.JwtAuthInterceptor;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
+import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.testdata.TestDataUtils;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.Lson;
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,8 +40,6 @@ import org.springframework.web.util.DefaultUriBuilderFactory;
 import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.*;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
@@ -507,12 +506,6 @@ public class RestEndpointTests extends BaseTest {
 
 	}
 
-
-
-
-
-
-
 	/**
 	 * fetch currently logged in user
 	 * @return
@@ -690,92 +683,116 @@ public class RestEndpointTests extends BaseTest {
 	/**
 	 * Cast a vote via real REST requests.
 	 * This is THE most important test case in LIQUIDO.
+	 * Here we test the basic flow for casting a vote.
+	 * Then we also test the use case when two proxies at different levels each cast their vote.
+	 * The vote of a lower level proxy must not be "overwritten" by the vote of a higher level proxy.
 	 */
   @Test
-  public void testCastVote() throws LiquidoException {
-		// GIVEN a poll that is in voting
+  public void testCastVote() throws Exception {
+		// GIVEN a poll that is in voting (user has not voted in this poll yet)
 		List<PollModel> pollsInVoting = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
 		assertNotNull("Need at least one poll in voting!", pollsInVoting.size() > 0);
 		PollModel poll = pollsInVoting.get(0);
 		log.trace("Cast vote in "+poll);
 
-		/*  old version: via poll in Voting via plain REST
-		String pollsJson = client.getForObject("/polls/search/findByStatus?status=VOTING", String.class);
-		DocumentContext ctx = JsonPath.parse(pollsJson);
-		String pollURI       = ctx.read("$._embedded.polls[0]._links.self.href", String.class);
-		String proposal1_URI = ctx.read("$._embedded.polls[0]._embedded.proposals[0]_links.self.href", String.class);
-		String proposal2_URI = ctx.read("$._embedded.polls[0]._embedded.proposals[1]_links.self.href", String.class);
-		long   areaId        = Long.valueOf(ctx.read("$._embedded.polls[0].area.id", String.class));
-		proposal1_URI = LiquidoRestUtils.cleanURI(proposal1_URI);
-		proposal2_URI = LiquidoRestUtils.cleanURI(proposal2_URI);
-		*/
+		// -------------------------------------------------------
+		// GIVEN user4 with his voterToken
+		loginUserJWT(TestFixtures.USER4_EMAIL);
+		String user4VoterToken = getVoterToken(poll.getArea().getId());
 
-		// AND users voterToken
-		loginUserJWT(TestFixtures.USER1_EMAIL);  // user1 is our topProxy with 7 delegations
-		//Mock: String voterToken  = castVoteService.createVoterTokenAndStoreChecksum(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
-		String voterToken = getVoterToken(poll.getArea().getId());
-		RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken);
-		log.trace("with voterToken: "+voterToken+ " => "+rightToVote);
+		// WHEN getting own ballot of user4
+		ResponseEntity<String> noBallotYet = client.getForEntity("/polls/" + poll.getId() + "/myballot?voterToken="+user4VoterToken, String.class);
+		// THEN user4 does not yet have a ballot (404 is returned)
+		assertEquals("User should not yet have a ballot in this poll", HttpStatus.NO_CONTENT, noBallotYet.getStatusCode());
 
-		log.debug("============== existing ballots ===========");
-		testDataUtils.printRightToVoteTree(rightToVote);
-		log.debug("============== existing ballots ===========");
+		// WHEN user4 casts his vote
+		List<LawModel> user4VoteOrder = TestDataUtils.randVoteOrder(poll);
+		ResponseEntity<String> user4CastVoteRes = castVoteRest(poll, user4VoterToken, user4VoteOrder);
 
-
-
-		// ------------------------------------
-		// WHEN getting own ballot
-		ResponseEntity<String> noBallotYet = client.getForEntity("/polls/" + poll.getId() + "/myballot?voterToken="+voterToken, String.class);
-		// THEN 404 is returned
-	  assertEquals("User should not yet have a ballot in this poll", HttpStatus.NO_CONTENT, noBallotYet.getStatusCode());
-
-		// ------------------------------------
-		// WHEN cast vote via REST
-		Iterator<LawModel> iterator = poll.getProposals().iterator();
-		HttpEntity entity = Lson.builder()
-		  .put("poll", "/polls/"+poll.getId())
-		  .put("voterToken", voterToken)
-		  .putArray("voteOrder",  "/laws/"+iterator.next().getId(), "/laws/"+iterator.next().getId())
-			.toHttpEntity();
-		ResponseEntity<String> castVoteRes = anonymousClient.postForEntity("/castVote", entity, String.class);
-
-		// THEN ballot is created successfully
-		assertEquals(HttpStatus.CREATED, castVoteRes.getStatusCode());
-		String checksum = JsonPath.read(castVoteRes.getBody(), "$.checksum");
+		// THEN his ballot is created successfully
+		assertEquals("User4's vote is casted successfully via REST", HttpStatus.CREATED, user4CastVoteRes.getStatusCode());
 
 		// AND voteCount is correct
-		int voteCount = JsonPath.read(castVoteRes.getBody(), "$.voteCount");   // vote count is delegations + 1 (user's own vote)
-		assertEquals("Vote should have been counted " + TestFixtures.USER1_DELEGATIONS+1 + " times!", TestFixtures.USER1_DELEGATIONS+1, voteCount);
+		long user4VoteCount = JsonPath.parse(user4CastVoteRes.getBody()).read("$.voteCount", Long.class);
+		assertEquals("Vote by user4 should have been counted for "+TestFixtures.USER4_DELEGATIONS+" delegations.", TestFixtures.USER4_DELEGATIONS, user4VoteCount);
 
-		//  AND ballots checksum is valid in poll
-		ResponseEntity<String> verifyChecksumRes = client.getForEntity("/polls/" + poll.getId() + "/verifyChecksum?checksum=" + checksum, String.class);
-		Boolean valid = JsonPath.read(verifyChecksumRes.getBody(), "$.valid");
-		assertTrue("Checksum should be valid", valid);
+		//  AND ballot can be verified with checksum of user4
+		String user4Checksum = JsonPath.read(user4CastVoteRes.getBody(), "$.ballot.checksum");
+		ResponseEntity<BallotModel> user4VerifyRes = client.getForEntity("/polls/" + poll.getId() + "/verifyChecksum?checksum=" + user4Checksum, BallotModel.class);
+		assertEquals("Ballot's checksum could be verified ", HttpStatus.OK, user4VerifyRes.getStatusCode());
+		assertEquals("Verified ballots's level is 0", 0, (long)user4VerifyRes.getBody().getLevel());
+		assertNull("Ballot.rightToVote should not be revealed", user4VerifyRes.getBody().getRightToVote());
+		for (int i = 0; i < user4VoteOrder.size(); i++) {
+			assertEquals("Verified ballot received with user1Checksum should have correct voteOrder", user4VoteOrder.get(i), user4VerifyRes.getBody().getVoteOrder().get(i));
+		}
 
-		//  AND we can retrieve user's ballot with correct level and voteCount
-		ResponseEntity<String> hasBallotRes = client.getForEntity("/polls/" + poll.getId() + "/myballot?voterToken="+voterToken, String.class);
-		assertEquals("User should now have a ballot in this poll", HttpStatus.OK, hasBallotRes.getStatusCode());
-		int level = JsonPath.read(hasBallotRes.getBody(), "$.level");
-		assertEquals("Ballot should have level 0", 0, level);
-		int voteCountInBallot = JsonPath.read(hasBallotRes.getBody(), "$.voteCount");
-		assertEquals("Ballot should have voteCount "+TestFixtures.USER1_DELEGATIONS+1, TestFixtures.USER1_DELEGATIONS+1, voteCountInBallot);
+		//  AND we can retrieve user's ballot with correct level and voteOrder
+		ResponseEntity<BallotModel> myBallotRes = client.getForEntity("/polls/" + poll.getId() + "/myballot?voterToken="+user4VoterToken, BallotModel.class);
+		assertEquals("User should now have a ballot in this poll", HttpStatus.OK, myBallotRes.getStatusCode());
+		assertEquals("Ballot should have level 0", 0L, (long)myBallotRes.getBody().getLevel());
+		for (int i = 0; i < user4VoteOrder.size(); i++) {
+			assertEquals("Ballot should have correct voteOrder", user4VoteOrder.get(i), myBallotRes.getBody().getVoteOrder().get(i));
+		}
 
 
-		//----------------
-		// GIVEN an already casted ballot by a proxy
 
-		// WHEN proxy at lower level casts a vote
+		// --------------------------------------------------------
+		// WHEN top proxy user1 casts his vote
+		loginUserJWT(TestFixtures.USER1_EMAIL);
+		String user1VoterToken = getVoterToken(poll.getArea().getId());
+		List<LawModel> user1VoteOrder = TestDataUtils.randVoteOrder(poll);  // different voteOrder than above
+		ResponseEntity<String> user1CastVoteRes = castVoteRest(poll, user1VoterToken, user1VoteOrder);
 
-		// THEN this vote counts only for him and his delegees
+		// THEN ballot of user1 is created successfully
+		assertEquals("Vote by user1 is casted successfully via REST", HttpStatus.CREATED, user1CastVoteRes.getStatusCode());
 
-		//  ANd this vote does not count for proxies above him
+		// AND voteCount is correct (smaller than delegationCount because voter4 below has already voted from himself)
+		Long user1VoteCount = JsonPath.parse(user1CastVoteRes.getBody()).read("$.voteCount", Long.class);
+		assertEquals("Vote by user1 should have been counted for "+TestFixtures.USER1_VOTE_COUNT_WHEN_USER4_VOTED+ " delegations.", TestFixtures.USER1_VOTE_COUNT_WHEN_USER4_VOTED, (long)user1VoteCount);
 
-		//  AND user's ballot is updated
+		//  AND ballot can be verified with checksum of user1
+		String user1Checksum = JsonPath.read(user1CastVoteRes.getBody(), "$.ballot.checksum");
+		ResponseEntity<BallotModel> user1VerifyRes = client.getForEntity("/polls/" + poll.getId() + "/verifyChecksum?checksum=" + user1Checksum, BallotModel.class);
+		assertEquals("Ballot's checksum could be verified ", HttpStatus.OK, user1VerifyRes.getStatusCode());
+		assertEquals("Verified ballots's level is 0", 0, (long)user1VerifyRes.getBody().getLevel());
+		assertNull("Ballot.rightToVote should not be revealed", user1VerifyRes.getBody().getRightToVote());
+		for (int i = 0; i < user1VoteOrder.size(); i++) {
+			assertEquals("Verified ballot received with user1Checksum should have correct voteOrder", user1VoteOrder.get(i), user1VerifyRes.getBody().getVoteOrder().get(i));
+		}
+
+		// --------------------------------------------------------
+		// GIVEN a user that has already casted his vote
+		//  WHEN a proxy above him casts a vote
+		// THEN the ballot of this user, who casted his own vote, did not change
+		ResponseEntity<BallotModel> verifiedBallot2 = client.getForEntity("/polls/" + poll.getId() + "/verifyChecksum?checksum=" + user4Checksum, BallotModel.class);
+		assertEquals("ballot of user4 can still be verified via his checksum", HttpStatus.OK, verifiedBallot2.getStatusCode());
+		assertEquals("level of the ballot of user4 is still 0", 0, (long)verifiedBallot2.getBody().getLevel());
+		for (int i = 0; i < user4VoteOrder.size(); i++) {
+			assertEquals("Ballot of user4 still has the original voteOrder after user below him voted", user4VoteOrder.get(i), verifiedBallot2.getBody().getVoteOrder().get(i));
+		}
 
 
 
 		// CLEANUP: remove casted Ballots
-		ballotRepo.findByPollAndChecksum(poll, checksum).ifPresent(ballot -> ballotRepo.delete(ballot));
+		ballotRepo.findByPollAndChecksum(poll, user1Checksum).ifPresent(ballot -> ballotRepo.delete(ballot));
+		ballotRepo.findByPollAndChecksum(poll, user4Checksum).ifPresent(ballot -> ballotRepo.delete(ballot));
+	}
+
+	/**
+	 * Cast a vote with the given voterToken
+	 * @param poll a poll in VOTING
+	 * @param voterToken user's valid voterToken
+	 * @param voteOrder ordered list of proposals
+	 * @return castVoter HTTP response
+	 */
+	private ResponseEntity<String> castVoteRest(PollModel poll, String voterToken, List<LawModel> voteOrder) {
+		List<String> voteOrderUris = voteOrder.stream().map(prop -> "/laws/"+prop.getId()).collect(Collectors.toList());
+		HttpEntity user4CastVoteEntity = Lson.builder()
+			.put("poll", "/polls/"+poll.getId())
+			.put("voterToken", voterToken)
+			.putArray("voteOrder",  voteOrderUris)
+			.toHttpEntity();
+		return anonymousClient.postForEntity("/castVote", user4CastVoteEntity, String.class);
 	}
 
 

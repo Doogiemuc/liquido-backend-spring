@@ -31,14 +31,6 @@ public interface RightToVoteRepo extends CrudRepository<RightToVoteModel, Long> 
 	List<RightToVoteModel> findByDelegatedTo(RightToVoteModel proxiesRightToVote);
 
 	/**
-	 * Find checksums that are delegated to this proxy with a check for (non-)transitive delegations
-	 * @param proxyChecksum checksum of a proxy
-	 * @param transitive whether to check for transitive or non-transitive delegations only
-	 * @return all checksums that are delegated to this proxy either transitively or non-transitively
-	 */
-	List<RightToVoteModel> findByDelegatedToAndTransitive(RightToVoteModel proxyChecksum, boolean transitive);
-
-	/**
 	 * find the checksum of a public proxy so that a voter can delegate his checksum to it.
 	 * @pararm area area of the checksum and public proxy
 	 * @param proxy a public proxy that added his username to his stored checksum {@link org.doogie.liquido.services.ProxyService#becomePublicProxy(UserModel, AreaModel, String)}

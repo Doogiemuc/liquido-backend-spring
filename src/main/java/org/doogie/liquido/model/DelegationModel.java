@@ -50,10 +50,11 @@ public class DelegationModel extends BaseModel {
 	 * But maybe the voter does not want that his proxy in turn delegates the vote again.
 	 * Then the delegation is marked as nonTransitive.
 	 * By default delegations can be transitive, so that a tree of delegations can be formed.
-	 */
+	 *
 	//TODO: This is a big one:  Delegations are always transitive, because if my direct proxy forwards his right to vote
 	//		and then his proxy votes, this is just as the direct proxy voted for himself.
 	public boolean transitive = true;
+	 */
 
 	/**
 	 * When a voter wants to delegate his vote to a proxy, but that proxy is not a public proxy,
@@ -90,7 +91,6 @@ public class DelegationModel extends BaseModel {
 		//Separation of concerns: More complicated business logic should be inside a Service class.
 		//A "builder" only creates a new object and sets some additional values, that the default RequiredArgs constructor does not set.
 		DelegationModel delegationRequest = new DelegationModel(area, fromUser, proxy);
-		delegationRequest.setTransitive(transitive);
 		delegationRequest.setRequestedDelegationFrom(rightToVoteModel);
 		delegationRequest.setRequestedDelegationAt(LocalDateTime.now());
 		return delegationRequest;
@@ -108,7 +108,6 @@ public class DelegationModel extends BaseModel {
 		sb.append("(id=").append(area.getId()).append(")");
 		sb.append(", fromUser=").append(fromUser.toStringShort());
 		sb.append(", toProxy=").append(toProxy.toStringShort());
-		sb.append(", transitive=").append(transitive);
 		sb.append(", requestedDelegationFrom=").append(requestedDelegationFrom);
 		sb.append(", requestedDelegationAt=").append(requestedDelegationAt);
 		sb.append(']');

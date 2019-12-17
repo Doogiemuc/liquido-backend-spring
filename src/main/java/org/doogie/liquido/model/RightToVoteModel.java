@@ -72,14 +72,6 @@ public class RightToVoteModel {
   */
 
 	/**
-	 * A voter can delegate his vote to a proxy.
-	 * But maybe the voter does not want that his proxy in turn delegates the vote again.
-	 * Then the delegation is marked as nonTransitive.
-	 * By default delegations can be transitive, so that a tree of delegations can be formed.
-	 */
-	boolean transitive = true;
-
-	/**
 	 * If a user want's to be a public proxy, then he CAN store his user together with his checksum.
 	 * Then voters can automatically delegate their vote to this proxy.
 	 * Then the proxy does not need to accept delegations. They can automatically be delegated.
@@ -91,7 +83,6 @@ public class RightToVoteModel {
 		StringBuffer buf = new StringBuffer();
 		buf.append("RightToVote[");
 		buf.append("hashedVoterToken="+this.getHashedVoterToken());			//MAYBE: do not expose sensible hashedVoterToken  ?
-		buf.append(", transitive="+this.isTransitive());
 		buf.append(", publicProxy="+ (this.getPublicProxy() != null ? this.getPublicProxy().toStringShort() : "<null>"));
 		buf.append(", delegatedTo.checksum="+ (this.getDelegatedTo() != null ? this.getDelegatedTo().getHashedVoterToken() : "<null>"));
 		buf.append("]");

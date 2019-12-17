@@ -112,7 +112,7 @@ public class ProxyRestController {
 		log.info("assignProxy in area(id="+area+assignProxyRequest+")");
 		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(()-> new  LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Cannot save Proxy. Need an authenticated user."));
-		DelegationModel delegation = proxyService.assignProxy(area, currentUser, assignProxyRequest.getToProxy(), assignProxyRequest.getVoterToken(), assignProxyRequest.isTransitive());
+		DelegationModel delegation = proxyService.assignProxy(area, currentUser, assignProxyRequest.getToProxy(), assignProxyRequest.getVoterToken());
 		if (delegation.isDelegationRequest()) {
 			log.info("Proxy is not yet assigned. Proxy must still confirm.");
 			return new ResponseEntity<>(delegation, HttpStatus.ACCEPTED);  // 202
@@ -155,7 +155,7 @@ public class ProxyRestController {
 				.put("acceptedDirectDelegations", acceptedDelegations)
 				.put("isPublicProxy", checksumOfPublicProxy.isPresent())
 				.put("delegationRequests", delegationRequests)
-				.put("delegationCount", delegationCount);		// overall number of delegations (incl. transitive ones)  This is also returned by getVoterToken
+				.put("delegationCount", delegationCount);		// number of already existing delegations to this proxy. This is also returned by getVoterToken
 	}
 
 	@RequestMapping(value = "/my/delegations/{areaId}/accept", method = PUT)
