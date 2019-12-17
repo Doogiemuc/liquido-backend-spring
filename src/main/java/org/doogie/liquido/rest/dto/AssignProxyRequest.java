@@ -27,15 +27,11 @@ public class AssignProxyRequest {
 	@NonNull
 	String voterToken;
 
-	/** Should the delegation be transitive, so that the proxy in turn can forward it */
-	boolean transitive;
-
 	@Override
 	public String toString() {
 		StringBuilder buf = new StringBuilder();
 		buf.append("AssignProxyRequest[");
 		buf.append("toProxy="+toProxy.toStringShort());
-		buf.append(", transitive="+transitive);
 		buf.append("]");
 		//do not expose secret voterToken in toString!
 		return buf.toString();

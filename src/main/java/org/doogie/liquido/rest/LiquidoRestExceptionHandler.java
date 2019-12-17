@@ -102,19 +102,20 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 			bodyOfResponse.put("remoteUser", request.getRemoteUser());
 		} catch (Throwable ignore) { }
 
-		/* add first fiveElems of stack trace   (when DEV or TEST env)
-		if (springEnv.acceptsProfiles(Profiles.of("DEV", "TEST"))) {
+		if (log.isDebugEnabled()) {
 			try {
 				StackTraceElement[] firstElems = Arrays.copyOfRange(ex.getStackTrace(), 0, Math.min(5, ex.getStackTrace().length));
-				bodyOfResponse.put("stacktrace", firstElems);    // this will be nicely serialized as JSON by my Lson utility
+				//bodyOfResponse.put("stacktrace", firstElems);    // this will be nicely serialized as JSON by my Lson utility
+				for (int i = 0; i < 5; i++) {
+					if (ex.getStackTrace().length > i) {
+						log.debug("   "+ex.getStackTrace()[i].toString());
+					}
+				}
 			} catch (Throwable ignore) {
 			}
-		}
-		*/
 
-		if (log.isDebugEnabled()) {
-			log.debug("LiquidoException.body=");
-			log.debug("\n"+bodyOfResponse.toPrettyString());
+
+			log.debug("LiquidoException:\n"+bodyOfResponse.toPrettyString());
 		}
 		return bodyOfResponse;
 	}

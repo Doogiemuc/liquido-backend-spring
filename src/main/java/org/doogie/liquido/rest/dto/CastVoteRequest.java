@@ -1,7 +1,11 @@
 package org.doogie.liquido.rest.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.Data;
 import lombok.NonNull;
+import org.doogie.liquido.model.LawModel;
+import org.doogie.liquido.model.PollModel;
+import org.doogie.liquido.rest.deserializer.LawModelDeserializer;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -12,15 +16,14 @@ import java.util.stream.Collectors;
  */
 @Data
 public class CastVoteRequest {
-	//TODO: link to PollModel and use PollModelDeserializer  => test
-
-	/** URI of a poll */
+	/** a poll */
 	@NonNull
-	String poll;
+	PollModel poll;
 
 	/** Ordered list of URIs, one for each proposal in VOTING. */
 	@NonNull
-	List<String> voteOrder;
+	@JsonDeserialize(contentUsing = LawModelDeserializer.class)   // deserialize list elements with this class
+	List<LawModel> voteOrder;
 
 	/**
 	 * The voter's own voterToken that MUST hash to a valid checksumModel. */
@@ -29,12 +32,11 @@ public class CastVoteRequest {
 
 	@Override
 	public String toString() {
+		String proposalIds = voteOrder.stream().map(law->law.getId().toString()).collect(Collectors.joining(","));   // I love java :-) <sarcasm>   In PERL this would just simply be     $buf = join(",", @arr);
 		StringBuilder buf = new StringBuilder();
 		buf.append("CastVoteRequest[");
 		buf.append("poll="+poll);
-		buf.append(", voteOrder=[");
-		buf.append(voteOrder.stream().collect(Collectors.joining(",")));    // I love java :-) <sarcasm>   In PERL this would just simply be     $buf = join(",", @arr);
-		buf.append("]");
+		buf.append(", voteOrder(proposalIds)=[" + proposalIds +"]");
 		//do not expose secret voterToken in toString!
 		return buf.toString();
 	}

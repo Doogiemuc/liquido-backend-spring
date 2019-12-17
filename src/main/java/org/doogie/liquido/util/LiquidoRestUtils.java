@@ -20,6 +20,8 @@ public class LiquidoRestUtils {
 	 * @return the internal db ID of the entity, i.e. just simply the number at the end of the string.
 	 */
 	public static Long getIdFromURI(String entityName, String uri) {
+		if (entityName == null || uri == null)
+			throw new IllegalArgumentException("Cannot getIdFromURI. Need entityName and uri!");
 		// RegEx: non-greedy prefix when passing a fully qualified URI,
 		// then optionally the entityName enclosed with / and
 		// then a number at the end

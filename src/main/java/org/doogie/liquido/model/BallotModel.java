@@ -82,13 +82,14 @@ public class BallotModel {
 	@NotNull
   public Integer level;
 
-	/**
+	/*
 	 * Number of times that his vote was counted because of delegations.
 	 * This value is not stored, since it may change when the tree of delegations changes.
 	 * It is only valid at the time when the ballot is casted.
-	 */
+
 	@Transient
-  public Long voteCount;
+  public Long voteCount;     Since this count may change we do not keep it at all
+	*/
 
   /**
    * One vote puts some proposals of this poll into his personally preferred order.
@@ -118,7 +119,7 @@ public class BallotModel {
   @NonNull
 	@OneToOne
 	@JoinColumn(name = "hashedVoterToken")		// The @Id of a RightToVoteModel is the hashedVoterToken itself
-	@JsonIgnore																// [SECURITY] Do not expose voter's private right to vote
+	@JsonIgnore																// [SECURITY] Do not expose voter's private right to vote (which might also include public proxies name)
   public RightToVoteModel rightToVote;
 
 	/**
@@ -147,7 +148,7 @@ public class BallotModel {
 			  ", status="+poll.getStatus() + ")" +
 				", level=" + level +
 				", voteOrder(proposalIds)=[" + proposalIds +"]"+
-				", rightToVote="+ rightToVote +
+				//Do not expose rightToVote", rightToVote="+ rightToVote +    which might include public proxy name
 				"}";
 	}
 }
