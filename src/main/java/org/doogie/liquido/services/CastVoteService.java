@@ -1,6 +1,7 @@
 package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.rest.dto.CastVoteResponse;
 import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
@@ -197,36 +198,24 @@ public class CastVoteService {
 	 * @param castVoteRequest which contains the poll that we want to vote for and
 	 *                        the anonymous voterToken and the preferred voteOrder
 	 * @return BallotModel the casted ballot
-	 * @throws LiquidoException when something is wrong with the ballot
+	 * @throws LiquidoException when voterToken is invalid or there is <b>anything</b> suspicious with the ballot
 	 */
 	@Transactional
-	public BallotModel castVote(CastVoteRequest castVoteRequest) throws LiquidoException {
-		log.debug("castVote: "+ castVoteRequest);
+	public CastVoteResponse castVote(CastVoteRequest castVoteRequest) throws LiquidoException {
+		log.info("castVote: "+ castVoteRequest);
 		if (castVoteRequest.getVoteOrder() == null || castVoteRequest.getVoteOrder().size() == 0)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Empty voteOrder");
 
+		// Validate voterToken against stored RightToVotes
 		RightToVoteModel rightToVoteModel = isVoterTokenValid(castVoteRequest.getVoterToken());
-		if (rightToVoteModel == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Your voter token seems to be invalid!");
 
-		// load models for URIs in castVoteRequst
-		//TODO: use *Deserializers as in AssignProxyRequest
-		Long pollId = restUtils.getIdFromURI("polls", castVoteRequest.getPoll());
-		PollModel poll = pollRepo.findById(pollId)
-				.orElseThrow(()->new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot find poll with poll.id="+pollId));
+		// Create new ballot for the voter himself at level 0
+		BallotModel newBallot = new BallotModel(castVoteRequest.getPoll(), 0, castVoteRequest.getVoteOrder(), rightToVoteModel);
 
-		List<LawModel> voteOrder = new ArrayList<>();
-		for (String proposalId : castVoteRequest.getVoteOrder()) {
-			Long lawId = restUtils.getIdFromURI("laws", proposalId);
-			LawModel law = lawRepo.findById(lawId)
-					.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot find proposal with proposal.id="+lawId));
-			voteOrder.add(law);
-		}
+		// check this ballot and recursive cast ballots for delegated rightToVotes
+		CastVoteResponse castVoteResponse = castVoteRec(newBallot);
 
-		BallotModel newBallot = new BallotModel(poll, 0, voteOrder, rightToVoteModel);  //MAYBE: BallotModelBuilder.createFromVoteRequest(...)   or would that be a bit of overengeneering
-		BallotModel savedBallot = storeBallot(newBallot);		// rightToVote will be validated inside storeBallot() -> checkBallot()
-
-		//MAYBE: also return the voteCount for how many votes the ballot was casted
-		return savedBallot;
+		return castVoteResponse;
 	}
 
 	/**
@@ -253,50 +242,46 @@ public class CastVoteService {
 	 *         null if the ballot wasn't stored due to an already existing ballot with a smaller level.
 	 */
 	//@Transactional   //Do not open a transaction for each recursion!
-	private BallotModel storeBallot(BallotModel newBallot) throws LiquidoException {
-		log.debug("storeBallot("+newBallot+") rightToVote.hashedVoterToken="+newBallot.getRightToVote().getHashedVoterToken());
+	private CastVoteResponse castVoteRec(BallotModel newBallot) throws LiquidoException {
+		log.debug("   castVoteRec: "+newBallot);
 
 		//----- check validity of the ballot
 		checkBallot(newBallot);
 
+		//----- check if there already is a ballot, then update that, otherwise save newBallot
 		Optional<BallotModel> existingBallotOpt = ballotRepo.findByPollAndRightToVote(newBallot.getPoll(), newBallot.getRightToVote());
-		BallotModel ballot;
-		//----- If there is no existing ballot yet with that rightToVote, then builder a completely new one.
-		if (!existingBallotOpt.isPresent()) {
-			log.trace("  Insert new ballot");
-			ballot = ballotRepo.save(newBallot);
-		} else {
-			//----- Update existing ballot
-			ballot = existingBallotOpt.get();
-			if (!ballot.getRightToVote().equals(newBallot.getRightToVote()))
-				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Something is really wrong here!!! Right to vote hashes do not match");  // This should never happen
+		BallotModel savedBallot;
 
-			//----- Proxy must not overwrite a voter's own vote  OR  a vote from a proxy below him
-			if (ballot.getLevel() < newBallot.getLevel()) {
-				log.trace("  Will not overwrite existing ballot with smaller level " + ballot);
+		if (existingBallotOpt.isPresent()) {
+			//----- Update existing ballot, if level of newBallot is smaller.  Proxy must not overwrite a voter's own vote  OR  a vote from a proxy below him
+			BallotModel existingBallot = existingBallotOpt.get();
+			if (existingBallot.getLevel() < newBallot.getLevel()) {
+				log.trace("   Will not overwrite existing ballot with vote at already smaller level " + existingBallot);
 				return null;
 			}
-
-			log.trace("  Update existing ballot "+ballot.getId());
-			ballot.setVoteOrder(newBallot.getVoteOrder());
-			ballot.setLevel(newBallot.getLevel());
+			log.trace("  Update existing ballot "+existingBallot.getId());
+			existingBallot.setVoteOrder(newBallot.getVoteOrder());
+			existingBallot.setLevel(newBallot.getLevel());
+			savedBallot = ballotRepo.save(existingBallot);
+		} else {
+			//----- If there is no existing ballot yet with that rightToVote, then builder a completely new one.
+			log.trace("   Saving new ballot");
+			savedBallot = ballotRepo.save(newBallot);
 		}
 
-		//----- recursively cast a vote for each delegated rightToVote
-		long voteCount = 1;   // first vote is for the ballot itself.
-		List<RightToVoteModel> delegatedRights = rightToVoteRepo.findByDelegatedTo(ballot.getRightToVote());
+		//----- When user is a proxy, then recursively cast a ballot for each delegated rightToVote
+		long voteCount = 0;   // count for how many delegees (that have not voted yet for themselves) the proxies ballot is also casted
+		List<RightToVoteModel> delegatedRights = rightToVoteRepo.findByDelegatedTo(savedBallot.getRightToVote());
 		for (RightToVoteModel delegatedRightToVote : delegatedRights) {
 			List<LawModel> voteOrderClone = new ArrayList<>(newBallot.getVoteOrder());   // BUGFIX for org.hibernate.HibernateException: Found shared references to a collection
 			BallotModel childBallot = new BallotModel(newBallot.getPoll(), newBallot.getLevel() + 1, voteOrderClone, delegatedRightToVote);
-			log.trace("checking delegated childBallot "+childBallot);
-			if (newBallot.getLevel() == 0 || delegatedRightToVote.isTransitive()) {
-				BallotModel savedChildBallot = storeBallot(childBallot);  // will return null when level of an existing childBallot is smaller then the childBallot that the proxy would cast. => this ends the recursion
-				if (savedChildBallot != null) voteCount = voteCount + savedChildBallot.getVoteCount();
-			}
+			log.debug("   Proxy casts vote for delegated childBallot "+childBallot);
+			CastVoteResponse childRes = castVoteRec(childBallot);  // will return null when level of an existing childBallot is smaller then the childBallot that the proxy would cast. => this ends the recursion
+			if (childRes != null) voteCount += 1 + childRes.getVoteCount();
 		}
 
-		ballot.setVoteCount(voteCount);
-		return ballotRepo.save(ballot);
+		// voteCount does not include the proxies own ballot
+		return new CastVoteResponse(savedBallot, voteCount);
 	}
 
 	/**
@@ -330,7 +315,7 @@ public class CastVoteService {
 
 		// check that all proposals you wanna vote for are in this poll and that they are also in voting phase
 		for(LawModel proposal : ballot.getVoteOrder()) {
-			if (!proposal.getPoll().equals(ballot.getPoll()))
+			if (!proposal.getPoll().getId().equals(ballot.getPoll().getId()))   //BUGFIX: Cannot compare whole poll. Must compare IDs:  https://hibernate.atlassian.net/browse/HHH-3799  PersistentSet does not honor hashcode/equals contract when loaded eagerly
 				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: Proposal(id="+proposal.getId()+") is not part of poll(id="+ballot.getPoll().getId()+")!");
 			if (!LawModel.LawStatus.VOTING.equals(proposal.getStatus())) {
 				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast vote: proposals must be in voting phase.");

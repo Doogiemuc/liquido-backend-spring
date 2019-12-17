@@ -282,23 +282,34 @@ public class PollService {
 	}
 
 	/**
-	 * Find the ballot that a user has already casted in a poll. Since  the ballot is anonymous, we need the user's voterToken.
+	 * Find the ballot that a user has casted in a poll. Since every ballot is anonymous, we need the user's voterToken to find the ballot.
+	 * The voterToken will be verified.
+	 *
 	 * @param poll a poll at least in voting phase
 	 * @param voterToken user's own voterToken. This will be validated against stored RightToVotes!
 	 * @return (optionally) the ballot of voter in that poll or Optional.empty() if there is not ballot for that voterToken in that poll
-	 * @thows LiquidoException when poll is in status elaboration or voterToken or is invalid.
+	 * @thows LiquidoException when poll is in status elaboration or voterToken is invalid.
 	 */
 	public Optional<BallotModel> getBallotForVoterToken(PollModel poll, String voterToken) throws LiquidoException {
+		if (PollModel.PollStatus.ELABORATION.equals(poll.getStatus()))
+			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Cannot get ballot of poll in ELABORATION");
 		RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken);
-	 	if (PollModel.PollStatus.ELABORATION.equals(poll.getStatus()))
-  		throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Cannot get ballot of poll in ELABORATION");
 		Optional<BallotModel> ballot = ballotRepo.findByPollAndRightToVote(poll, rightToVote);
-		if (ballot.isPresent()) {
-			// update voteCount with current value according to current state of delegations
-			long delegationCount = proxyService.getRecursiveDelegationCount(voterToken);
-			ballot.get().setVoteCount(delegationCount+1);
-		}
 		return ballot;
+	}
+
+	/**
+	 * Checks if the ballot with that checksum was counted correctly in the poll.
+	 *
+	 * The difference between this and {@link #getBallotForVoterToken(PollModel, String)} is that
+	 * this verification also checks the voteOrder which is encoded into the ballot's checksum.
+	 *
+	 * @param poll the poll where the ballot was casted in
+	 * @param checksum a ballot's checksum as returned by /castVote
+	 * @return The ballot when checksum is correct or Optional.emtpy() if no ballot with that checksum could be found.
+	 */
+	public Optional<BallotModel> getBallotForChecksum(@NotNull PollModel poll, String checksum) {
+		return ballotRepo.findByPollAndChecksum(poll, checksum);
 	}
 
 	/**
@@ -308,7 +319,7 @@ public class PollService {
 	 * @return (optionally) the ballot of the vote's direct proxy in this poll, if voter has a direct proxy
 	 * @throws LiquidoException when this voter did not delegate his checksum to any proxy in this area
 	 */
-	public Optional<BallotModel> getBallotOfDirectProxy(PollModel poll, RightToVoteModel voterChecksum) throws LiquidoException {
+	public Optional<BallotModel> getBallotOfEffectiveProxy(PollModel poll, RightToVoteModel voterChecksum) throws LiquidoException {
 		if (PollModel.PollStatus.ELABORATION.equals(poll.getStatus()))
 			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Cannot get ballot of poll in ELABORATION");
 		return ballotRepo.findByPollAndRightToVote(poll, voterChecksum.getDelegatedTo());
@@ -327,16 +338,6 @@ public class PollService {
 	private RightToVoteModel findTopChecksumRec(RightToVoteModel checksum) {
 		if (checksum.getDelegatedTo() == null) return checksum;
 		return findTopChecksumRec(checksum.getDelegatedTo());
-	}
-
-	/**
-	 * Checks if a ballot with that checksum was counted in that poll
-	 * @param poll SHOULD have status == FINISHED
-	 * @param checksum a ballot's checksum
-	 * @return true if a ballot with that checksum was counted in that poll
-	 */
-	public boolean verifyBallot(@NotNull PollModel poll, String checksum) {
-		return ballotRepo.findByPollAndChecksum(poll, checksum).isPresent();
 	}
 
 	/**
@@ -387,13 +388,6 @@ public class PollService {
 		//----- Get voters direct proxy, which must exist because the voters checksum is delegated
 		DelegationModel delegation = delegationRepo.findByAreaAndFromUser(poll.getArea(), voter)
 				.orElseThrow(() -> new RuntimeException("Data inconsistency: Voter has a delegated checksum but no direct proxy! "+voter+", "+voterChecksum));
-
-		//----- if delegation is non-transitive, only check if direct proxy has voted for himself or not. No recursion.
-		if (delegation.isTransitive() == false) {
-			Optional<BallotModel> ballotOfNonTransitiveProxy = ballotRepo.findByPollAndRightToVote(poll, voterChecksum.getDelegatedTo());
-			if (ballotOfNonTransitiveProxy.isPresent() && ballotOfNonTransitiveProxy.get().getLevel() == 0) return Optional.of(delegation.getToProxy());
-			return Optional.empty();
-		}
 
 		//----- at last recursively check for that proxy up in the tree.
 		return findEffectiveProxyRec(poll, delegation.getToProxy(), voterChecksum.getDelegatedTo());

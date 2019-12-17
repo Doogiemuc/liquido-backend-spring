@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
+import org.doogie.liquido.rest.dto.CastVoteResponse;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.*;
 import org.doogie.liquido.util.DoogiesUtil;
@@ -391,7 +392,6 @@ public class TestDataCreator implements CommandLineRunner {
     for(String[] delegationData: delegations) {
       UserModel fromUser   = usersMap.get(delegationData[0]);
       UserModel toProxy    = usersMap.get(delegationData[1]);
-      boolean   transitive = "true".equalsIgnoreCase(delegationData[2]);
       try {
 	      if (TestFixtures.shouldBePublicProxy(area, toProxy)) {
 					castVoteService.createVoterTokenAndStoreRightToVote(toProxy, area, TestFixtures.USER_TOKEN_SECRET, true);
@@ -399,7 +399,7 @@ public class TestDataCreator implements CommandLineRunner {
 				}
 
 				String userVoterToken = castVoteService.createVoterTokenAndStoreRightToVote(fromUser, area, TestFixtures.USER_TOKEN_SECRET, TestFixtures.shouldBePublicProxy(area, fromUser));
-	      DelegationModel delegation = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken, transitive);
+	      DelegationModel delegation = proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);
       } catch (LiquidoException e) {
         log.error("Cannot seedProxies: error Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId()+": "+e);
       }
@@ -762,28 +762,17 @@ public class TestDataCreator implements CommandLineRunner {
 			throw new RuntimeException("Cannot seed votes. Poll must be in status "+ PollModel.PollStatus.VOTING);
   	if (pollInVoting.getNumCompetingProposals() < 2) throw new RuntimeException("Cannot seed votes. Poll in voting must have at least two proposals.");
 
-		String pollURI = basePath+"/polls/"+pollInVoting.getId();
-		Long firstId = pollInVoting.getProposals().iterator().next().getId();
-
+  	// for the first n users
 		this.usersMap.values().stream().limit(numVotes).forEach(voter -> {
-			// Create a random voteOrder. Get some proposal URIs in random order
-			List<String> voteOrder = pollInVoting.getProposals().stream()
-					.filter(p -> rand.nextInt(10) > 0)					// keep 90% of the candidates
-					.sorted((p1, p2) -> rand.nextInt(2)*2 - 1)  // compare randomly  -1 or +1
-					.map(p -> basePath+"/laws/"+p.getId() )
-					.collect(Collectors.toList());
-
-			// voteOrder MUST at least contain one proposal!
-			if (voteOrder.size() == 0) voteOrder.add(basePath+"/laws"+firstId);
-
-			// Now we use the original CastVoteService to get a voterToken and cast our vote.
+			// we use CastVoteService to get a voterToken and cast our vote with a random voteOrder
 			try {
 				auditorAware.setMockAuditor(voter);
 				String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, pollInVoting.getArea(), TestFixtures.USER_TOKEN_SECRET, TestFixtures.shouldBePublicProxy(pollInVoting.getArea(), voter));
 				auditorAware.setMockAuditor(null); // MUST cast vote anonymously!
-				CastVoteRequest castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
-				BallotModel ballotModel = castVoteService.castVote(castVoteRequest);
-				log.trace("Vote casted "+ballotModel);
+				List<LawModel> voteOrder = TestDataUtils.randVoteOrder(pollInVoting);
+				CastVoteRequest castVoteRequest = new CastVoteRequest(pollInVoting, voteOrder, voterToken);
+				CastVoteResponse castVoteResponse = castVoteService.castVote(castVoteRequest);
+				log.trace("Vote casted "+castVoteResponse);
 			} catch (LiquidoException e) {
 				log.error("Cannot seed a vote: " + e);
 			}

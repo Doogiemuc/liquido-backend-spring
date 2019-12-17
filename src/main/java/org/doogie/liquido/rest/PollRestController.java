@@ -2,9 +2,9 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.BallotRepo;
-import org.doogie.liquido.datarepos.RightToVoteRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
+import org.doogie.liquido.datarepos.RightToVoteRepo;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.JoinPollRequest;
 import org.doogie.liquido.services.CastVoteService;
@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
@@ -156,19 +157,18 @@ public class PollRestController {
 	 * @param poll the poll
 	 * @param checksum the ballot's checksum that was returned to the voter when casting his ballot
 	 * @return true when ballot could be verified
+	 * @throws LiquidoException with HttpStatus 404 when checksum could not be verified because no ballot for that checksum could be found.
 	 */
 	@RequestMapping(value = "/polls/{pollId}/verifyChecksum")
 	@ResponseBody
-	public Lson verifyChecksum(
+	public BallotModel verifyChecksum(
 		@PathVariable("pollId") PollModel poll,
 		@RequestParam("checksum") String checksum
-	) {
-  	boolean valid = pollService.verifyBallot(poll, checksum);
-		Link pollLink = entityLinks.linkToSingleResource(PollModel.class, poll.getId());
-  	return new Lson()
-			.put("checksum", checksum)
-			.put("poll", pollLink.getHref())
-			.put("valid", valid);
+	) throws LiquidoException {
+  	Optional<BallotModel> ballot = pollService.getBallotForChecksum(poll, checksum);
+  	if (!ballot.isPresent()) throw new LiquidoException(LiquidoException.Errors.CANNOT_VERIFY_CHECKSUM, "No ballot for that checksum.");
+		//Link pollLink = entityLinks.linkToSingleResource(PollModel.class, poll.getId());
+  	return ballot.get();
 	}
 
 	/**
@@ -186,9 +186,9 @@ public class PollRestController {
 			@RequestParam("voterToken") String voterToken
 	) throws LiquidoException {
 		BallotModel ownBallot = pollService.getBallotForVoterToken(poll, voterToken)
-				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_BALLOT, "No ballot found. You did not vote in this poll yet."));   // this is not an error. HttpStatus.NO_CONTENT
-		return ownBallot;  // This ballot has no current voteCount!
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.NO_BALLOT, "No ballot found. You did not vote in this poll yet."));   // this is not an error. returns HttpStatus.NO_CONTENT
 
+		return ownBallot;
 		/*
 		// This was a try to build our response JSON here. But has now been moved to BallotModelPollJsonSerializer.java
 		List<PersistentEntityResource> voteOrder = ownBallot.getVoteOrder().stream().map(proposal -> resourceAssembler.toFullResource(proposal)).collect(Collectors.toList());

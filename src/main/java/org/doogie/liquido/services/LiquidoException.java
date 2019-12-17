@@ -38,7 +38,9 @@ public class LiquidoException extends Exception {
 		PUBLIC_CHECKSUM_NOT_FOUND(24, HttpStatus.NOT_FOUND),
 		CANNOT_ADD_SUPPORTER(25, HttpStatus.BAD_REQUEST),							// e.g. when user tries to support his own proposal
 		CANNOT_CALCULATE_UNIQUE_RANKED_PAIR_WINNER(26, HttpStatus.INTERNAL_SERVER_ERROR),		// this is only used in the exceptional situation, that no unique winner can be calculated in RankedPairVoting
+		CANNOT_VERIFY_CHECKSUM(27, HttpStatus.NOT_FOUND),							// ballot's checksum could not be verified
 		INTERNAL_ERROR(99, HttpStatus.INTERNAL_SERVER_ERROR);
+
 		int liquidoErrorCode;
 		HttpStatus httpResponseStatus;
 

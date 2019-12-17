@@ -9,6 +9,7 @@ import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -48,14 +49,6 @@ public class RepoTests extends BaseTest {
   AreaRepo areaRepo;
 
   @Test
-  @SuppressWarnings("unchecked")
-  public void findAllUsers() {
-    Iterable<UserModel> allUsers = userRepo.findAll();
-    assertThat(allUsers, hasItem(userWithEMail(TestFixtures.USER1_EMAIL)));
-    log.info("TEST SUCCESS: "+ TestFixtures.USER1_EMAIL +" found in list of all users.");
-  }
-
-  @Test
   public void findUserByEmail() {
     Optional<UserModel> foundUser = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
     assertTrue(TestFixtures.USER1_EMAIL +" could not be found", foundUser.isPresent());
@@ -88,7 +81,6 @@ public class RepoTests extends BaseTest {
   }
 
   @Test
-  //@WithUserDetails("testuser1@liquido.de")
   public void testUpdate() {
     long count1 = areaRepo.count();
     Optional<AreaModel> areaOpt = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
@@ -124,8 +116,10 @@ public class RepoTests extends BaseTest {
     log.debug("User "+supporter.getEmail()+" supports "+supportedLaws.size()+" ideas.");
   }
 
-  public void testLawFindBySpecification() {
+  /*
 
+  //TODO: public void testLawFindBySpecification() {
     //lawRepo.findBy
   }
+  */
 }

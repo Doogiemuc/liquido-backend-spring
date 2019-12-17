@@ -69,7 +69,7 @@ public class TestFixtures {
   user2 is not a public proxy --> (user2) user3  user4
   delegation request 5-> 2    -->  /R/      |       \
       		                       user5    user6    user7
-      		                      /    \           /   |  (\)    <---- 12->7  non-transitive delegation
+      		                      /    \           /   |   \
       		                 user8    user9  user10 user11 user12
 
 DEBUG .(TestDataCreator.java:230).run()                                      | ====== TestDataCreator: Proxy tree =====
@@ -116,20 +116,21 @@ DEBUG .(CastVoteService.java:88).createVoterTokenAndStoreRightToVote()       | c
 	public static final String AREA_FOR_DELEGATIONS = AREA0_TITLE;
 	public static final String TOP_PROXY_EMAIL = USER1_EMAIL;
 	// Number of delegations.  (without the voter's own one. This would be votecCount)
-	public static final int USER1_DELEGATIONS = 7;     // testuser1@liquido.de  has 7 delegations to him (5-2 and below is still only requested. And the non-transitive one 12-7 is not counted for him!)
-	public static final int USER2_DELEGATIONS = 0;		 // testuser2@liquido.de  has a requested delegation. He has no accepted delegations yet.
-	public static final int USER4_DELEGATIONS = 3;     // testuser4@liquido.de  has 3 direct delegations
+	public static final long USER1_DELEGATIONS = 8;     // testuser1@liquido.de  has 7 delegations to him (5 -> 2 is still only requested)
+	public static final long USER2_DELEGATIONS = 0;		 // testuser2@liquido.de  has a requested delegation. He has no accepted delegations yet.
+	public static final long USER4_DELEGATIONS = 4;     // testuser4@liquido.de  has 4 delegations from below him
+	public static final long USER1_VOTE_COUNT_WHEN_USER4_VOTED = 3;   // When top proxy user1 votes while user4 has already voted, then his ballot counts 3 times.
 	static {
 		// fromUser, toProxy, transitive?
-		delegations.add(new String[]{TestFixtures.USER2_EMAIL, TestFixtures.USER1_EMAIL, "true"});   // testuser2 delegates to proxy testuser1
-		delegations.add(new String[]{TestFixtures.USER3_EMAIL, TestFixtures.USER1_EMAIL, "true"});
-		delegations.add(new String[]{TestFixtures.USER4_EMAIL, TestFixtures.USER1_EMAIL, "true"});
-		delegations.add(new String[]{TestFixtures.USER5_EMAIL, TestFixtures.USER2_EMAIL, "true"});  // 5 -> 2 requested, because user2 is not a public proxy
-		delegations.add(new String[]{TestFixtures.USER6_EMAIL, TestFixtures.USER3_EMAIL, "true"});
-		delegations.add(new String[]{TestFixtures.USER7_EMAIL, TestFixtures.USER4_EMAIL, "true"});
-		delegations.add(new String[]{TestFixtures.USER10_EMAIL, TestFixtures.USER7_EMAIL, "true"});
-		delegations.add(new String[]{TestFixtures.USER11_EMAIL, TestFixtures.USER7_EMAIL, "true"});
-		delegations.add(new String[]{TestFixtures.USER12_EMAIL, TestFixtures.USER7_EMAIL, "false"});  // 12 -> 7  non transitive
+		delegations.add(new String[]{TestFixtures.USER2_EMAIL, TestFixtures.USER1_EMAIL, });   // testuser2 delegates to proxy testuser1
+		delegations.add(new String[]{TestFixtures.USER3_EMAIL, TestFixtures.USER1_EMAIL, });
+		delegations.add(new String[]{TestFixtures.USER4_EMAIL, TestFixtures.USER1_EMAIL, });
+		delegations.add(new String[]{TestFixtures.USER5_EMAIL, TestFixtures.USER2_EMAIL, });  // 5 -> 2 requested, because user2 is not a public proxy
+		delegations.add(new String[]{TestFixtures.USER6_EMAIL, TestFixtures.USER3_EMAIL, });
+		delegations.add(new String[]{TestFixtures.USER7_EMAIL, TestFixtures.USER4_EMAIL, });
+		delegations.add(new String[]{TestFixtures.USER10_EMAIL, TestFixtures.USER7_EMAIL, });
+		delegations.add(new String[]{TestFixtures.USER11_EMAIL, TestFixtures.USER7_EMAIL, });
+		delegations.add(new String[]{TestFixtures.USER12_EMAIL, TestFixtures.USER7_EMAIL, });
 	}
 
 

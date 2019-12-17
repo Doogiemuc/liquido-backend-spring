@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.BallotRepo;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
+import org.doogie.liquido.rest.dto.CastVoteResponse;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
@@ -95,7 +96,7 @@ public class VoteRestController {
 	 * Example JSON payload:
 	 * <pre>
 	 *  {
-	 *    "poll": "/liquido/v2/polls/4711",
+	 *    "poll": "/liquido/v2/polls/270",
 	 *    "voterTokens": [
 	 *      "asdfv532sasdfsf...",    // users own voterToken
 	 *      "aasf341sdvvdaaa...",    // one token per delegee if user is a proxy
@@ -110,28 +111,24 @@ public class VoteRestController {
 	 *
 	 * @param castVoteRequest the posted ballot as a REST resource
 	 * @return on success JSON:
-	 *   {
-	 *     "msg": "OK, your ballot was counted.",
-	 *     "checksum": "$2a$10$1IdrGrRAN2Wp3U7QI.JIzueBtPrEreWk1ktFJ3l61Tyv4TC6ICLp2",
-	 *     "poll": "/polls/253"
-	 *   }
+	 * <pre>
+	 * {
+	 *   "msg" : "OK, your vote was counted successfully.",
+	 *   "delegationCount" : 7,
+	 *   "checksum" : "980aa0d85b4d604b8c29a7a8d7628478",
+	 *   "poll" : "/polls/270"
+	 * }
+	 * </pre>
 	 */
   @RequestMapping(value = "/castVote", method = RequestMethod.POST)   // @RequestMapping(value = "somePath") here on type/method level does not work with @RepositoryRestController. But it seems to work with BasePathAwareController
   @ResponseStatus(HttpStatus.CREATED)
-  public @ResponseBody Lson castVote(@RequestBody CastVoteRequest castVoteRequest) throws LiquidoException {
-    log.trace("=> POST /castVote");
-    Optional<UserModel> currentUser = liquidoAuditorAware.getCurrentAuditor();
-    if (currentUser.isPresent()) throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast Vote. You should cast your vote anonymously. Do not send a SESSIONID.");
-
-    BallotModel ballot = castVoteService.castVote(castVoteRequest);   					// all validity checks are done inside ballotService.
-
-		Lson result = Lson.builder()
-			.put("msg", "OK, your vote was counted successfully.")
-			.put("poll", castVoteRequest.getPoll())                 // return URI of poll
-			.put("checksum", ballot.getChecksum())   								// Checksum of the whole ballot, incl. its voterOrder
-			.put("voteCount", ballot.getVoteCount());								// ballot was counted this number of times.
-    return result;
-  }
+  public @ResponseBody CastVoteResponse castVote(@RequestBody CastVoteRequest castVoteRequest) throws LiquidoException {
+		log.trace("=> POST /castVote");
+		Optional<UserModel> currentUser = liquidoAuditorAware.getCurrentAuditor();
+		if (currentUser.isPresent())
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast Vote. You should cast your vote anonymously. Do not send a JWT or SESSIONID in cookie.");
+		return castVoteService.castVote(castVoteRequest);            // all validity checks are done inside castVoteService.
+	}
 
 
 	/**

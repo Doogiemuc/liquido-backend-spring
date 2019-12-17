@@ -11,6 +11,7 @@ import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.services.ProxyService;
 import org.doogie.liquido.services.voting.SchulzeMethod;
 import org.doogie.liquido.testdata.TestDataCreator;
+import org.doogie.liquido.testdata.TestDataUtils;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Matrix;
@@ -132,7 +133,7 @@ public class PollServiceTests  extends BaseTest {
 		log.info("Potential Winners:" +winningProposals);
 
 		assertTrue("There should only be one winner in this example", winningProposals.size() == 1);
-		assertEquals(propsArray[4]+" should have one the election.", propsArray[4], winningProposals.get(0) );
+		assertEquals(propsArray[4]+" should have won the election.", propsArray[4], winningProposals.get(0) );
 
 		log.info("Schulze Method calculations SUCCESSFUL.");
 
@@ -310,6 +311,7 @@ public class PollServiceTests  extends BaseTest {
 		String voterToken;
 		CastVoteRequest castVoteRequest;
 		UserModel voter;
+		List<LawModel> voteOrder;
 		Optional<UserModel> effectiveProxy;
 		UserModel expectedProxy;
 
@@ -318,22 +320,18 @@ public class PollServiceTests  extends BaseTest {
 		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 3);
 		String pollURI = basePath + "/polls/" + poll.getId();
 
-    //  AND a dummy voteOrder
-		List<String> voteOrder = new ArrayList<>();
-		Iterator<LawModel> iterator = poll.getProposals().iterator();
-		voteOrder.add(basePath + "/laws/" + iterator.next().getId());
-		voteOrder.add(basePath + "/laws/" + iterator.next().getId());
-
 		// WHEN USER1_EMAIL casts his vote with a dummy voteOrder (the topProxy)
 		voter = testDataCreator.getUser(TestFixtures.USER1_EMAIL);
 		voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
-		castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
+		voteOrder = TestDataUtils.randVoteOrder(poll);
+		castVoteRequest = new CastVoteRequest(poll, voteOrder, voterToken);
 		castVoteService.castVote(castVoteRequest);
 
 		//  AND a USER4_EMAIL casts his vote with a dummy voteOrder (a proxy in the middle)
 		voter = testDataCreator.getUser(TestFixtures.USER4_EMAIL);
 		voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
-		castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
+		voteOrder = TestDataUtils.randVoteOrder(poll);
+		castVoteRequest = new CastVoteRequest(poll, voteOrder, voterToken);
 		castVoteService.castVote(castVoteRequest);
 
 		// THEN the effective proxy of USER10_EMAIL should be USER4_EMAIL (this proxy in the middle)
@@ -345,17 +343,11 @@ public class PollServiceTests  extends BaseTest {
 		assertEquals(expectedProxy.toStringShort() + "should be the effective proxy of "+voter.toStringShort(), expectedProxy, effectiveProxy.get());
 		log.info("SUCCESS: " + expectedProxy.toStringShort() + " is the effective proxy of "+ voter.toStringShort()  + " in poll.id="+poll.getId());
 
-		// AND USER12_EMAIL should NOT have an effective proxy (because his delegation is non-transitive)
-		voter = testDataCreator.getUser(TestFixtures.USER12_EMAIL);
-		voterToken= castVoteService.createVoterTokenAndStoreRightToVote(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
-		effectiveProxy = pollService.findEffectiveProxy(poll, voter, voterToken);
-		assertFalse(voter + " should not have an effective proxy", effectiveProxy.isPresent());
-		log.info("SUCCESS: " + voter  + " should not yet have an effective proxy, because his non-transitive direct proxy did not vote yet in poll.id="+poll.getId());
-
 		// WHEN VOTER7_EMAIL casts his vote with a dummy voteOrder
 		voter = testDataCreator.getUser(TestFixtures.USER7_EMAIL);
 		voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
-		castVoteRequest = new CastVoteRequest(pollURI, voteOrder, voterToken);
+		voteOrder = TestDataUtils.randVoteOrder(poll);
+		castVoteRequest = new CastVoteRequest(poll, voteOrder, voterToken);
 		castVoteService.castVote(castVoteRequest);
 
 		// THEN the effective proxy of USER12_EMAIL should be USER7_EMAIL (his non-transitive direct proxy)
