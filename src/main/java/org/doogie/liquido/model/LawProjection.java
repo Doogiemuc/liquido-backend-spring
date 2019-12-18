@@ -29,7 +29,7 @@ public interface LawProjection {
 
   AreaModel getArea();  // always inline information about the area  directly into the JSON
 
-  PollModel getPoll();  // always inline information poll
+  PollModel getPoll();  // always inline information about poll
 
   // To fetch comments user CommentProjection of CommentModel
   //Set<CommentModel> getComments();

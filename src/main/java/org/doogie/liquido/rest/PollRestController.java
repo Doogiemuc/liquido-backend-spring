@@ -25,11 +25,11 @@ import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.Resources;
 import org.springframework.hateoas.mvc.ControllerLinkBuilder;
 import org.springframework.http.MediaType;
+import org.springframework.lang.Nullable;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import javax.validation.constraints.Null;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
@@ -258,8 +258,7 @@ public class PollRestController {
 		} catch (IllegalArgumentException e) {
 			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Unknown status for poll '"+status+"'. Must be one of ELABORATION, VOTING or FINISHED");
 		}
-		List<PollModel> polls = pollRepo.findByStatus(pollStatus);
-		List<PollModel> pollsInArea = polls.stream().filter(poll -> poll.getArea().equals(area)).collect(Collectors.toList());
+		List<PollModel> polls = pollRepo.findByStatusAndArea(pollStatus, area);
 
 		// Implementation note: PollRepo is deliberately NOT exposed as REST resource. Polls MUST be handled through this custom PollRestController.
 		// CODE: return new Resources<>(pollsInArea, linkTo(methodOn(PollRestController.class).findPollsByStatusAndArea(null, null)).withRel("self"));
@@ -268,9 +267,48 @@ public class PollRestController {
 		// LEARNING:  Always fine tune the returned JSON of your API !YOURSELF!  Do NOT rely on auto generated Repos.
 		ControllerLinkBuilder controllerLinkBuilder = linkTo(methodOn(PollRestController.class).findPollsByStatusAndArea(null, null));
 		return new Lson()
-				.put("_embedded.polls", pollsInArea)
+				.put("_embedded.polls", polls)
 				.put("_links.self.href", controllerLinkBuilder.toUri());
 	}
+
+	@RequestMapping("/polls/search/find")
+	public @ResponseBody Lson findPollsWithOwnBallots(
+			@RequestParam("status") Optional<PollModel.PollStatus> status,
+			@RequestParam("area") Optional<AreaModel> area,
+			@RequestParam("withOwnBallot") Optional<String> voterToken) throws LiquidoException {
+
+		/*  old version with nice error message. Error messages are yet another reason to completely not use RestRepositories but use our own manually build controllers.
+		PollModel.PollStatus pollStatus = null;
+		try {
+			pollStatus = PollModel.PollStatus.valueOf(status);
+		} catch (IllegalArgumentException e) {
+			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Unknown status for poll '"+status+"'. Must be one of ELABORATION, VOTING or FINISHED");
+		}
+		*/
+
+		List<PollModel> polls = new ArrayList<>();
+		if (status.isPresent() && area.isPresent()) {
+			polls = pollRepo.findByStatusAndArea(status.get(), area.get());
+		} else if (status.isPresent()) {
+			polls = pollRepo.findByStatus(status.get());
+		}
+		if (voterToken.isPresent()) {
+			RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken.get());
+			polls = polls.stream().filter(poll -> ballotRepo.findByPollAndRightToVote(poll, rightToVote).isPresent()).collect(Collectors.toList());
+		}
+
+
+		// Implementation note: PollRepo is deliberately NOT exposed as REST resource. Polls MUST be handled through this custom PollRestController.
+		// CODE: return new Resources<>(pollsInArea, linkTo(methodOn(PollRestController.class).findPollsByStatusAndArea(null, null)).withRel("self"));
+		// BUG: returning resource does not add _embedded.polls: [] when List is empty. https://stackoverflow.com/questions/30286795/how-to-force-spring-hateoas-resources-to-render-an-empty-embedded-array/30297552
+		// FIX: Doogies LSON Builder for the win once again!! :-)
+		// LEARNING:  Always fine tune the returned JSON of your API !YOURSELF!  Do NOT rely on auto generated Repos.
+		ControllerLinkBuilder controllerLinkBuilder = linkTo(methodOn(PollRestController.class).findPollsWithOwnBallots(null, null, null));
+		return new Lson()
+			.put("_embedded.polls", polls)
+			.put("_links.self.href", controllerLinkBuilder.toUri());
+	}
+
 
 
 	//TODO: Move getRecentlyDiscussed() method to LawRestController (There was something about URL pathes????)
