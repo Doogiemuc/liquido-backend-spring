@@ -45,13 +45,13 @@ public class DelegationModel extends BaseModel {
   @OneToOne
   public UserModel toProxy;
 
-	/**
+	/* @Deprecated
 	 * A voter can delegate his vote to a proxy.
 	 * But maybe the voter does not want that his proxy in turn delegates the vote again.
 	 * Then the delegation is marked as nonTransitive.
 	 * By default delegations can be transitive, so that a tree of delegations can be formed.
 	 *
-	//TODO: This is a big one:  Delegations are always transitive, because if my direct proxy forwards his right to vote
+	//DONE: This was a big one:  Delegations are always transitive, because if my direct proxy forwards his right to vote
 	//		and then his proxy votes, this is just as the direct proxy voted for himself.
 	public boolean transitive = true;
 	 */
