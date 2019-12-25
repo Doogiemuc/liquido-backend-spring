@@ -6,13 +6,14 @@ import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.RightToVoteModel;
 import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.EntityLinks;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -56,6 +57,33 @@ public class ProxyService {
 	@Autowired
 	EntityLinks entityLinks;
 
+	@Autowired
+	LiquidoAuditorAware liquidoAuditorAware;
+
+	/**
+	 * Get all users that could be assigned as a proxy in this area.
+	 * Assignable proxies are all users, except the current user, his already assigned proxy (if any) or
+	 * any proxy that would create a circular delegation which is not allowed.
+	 * @param area an area
+	 * @return the list of assignable proxies
+	 * @throws LiquidoException when not logged in
+	 */
+	public List<UserModel> getAssignableProxies(AreaModel area) throws LiquidoException {
+		List<UserModel> assignableProxies = new ArrayList<>();
+		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
+			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your assignable proxies."));
+		Optional<DelegationModel> currentProxyOpt = delegationRepo.findByAreaAndFromUser(area, currentUser);
+		for (UserModel proxy : userRepo.findAll()) {
+			if (!(proxy.equals(currentUser) ||
+				    currentProxyOpt.isPresent() && currentProxyOpt.get().equals(proxy) ||
+				    thisWouldBeCircularDelegation(area, currentUser, proxy)))
+			{
+				assignableProxies.add(proxy);
+			}
+		}
+		return assignableProxies;
+	}
+
 	/**
 	 * User forwards his right to vote to a proxy in one area.
 	 *
@@ -80,11 +108,10 @@ public class ProxyService {
 	@Transactional
 	public DelegationModel assignProxy(AreaModel area, UserModel fromUser, UserModel proxy, String userVoterToken) throws LiquidoException {
 		//----- validate voterToken and get voters checksumModel, so that we can delegate it to the proxies checksum anonymously.
-
 		//TODO: How to check if the passed voterToken is from the currently logged in user?  (Currently this would be possible. As long as the server can create voterTokens for himself.)
-		RightToVoteModel voterChecksum = castVoteService.isVoterTokenValid(userVoterToken);
-		Optional<RightToVoteModel> proxyChecksum = getChecksumOfPublicProxy(area, proxy);   // get checksumModel of public proxy (may be null!)
-		return assignProxy(area, fromUser, proxy, voterChecksum, proxyChecksum);
+		RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(userVoterToken);
+		Optional<RightToVoteModel> rightToVoteOfProxy = getRightToVoteOfPublicProxy(area, proxy);   // get checksumModel of public proxy (may be null!)
+		return assignProxy(area, fromUser, proxy, rightToVote, rightToVoteOfProxy);
 	}
 
 	/**
@@ -156,21 +183,22 @@ public class ProxyService {
 	/**
 	 * Proxy delegations must not be circular. A user must not delegate to a proxy, which already delegated his right
 	 * to vote to himself. The proxy delegations must form a tree.
-	 * @param voterChecksum token checksum of a voter
-	 * @param proxyToCheck token checksum of the new proxy that the user want's to assign
-	 * @return true if proxyToCheck is not yet contained in the delegation tree below user.
-	 *         false if proxyToCheck already (maybe transitively) delegated his vote to user.
+	 * @param rightToVote rightToVote of a voter
+	 * @param rightToVoteOfProxy rightToVote of the new proxy that the user want's to delegate to
+	 * @return true if rightToVoteOfProxy is not yet contained in the delegation tree below user.
+	 *         false if rightToVoteOfProxy already (maybe transitively) delegated his vote to user.
 	 */
-	public boolean thisWouldBeCircularDelegation(RightToVoteModel voterChecksum, RightToVoteModel proxyToCheck) {
-		//voterChecksum.getDelegatedTo is not yet set and still <null> !
-		if (voterChecksum == null) return false;
-		if (proxyToCheck == null) return false;
-		if (proxyToCheck.getDelegatedTo() == null) return false;
-		if (proxyToCheck.getDelegatedTo().equals(voterChecksum)) return true;
-		return thisWouldBeCircularDelegation(voterChecksum, proxyToCheck.getDelegatedTo());
+	public boolean thisWouldBeCircularDelegation(RightToVoteModel rightToVote, RightToVoteModel rightToVoteOfProxy) {
+		//rightToVote.getDelegatedTo is not yet set and still <null> !
+		if (rightToVote == null) return false;
+		if (rightToVoteOfProxy == null) return false;
+		if (rightToVoteOfProxy.getDelegatedTo() == null) return false;
+		if (rightToVoteOfProxy.getDelegatedTo().equals(rightToVote)) return true;
+		return thisWouldBeCircularDelegation(rightToVote, rightToVoteOfProxy.getDelegatedTo());
 	}
 
 	public boolean thisWouldBeCircularDelegation(AreaModel area, UserModel user, UserModel proxyToCheck) {
+		if (area == null || user == null || proxyToCheck == null) return false;
 		if (user.equals(proxyToCheck)) return true;
 		List<DelegationModel> delegations = delegationRepo.findByAreaAndToProxy(area, user);   // find delegations to fromUser where fromUser is the proxy.
 		//TODO: What about delegation requests?
@@ -214,7 +242,7 @@ public class ProxyService {
 	 * @param proxy proxy to check
 	 * @return (optionally) the checksum of a public proxy
 	 */
-	public Optional<RightToVoteModel> getChecksumOfPublicProxy(AreaModel area, UserModel proxy) {
+	public Optional<RightToVoteModel> getRightToVoteOfPublicProxy(AreaModel area, UserModel proxy) {
 		return rightToVoteRepo.findByAreaAndPublicProxy(area, proxy);
 	}
 

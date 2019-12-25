@@ -45,7 +45,7 @@ public class BaseTest {
 	public TestWatcher slf4jTestWatcher = new TestWatcher() {
 		@Override
 		protected void starting(Description descr) {
-			log.trace("===== TEST STARTING "+descr.getDisplayName());
+			log.debug("===== TEST STARTING "+descr.getDisplayName());
 		}
 
 		@Override
@@ -55,7 +55,7 @@ public class BaseTest {
 
 		@Override
 		protected void succeeded(Description descr) {
-			log.trace("===== TEST SUCCESS "+descr.getDisplayName());
+			log.debug("===== TEST SUCCESS "+descr.getDisplayName());
 		}
 	};
 

@@ -14,7 +14,7 @@ BaseModel --|> Identifyable
 LawModel --|> BaseModel
 DelegationModel --> AreaModel: delegation\nin area
 LawModel --> AreaModel: law\nin area
-PollModel ..> AreaModel: poll\nin area\n(calculated)
+PollModel ..> AreaModel: poll is\nin area\n(calculated)
 PollModel "0..1" <-> "N" LawModel: proposals{}\n in poll
 CommentModel "N" <--> "1" LawModel: comments{}
 BallotModel "0..1" --> "N" PollModel: ballot in poll
@@ -26,7 +26,7 @@ RightToVoteModel .. DelegationModel: No direct link!\nTwo parallel trees.
 ' These are just for layout
 PollModel -[hidden]left-> DelegationModel
 UserModel -[hidden]> AreaModel
-KeyValueModel -[hidden]> AreaModel
+KeyValueModel -[hidden]left> AreaModel
 OneTimeToken -[hidden]left> AreaModel
 
 class BaseModel {

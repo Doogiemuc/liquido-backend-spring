@@ -6,6 +6,7 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 import lombok.extern.slf4j.Slf4j;
+import net.minidev.json.JSONArray;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.jwt.JwtTokenProvider;
 import org.doogie.liquido.model.*;
@@ -18,8 +19,6 @@ import org.doogie.liquido.testdata.TestDataUtils;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.Lson;
-import org.json.JSONArray;
-import org.json.JSONException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,7 +38,10 @@ import org.springframework.web.util.DefaultUriBuilderFactory;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
@@ -578,6 +580,15 @@ public class RestEndpointTests extends BaseTest {
     assertTrue("Voter token is invalid", voterToken != null && voterToken.startsWith("$2") && voterToken.length() > 10);
     log.trace("TEST SUCCESS: found expected "+TestFixtures.USER1_DELEGATIONS +" delegations for "+TestFixtures.USER1_EMAIL + " in area "+TestFixtures.AREA_FOR_DELEGATIONS);
   }
+
+  @Test
+  public void testGetAssignableProxies() {
+		AreaModel area = areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
+		loginUserJWT(TestFixtures.USER1_EMAIL);
+		String assignableResources = client.getForObject("/my/proxy/{areaId}/assignable", String.class, area.getId());
+		JSONArray assignableProxies = JsonPath.read(assignableResources, "$._embedded.users");
+		assertTrue("There should be at least one assignable proxy", assignableProxies.size() > 1);
+	}
 
 	@Test
 	public void testDelegationsCount() {
