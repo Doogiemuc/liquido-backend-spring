@@ -11,7 +11,7 @@ import org.doogie.liquido.rest.deserializer.UserModelDeserializer;
 
 /**
  * DTO for assigning a Proxy
- * The POST /assignProxy request contains URI links to the entities. These are then deserialized into entity classes
+ * The PUT /assignProxy request contains URI links to the entities. These are then deserialized into entity classes
  * by my custom Jackson deserializers
  * @see org.doogie.liquido.rest.ProxyRestController#assignProxy(AreaModel, AssignProxyRequest)
  */
@@ -20,7 +20,7 @@ import org.doogie.liquido.rest.deserializer.UserModelDeserializer;
 public class AssignProxyRequest {
 	/** proxy that the voter want's to assign */
 	@NonNull
-	@JsonDeserialize(using=UserModelDeserializer.class)   // this way the client can pass URIs e.g. "toProxy": "/liquido/v2/users/1"
+	@JsonDeserialize(using=UserModelDeserializer.class)   // this way the client can pass URIs e.g. "toProxy": "/users/1"
 	UserModel toProxy;
 
 	/** The voter's own voterToken that MUST hash to a valid checksumModel. */

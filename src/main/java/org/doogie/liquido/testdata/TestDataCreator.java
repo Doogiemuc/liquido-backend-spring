@@ -29,7 +29,6 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.doogie.liquido.model.LawModel.LawStatus;
 
@@ -395,7 +394,7 @@ public class TestDataCreator implements CommandLineRunner {
       try {
 	      if (TestFixtures.shouldBePublicProxy(area, toProxy)) {
 					castVoteService.createVoterTokenAndStoreRightToVote(toProxy, area, TestFixtures.USER_TOKEN_SECRET, true);
-					log.debug("publicProxyChecksum = ", proxyService.getChecksumOfPublicProxy(area, toProxy));
+					log.debug("publicProxyChecksum = ", proxyService.getRightToVoteOfPublicProxy(area, toProxy));
 				}
 
 				String userVoterToken = castVoteService.createVoterTokenAndStoreRightToVote(fromUser, area, TestFixtures.USER_TOKEN_SECRET, TestFixtures.shouldBePublicProxy(area, fromUser));
