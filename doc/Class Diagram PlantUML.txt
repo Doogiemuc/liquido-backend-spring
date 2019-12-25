@@ -20,8 +20,7 @@ CommentModel "N" <--> "1" LawModel: comments{}
 BallotModel "0..1" --> "N" PollModel: ballot in poll
 BallotModel "0..1" --> "N" LawModel: voteOrder[]: sorted\nproposals in ballot
 BallotModel "1" -> "1" RightToVoteModel
-
-RightToVoteModel .. DelegationModel: No direct link!\nTwo parallel trees.
+DelegationModel "1" -up-> "1" RightToVoteModel
 
 ' These are just for layout
 PollModel -[hidden]left-> DelegationModel
