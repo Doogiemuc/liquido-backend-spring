@@ -30,4 +30,6 @@ public interface UserRepo extends CrudRepository<UserModel, Long> {
   /** find a user by his mobile phone number */
   Optional<UserModel> findByProfileMobilephone(String mobilephone);
 
+
+  //TODO: need a sophisticated search for UserModels, e.g. to find assignableProxies
 }
