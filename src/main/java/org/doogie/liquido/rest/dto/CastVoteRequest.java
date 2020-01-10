@@ -6,6 +6,7 @@ import lombok.NonNull;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.rest.deserializer.LawModelDeserializer;
+import org.doogie.liquido.rest.deserializer.PollModelDeserializer;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,6 +19,7 @@ import java.util.stream.Collectors;
 public class CastVoteRequest {
 	/** a poll */
 	@NonNull
+	@JsonDeserialize(using = PollModelDeserializer.class)
 	PollModel poll;
 
 	/** Ordered list of URIs, one for each proposal in VOTING. */
