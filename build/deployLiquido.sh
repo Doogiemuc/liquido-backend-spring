@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 #
-# Deployment Script for LIQUIDO
+# Linux Shell - Deployment Script for LIQUIDO
 #
 
 # export JAVA_HOME=/d/Coding/DevApps/jdk-8.211
@@ -18,18 +18,25 @@ FRONTEND_BASE=/d/Coding/liquido/liquido-vue-frontend
 FRONTEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:/var/www/html
 FRONTEND_URL=http://$BACKEND_HOST
 
+DOC_SOURCE=/d/Coding/liquido/liquido-doc-gulp-pug/_site/
+DOC_DEST=${BACKEND_USER}@${BACKEND_HOST}:/home/ec2-user/liquido/liquido-doc
+
 CURRENT_DIR=$PWD
 NPM=npm
 MAVEN=./mvnw
 CYPRESS=/c/Doogie/CodingDoogie/liquido/liquido-vue-frontend/node_modules/cypress/bin/cypress
 
-# ===== BASH colors
+# ===== BASH colors =====
 DEFAULT="\e[39m"
 GREEN="\e[32m"
 YELLOW="\e[33m"
 RED="\e[31m"
 GREEN_OK="${GREEN}OK${DEFAULT}"
 RED_FAIL="${RED}FAIL${DEFAULT}"
+
+#
+# ===== Deployment Tasks =====
+#
 
 echo
 echo " ===== Preparing to Deploying LIQUIDO ====="
@@ -62,7 +69,7 @@ echo "===== Build Backend ====="
 echo
 echo "in $BACKEND_SOURCE"
 read -p "Build backend? [yes|skipTests|NO] " yn
-if [[ $yn =~ ^[s](kip)?$ ]] ; then
+if [[ $yn =~ ^[Ss](kip)?$ ]] ; then
   echo "  Skipping tests."
   cd $BACKEND_SOURCE
   $MAVEN clean install package -DskipTests
@@ -156,7 +163,21 @@ else
   echo "WebApp will NOT be deployed."
 fi
 
-
+echo
+echo "===== Update LIQUIDO Documentation ====="
+echo
+read -p "Update LIQUIDO documentation? [yes|NO] " yn
+if [[ $yn =~ ^[Yy](es)?$ ]] ; then
+  echo "rsync -avz -e ssh -i $SSH_KEY $DOC_SOURCE $DOC_DEST"
+  BACKUP_CURRENT_DIR=$PWD
+  cd $DOC_SOURCE
+  rsync -avz -e "ssh -i $SSH_KEY" . $DOC_DEST
+  [ $? -ne 0 ] && exit 1
+  cd $BACKUP_CURRENT_DIR
+  echo -e "Documentation updated in $DOC_DEST ${GREEN_OK}"
+else
+  echo "Documentation will NOT be updated."
+fi
 
 
 echo

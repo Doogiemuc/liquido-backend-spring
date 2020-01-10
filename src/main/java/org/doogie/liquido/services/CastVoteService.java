@@ -197,14 +197,18 @@ public class CastVoteService {
 	 * If that user is a proxy for other voters, then their ballots will also be added automatically.
 	 * @param castVoteRequest which contains the poll that we want to vote for and
 	 *                        the anonymous voterToken and the preferred voteOrder
-	 * @return BallotModel the casted ballot
+	 * @return CastVoteResponse with ballot and the voteCount how often the vote was actually counted for this proxy. (Some voters might already have voted on their own.)
 	 * @throws LiquidoException when voterToken is invalid or there is <b>anything</b> suspicious with the ballot
 	 */
 	@Transactional
 	public CastVoteResponse castVote(CastVoteRequest castVoteRequest) throws LiquidoException {
 		log.info("castVote: "+ castVoteRequest);
+		if (castVoteRequest.getPoll() == null || castVoteRequest.getPoll().getId() == null)
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Need poll to cast vote");
+		if (DoogiesUtil.isEmpty(castVoteRequest.getVoterToken()))
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Need voterToken to cast vote");
 		if (castVoteRequest.getVoteOrder() == null || castVoteRequest.getVoteOrder().size() == 0)
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Empty voteOrder");
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Need voteOrder to cast vote");
 
 		// Validate voterToken against stored RightToVotes
 		RightToVoteModel rightToVoteModel = isVoterTokenValid(castVoteRequest.getVoterToken());
@@ -219,7 +223,7 @@ public class CastVoteService {
 	}
 
 	/**
-	 * This method calls itself recursively. The <b>upsert</b> algorithm for storing a ballot:
+	 * This method calls itself recursively. The <b>upsert</b> algorithm for storing a ballot works like this:
 	 *
 	 * 1) Check the integrity of the passed newBallot. Especially check the validity of its RightToVoteModel.
 	 *    The rightToVote must be known.
