@@ -132,7 +132,7 @@ public class VoteRestController {
 
 
 	/**
-	 * Fetch Ballots of a voter. Caller <b>must</b>> provide a valid voterToken.
+	 * Fetch Ballots of a voter. Caller <b>must</b> provide a valid voterToken.
 	 *
 	 * This REST endpoint supports search criterias:
 	 * When poll is given we lookup the one ballot that the voter may already have casted in this specific poll.
