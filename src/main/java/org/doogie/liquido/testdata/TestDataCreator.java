@@ -57,6 +57,7 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * See http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/htmlsingle/#boot-features-command-line-runner
  *
  * Other possibilities for initializing a DB with Spring and Hibernate:
+ * https://www.baeldung.com/spring-boot-data-sql-and-schema-sql    <=  @Sql annotation can be used on test classes or methods to execute SQL scripts.
  * https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#core.repository-populators
  * https://docs.spring.io/spring-boot/docs/current/reference/html/howto-database-initialization.html
  * http://www.sureshpw.com/2014/05/importing-json-with-references-into.html
@@ -724,9 +725,10 @@ public class TestDataCreator implements CommandLineRunner {
     if (ageInDays < 0) throw new IllegalArgumentException("ageInDays must be positive");
     Table tableAnnotation = model.getClass().getAnnotation(javax.persistence.Table.class);
     String tableName = tableAnnotation.name();
-    String sql = "UPDATE " + tableName + " SET created_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
-    //log.trace(sql);
-    jdbcTemplate.execute(sql);
+    //String sql = "UPDATE " + tableName + " SET created_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
+		String postgreSQL = "UPDATE " + tableName + " SET created_at = clock_timestamp() + interval '" + ageInDays + " day'  WHERE id='" + model.getId() + "'";
+    log.trace("Executing sql:" +postgreSQL);
+    jdbcTemplate.execute(postgreSQL);
     Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
     model.setCreatedAt(daysAgo);
   }
@@ -740,9 +742,10 @@ public class TestDataCreator implements CommandLineRunner {
     if (ageInDays < 0) throw new IllegalArgumentException("ageInDays must be positive");
     Table tableAnnotation = model.getClass().getAnnotation(javax.persistence.Table.class);
     String tableName = tableAnnotation.name();
-    String sql = "UPDATE " + tableName + " SET updated_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
-    //log.trace(sql);
-    jdbcTemplate.execute(sql);
+    //String sql = "UPDATE " + tableName + " SET updated_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
+		String postgreSQL = "UPDATE " + tableName + " SET updated_at = clock_timestamp() + interval '" + ageInDays + " day'  WHERE id='" + model.getId() + "'";
+		log.trace("Executing sql:" +postgreSQL);
+		jdbcTemplate.execute(postgreSQL);
     Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
     model.setUpdatedAt(daysAgo);
   }
