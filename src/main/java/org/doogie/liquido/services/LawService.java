@@ -75,6 +75,7 @@ public class LawService {
  * @return the saved idea
  */
   public LawModel addSupporter(@NotNull UserModel supporter, @NotNull LawModel idea) throws LiquidoException {
+    if (supporter == null || idea == null) throw new IllegalArgumentException("Need idea and supporter to addSupporter to idea!");
     if (idea.getCreatedBy().equals(supporter)) throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_SUPPORTER, "You cannot support your own idea.");
     if (idea.getSupporters().contains(supporter)) return idea;  // If user already supports this idea, then return idea as is.
     log.info("addSupporter: "+supporter.toStringShort()+" now supports "+idea);

@@ -24,7 +24,7 @@ DOC_DEST=${BACKEND_USER}@${BACKEND_HOST}:/home/ec2-user/liquido/liquido-doc
 CURRENT_DIR=$PWD
 NPM=npm
 MAVEN=./mvnw
-CYPRESS=/c/Doogie/CodingDoogie/liquido/liquido-vue-frontend/node_modules/cypress/bin/cypress
+CYPRESS=/d/Coding/liquido/liquido-vue-frontend/node_modules/.bin/cypress
 
 # ===== BASH colors =====
 DEFAULT="\e[39m"
@@ -164,7 +164,7 @@ else
 fi
 
 echo
-echo "===== Update LIQUIDO Documentation ====="
+echo "===== Update LIQUIDO Documentation on EC2 ====="
 echo
 read -p "Update LIQUIDO documentation? [yes|NO] " yn
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
@@ -201,14 +201,20 @@ if [ $PING_SUCCESS == 0 ]; then
 	exit 1
 fi
 
-echo -n "Login with dummy SMS token should NOT be possible in PROD ... "
 
-DUMMY_LOGIN=`curl -s -X GET "${BACKEND_API}/auth/loginWithSmsToken?mobile=%2B491234567890&token=998877"`
-if [[ $DUMMY_LOGIN != *'"httpStatus":401'* ]] ; then
-	echo -e "$RED_FAIL"
-	exit 1
-fi
-echo -e "$GREEN_OK"
+#echo -n "Login with dummy SMS token should NOT be possible in PROD ... "
+#
+#DUMMY_LOGIN=`curl -s -X GET "${BACKEND_API}/auth/loginWithSmsToken?mobile=%2B491234567890&token=998877"`
+#if [[ $DUMMY_LOGIN != *'"httpStatus":401'* ]] ; then
+#	echo -e "$RED_FAIL"
+#	exit 1
+#fi
+#echo -e "$GREEN_OK"
+
+#
+# ===== Upsert School Test Data =====
+#
+
 
 echo
 echo "===== End-2-End Tests ====="

@@ -34,8 +34,8 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
   @Override
   public Optional<UserModel> getCurrentAuditor() {
     if (mockAuditor != null) {
-    	// warn about mock users, but only if we are not in dev or test
-			if (!springEnv.acceptsProfiles(Profiles.of("dev", "test")))
+    	// warn about mock users, but only if we are not in dev or test or int
+			if (!springEnv.acceptsProfiles(Profiles.of("dev", "test", "int")))
 				log.warn("Returning mock auditor "+mockAuditor.getEmail());
       return Optional.of(mockAuditor);
     }
