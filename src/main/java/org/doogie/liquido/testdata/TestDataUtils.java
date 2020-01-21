@@ -9,6 +9,8 @@ import org.doogie.liquido.services.LawService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -44,13 +46,18 @@ public class TestDataUtils {
 	LiquidoAuditorAware auditorAware;
 
 	@Autowired
+	Environment springEnv;
+
+	@Autowired
 	LiquidoProperties prop;
 
 	@Autowired
 	JdbcTemplate jdbcTemplate;
 
-	Map<String, UserModel> usersMap = new HashMap();
-	List<UserModel> users = new ArrayList();
+	Random rand = new Random();
+
+	public Map<String, UserModel> usersMap = new HashMap();
+	public List<UserModel> users = new ArrayList();
 
 	public void reloadUsersCache() {
 		this.usersMap = new HashMap();
@@ -67,6 +74,10 @@ public class TestDataUtils {
 
 	public UserModel user(String email) {
 		return this.usersMap.get(email);
+	}
+
+	public UserModel randUser() {
+		return this.users.get(rand.nextInt(this.users.size()));
 	}
 
 	public void printProxyTree(AreaModel area, UserModel proxy) {
@@ -136,10 +147,18 @@ public class TestDataUtils {
 		if (ageInDays < 0) throw new IllegalArgumentException("ageInDays must be positive");
 		Table tableAnnotation = model.getClass().getAnnotation(javax.persistence.Table.class);
 		String tableName = tableAnnotation.name();
-		//String sql = "UPDATE " + tableName + " SET created_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
-		String postgreSQL = "UPDATE " + tableName + " SET created_at = clock_timestamp() + interval '" + ageInDays + " day'  WHERE id='" + model.getId() + "'";
-		log.trace("Executing sql:" + postgreSQL);
-		jdbcTemplate.execute(postgreSQL);
+		String sql;
+		// in int we have a PostgreSQL DB and must use its syntax
+		if(springEnv.getProperty("spring.jpa.database-platform") != null &&
+			springEnv.getProperty("spring.jpa.database-platform").contains("PostgreSQLDialect"))
+		{
+			sql = "UPDATE " + tableName + " SET created_at = clock_timestamp() + interval '" + ageInDays + " day'  WHERE id='" + model.getId() + "'";
+		} else {
+			// This is H2 / MySQL syntax
+			sql = "UPDATE " + tableName + " SET created_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
+		}
+		log.trace("Executing sql:" + sql);
+		jdbcTemplate.execute(sql);
 		Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
 		model.setCreatedAt(daysAgo);
 	}
@@ -154,10 +173,19 @@ public class TestDataUtils {
 		if (ageInDays < 0) throw new IllegalArgumentException("ageInDays must be positive");
 		Table tableAnnotation = model.getClass().getAnnotation(javax.persistence.Table.class);
 		String tableName = tableAnnotation.name();
-		//String sql = "UPDATE " + tableName + " SET updated_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
-		String postgreSQL = "UPDATE " + tableName + " SET updated_at = clock_timestamp() + interval '" + ageInDays + " day'  WHERE id='" + model.getId() + "'";
-		log.trace("Executing sql:" + postgreSQL);
-		jdbcTemplate.execute(postgreSQL);
+		String sql;
+		// in int we have a PostgreSQL DB and must use its syntax
+		if(springEnv.getProperty("spring.jpa.database-platform") != null &&
+			springEnv.getProperty("spring.jpa.database-platform").contains("PostgreSQLDialect"))
+		{
+			sql = "UPDATE " + tableName + " SET updated_at = clock_timestamp() + interval '" + ageInDays + " day'  WHERE id='" + model.getId() + "'";
+		} else {
+			// This is H2 / MySQL syntax
+			sql = "UPDATE " + tableName + " SET updated_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
+		}
+
+		log.trace("Executing sql:" + sql);
+		jdbcTemplate.execute(sql);
 		Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
 		model.setUpdatedAt(daysAgo);
 	}
@@ -218,5 +246,18 @@ public class TestDataUtils {
 		fakeUpdatedAt(proposal, ageInDays > 1 ? ageInDays - 1 : 0);
 		return proposal;
 	}
+
+
+	private static final String loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, nam urna. Vitae aenean velit, voluptate velit rutrum. Elementum integer rhoncus rutrum morbi aliquam metus, morbi nulla, nec est phasellus dolor eros in libero. Volutpat dui feugiat, non magna, parturient dignissim lacus ipsum in adipiscing ut. Et quis adipiscing perferendis et, id consequat ac, dictum dui fermentum ornare rhoncus lobortis amet. Eveniet nulla sollicitudin, dolore nullam massa tortor ullamcorper mauris. Lectus ipsum lacus.\n" +
+		"Vivamus placerat a sodales est, vestibulum nec cursus eros fermentum. Felis orci nunc quis suspendisse dignissim justo, sed proin metus, nunc elit ac aliquam. Sed tellus ante ipsum erat platea nulla, enim bibendum gravida condimentum, imperdiet in vitae faucibus ultrices, aenean fringilla at. Rhoncus et sint volutpat, bibendum neque arcu, posuere viverra in, imperdiet duis. Eget erat condimentum congue ipsam. Tortor nostra, adipiscing facilisis donec elit pellentesque natoque integer. Ipsum id. Aenean suspendisse et eros hymenaeos in auctor, porttitor amet id pellentesque tempor, praesent aliquam rhoncus convallis vel, tempor fusce wisi enim aliquam ut nisl, nullam dictum etiam. Nisi accumsan augue sapiente dui, pulvinar cras sapien mus quam nonummy vivamus, in vitae, sociis pede, convallis mollis id mauris. Vestibulum ac quis scelerisque magnis pede in, duis ullamcorper a ipsum ante ornare.\n" +
+		"Quam amet. Risus lorem nibh consequat volutpat. Bibendum lorem, mauris sed quisque. Pellentesque augue eros nibh, iaculis maecenas facilisis amet. Nam laoreet elit litora justo, morbi in vitae nisl nulla vestibulum maecenas. Scelerisque lacinia id eget pede nunc in, id a nullam nunc velit mauris class. Duis dui ullamcorper vestibulum, turpis mi eu, arcu pellentesque sit. Arcu nibh elit. Vitae magna magna auctor, class pariatur, tortor eget amet mi pede accumsan, ut quam ut ante nibh vivamus quisque. Magna praesent tortor praesent.";
+
+	/** @return a dummy text that can be used eg. in descriptions */
+	public String getLoremIpsum(int minLength, int maxLength) {
+		int endIndex = minLength + rand.nextInt(maxLength - minLength);
+		if (endIndex >= loremIpsum.length()) endIndex = loremIpsum.length()-1;
+		return loremIpsum.substring(0, endIndex);
+	}
+
 
 }
