@@ -42,14 +42,14 @@ echo
 echo " ===== Preparing to Deploying LIQUIDO ====="
 echo
 
-echo -n "Checking for frontend in $FRONTEND_BASE ..."
+echo -n "Checking for frontend in $FRONTEND_BASE ... "
 if [ ! -d $FRONTEND_BASE ]; then
 	echo -e "$RED_FAIL"
 	exit 1
 fi
 echo -e "$GREEN_OK"
 
-echo -n "Checking for backend in $BACKEND_SOURCE ..."
+echo -n "Checking for backend in $BACKEND_SOURCE ... "
 if [ ! -d $BACKEND_SOURCE ]; then
 	echo -e "$RED_FAIL"
 	exit 1
@@ -139,10 +139,10 @@ if [[ $yn =~ ^[Yy](es)?$ ]] ; then
   ssh -i $SSH_KEY ${BACKEND_USER}@${BACKEND_HOST} "pkill -f java.+liquido-backend-spring"
   echo "Start new instance"
   echo "ssh -i $SSH_KEY ${BACKEND_USER}@${BACKEND_HOST} ${BACKEND_START_CMD}"
-  echo "---------------------"
+  echo "--------------------- output of remote command --------------"
   ssh -i $SSH_KEY ${BACKEND_USER}@${BACKEND_HOST} ${BACKEND_START_CMD}
   [ $? -ne 0 ] && exit 1
-  echo "---------------------"
+  echo "-------------------------------------------------------------"
   echo -e "${JAR_NAME} is booting up on $BACKEND_HOST ... ${GREEN_OK}"
 else
   echo "Backend will not be restarted."
@@ -225,6 +225,7 @@ echo
 read -p "Run Cypress Happy Case test? [yes|NO] " yn
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
 	cd $FRONTEND_BASE
+  # cypress run --config-file ./cypress/config-envs/cypress-int.json
 	echo "$CYPRESS run --config baseUrl=$FRONTEND_URL --env backendBaseURL=$BACKEND_API --spec ./cypress/integration/liquidoTests/liquidoHappyCase.js"
 	$CYPRESS run --config baseUrl=$FRONTEND_URL --env backendBaseURL=$BACKEND_API --spec ./cypress/integration/liquidoTests/liquidoHappyCase.js
 	[ $? -ne 0 ] && exit 1
