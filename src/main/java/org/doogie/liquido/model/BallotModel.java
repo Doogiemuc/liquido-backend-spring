@@ -58,8 +58,8 @@ public class BallotModel {
   @NotNull
   @NonNull
   @ManyToOne
-	@JsonProperty("_links")   // JSON will contain "_links.poll.href"
-	@JsonSerialize(using = PollAsLinkJsonSerializer.class)  // a ballot can only be fetched when the caller already knows the poll. So we only return a simple ref to the poll
+	@JsonProperty("_links")   											// JSON will contain "_links.poll.href"
+	@JsonSerialize(using = PollAsLinkJsonSerializer.class)
   public PollModel poll;
 
 	/**
@@ -86,9 +86,8 @@ public class BallotModel {
 	 * Number of times that his vote was counted because of delegations.
 	 * This value is not stored, since it may change when the tree of delegations changes.
 	 * It is only valid at the time when the ballot is casted.
-
 	@Transient
-  public Long voteCount;     Since this count may change we do not keep it at all
+  public Long voteCount;
 	*/
 
   /**
@@ -137,6 +136,10 @@ public class BallotModel {
 				this.getVoteOrder().hashCode() +
 				this.getPoll().hashCode() +
 				this.getRightToVote().hashedVoterToken);
+	}
+
+	public AreaModel getArea() {
+		return this.getPoll() != null ? this.getPoll().getArea() : null;
 	}
 
 	@Override

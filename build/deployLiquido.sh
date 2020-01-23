@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 #
-# Deployment Script for LIQUIDO
+# Linux Shell - Deployment Script for LIQUIDO
 #
 
 # export JAVA_HOME=/d/Coding/DevApps/jdk-8.211
@@ -20,12 +20,15 @@ BACKEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:${BACKEND_DEST_DIR}
 FRONTEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:/var/www/html
 FRONTEND_URL=http://$BACKEND_HOST
 
+DOC_SOURCE=/d/Coding/liquido/liquido-doc-gulp-pug/_site/
+DOC_DEST=${BACKEND_USER}@${BACKEND_HOST}:/home/ec2-user/liquido/liquido-doc
+
 CURRENT_DIR=$PWD
 NPM=npm
 MAVEN=./mvnw
 CYPRESS=$FRONTEND_SOURCE/node_modules/cypress/bin/cypress
 
-# ===== BASH colors
+# ===== BASH colors =====
 DEFAULT="\e[39m"
 GREEN="\e[32m"
 YELLOW="\e[33m"
@@ -57,7 +60,7 @@ if [ ! -d $FRONTEND_SOURCE ]; then
 fi
 echo -e "$GREEN_OK"
 
-echo -n "Checking for backend in $BACKEND_SOURCE ..."
+echo -n "Checking for backend in $BACKEND_SOURCE ... "
 if [ ! -d $BACKEND_SOURCE ]; then
 	echo -e "$RED_FAIL"
 	exit 1
@@ -77,7 +80,7 @@ echo "===== Build Backend ====="
 echo
 echo "in $BACKEND_SOURCE"
 read -p "Build backend? [yes|skipTests|NO] " yn
-if [[ $yn =~ ^[s](kip)?$ ]] ; then
+if [[ $yn =~ ^[Ss](kip)?$ ]] ; then
   echo "  Skipping tests."
   cd $BACKEND_SOURCE
   $MAVEN clean install package -DskipTests
@@ -147,10 +150,10 @@ if [[ $yn =~ ^[Yy](es)?$ ]] ; then
   ssh -i $SSH_KEY ${BACKEND_USER}@${BACKEND_HOST} "pkill -f java.+liquido-backend-spring"
   echo "Start new instance"
   echo "ssh -i $SSH_KEY ${BACKEND_USER}@${BACKEND_HOST} ${BACKEND_START_CMD}"
-  echo "---------------------"
+  echo "--------------------- output of remote command --------------"
   ssh -i $SSH_KEY ${BACKEND_USER}@${BACKEND_HOST} ${BACKEND_START_CMD}
   [ $? -ne 0 ] && exit 1
-  echo "---------------------"
+  echo "-------------------------------------------------------------"
   echo -e "${JAR_NAME} is booting up on $BACKEND_HOST ... ${GREEN_OK}"
 else
   echo "Backend will not be restarted."
@@ -171,7 +174,21 @@ else
   echo "WebApp will NOT be deployed."
 fi
 
-
+echo
+echo "===== Update LIQUIDO Documentation on EC2 ====="
+echo
+read -p "Update LIQUIDO documentation? [yes|NO] " yn
+if [[ $yn =~ ^[Yy](es)?$ ]] ; then
+  echo "rsync -avz -e ssh -i $SSH_KEY $DOC_SOURCE $DOC_DEST"
+  BACKUP_CURRENT_DIR=$PWD
+  cd $DOC_SOURCE
+  rsync -avz -e "ssh -i $SSH_KEY" . $DOC_DEST
+  [ $? -ne 0 ] && exit 1
+  cd $BACKUP_CURRENT_DIR
+  echo -e "Documentation updated in $DOC_DEST ${GREEN_OK}"
+else
+  echo "Documentation will NOT be updated."
+fi
 
 
 echo
@@ -195,14 +212,20 @@ if [ $PING_SUCCESS == 0 ]; then
 	exit 1
 fi
 
-echo -n "Login with dummy SMS token should NOT be possible in PROD ... "
 
-DUMMY_LOGIN=`curl -s -X GET "${BACKEND_API}/auth/loginWithSmsToken?mobile=%2B491234567890&token=998877"`
-if [[ $DUMMY_LOGIN != *'"httpStatus":401'* ]] ; then
-	echo -e "$RED_FAIL"
-	exit 1
-fi
-echo -e "$GREEN_OK"
+#echo -n "Login with dummy SMS token should NOT be possible in PROD ... "
+#
+#DUMMY_LOGIN=`curl -s -X GET "${BACKEND_API}/auth/loginWithSmsToken?mobile=%2B491234567890&token=998877"`
+#if [[ $DUMMY_LOGIN != *'"httpStatus":401'* ]] ; then
+#	echo -e "$RED_FAIL"
+#	exit 1
+#fi
+#echo -e "$GREEN_OK"
+
+#
+# ===== Upsert School Test Data =====
+#
+
 
 echo
 echo "===== End-2-End Tests ====="
