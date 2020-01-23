@@ -74,12 +74,11 @@ public class DevRestController {
 	LiquidoProperties prop;
 
 	/**
-	 * Get list of users for the quick login at the top right of the UI. Admin is first element (if configured) and
-	 * then 10 more users.
+	 * Get list of users for the quick login at the top right of the UI. Admin is first element (if configured)
 	 * This endpoint must be public, because the web app needs it during very early application start. (See main.js) But client must at least provide devLoginSmsToken.
 	 * This is only available in dev and test environment!
 	 * @param token dev login sms token
-	 * @return UserModel HATEOAS resource
+	 * @return UserModel HATEOAS resource with 10 users. Admin is first element.
 	 */
 	@Profile({"dev", "test"})
 	@RequestMapping(value = "/dev/users")
@@ -94,17 +93,18 @@ public class DevRestController {
 		List<UserModel> users = new ArrayList<UserModel>();
 		Optional<UserModel> adminOpt = userRepo.findByEmail(prop.admin.email);
 		if (adminOpt.isPresent()) users.add(adminOpt.get());
-		Iterator<UserModel> it = userRepo.findAll().iterator();
-		for (int i = 0; i < 20; i++) {
-			if (it.hasNext()) users.add(it.next());
+		int count = 0;
+		for (UserModel user : userRepo.findAll()) {
+			if (!user.getEmail().equalsIgnoreCase(prop.admin.email)) users.add(user);   // don't add the admin twice
+			count++;
+			if (count > 10) break;
 		}
 
-		/* non of those work :-/
+		/* non of those work since this is a plain @RestController
 		TemplateVariables variables = new TemplateVariables(new TemplateVariable("spring.data.rest.base-path", TemplateVariable.VariableType.PATH_VARIABLE));
 		ControllerLinkBuilder controllerLinkBuilder = linkTo(methodOn(DevRestController.class, variables).devGetAllUsers(null, null));
 		UriComponents build = UriComponentsBuilder.fromPath("/dev/users").build();
 		ServletUriComponentsBuilder servletUriComponentsBuilder = ServletUriComponentsBuilder.fromCurrentRequestUri();
-		// to return a Resource like this
 		return new Resources<>(users, linkTo(methodOn(DevRestController.class).devGetAllUsers(null)).withRel("self"));
 		 */
 		String selfUrl = request.getRequestURL().toString() + "?token={token}";   // let's do a quick hack to to create selfUrl
