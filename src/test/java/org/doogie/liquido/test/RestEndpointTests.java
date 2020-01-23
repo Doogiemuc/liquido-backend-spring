@@ -503,7 +503,7 @@ public class RestEndpointTests extends BaseTest {
 		// THEN the newsfeed should not be empty
 		assertTrue("Newsfeed should not be empty", res != null);
 		DocumentContext ctx = JsonPath.parse(res.getBody());
-		Long recentlyDiscussedId = ctx.read("$.recentlyDiscussedProposals[0].id", Long.class);
+		Long recentlyDiscussedId = ctx.read("$.supportedByYou[0].id", Long.class);
 		assertNotNull(recentlyDiscussedId);
 
 	}
@@ -729,7 +729,7 @@ public class RestEndpointTests extends BaseTest {
 
 		//  AND ballot can be verified with checksum of user4
 		String user4Checksum = JsonPath.read(user4CastVoteRes.getBody(), "$.ballot.checksum");
-		ResponseEntity<BallotModel> user4VerifyRes = client.getForEntity("/polls/" + poll.getId() + "/verifyChecksum?checksum=" + user4Checksum, BallotModel.class);
+		ResponseEntity<BallotModel> user4VerifyRes = client.getForEntity("/polls/" + poll.getId() + "/verify?checksum=" + user4Checksum, BallotModel.class);
 		assertEquals("Ballot's checksum could be verified ", HttpStatus.OK, user4VerifyRes.getStatusCode());
 		assertEquals("Verified ballots's level is 0", 0, (long)user4VerifyRes.getBody().getLevel());
 		assertNull("Ballot.rightToVote should not be revealed", user4VerifyRes.getBody().getRightToVote());
@@ -763,7 +763,7 @@ public class RestEndpointTests extends BaseTest {
 
 		//  AND ballot can be verified with checksum of user1
 		String user1Checksum = JsonPath.read(user1CastVoteRes.getBody(), "$.ballot.checksum");
-		ResponseEntity<BallotModel> user1VerifyRes = client.getForEntity("/polls/" + poll.getId() + "/verifyChecksum?checksum=" + user1Checksum, BallotModel.class);
+		ResponseEntity<BallotModel> user1VerifyRes = client.getForEntity("/polls/" + poll.getId() + "/verify?checksum=" + user1Checksum, BallotModel.class);
 		assertEquals("Ballot's checksum could be verified ", HttpStatus.OK, user1VerifyRes.getStatusCode());
 		assertEquals("Verified ballots's level is 0", 0, (long)user1VerifyRes.getBody().getLevel());
 		assertNull("Ballot.rightToVote should not be revealed", user1VerifyRes.getBody().getRightToVote());
@@ -775,7 +775,7 @@ public class RestEndpointTests extends BaseTest {
 		// GIVEN a user that has already casted his vote
 		//  WHEN a proxy above him casts a vote
 		// THEN the ballot of this user, who casted his own vote, did not change
-		ResponseEntity<BallotModel> verifiedBallot2 = client.getForEntity("/polls/" + poll.getId() + "/verifyChecksum?checksum=" + user4Checksum, BallotModel.class);
+		ResponseEntity<BallotModel> verifiedBallot2 = client.getForEntity("/polls/" + poll.getId() + "/verify?checksum=" + user4Checksum, BallotModel.class);
 		assertEquals("ballot of user4 can still be verified via his checksum", HttpStatus.OK, verifiedBallot2.getStatusCode());
 		assertEquals("level of the ballot of user4 is still 0", 0, (long)verifiedBallot2.getBody().getLevel());
 		for (int i = 0; i < user4VoteOrder.size(); i++) {

@@ -83,35 +83,28 @@ public class PollRestController {
   /**
    * When an idea reaches its quorum then it becomes a proposal and its creator <i>can</i> builder a new poll for this proposal.
    * Other proposals need to join this poll before voting can be started.
-   * @param pollResource the new poll with the link to (at least) one proposal, e.g.
+   * @param pollResource the new poll with the link to exactly one proposal, e.g.
    *          <pre>{ title: "Poll Title", "proposals": [ "/liquido/v2/laws/152" ] }</pre>
    * @param resourceAssembler spring's PersistentEntityResourceAssembler that can builder the reply
    * @return the saved poll as HATEOAS resource with all _links
    * @throws LiquidoException when sent LawModel is not in state PROPOSAL or creation of new poll failed
    */
-  @RequestMapping(value = "/polls/add", method = RequestMethod.POST)
-  public @ResponseBody Resource createNewPoll(
-      @RequestBody Resource<PollModel> pollResource,                         // how to convert URI to object? https://github.com/spring-projects/spring-hateoas/issues/292
-      PersistentEntityResourceAssembler resourceAssembler
-  ) throws LiquidoException
-  {
-    PollModel pollFromRequest = pollResource.getContent();
-    LawModel proposalFromRequest = pollFromRequest.getProposals().iterator().next();             // This proposal is a "detached entity". Cannot simply be saved.
-    //jpaContext.getEntityManagerByManagedType(PollModel.class).merge(proposal);      // DOES NOT WORK IN SPRING.  Must handle transaction via a seperate PollService class and @Transactional annotation there.
-    PollModel createdPoll = pollService.createPoll(pollFromRequest.getTitle(), proposalFromRequest);
+	@RequestMapping(value = "/polls/add", method = RequestMethod.POST)
+	public @ResponseBody Resource createNewPoll(
+		@RequestBody Resource<PollModel> pollResource,                         // how to convert URI to object? https://github.com/spring-projects/spring-hateoas/issues/292
+		PersistentEntityResourceAssembler resourceAssembler
+	) throws LiquidoException
+	{
+		PollModel pollFromRequest = pollResource.getContent();
+		if (pollFromRequest.getProposals().size() != 1)
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Must pass exactly one proposal to create a new poll!");
+		LawModel proposalFromRequest = pollFromRequest.getProposals().iterator().next();             // This proposal is a "detached entity". Cannot simply be saved here. This will all be done inside pollService.
+		PollModel createdPoll = pollService.createPoll(pollFromRequest.getTitle(), proposalFromRequest);
 
-    PersistentEntityResource persistentEntityResource = resourceAssembler.toFullResource(createdPoll);
-
-    log.trace("<= POST /createNewPoll: created Poll "+persistentEntityResource.getLink("self").getHref());
-
-    /*
-    Map<String, String> result = new HashMap<>();
-    result.putArray("msg", "Created poll successfully");
-    result.putArray("", resourceAssembler.getSelfLinkFor(savedPoll).getHref());
-    */
-
-    return persistentEntityResource;
-  }
+		PersistentEntityResource persistentEntityResource = resourceAssembler.toFullResource(createdPoll);
+		log.trace("<= POST /createNewPoll: created Poll "+persistentEntityResource.getLink("self").getHref());
+		return persistentEntityResource;
+	}
 
 	/**
 	 * Join a proposal into an existing poll (that must be in its ELABORATION phase)
@@ -156,10 +149,10 @@ public class PollRestController {
 	 * Verify that a ballot has been casted and counted correctly in a poll.
 	 * @param poll the poll
 	 * @param checksum the ballot's checksum that was returned to the voter when casting his ballot
-	 * @return true when ballot could be verified
+	 * @return the verified ballot
 	 * @throws LiquidoException with HttpStatus 404 when checksum could not be verified because no ballot for that checksum could be found.
 	 */
-	@RequestMapping(value = "/polls/{pollId}/verifyChecksum")
+	@RequestMapping(value = "/polls/{pollId}/verify")
 	@ResponseBody
 	public BallotModel verifyChecksum(
 		@PathVariable("pollId") PollModel poll,
@@ -271,11 +264,19 @@ public class PollRestController {
 				.put("_links.self.href", controllerLinkBuilder.toUri());
 	}
 
+	/**
+	 * Flexible search for polls.
+	 * @param status (optionally) only return polls with that status
+	 * @param area (optionally) filter by that area
+	 * @param voterToken if given, then only return polls, that the user has a ballot in, casted with that voter token
+	 * @return list of polls
+	 * @throws LiquidoException when voterToken is invalid
+	 */
 	@RequestMapping("/polls/search/find")
 	public @ResponseBody Lson findPollsWithOwnBallots(
 			@RequestParam("status") Optional<PollModel.PollStatus> status,
 			@RequestParam("area") Optional<AreaModel> area,
-			@RequestParam("withOwnBallot") Optional<String> voterToken) throws LiquidoException {
+			@RequestParam("voterToken") Optional<String> voterToken) throws LiquidoException {
 
 		/*  old version with nice error message. Error messages are yet another reason to completely not use RestRepositories but use our own manually build controllers.
 		PollModel.PollStatus pollStatus = null;

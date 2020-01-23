@@ -57,6 +57,7 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * See http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/htmlsingle/#boot-features-command-line-runner
  *
  * Other possibilities for initializing a DB with Spring and Hibernate:
+ * https://www.baeldung.com/spring-boot-data-sql-and-schema-sql    <=  @Sql annotation can be used on test classes or methods to execute SQL scripts.
  * https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#core.repository-populators
  * https://docs.spring.io/spring-boot/docs/current/reference/html/howto-database-initialization.html
  * http://www.sureshpw.com/2014/05/importing-json-with-references-into.html
@@ -79,7 +80,6 @@ public class TestDataCreator implements CommandLineRunner {
 
   @Autowired
   UserRepo userRepo;
-  private Map<String, UserModel> usersMap = new HashMap<>();  // user by their email address
 
   @Autowired
   AreaRepo areaRepo;
@@ -118,6 +118,9 @@ public class TestDataCreator implements CommandLineRunner {
 
   @Autowired
 	LiquidoProperties prop;
+
+  @Autowired
+	TestDataUtils util;
 
   @Autowired
   JdbcTemplate jdbcTemplate;
@@ -171,7 +174,7 @@ public class TestDataCreator implements CommandLineRunner {
       // The order of these methods is very important here!
       seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX);
       seedAdminUser();
-      auditorAware.setMockAuditor(this.usersMap.get(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
+      auditorAware.setMockAuditor(util.user(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
       seedAreas();
       AreaModel area = areaMap.get(TestFixtures.AREA0_TITLE);   // most testdata is created in this area
       seedIdeas();
@@ -199,10 +202,7 @@ public class TestDataCreator implements CommandLineRunner {
 				ScriptUtils.executeSqlScript(jdbcTemplate.getDataSource().getConnection(), resource);
 
 				// Fill userMap as cache
-				if (this.usersMap == null) this.usersMap = new HashMap<>();
-				for (UserModel user : userRepo.findAll()) {
-					this.usersMap.put(user.getEmail(), user);
-				}
+				util.reloadUsersCache();
 				if (this.areaMap == null) this.areaMap= new HashMap<>();
 				for (AreaModel area: areaRepo.findAll()) {
 					this.areaMap.put(area.getTitle(), area);
@@ -308,9 +308,8 @@ public class TestDataCreator implements CommandLineRunner {
 	 */
   public void seedUsers(long numUsers, String mailPrefix) {
     log.info("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
-    if (this.usersMap == null) this.usersMap = new HashMap<>();
 
-		long countUsers = countUsers();
+		long countUsers = util.users.size();
 
     for (int i = 0; i < numUsers; i++) {
       String email = mailPrefix + (i+1) + "@liquido.de";    // Remember that DB IDs start at 1. Testuser1 has ID=1 in DB. And there is no testuser0
@@ -334,9 +333,10 @@ public class TestDataCreator implements CommandLineRunner {
       }
 
       UserModel savedUser = userRepo.save(newUser);
-      this.usersMap.put(savedUser.getEmail(), savedUser);
       if (i==0) auditorAware.setMockAuditor(savedUser);   // prevent some warnings
     }
+
+    util.reloadUsersCache();
   }
 
 	/**
@@ -350,6 +350,7 @@ public class TestDataCreator implements CommandLineRunner {
   	admin.setProfile(adminProfile);
 		log.debug("Create admin "+admin);
   	userRepo.save(admin);
+		util.reloadUsersCache();
 	}
 
   /**
@@ -359,7 +360,7 @@ public class TestDataCreator implements CommandLineRunner {
     log.info("Seeding Areas ...");
     this.areas = new ArrayList<>();
 
-    UserModel createdBy = this.usersMap.get(TestFixtures.USER1_EMAIL);
+    UserModel createdBy = util.user(TestFixtures.USER1_EMAIL);
 
     for (int i = 0; i < TestFixtures.NUM_AREAS; i++) {
       String areaTitle = "Area " + i;
@@ -389,8 +390,8 @@ public class TestDataCreator implements CommandLineRunner {
 
 		AreaModel area = areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
     for(String[] delegationData: delegations) {
-      UserModel fromUser   = usersMap.get(delegationData[0]);
-      UserModel toProxy    = usersMap.get(delegationData[1]);
+      UserModel fromUser   = util.user(delegationData[0]);
+      UserModel toProxy    = util.user(delegationData[1]);
       try {
 	      if (TestFixtures.shouldBePublicProxy(area, toProxy)) {
 					castVoteService.createVoterTokenAndStoreRightToVote(toProxy, area, TestFixtures.USER_TOKEN_SECRET, true);
@@ -403,7 +404,7 @@ public class TestDataCreator implements CommandLineRunner {
         log.error("Cannot seedProxies: error Assign Proxy fromUser.id="+fromUser.getId()+ " toProxy.id="+toProxy.getId()+": "+e);
       }
     }
-    UserModel topProxy = usersMap.get(TestFixtures.TOP_PROXY_EMAIL);
+    UserModel topProxy = util.user(TestFixtures.TOP_PROXY_EMAIL);
     utils.printProxyTree(area, topProxy);
   }
 
@@ -415,9 +416,9 @@ public class TestDataCreator implements CommandLineRunner {
       StringBuffer ideaDescr = new StringBuffer();
       ideaDescr.append(DoogiesUtil.randString(8));    // prepend with some random chars to test sorting
       ideaDescr.append(" ");
-      ideaDescr.append(getLoremIpsum(0,400));
+      ideaDescr.append(util.getLoremIpsum(0,400));
 
-      UserModel createdBy = this.randUser();
+      UserModel createdBy = util.randUser();
       auditorAware.setMockAuditor(createdBy);
       AreaModel area = this.areas.get(i % this.areas.size());
       LawModel newIdea = new LawModel(ideaTitle, ideaDescr.toString(), area);
@@ -429,8 +430,8 @@ public class TestDataCreator implements CommandLineRunner {
       addSupportersToIdea(newIdea, numSupporters);
 
       //LawModel savedIdea = lawRepo.save(newIdea);
-      fakeCreateAt(newIdea, i+1);
-      fakeUpdatedAt(newIdea, i);
+      util.fakeCreateAt(newIdea, i+1);
+      util.fakeUpdatedAt(newIdea, i);
     }
   }
 
@@ -448,8 +449,8 @@ public class TestDataCreator implements CommandLineRunner {
 
 		lawRepo.save(proposal);
 
-    fakeCreateAt(proposal,  ageInDays);
-    fakeUpdatedAt(proposal, ageInDays > 1 ? ageInDays - 1 : 0);
+    util.fakeCreateAt(proposal,  ageInDays);
+    util.fakeUpdatedAt(proposal, ageInDays > 1 ? ageInDays - 1 : 0);
     return proposal;
   }
 
@@ -457,8 +458,8 @@ public class TestDataCreator implements CommandLineRunner {
     StringBuffer description = new StringBuffer();
     description.append(DoogiesUtil.randString(8));    // prepend with some random chars to test sorting
     description.append(" ");
-    description.append(getLoremIpsum(0,400));
-    UserModel createdBy = this.randUser();
+    description.append(util.getLoremIpsum(0,400));
+    UserModel createdBy = this.util.randUser();
     AreaModel area = this.areas.get(rand.nextInt(TestFixtures.NUM_AREAS));
     int ageInDays = rand.nextInt(10);
     int reachQuorumDaysAgo = (int)(ageInDays*rand.nextFloat());
@@ -477,9 +478,9 @@ public class TestDataCreator implements CommandLineRunner {
     }
     // make sure, that testuser0 has at least 5 proposals
     for (int i = 0; i < 5; i++) {
-			UserModel createdBy = this.usersMap.get(TestFixtures.USER1_EMAIL);
+			UserModel createdBy = util.user(TestFixtures.USER1_EMAIL);
     	String title = "Proposal " + i + " for user "+createdBy.getEmail();
-      String description = getLoremIpsum(100,400);
+      String description = util.getLoremIpsum(100,400);
       AreaModel area = this.areas.get(rand.nextInt(TestFixtures.NUM_AREAS));
       int ageInDays = rand.nextInt(10);
       int reachedQuorumDaysAgo = (int)(ageInDays*rand.nextFloat());
@@ -499,12 +500,12 @@ public class TestDataCreator implements CommandLineRunner {
    * @return the idea with the added supporters. The idea might have reached its quorum and now be a proposal
    */
   private LawModel addSupportersToIdea(@NonNull LawModel idea, int num) {
-    if (num >= usersMap.size()-1) throw new RuntimeException("Cannot at "+num+" supporters to idea. There are not enough usersMap.");
+    if (num >= util.users.size()-1) throw new RuntimeException("Cannot at "+num+" supporters to idea. There are not enough usersMap.");
     if (idea.getId() == null) throw new RuntimeException(("Idea must must be saved to DB before you can add supporter to it. IdeaModel must have an Id"));
 
     // https://stackoverflow.com/questions/8378752/pick-multiple-random-elements-from-a-list-in-java
     LinkedList<UserModel> otherUsers = new LinkedList<>();
-    for (UserModel user: this.usersMap.values()) {
+    for (UserModel user: util.usersMap.values()) {
       if (!user.equals(idea.getCreatedBy()))   otherUsers.add(user);
     }
     Collections.shuffle(otherUsers);
@@ -524,26 +525,26 @@ public class TestDataCreator implements CommandLineRunner {
 
   @Transactional
   private LawModel addCommentsToProposal(LawModel proposal) {
-  	UserModel randUser = this.randUser();
+  	UserModel randUser = util.randUser();
 		auditorAware.setMockAuditor(randUser);
 		CommentModel rootComment = new CommentModel(proposal, "Comment on root level. I really like this idea, but needs to be improved. "+System.currentTimeMillis(), null);
 		for (int i = 0; i < rand.nextInt(10); i++) {
-			rootComment.getUpVoters().add(randUser());
+			rootComment.getUpVoters().add(util.randUser());
 		}
 		for (int j = 0; j < rand.nextInt(10); j++) {
-			rootComment.getDownVoters().add(randUser());
+			rootComment.getDownVoters().add(util.randUser());
 		}
 		// Must save CommentModel immediately, to prevent "TransientPropertyValueException: object references an unsaved transient instance"
     // Could also add @Cascade(org.hibernate.annotations.CascadeType.ALL) on LawModel.comments but this would always overwrite and save the full list of all comments on every save of a LawModel.
     commentRepo.save(rootComment);
 		for (int i = 0; i < rand.nextInt(8)+2; i++) {
-			auditorAware.setMockAuditor(randUser());
-			CommentModel reply = new CommentModel(proposal, "Reply "+i+" "+getLoremIpsum(10, 100) , rootComment);
+			auditorAware.setMockAuditor(util.randUser());
+			CommentModel reply = new CommentModel(proposal, "Reply "+i+" "+util.getLoremIpsum(10, 100) , rootComment);
 			for (int k = 0; k < rand.nextInt(10); k++) {
-				reply.getUpVoters().add(randUser());
+				reply.getUpVoters().add(util.randUser());
 			}
 			for (int l = 0; l < rand.nextInt(10); l++) {
-				reply.getDownVoters().add(randUser());
+				reply.getDownVoters().add(util.randUser());
 			}
 			commentRepo.save(reply);
       rootComment.getReplies().add(reply);
@@ -560,7 +561,7 @@ public class TestDataCreator implements CommandLineRunner {
   @Transactional
   private PollModel seedPollInElaborationPhase(AreaModel area, int numProposals) {
     log.info("Seeding one poll in elaboration phase ...");
-    if (numProposals > this.usersMap.size())
+    if (numProposals > util.usersMap.size())
     	throw new RuntimeException("Cannot seedPollInElaborationPhase. Need at least "+TestFixtures.NUM_ALTERNATIVE_PROPOSALS+" distinct usersMap");
 
     try {
@@ -569,8 +570,8 @@ public class TestDataCreator implements CommandLineRunner {
 
       //===== builder Poll from initial Proposal
       title = "Initial Proposal in a poll that is in elaboration "+System.currentTimeMillis();
-      desc = getLoremIpsum(100, 400);
-      createdBy = getUser(0);
+      desc = util.getLoremIpsum(100, 400);
+      createdBy = util.user(0);
       LawModel initialProposal = createProposal(title, desc, area, createdBy, 10, 7);
 			initialProposal = addCommentsToProposal(initialProposal);
 			String pollTitle = "Poll in ELABORATION from TestDataCreator "+System.currentTimeMillis() % 10000;
@@ -580,15 +581,15 @@ public class TestDataCreator implements CommandLineRunner {
       //===== add alternative proposals
       for (int i = 1; i < numProposals; i++) {
         title = "Alternative Proposal" + i + " in a poll that is in elaboration"+System.currentTimeMillis();
-        desc = getLoremIpsum(100, 400);
-        createdBy = getUser(i);
+        desc = util.getLoremIpsum(100, 400);
+        createdBy = util.user(i);
         LawModel altProp = createProposal(title, desc, area, createdBy, 20, 18);
 				altProp = addCommentsToProposal(altProp);
         newPoll = pollService.addProposalToPoll(altProp, newPoll);
       }
 
-      fakeCreateAt(newPoll, prop.daysUntilVotingStarts/2);
-      fakeUpdatedAt(newPoll, prop.daysUntilVotingStarts/2);
+      util.fakeCreateAt(newPoll, prop.daysUntilVotingStarts/2);
+      util.fakeUpdatedAt(newPoll, prop.daysUntilVotingStarts/2);
       log.trace("Created poll in elaboration phase: "+newPoll);
       return newPoll;
     } catch (Exception e) {
@@ -613,8 +614,8 @@ public class TestDataCreator implements CommandLineRunner {
         i++;
       }
       PollModel savedPoll = pollRepo.save(poll);
-      fakeCreateAt(savedPoll, prop.daysUntilVotingStarts+1);
-      fakeUpdatedAt(savedPoll, prop.daysUntilVotingStarts/2);
+      util.fakeCreateAt(savedPoll, prop.daysUntilVotingStarts+1);
+      util.fakeUpdatedAt(savedPoll, prop.daysUntilVotingStarts/2);
 
       //===== Start the voting phase of this poll
       pollService.startVotingPhase(savedPoll);
@@ -653,8 +654,8 @@ public class TestDataCreator implements CommandLineRunner {
 			poll.setTitle("Finished Poll "+System.currentTimeMillis()%10000);
 
 			pollRepo.save(poll);
-			fakeCreateAt(poll, daysVotingStarts+durationVotingPhase+daysFinished);
-			fakeUpdatedAt(poll, 1);
+			util.fakeCreateAt(poll, daysVotingStarts+durationVotingPhase+daysFinished);
+			util.fakeUpdatedAt(poll, 1);
 
 			//----- seed Votes
 			seedVotes(poll, TestFixtures.NUM_VOTES);
@@ -675,7 +676,7 @@ public class TestDataCreator implements CommandLineRunner {
   public void seedLaws() {
     log.info("Seeding laws");
     AreaModel area = this.areas.get(0);
-    UserModel createdBy = this.usersMap.get(TestFixtures.USER1_EMAIL);
+    UserModel createdBy = util.user(TestFixtures.USER1_EMAIL);
     auditorAware.setMockAuditor(createdBy);
 
 		//TODO: realLaw actually needs to have been part of a (finished) poll with alternative proposals
@@ -684,7 +685,7 @@ public class TestDataCreator implements CommandLineRunner {
 
     for (int i = 0; i < TestFixtures.NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
-      LawModel realLaw = createProposal(lawTitle, getLoremIpsum(100,400), area, createdBy, 12, 10);
+      LawModel realLaw = createProposal(lawTitle, util.getLoremIpsum(100,400), area, createdBy, 12, 10);
 			realLaw = addSupportersToIdea(realLaw, prop.supportersForProposal+2);
 			//realLaw.setPoll(poll);
 			LocalDateTime reachQuorumAt = LocalDateTime.now().minusDays(10);
@@ -710,41 +711,8 @@ public class TestDataCreator implements CommandLineRunner {
       log.trace("Creating new proposal " + lawModel);
     }
     LawModel savedLaw = lawRepo.save(lawModel);
-    fakeCreateAt(savedLaw, ageInDays);
+    util.fakeCreateAt(savedLaw, ageInDays);
     return savedLaw;
-  }
-
-
-  /**
-   * Fake the created at date to be n days in the past
-   * @param model any domain model class derived from BaseModel
-   * @param ageInDays the number of days to set the createAt field into the past.
-   */
-  private void fakeCreateAt(BaseModel model, int ageInDays) {
-    if (ageInDays < 0) throw new IllegalArgumentException("ageInDays must be positive");
-    Table tableAnnotation = model.getClass().getAnnotation(javax.persistence.Table.class);
-    String tableName = tableAnnotation.name();
-    String sql = "UPDATE " + tableName + " SET created_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
-    //log.trace(sql);
-    jdbcTemplate.execute(sql);
-    Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
-    model.setCreatedAt(daysAgo);
-  }
-
-  /**
-   * Fake the updated at date to be n days in the past. Keep in mind, that updated at should not be before created at.
-   * @param model any domain model class derived from BaseModel
-   * @param ageInDays the number of days to set the createAt field into the past.
-   */
-  private void fakeUpdatedAt(BaseModel model, int ageInDays) {
-    if (ageInDays < 0) throw new IllegalArgumentException("ageInDays must be positive");
-    Table tableAnnotation = model.getClass().getAnnotation(javax.persistence.Table.class);
-    String tableName = tableAnnotation.name();
-    String sql = "UPDATE " + tableName + " SET updated_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
-    //log.trace(sql);
-    jdbcTemplate.execute(sql);
-    Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
-    model.setUpdatedAt(daysAgo);
   }
 
 	/**
@@ -762,7 +730,7 @@ public class TestDataCreator implements CommandLineRunner {
   	if (pollInVoting.getNumCompetingProposals() < 2) throw new RuntimeException("Cannot seed votes. Poll in voting must have at least two proposals.");
 
   	// for the first n users
-		this.usersMap.values().stream().limit(numVotes).forEach(voter -> {
+		util.usersMap.values().stream().limit(numVotes).forEach(voter -> {
 			// we use CastVoteService to get a voterToken and cast our vote with a random voteOrder
 			try {
 				auditorAware.setMockAuditor(voter);
@@ -777,49 +745,6 @@ public class TestDataCreator implements CommandLineRunner {
 			}
   	});
   }
-
-
-
-
-
-
-
-
-  //-------------------------------- UTILITY methods ------------------------------
-
-	/**
-	 * get one random UserModel
-	 * @return a random user
-	 */
-	public UserModel randUser() {
-		Object[] entries = usersMap.values().toArray();
-		return (UserModel)entries[rand.nextInt(entries.length)];
-	}
-
-	public UserModel getUser(String email) {
-		return this.usersMap.get(email);
-	}
-
-	public UserModel getUser(int i) {
-		Object[] entries = usersMap.values().toArray();
-		return (UserModel)entries[i];
-	}
-
-	public long countUsers() {
-		return usersMap.size();
-	}
-
-   private static final String loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, nam urna. Vitae aenean velit, voluptate velit rutrum. Elementum integer rhoncus rutrum morbi aliquam metus, morbi nulla, nec est phasellus dolor eros in libero. Volutpat dui feugiat, non magna, parturient dignissim lacus ipsum in adipiscing ut. Et quis adipiscing perferendis et, id consequat ac, dictum dui fermentum ornare rhoncus lobortis amet. Eveniet nulla sollicitudin, dolore nullam massa tortor ullamcorper mauris. Lectus ipsum lacus.\n" +
-      "Vivamus placerat a sodales est, vestibulum nec cursus eros fermentum. Felis orci nunc quis suspendisse dignissim justo, sed proin metus, nunc elit ac aliquam. Sed tellus ante ipsum erat platea nulla, enim bibendum gravida condimentum, imperdiet in vitae faucibus ultrices, aenean fringilla at. Rhoncus et sint volutpat, bibendum neque arcu, posuere viverra in, imperdiet duis. Eget erat condimentum congue ipsam. Tortor nostra, adipiscing facilisis donec elit pellentesque natoque integer. Ipsum id. Aenean suspendisse et eros hymenaeos in auctor, porttitor amet id pellentesque tempor, praesent aliquam rhoncus convallis vel, tempor fusce wisi enim aliquam ut nisl, nullam dictum etiam. Nisi accumsan augue sapiente dui, pulvinar cras sapien mus quam nonummy vivamus, in vitae, sociis pede, convallis mollis id mauris. Vestibulum ac quis scelerisque magnis pede in, duis ullamcorper a ipsum ante ornare.\n" +
-      "Quam amet. Risus lorem nibh consequat volutpat. Bibendum lorem, mauris sed quisque. Pellentesque augue eros nibh, iaculis maecenas facilisis amet. Nam laoreet elit litora justo, morbi in vitae nisl nulla vestibulum maecenas. Scelerisque lacinia id eget pede nunc in, id a nullam nunc velit mauris class. Duis dui ullamcorper vestibulum, turpis mi eu, arcu pellentesque sit. Arcu nibh elit. Vitae magna magna auctor, class pariatur, tortor eget amet mi pede accumsan, ut quam ut ante nibh vivamus quisque. Magna praesent tortor praesent.";
-
-  /** @return a dummy text that can be used eg. in descriptions */
-  public String getLoremIpsum(int minLength, int maxLength) {
-    int endIndex = minLength + rand.nextInt(maxLength - minLength);
-    if (endIndex >= loremIpsum.length()) endIndex = loremIpsum.length()-1;
-    return loremIpsum.substring(0, endIndex);
-  }
-
 
 
 }

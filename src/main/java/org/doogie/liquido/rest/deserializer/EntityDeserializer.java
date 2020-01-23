@@ -21,7 +21,8 @@ import java.io.IOException;
  * Then spring will automatically detect it and use it when deserializing with Jackson.
  *
  * <pre>
- * @JsonComponent
+ * // @JsonComponent   if you add this, then this deserializer becomes the default which can make problems with spring-hateoas internal de/serialization.  It's complicated ....
+ * //                  Instead register your deserializer explicitly where necessary. For example in a DTO  annotate an entity attribute with   @JsonDeserialize(using = PollModelDeserializer.class)
  * public class MyEntityDeserializer extends EntityDeserializer<MyEntity> {
  * 	@Autowired  // myRepo can simply be injected
  * 	public AreaModelDeserializer(MyRepo myRepo) {

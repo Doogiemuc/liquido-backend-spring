@@ -139,6 +139,7 @@ public class LawServiceTests extends BaseTest {
 	}
 
 	@Test
+	//MAYBE:  https://www.baeldung.com/spring-boot-data-sql-and-schema-sql    <=  @Sql annotation can be used on test classes or methods to execute SQL scripts.
 	public void testFindBySupporter() {
 		// GIVEN
 		LawQuery lawQuery = new LawQuery();

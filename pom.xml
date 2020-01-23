@@ -4,7 +4,7 @@
 
 	<groupId>org.doogie.liquido</groupId>
 	<artifactId>liquido-backend-spring</artifactId>
-	<version>1.0.0</version>
+	<version>2.1.14</version>
 	<packaging>jar</packaging>
 
 	<name>liquido-backend-spring</name>
@@ -86,9 +86,17 @@
 			<version>${spring-boot.version}</version>
 		</dependency>
 
+		<!-- Database connector for MySQL-->
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.2.9</version>
 		</dependency>
 
 		<!--Jwt-->
