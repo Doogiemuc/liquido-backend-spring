@@ -107,9 +107,24 @@ Get proxy info for an area is possible without a voterToken
  server is able to create valid checksums.
 
 
-
-
      Voter =request=> Voter Token =hashed=> Voter's Checksum =delegatedTo=> Proxies Checksum <= ProxyToken <= Proxy
+
+
+# User management 
+
+At the beginning I had no idea how important and unexpectedly complex user management can be. Especially for an app like LIQUIDO very security is crucial.
+
+## Authy
+
+There are no passwords in LIQUIDO! Instead users can login with One Time Tokens. A user can either install the Authy App on his mobile phone
+and then use the time based one time tokens (T-OTP) that the authy app gererates. Authy can also send OTPs via SMS or email.
+
+## Register
+
+When the user registers, he is told to install the Authy mobile app (by twilio.com)
+
+## Login
+
 
 
 # REST API
@@ -222,9 +237,9 @@ From then on all tests can be run against this pre-created test data. This is fa
 
 After a deployment you should run tests against your production environment. You may do this manually. Liquido
 offers the possibility to run the automated end-2-end tests against PROD. When DevRestController.java is deployed
-then you can fetch a JWT like this. You MUST pass the devLoginSmsToken that is configured in appplication-prod.properties 
+then you can fetch a JWT like this. You MUST pass the devLoginToken that is configured in appplication-prod.properties 
 
-    http://{PROD_HOST}:{PROD_API_PORT}/liquido/v2/dev/getJWT?mobile=%2B491234567890&token=<devLoginSmsToken>
+    http://{PROD_HOST}:{PROD_API_PORT}/liquido/v2/dev/getJWT?mobile=%2B491234567890&token=<devLoginToken>
 
 
 

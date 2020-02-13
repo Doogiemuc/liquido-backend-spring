@@ -20,25 +20,17 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
-import org.springframework.hateoas.Resources;
-import org.springframework.hateoas.TemplateVariable;
-import org.springframework.hateoas.TemplateVariables;
-import org.springframework.hateoas.mvc.ControllerLinkBuilder;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 
 /**
  * This controller is only available for development and testing
@@ -75,20 +67,19 @@ public class DevRestController {
 
 	/**
 	 * Get list of users for the quick login at the top right of the UI. Admin is first element (if configured)
-	 * This endpoint must be public, because the web app needs it during very early application start. (See main.js) But client must at least provide devLoginSmsToken.
-	 * This is only available in dev and test environment!
+	 * This endpoint must be public, because the web app needs it during very early application start. (See main.js) But client must at least provide devLoginToken.
+	 * And this is only available in DEV and TEST environment!
 	 * @param token dev login sms token
 	 * @return UserModel HATEOAS resource with 10 users. Admin is first element.
 	 */
 	@Profile({"dev", "test"})
 	@RequestMapping(value = "/dev/users")
-	// This must be public, because during DEV we need the list of users for the quick DevLogin drop down.
 	public @ResponseBody Lson devGetAllUsers(
 		@RequestParam("token") String token,
 		HttpServletRequest request
 	) throws LiquidoException {
 		log.debug("GET /dev/users");
-		if (!token.equals(prop.devLoginSmsToken))
+		if (!token.equals(prop.devLoginToken))
 			throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Invalid token for GET /dev/users");
 		List<UserModel> users = new ArrayList<UserModel>();
 		Optional<UserModel> adminOpt = userRepo.findByEmail(prop.admin.email);
@@ -117,8 +108,9 @@ public class DevRestController {
 
 	/**
 	 * Receive a Json Web Token for authentication. This for example allows tests to login as <b>any</b> user.
-	 * But the client must still provide the valid devLoginSmsToken from application.properties
-	 * Then authentication for further requests is handled normally in {@link org.doogie.liquido.security.LiquidoUserDetailsService#loadUserByUsername(String)}
+	 * Then authentication for further requests can then be handled normally in {@link org.doogie.liquido.security.LiquidoUserDetailsService#loadUserByUsername(String)}
+	 *
+	 * 	The client must still provide the valid devLoginToken from application.properties. This is also available in PROD for testing against PROD!
 	 *
 	 * @param mobile mobilephone of existing user
 	 * @param token  devLoginSmsToken from application.properties
@@ -130,7 +122,7 @@ public class DevRestController {
 		@RequestParam("mobile") String mobile,
 		@RequestParam("token") String token
 	) throws LiquidoException {
-		if (!token.equals(prop.devLoginSmsToken))
+		if (!token.equals(prop.devLoginToken))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Dev Login failed. Token for mobile="+mobile+" is invalid!");
 		UserModel user = userRepo.findByProfileMobilephone(mobile)
 			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "DevLogin: user for mobile phone " + mobile + " not found."));

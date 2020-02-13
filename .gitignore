@@ -3,3 +3,4 @@
 target/
 build/buildNumber.properties
 release.properties
+/application.properties

@@ -92,12 +92,12 @@
 			<artifactId>mysql-connector-java</artifactId>
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
+		<!-- https://mvnrepository.com/artifact/org.postgresql/postgresql
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 			<version>42.2.9</version>
-		</dependency>
+		</dependency -->
 
 		<!--Jwt-->
 		<dependency>
@@ -211,6 +211,10 @@
 			<version>4.12</version>
       		<scope>test</scope>
     	</dependency>
+		<dependency>
+			<groupId>com.jayway.jsonpath</groupId>
+			<artifactId>json-path</artifactId>
+		</dependency>
 
 	</dependencies>
 
