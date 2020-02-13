@@ -5,10 +5,8 @@ import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.jwt.JwtTokenProvider;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.security.LiquidoAuditorAware;
-import org.doogie.liquido.services.CastVoteService;
-import org.doogie.liquido.services.LiquidoException;
-import org.doogie.liquido.services.MailService;
-import org.doogie.liquido.services.ProxyService;
+import org.doogie.liquido.security.TwilioAuthyClient;
+import org.doogie.liquido.services.*;
 import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoRestUtils;
@@ -93,27 +91,20 @@ public class UserRestController {
   @Autowired
 	BallotRepo ballotRepo;
 
-	/**
-	 * Register as a new user
+  @Autowired
+	UserService userService;
+
+  /**
+	 * Register as a new user. This will also create the authy user at twilio.com
 	 * @param newUser UserModel with at least email and profile.mobilePhone.
 	 * @return HTTP OK(200)   or error 400 when data is missing or user already exists
 	 * @throws LiquidoException when newUser is not ok.
 	 */
 	@RequestMapping(path = "/auth/register", method = RequestMethod.POST)
 	public ResponseEntity registerNewUser(@RequestBody UserModel newUser) throws LiquidoException {
-		log.info("register new user "+newUser);
-		//----- sanity checks
-		if (newUser == null || newUser.getProfile() == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need data for new user");
-		if (DoogiesUtil.isEmpty(newUser.getEmail())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need email for new user");
-		if (DoogiesUtil.isEmpty(newUser.getProfile().getMobilephone())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need mobile phone for new user");
-		Optional<UserModel> existingByEmail = userRepo.findByEmail(newUser.getEmail());
-		if (existingByEmail.isPresent()) throw new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that email already exists");
-		Optional<UserModel> existingByMobile = userRepo.findByProfileMobilephone(newUser.getProfile().getMobilephone());
-		if (existingByMobile.isPresent()) throw new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that mobile phone number already exists");
-
-		//----- save new user (mobile phone number is automatically cleaned in UserProfileModel.java
-		userRepo.save(newUser);
-		return ResponseEntity.ok().build();
+		log.info("Register new user "+newUser);
+		UserModel savedUser = userService.registerUser(newUser);
+		return ResponseEntity.ok(savedUser);   // savedUser now has an authyId
 	}
 
 	/**
@@ -124,26 +115,9 @@ public class UserRestController {
 	 */
   @RequestMapping(value = "/auth/requestSmsToken", produces = MediaType.TEXT_PLAIN_VALUE)
   public ResponseEntity requestSmsToken(@RequestParam("mobile") String mobile) throws LiquidoException {
-		if (DoogiesUtil.isEmpty(mobile)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "Need mobile phone number!");
-		final String cleanMobile = LiquidoRestUtils.cleanMobilephone(mobile);
-  	log.info("request SMS login code for mobile="+cleanMobile);
-	  UserModel user = userRepo.findByProfileMobilephone(cleanMobile)
-		  .orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "No user found with mobile number "+cleanMobile+". You must register first."));
-
-	  // Create new SMS token: six random digits between [100000...999999]
-	  String smsToken = DoogiesUtil.randomDigits(6);
-	  LocalDateTime validUntil = LocalDateTime.now().plusHours(1);  // login token via SMS is valid for one hour. That should be enough!
-		OneTimeToken oneTimeToken = new OneTimeToken(smsToken, user, OneTimeToken.TOKEN_TYPE.SMS, validUntil);
-		ottRepo.save(oneTimeToken);
-		log.info("User "+user.getEmail()+" may login. Sending code via SMS.");
-
-		//TODO: send one time token via SMS
-
-	  if (springEnv.acceptsProfiles(Profiles.of("dev", "test"))) {
-		  return ResponseEntity.ok().header("token", smsToken).build();  // when debugging, return the code in the header
-	  } else {
-	  	return ResponseEntity.ok().build();
-	  }
+		log.info("Push authentication request for mobile="+mobile);
+		userService.requestPushAuthentication(mobile);
+		return ResponseEntity.ok().build();
   }
 
 	/**
@@ -157,43 +131,8 @@ public class UserRestController {
 		  @RequestParam("mobile") String mobile,
   		@RequestParam("token") String token
   ) throws LiquidoException {
-	  log.debug("Request to login with sms token="+token);
-
-	  /** The admin, and only the admin is allowed to login with a secret static token */
-	  if (DoogiesUtil.equals(prop.devLoginSmsToken, token) && DoogiesUtil.equals(prop.admin.mobilephone, mobile)) {
-	  	UserModel user = userRepo.findByProfileMobilephone(mobile)
-					.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "DevLogin: user for mobile phone "+mobile+" not found."));
-	  	log.info("DEV Login as "+mobile+" => "+user);
-	  	user.setLastLogin(LocalDateTime.now());
-	  	userRepo.save(user);
-			return jwtTokenProvider.generateToken(user.getEmail());
-		}
-
-	  // Check if OTT is known and matches with mobilephone.
-	  OneTimeToken oneTimeToken = ottRepo.findByToken(token);
-	  if (oneTimeToken == null || mobile == null ||
-        !mobile.equals(oneTimeToken.getUser().getProfile().getMobilephone()) ||
-	      !OneTimeToken.TOKEN_TYPE.SMS.equals(oneTimeToken.getTokenType())  )
-	  {
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Invalid SMS login token.");
-		}
-
-	  // Check if OTT is expired
-	  if (LocalDateTime.now().isAfter(oneTimeToken.getValidUntil())) {
-	  	ottRepo.delete(oneTimeToken);
-		  throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "This sms login token is expired.");
-	  }
-
-	  // delete used one time token, because it is "one time only" :-)
-		UserModel user = oneTimeToken.getUser();
-		ottRepo.delete(oneTimeToken);
-
-    // return JWT token for this email
-		String jwt = jwtTokenProvider.generateToken(user.getEmail());
-		user.setLastLogin(LocalDateTime.now());
-		userRepo.save(user);
-		log.info(user+ "logged in with valid SMS token.");
-		return jwt;
+	  log.info("Request to login with sms token="+token);
+		return userService.verifyOneTimePassword(mobile, token);
   }
 
 

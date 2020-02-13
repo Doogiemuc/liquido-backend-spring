@@ -7,6 +7,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -97,11 +99,39 @@ public class Lson extends HashMap<String, Object> {
 		return this;
 	}
 
-	public HttpEntity<String> toHttpEntity() {
+	/**
+	 * @return an HttpEntity with MediaType = APPLICATION/JSON
+	 */
+	public HttpEntity<String> toJsonHttpEntity() {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 		HttpEntity<String> entity = new HttpEntity<>(this.toString(), headers);
 		return entity;
+	}
+
+	public HttpEntity<String> toUrlEncodedFormHttpEntity() {
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+		HttpEntity<String> entity = new HttpEntity<>(toUrlEncodedParams(), headers);
+		return entity;
+	}
+
+
+
+	public String toUrlEncodedParams() {
+		StringBuffer buf = new StringBuffer();
+		for(String key : this.keySet()) {
+			buf.append(key);
+			buf.append("=");
+			try {
+				buf.append(URLEncoder.encode((String)this.get(key), "UTF-8"));
+			} catch (UnsupportedEncodingException e) {
+				throw new RuntimeException("Cannot URL encode value of param '"+key+"'", e);
+			}
+			buf.append("&");
+		}
+		buf.deleteCharAt(buf.length()-1);
+		return buf.toString();
 	}
 
 	public String toPrettyString() {

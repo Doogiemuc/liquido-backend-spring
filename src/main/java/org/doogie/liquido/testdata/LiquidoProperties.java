@@ -23,11 +23,13 @@ public class LiquidoProperties {
 	public Integer durationOfVotingPhase;
 	public Integer rightToVoteExpirationHours;
 	public String  frontendUrl;
-	public String  devLoginSmsToken;
+	public String  devLoginToken;
 
 	public Backend backend = new Backend();
 	@Data
-	static class Backend {	String version;	}
+	public static class Backend {
+		public String version;
+	}
 
 	public Bcrypt bcrypt = new Bcrypt();
 	@Data
@@ -70,6 +72,13 @@ public class LiquidoProperties {
 		public String name;
 		public String mobilephone;
 		public String picture;
+	}
+
+	public Authy authy = new Authy();
+	@Data
+	public static class Authy {
+		public String apiUrl;
+		public String apiKey;
 	}
 
 

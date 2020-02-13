@@ -9,12 +9,15 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
- * REST service for global configuration values
+ * REST service for global configuration values.
+ * This is a plain rest controller. No Sprint JPA magic here. So that we can return plain JSON.
  */
 @Slf4j
-@BasePathAwareController                  // only works when methods have the @ResponseBody annotation
+@RestController
+@RequestMapping("${spring.data.rest.base-path}")
 public class PropertiesController {
 
   @Autowired
@@ -30,11 +33,13 @@ public class PropertiesController {
    */
   @RequestMapping(value = "/globalProperties", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
   public @ResponseBody String getGlobalProperties() {
+    //SECURITY: Do NOT simply return the whole prop object! It contains sensitive secrets!
     return new Lson()
       .put("supportersForProposal", prop.supportersForProposal)
       .put("daysUntilVotingStarts", prop.daysUntilVotingStarts)
       .put("durationOfVotingPhase", prop.durationOfVotingPhase)
       .put("checksumExpirationHours", prop.rightToVoteExpirationHours)
+      .put("backendVersion", prop.backend.version)
       .toString();
 
   }

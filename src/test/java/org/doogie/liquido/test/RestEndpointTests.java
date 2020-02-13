@@ -266,7 +266,7 @@ public class RestEndpointTests extends BaseTest {
 				.put("profile", new Lson()
 						.put("mobilephone", mobile)
 						.put("picture", "/static/img/avatars/Avatar1.png")
-				).toHttpEntity();
+				).toJsonHttpEntity();
 
 		// register
 		ResponseEntity<String> res = anonymousClient.postForEntity("/auth/register", entity, String.class);
@@ -635,7 +635,7 @@ public class RestEndpointTests extends BaseTest {
 				.put("toProxy",  toProxyUri)
 				.put("voterToken", voterToken)
 				.put("transitive", true)
-				.toHttpEntity();
+				.toJsonHttpEntity();
     ResponseEntity<String> response = client.exchange("/my/proxy/{areaId}?voterToken={voterToken}", PUT, entity, String.class, area.getId(), voterToken);
     assertEquals(HttpStatus.CREATED, response.getStatusCode());
     String updatedDelegationJson = response.getBody();
@@ -802,7 +802,7 @@ public class RestEndpointTests extends BaseTest {
 			.put("poll", "/polls/"+poll.getId())
 			.put("voterToken", voterToken)
 			.putArray("voteOrder",  voteOrderUris)
-			.toHttpEntity();
+			.toJsonHttpEntity();
 		return anonymousClient.postForEntity("/castVote", user4CastVoteEntity, String.class);
 	}
 

@@ -28,6 +28,13 @@ public class UserModel extends BaseModel {
 
   //NO PASSWORD!  Passwords are soooo old fashioned :-)
 
+	/**
+	 * www.twilio.com Authy user id for authentication
+	 * @param authyId
+	 */
+	public long authyId;
+
+
 	public UserModel(String email, String name, String mobilephone, String website, String picture) {
 		if (email == null || email.length() == 0) throw new IllegalArgumentException("Need at least an email to create a UserModel");
 		this.email = email;
