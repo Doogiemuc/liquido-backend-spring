@@ -108,12 +108,14 @@ public class UserRestController {
 	}
 
 	/**
-	 * SMS login flow - step 1 - user requests login code via SMS
+	 * Request a one time token for login. This will check if a user with that mobile exists.
+	 * The request will be forward to Twilio for authentication.
+	 * The one time token entered by the user can then be verified with a call to <pre>/auth/loginWithToken</pre>
 	 * @param mobile users mobile phone number. MUST be a known user. Mobile number will be cleaned.
 	 * @return HttpStatus.OK, when code was sent via SMS
 	 *        OR HttpStatus.NOT_FOUND when cleaned mobile phone number was not found and user must register first.
 	 */
-  @RequestMapping(value = "/auth/requestSmsToken", produces = MediaType.TEXT_PLAIN_VALUE)
+  @RequestMapping(value = "/auth/requestToken", produces = MediaType.TEXT_PLAIN_VALUE)
   public ResponseEntity requestSmsToken(@RequestParam("mobile") String mobile) throws LiquidoException {
 		log.info("Push authentication request for mobile="+mobile);
 		userService.requestPushAuthentication(mobile);
@@ -121,17 +123,17 @@ public class UserRestController {
   }
 
 	/**
-	 * SMS login flow - step 2 - login with received SMS code
+	 * login with a one time token
 	 * This endpoint must be public.
 	 * @param token the 6 digit code from the SMS
 	 * @return Json Web Token (JWT) with user data encoded within it.
 	 */
-  @RequestMapping(path = "/auth/loginWithSmsToken", produces = MediaType.TEXT_PLAIN_VALUE)
+  @RequestMapping(path = "/auth/loginWithToken", produces = MediaType.TEXT_PLAIN_VALUE)
   public String loginWithSmsToken(
 		  @RequestParam("mobile") String mobile,
   		@RequestParam("token") String token
   ) throws LiquidoException {
-	  log.info("Request to login with sms token="+token);
+	  log.info("Request to login with token="+token);
 		return userService.verifyOneTimePassword(mobile, token);
   }
 

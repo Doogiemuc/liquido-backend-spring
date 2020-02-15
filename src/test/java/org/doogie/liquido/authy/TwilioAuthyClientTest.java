@@ -33,7 +33,7 @@ public class TwilioAuthyClientTest extends BaseTest {
 	 * Then delete the newly created user.
 	 */
 	@Test
-	public void testTwilioAuthentication() {
+	public void testTwilioAuthentication() throws LiquidoException {
 		String email = null;
 		String mobilephone;
 		long userAuthyId;
@@ -62,7 +62,7 @@ public class TwilioAuthyClientTest extends BaseTest {
 			} else {
 				log.info("Sent Sms to userAuthyId=" + userAuthyId + "   Response:\n" + res);
 			}
-		} catch (RestClientException e) {
+		} catch (LiquidoException e) {
 			log.error("Cannot send SMS to twilio userAuthIy="+userAuthyId, e);
 			throw e;
 		}
