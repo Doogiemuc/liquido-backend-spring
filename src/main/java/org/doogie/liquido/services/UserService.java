@@ -67,7 +67,7 @@ public class UserService {
 		if (DoogiesUtil.isEmpty(mobilephone)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "Need mobile phone number!");
 		final String cleanMobile = LiquidoRestUtils.cleanMobilephone(mobilephone);
 		UserModel user = userRepo.findByProfileMobilephone(cleanMobile)
-				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "No user found with mobile number "+cleanMobile+". You must register first."));
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "No user found with mobile number "+cleanMobile+" in LIQUIDO. You must register first."));
 		return twilio.sendSmsOrPushNotification(user.getAuthyId());
 	}
 

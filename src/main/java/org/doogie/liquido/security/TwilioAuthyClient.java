@@ -4,12 +4,10 @@ import com.jayway.jsonpath.JsonPath;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.Header;
 import org.apache.http.HttpHost;
-import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicHeader;
@@ -24,11 +22,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,16 +43,17 @@ public class TwilioAuthyClient {
 	@Autowired
 	LiquidoProperties prop;
 
-	@Value("${PROXY_ACTIVE}")
+	/** Do we need to connect through a proxy. You can configure this in your local application.yml. (Default is "false") */
+	@Value("${PROXY_ACTIVE:false}")
 	private boolean proxyActive;
 
-	@Value("${PROXY_HOST}")
+	@Value("${PROXY_HOST:''}")
 	private String PROXY_HOST;
-	@Value("${PROXY_PORT}")
+	@Value("${PROXY_PORT:8080}")
 	private int    PROXY_PORT;
-	@Value("${PROXY_USER}")
+	@Value("${PROXY_USER:''}")
 	private String PROXY_USER;
-	@Value("${PROXY_PASS}")
+	@Value("${PROXY_PASS:''}")
 	private String PROXY_PASS;
 
 	RestTemplate restClient = null;
@@ -166,16 +163,21 @@ public class TwilioAuthyClient {
 	 * @param userAuthyId authy's user id   (mobile phone number is already stored with that user at authy)
 	 * @return JSON response from authy
 	 */
-	public String sendSmsOrPushNotification(long userAuthyId) {
+	public String sendSmsOrPushNotification(long userAuthyId) throws LiquidoException {
 		try {
 			String url = prop.authy.apiUrl + "/protected/json/sms/"+userAuthyId;
 			ResponseEntity<String> response = this.getRestClient().getForEntity(url, String.class);
 			log.debug("Sent authentication request to userAuthyId="+userAuthyId, response);
 			return response.getBody();
-		} catch (RestClientException e) {
-			// Spring RestTemplate throws RuntimeExceptions when request fails!
-			log.error("Cannot sendSmsOrPushNotification userAuthIy="+userAuthyId, e.toString());
-			throw e;
+		} catch (RestClientResponseException e) {
+			// Spring RestTemplate throws RuntimeExceptions when request fails!   (see HttpClientErrorException)
+			if (e.getRawStatusCode() == 404) {
+				throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "No Authy user with id="+userAuthyId, e);
+			} else {
+				String msg = "Cannot request token for userAuthyId="+userAuthyId;
+				log.warn(msg);
+				throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, msg, e);
+			}
 		}
 	}
 
@@ -201,7 +203,7 @@ public class TwilioAuthyClient {
 				throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Authy Token is invalid (userAuthyId="+userAuthyId+")");
 			log.debug("AUTHY: userAuthyId="+userAuthyId+" authenticated successfully with valid OTP.", response);
 			return response.getBody();
-		} catch (HttpClientErrorException err) {		// Authy returns HTTP 401 when OTP is invalid => Spring RestTemplate then throws a RuntimeExceptions!
+		} catch (RestClientResponseException err) {		// Authy returns HTTP 401 when OTP is invalid => Spring RestTemplate then throws a RuntimeExceptions!
 			if (err.getRawStatusCode() == 401) {
 				log.debug("Invalid Authy OTP provided. verifyOneTimePassword(userAuthIy=" + userAuthyId+")");
 				throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Invalid Authy OTP provided. (userAuthyId=" + userAuthyId + ")", err);
