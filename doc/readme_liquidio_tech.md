@@ -189,18 +189,12 @@ GET /users/{userId}/publicChecksum         get checksum of public proxy
  *  This will also run all tests. There must not be any uncommitted local changes in your working directory.
  *  This will automatically increment the build number (`mvn buildnumber:create`)
 
+# Database
 
+https://www.freesqldatabase.com/
 
 
 # Testing
-
-## Running all tests
-
-Run the test cases under `srs/test/java` with `mvn test -DloadSampleDB=true`.
-Spring Boot will automatically start the test server for you.
-Test data is taken from the sample DB.
-
-## Test Data
 
 
 
@@ -233,6 +227,12 @@ From then on all tests can be run against this pre-created test data. This is fa
 
     -Dspring.profiles.active=dev -DloadTestData=true     -Dspring.jpa.hibernate-ddl-auto=none
 
+## Run all tests
+
+Run the test cases under `srs/test/java` with `mvn test -DloadSampleDB=true`.
+Spring Boot will automatically start the test server for you.
+
+
 ### Testing against production environment
 
 After a deployment you should run tests against your production environment. You may do this manually. Liquido
@@ -241,11 +241,9 @@ then you can fetch a JWT like this. You MUST pass the devLoginToken that is conf
 
     http://{PROD_HOST}:{PROD_API_PORT}/liquido/v2/dev/getJWT?mobile=%2B491234567890&token=<devLoginToken>
 
-
-
 # Logging
 
-"I am a logging fanatic"
+"I am a logging fanatic" (tm)
 
  - REST requests are logged via DoogiesRequestLogger
  - Services methods have entry and exit logging on TRACE level.
@@ -284,17 +282,8 @@ https://www.draw.io/#LLiquido%20Architecture
 ## Oauth 2.0
 
  - [Spring-Security 5.1 now natively supports OAuth 2.0](https://docs.spring.io/spring-security/site/docs/current/reference/html/new.html)
-
  - [Baelddung Oauth Tutorials Overview](https://www.baeldung.com/spring-security-oauth)
  - [Baeldung Tutorial Oauth with JWT](https://www.baeldung.com/spring-security-oauth-jwt)
  - [Very nice Sprint Boot example app for JWT](https://github.com/nydiarra/springboot-jwt)
 
  
- ----
- 
- Deprecated: coneetion to MongoDB
-
-    # MongoDB via spring-data-mongo
-    spring.data.mongodb.uri=mongodb://testuser:PASSWORD@ds019664.mlab.com:19664/liquido-test
-    spring.data.mongodb.uri=mongodb://localhost:27017/liquido-test
-
