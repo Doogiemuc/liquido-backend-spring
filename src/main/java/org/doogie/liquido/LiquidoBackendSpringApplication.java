@@ -9,7 +9,11 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.env.Environment;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
+
+import java.sql.SQLException;
 
 /**
  * Main entry class for Liquido Backend
@@ -31,12 +35,21 @@ public class LiquidoBackendSpringApplication {
 	@Autowired
 	LiquidoProperties ppp;
 
+	@Autowired
+	JdbcTemplate jdbcTemplate;
+
   /**
    * Main entry point for Liquido Spring backend.
    * @param args command line arguments (none currently used)
    */
   public static void main(String[] args) throws SchedulerException {
-		System.out.println("====== Starting Liquido Backend =====");
+		System.out.println(" _       ___    ___    _   _   ___   ____     ___  ");
+		System.out.println("| |     |_ _|  / _ \\  | | | | |_ _| |  _ \\   / _ \\ ");
+		System.out.println("| |      | |  | | | | | | | |  | |  | | | | | | | |");
+		System.out.println("| |___   | |  | |_| | | |_| |  | |  | |_| | | |_| |");
+		System.out.println("|_____| |___|  \\__\\_\\  \\___/  |___| |____/   \\___/ ");
+
+
 		/*
 		try {
 			Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
@@ -51,14 +64,18 @@ public class LiquidoBackendSpringApplication {
 
 	@EventListener(ApplicationReadyEvent.class)
 	public void applicationStarted() {
-
-		log.info(ppp.toString());
-
+		String dbUrl = "unknown";
+		try {
+			dbUrl = jdbcTemplate.getDataSource().getConnection().getMetaData().getURL();
+		} catch (SQLException e) {
+			// ignore
+		}
 		log.info("=====================================================");
-		log.info("=== LIQUIDO backend is up and running at");
-		log.info("=== http://localhost:"+this.serverPort+this.basePath);
+		log.info("=== LIQUIDO backend API is up and running under");
+		log.info(" BackendBasePath: http://localhost:"+this.serverPort+this.basePath);
+		log.info(" DB: "+dbUrl);
 		log.info("=======================================================");
+		log.info(ppp.toString());
 	}
 
-  //TODO: package-by-feature  http://www.javapractices.com/topic/TopicAction.do?Id=205
 }
