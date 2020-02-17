@@ -14,7 +14,10 @@ import org.springframework.core.env.Profiles;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
@@ -138,58 +141,48 @@ public class TestDataUtils {
 	}
 
 	/**
-	 * Fake the created at date to be n days in the past
+	 * Fake the created_at date to be n days in the past
 	 *
 	 * @param model     any domain model class derived from BaseModel
 	 * @param ageInDays the number of days to set the createAt field into the past.
 	 */
 	public void fakeCreateAt(BaseModel model, int ageInDays) {
+		updateDateField(model, "created_at", ageInDays, model.getId());
+	}
+
+	/**
+	 * Fake the updated_at date of the given model to be n days in the past
+	 * @param model a liquido model, eg. a LawModel
+	 * @param ageInDays the number of days to se the updated_at field into the past.
+	 */
+	public void fakeUpdatedAt(BaseModel model, int ageInDays) {
+		updateDateField(model, "updated_at", ageInDays, model.getId());
+	}
+
+	@PersistenceContext
+	private EntityManager entityManager;
+
+	/**
+	 * Fake the value of a dateTime field in the DB with nasty proprietaty SQL syntax. This is a hack.
+	 */
+	public void updateDateField(BaseModel model, String field, int ageInDays, long id) {
 		if (ageInDays < 0) throw new IllegalArgumentException("ageInDays must be positive");
 		Table tableAnnotation = model.getClass().getAnnotation(javax.persistence.Table.class);
 		String tableName = tableAnnotation.name();
-		String sql;
-		// in int we have a PostgreSQL DB and must use its syntax
-		if(springEnv.getProperty("spring.jpa.database-platform") != null &&
-			springEnv.getProperty("spring.jpa.database-platform").contains("PostgreSQLDialect"))
-		{
-			sql = "UPDATE " + tableName + " SET created_at = clock_timestamp() + interval '" + ageInDays + " day'  WHERE id='" + model.getId() + "'";
-		} else {
-			// This is H2 / MySQL syntax
-			sql = "UPDATE " + tableName + " SET created_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
+		String hybernateDialect = (String)entityManager.getEntityManagerFactory().getProperties().getOrDefault("hibernate.dialect", "");
+		String sql = "";
+		log.debug("Using hybernateDialect="+hybernateDialect);
+		if(hybernateDialect.contains("H2Dialect")) {
+			sql = "UPDATE " + tableName + " SET "+field+" = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id=" + id;
+		} else { // MySQL
+			sql = "UPDATE " + tableName + " SET "+field+" = CURRENT_TIMESTAMP() - interval " + ageInDays + " day WHERE id=" + id;
 		}
 		log.trace("Executing sql:" + sql);
 		jdbcTemplate.execute(sql);
 		Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
 		model.setCreatedAt(daysAgo);
+
 	}
-
-	/**
-	 * Fake the updated at date to be n days in the past. Keep in mind, that updated at should not be before created at.
-	 *
-	 * @param model     any domain model class derived from BaseModel
-	 * @param ageInDays the number of days to set the createAt field into the past.
-	 */
-	public void fakeUpdatedAt(BaseModel model, int ageInDays) {
-		if (ageInDays < 0) throw new IllegalArgumentException("ageInDays must be positive");
-		Table tableAnnotation = model.getClass().getAnnotation(javax.persistence.Table.class);
-		String tableName = tableAnnotation.name();
-		String sql;
-		// in int we have a PostgreSQL DB and must use its syntax
-		if(springEnv.getProperty("spring.jpa.database-platform") != null &&
-			springEnv.getProperty("spring.jpa.database-platform").contains("PostgreSQLDialect"))
-		{
-			sql = "UPDATE " + tableName + " SET updated_at = clock_timestamp() + interval '" + ageInDays + " day'  WHERE id='" + model.getId() + "'";
-		} else {
-			// This is H2 / MySQL syntax
-			sql = "UPDATE " + tableName + " SET updated_at = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id='" + model.getId() + "'";
-		}
-
-		log.trace("Executing sql:" + sql);
-		jdbcTemplate.execute(sql);
-		Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
-		model.setUpdatedAt(daysAgo);
-	}
-
 
 	/**
 	 * Add num supporters to idea/proposal.   This only adds the references. It does not save/persist anything.

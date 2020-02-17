@@ -38,9 +38,9 @@ public class StartupJobs implements CommandLineRunner {
 		try {
 			String dbURL = jdbcTemplate.getDataSource().getConnection().getMetaData().getURL();
 			log.info("===== Connecting to DB at "+dbURL);
-			//Keep in mind that at this stage the DB might not be filled with a schmea or data yet
+			//Keep in mind that at this stage the DB might not be filled with a schema or data yet
 		} catch (Exception e) {
-			log.error("There is something worong with the database: "+e.toString());
+			log.error("There is something wrong with the database: "+e.toString());
 			throw e;
 		}
 

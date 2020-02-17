@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.security.TwilioAuthyClient;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.BaseTest;
+import org.doogie.liquido.testdata.LiquidoProperties;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,8 +23,12 @@ public class TwilioAuthyClientTest extends BaseTest {
 	@Autowired
 	TwilioAuthyClient client;
 
+	@Autowired
+	LiquidoProperties props;
+
 	@Test
 	public void testGetAppDetails() {
+		log.info("Running Twilio Tests against "+props.authy.apiUrl);
 		log.info(client.getAppDetails());
 	}
 

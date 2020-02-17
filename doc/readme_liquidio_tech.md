@@ -191,7 +191,10 @@ GET /users/{userId}/publicChecksum         get checksum of public proxy
 
 # Database
 
-https://www.freesqldatabase.com/
+
+    SELECT CONCAT('SHOW GRANTS FOR ''',user,'''@''',host,''';') FROM mysql.user;
+
+DEPRECATED: https://www.freesqldatabase.com/
 
 
 # Testing
@@ -252,6 +255,15 @@ then you can fetch a JWT like this. You MUST pass the devLoginToken that is conf
 # Software Architecture
 
 https://www.draw.io/#LLiquido%20Architecture
+
+
+# Roadmap
+
+ * MAYBE package-by-feature  http://www.javapractices.com/topic/TopicAction.do?Id=205  => and then invent microservices :-)
+
+
+
+
 
 
 ## Spring Security
