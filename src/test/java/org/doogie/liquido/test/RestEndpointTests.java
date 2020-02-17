@@ -258,7 +258,7 @@ public class RestEndpointTests extends BaseTest {
 
   //===================== Register and login ============================
 
-	@Test
+	//@Test    //TODO: test this via email
 	public void testRegisterAndLoginViaSms() {
 		String mobile = "+4912345"+ DoogiesUtil.randomDigits(5);
 		HttpEntity<String> entity = Lson.builder()

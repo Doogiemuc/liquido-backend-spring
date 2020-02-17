@@ -1,6 +1,8 @@
 package org.doogie.liquido.util;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingResponseWrapper;
 
@@ -15,6 +17,7 @@ import java.util.Enumeration;
 /**
  * Doogies very cool HTTP request logging.
  * Yes I am completely fanatic about logging HTTP requests. But believe me, this has saved me hours of debugging.
+ * Use your browsers developer console -> Network and compare to what the server receives.
  *
  * There is also {@link org.springframework.web.filter.CommonsRequestLoggingFilter}  but it cannot log request method
  * And it cannot easily be extended.
@@ -22,11 +25,17 @@ import java.util.Enumeration;
  * https://mdeinum.wordpress.com/2015/07/01/spring-framework-hidden-gems/
  * http://stackoverflow.com/questions/8933054/how-to-read-and-copy-the-http-servlet-response-output-stream-content-for-logging
  */
+@Component
 public class DoogiesRequestLogger extends OncePerRequestFilter {
 
-  private boolean includeResponsePayload = true;
-  private boolean logRequestHeaders = false;
-  private int maxPayloadLength = 1000;
+	@Value("${liquido.debug.log.includeResponsePayload:false}")
+  private boolean includeResponsePayload;
+
+	@Value("${liquido.debug.log.maxPayloadLength:1000}")
+	private int maxPayloadLength;
+
+	@Value("${liquido.debug.log.logRequestHeaders:false}")
+  private boolean logRequestHeaders;
 
   private String getContentAsString(byte[] buf, int maxLength, String charsetName) {
     if (buf == null || buf.length == 0) return "";

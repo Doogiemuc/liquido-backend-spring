@@ -9,9 +9,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
- * Run some jobs for startup
- *  - Make sure that there is an admin user
- *  - Log stuff in DEV
+ * Make sure that there is an admin user
  */
 @Slf4j
 @Component
@@ -32,8 +30,8 @@ public class UpsertAdminUser implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws Exception {
 		UserModel admin = new UserModel(prop.admin.email, prop.admin.name, prop.admin.mobilephone, "", prop.admin.picture);
-		log.info("Creating Admin User in DB. "+admin.toStringShort());
-		testDataUtils.upsert(admin);
+		UserModel adminUser = testDataUtils.upsert(admin);
+		log.info("Created Admin User in DB. "+admin.toStringShort());
 	}
 
 }

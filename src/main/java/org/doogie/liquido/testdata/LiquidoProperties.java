@@ -1,6 +1,7 @@
 package org.doogie.liquido.testdata;
 
 import lombok.Data;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -17,12 +18,14 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties("liquido")
 public class LiquidoProperties {
+	// [SECURITY] Exclude sensitive fields from toString in this class!!!
 
 	public Integer supportersForProposal;
 	public Integer daysUntilVotingStarts;
 	public Integer durationOfVotingPhase;
 	public Integer rightToVoteExpirationHours;
 	public String  frontendUrl;
+	@ToString.Exclude
 	public String  devLoginToken;
 
 	public Backend backend = new Backend();
@@ -31,16 +34,14 @@ public class LiquidoProperties {
 		public String version;
 	}
 
+	@ToString.Exclude
 	public Bcrypt bcrypt = new Bcrypt();
 	@Data
 	public static class Bcrypt {
+		@ToString.Exclude
 		public String salt;
+		@ToString.Exclude
 		public String secret;
-		/** Security: Do NOT expose secret and salt in toString() !!! */
-		@Override
-		public String toString() {
-			return "Bcrypt{secret, salt}";
-		}
 	}
 
 	public Smtp smtp = new Smtp();
@@ -50,21 +51,13 @@ public class LiquidoProperties {
 		public String port;
 		public String from;
 		public String fromName;
+		@ToString.Exclude
 		public String username;
+		@ToString.Exclude
 		public String pass;
-		/** Security: No username and password in toString !!!! */
-		@Override
-		public String toString() {
-			final StringBuffer sb = new StringBuffer("Smtp{");
-			sb.append("host='").append(host).append('\'');
-			sb.append(", port='").append(port).append('\'');
-			sb.append(", from='").append(from).append('\'');
-			sb.append(", fromName='").append(fromName).append('\'');
-			sb.append('}');
-			return sb.toString();
-		}
 	}
 
+	@ToString.Exclude
 	public Admin admin = new Admin();
 	@Data
 	public static class Admin {
@@ -74,10 +67,13 @@ public class LiquidoProperties {
 		public String picture;
 	}
 
+	@ToString.Exclude
 	public Authy authy = new Authy();
 	@Data
 	public static class Authy {
+		@ToString.Exclude
 		public String apiUrl;
+		@ToString.Exclude
 		public String apiKey;
 	}
 
