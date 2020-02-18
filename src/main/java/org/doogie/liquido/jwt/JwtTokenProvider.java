@@ -13,14 +13,11 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
 
-	@Value("${app.jwt.secret}")   //TODO: how to make this jwtSecret more "secret" ?
+	@Value("${liquido.jwt.secret}")
 	private String jwtSecret;
 
-	@Value("${app.jwt.expiration}")
+	@Value("${liquido.jwt.expiration}")
 	private Long jwtExpirationInMs;
-
-	@Value("${app.jwt.claims.refresh.name}")
-	private String jwtClaimRefreshName;
 
 	/**
 	 * This generates a new JWT. This needs jwtSecret as input, so that only the server can
