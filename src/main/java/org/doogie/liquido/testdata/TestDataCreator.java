@@ -247,6 +247,7 @@ public class TestDataCreator implements CommandLineRunner {
 
 	/**
 	 * Crude hack for nasty race condition.
+	 *
 	 * My nice SQL script contains the schema (CREATE TABLE ...) and data (INSERT INTO...) That way I can
 	 * very quickly init a DB from scratch.  But TestDataCreator runs after my SpringApp has started.
 	 * Our Quartz scheduler is started earlier. It can be configured to create or not create its own
@@ -316,6 +317,7 @@ public class TestDataCreator implements CommandLineRunner {
 			String name  = "Test User" + (i+1);
 			if (i == 0) name = TestFixtures.USER1_NAME;           // user1 has a special fixed name. And yes  this breaks the system. That's the idea of test data :-) Sames as in areal world db.
       UserModel newUser = new UserModel(email);
+      //TODO: newUser.setAuthyId();
 
       UserProfileModel profile = new UserProfileModel();
       profile.setName(name);
