@@ -64,7 +64,10 @@ public class TwilioAuthyClient {
 	RestTemplate getRestClient() {
 		if (this.restClient != null) return this.restClient;
 
-		log.debug("Creating new RestClient for "+prop.authy.apiUrl);
+		log.debug("Creating new RestClient for " + prop.authy.apiUrl + (proxyActive ? " with proxy "+PROXY_USER + "@" + PROXY_HOST+":"+PROXY_PORT : ""));
+
+		if (prop.authy.apiKey == null || prop.authy.apiKey.length() < 3)
+			throw new RuntimeException("Need prop.authy.apiKey in application.yml !");
 
 		List<Header> headers = new ArrayList<>();
 		headers.add(new BasicHeader("X-Authy-API-Key", prop.authy.apiKey));
@@ -78,14 +81,11 @@ public class TwilioAuthyClient {
 				.disableCookieManagement();
 
 		if (this.proxyActive) {
-			log.debug("  with proxy authentication. "+PROXY_USER+"@"+PROXY_HOST+":"+PROXY_PORT);
 			HttpHost myProxy = new HttpHost(PROXY_HOST, PROXY_PORT);
-
 			CredentialsProvider credsProvider = new BasicCredentialsProvider();
 			credsProvider.setCredentials(
 					new AuthScope(PROXY_HOST, PROXY_PORT),
 					new UsernamePasswordCredentials(PROXY_USER, PROXY_PASS));
-
 			httpClientBuilder
 				.setProxy(myProxy)
 				.setDefaultCredentialsProvider(credsProvider);
