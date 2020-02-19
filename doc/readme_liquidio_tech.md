@@ -121,11 +121,17 @@ and then use the time based one time tokens (T-OTP) that the authy app gererates
 
 ## Register
 
-When the user registers, he is told to install the Authy mobile app (by twilio.com)
+When the user registers, he is told to install the Authy mobile app (by twilio.com).
+The Authy app will automatically show LIQUIDO as an authy "account", when the user provices 
+the same mobilephone.
 
 ## Login
 
+At the login page the user can either login via e-mail or via authy. 
 
+### Login via authy
+
+User must enter his mobilephone, click request token and then enter the T-OTP from the authy app.
 
 # REST API
 
