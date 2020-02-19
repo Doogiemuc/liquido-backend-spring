@@ -256,13 +256,13 @@ public class RestEndpointTests extends BaseTest {
   }
 
 
-  //===================== Register and login ============================
+  //===================== Register ============================
 
 	//@Test    //TODO: test this via email
 	public void testRegisterAndLoginViaSms() {
 		String mobile = "+4912345"+ DoogiesUtil.randomDigits(5);
 		HttpEntity<String> entity = Lson.builder()
-				.put("email", "userFromTest-" + System.currentTimeMillis())
+				.put("email", "userFromTest" + System.currentTimeMillis()+"@liquido.vote")
 				.put("profile", new Lson()
 						.put("mobilephone", mobile)
 						.put("picture", "/static/img/avatars/Avatar1.png")
@@ -271,16 +271,16 @@ public class RestEndpointTests extends BaseTest {
 		// register
 		ResponseEntity<String> res = anonymousClient.postForEntity("/auth/register", entity, String.class);
 		assertEquals(res.getStatusCode(), HttpStatus.OK);
-		log.debug("Successfully registered new user");
+		log.info("Successfully registered new user");
 
-		// request SMS login code
-		res = anonymousClient.getForEntity("/auth/requestSmsToken?mobile={mobile}", String.class, mobile);
-		String smsToken = res.getHeaders().get("token").get(0);   // when spring profile is TEST then backend returns token in header. That would normally be sent via SMS.
-		assertFalse("Did not receive token.", DoogiesUtil.isEmpty(smsToken));
-		log.debug("Received login token via SMS: "+smsToken);
+		// request one time login token
+		res = anonymousClient.getForEntity("/auth/requestToken?mobile={mobile}", String.class, mobile);
+		assertEquals("Could not requestToken", HttpStatus.OK, res.getStatusCode());
 
-		// login with received SMS code
-		res = anonymousClient.getForEntity("/auth/loginWithSmsToken?mobile={mobile}&token={smsToken}", String.class, mobile, smsToken);
+		log.info("Successfully requested a one time token");
+		//with reals 2FA tokens, this cannot be automatically tested
+		/* login with received token
+		res = anonymousClient.getForEntity("/auth/loginWithToken?mobile={mobile}&token={smsToken}", String.class, mobile, smsToken);
 		String jwt = res.getBody();
 		log.debug("received JWT: "+jwt);
 		assertTrue("Invalid JWT: "+jwt, jwt != null && jwt.length() > 20);
@@ -292,6 +292,8 @@ public class RestEndpointTests extends BaseTest {
 		log.debug("Logged in as : "+userJson);
 		String receivedMobile = JsonPath.read(userJson, "$.profile.mobilephone");
 		assertEquals("Logged in user should have the phone number that we registered with", mobile, receivedMobile);
+		*/
+
 	}
 
 

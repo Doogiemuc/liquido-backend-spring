@@ -6,3 +6,4 @@ release.properties
 /application.properties
 /application.yml
 /application-int.yml
+/application-prod.yml
