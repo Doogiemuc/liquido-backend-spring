@@ -1,11 +1,11 @@
 package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.services.scheduler.FinishPollJob;
 import org.doogie.liquido.services.voting.RankedPairVoting;
+import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.util.Lson;
 import org.doogie.liquido.util.Matrix;
 import org.quartz.*;
@@ -20,7 +20,9 @@ import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.quartz.JobBuilder.newJob;
@@ -160,7 +162,7 @@ public class PollService {
   @Autowired
 	SchedulerFactoryBean schedulerFactoryBean;
 
-	/**
+  /**
 	 * Schedule a Quartz job that will end the voting phase of this poll
 	 * @param poll a poll in voting phase
 	 * @throws SchedulerException
@@ -188,7 +190,7 @@ public class PollService {
 
 		try {
 			//Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
-			Scheduler scheduler = schedulerFactoryBean.getScheduler();
+			Scheduler scheduler =  schedulerFactoryBean.getScheduler();
 			if (!scheduler.isStarted())
 				log.warn("Quartz job scheduler is not started. It should be started!");
 			scheduler.scheduleJob(jobDetail, trigger);
