@@ -99,7 +99,7 @@ public class CastVoteService {
 		String voterToken =       calcVoterToken(voter.getId(), voterTokenSecret, area.getId());   // voterToken that only this user must know
 		String hashedVoterToken = calcHashedVoterToken(voterToken);                                // hash of voterToken that can only be generated from the users voterToken and only by the server.
 
-		//   IF there is a an already existing rightToVote for that voter as public proxy
+		//   IF there is an already existing rightToVote for that voter as public proxy
 		//  AND there is NO existing rightToVote for that voterToken OR one that does not match the public proxies rightToVote,
 		// THEN the user has changed his voterTokenSecret
 		//  AND we must invalidate (delete) the old rightToVote.

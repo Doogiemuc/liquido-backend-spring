@@ -49,3 +49,16 @@ liquido:
   authy:
     apiUrl: http://api.authy.com
     apiKey: XXXXXX
+
+  # liquido request logging
+  debug:
+    log:
+      includeResponsePayload: true
+
+# java slf4j logging, can be configured by package
+logging:
+  level:
+    org:
+      doogie:
+        liquido: INFO
+

@@ -163,7 +163,7 @@ public class TestDataUtils {
 	private EntityManager entityManager;
 
 	/**
-	 * Fake the value of a dateTime field in the DB with nasty proprietaty SQL syntax. This is a hack.
+	 * Fake the value of a dateTime field in the DB with nasty proprietary SQL syntax. This is a hack.
 	 */
 	public void updateDateField(BaseModel model, String field, int ageInDays, long id) {
 		if (ageInDays < 0) throw new IllegalArgumentException("ageInDays must be positive");
