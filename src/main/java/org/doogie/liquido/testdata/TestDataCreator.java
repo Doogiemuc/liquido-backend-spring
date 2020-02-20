@@ -63,18 +63,22 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * http://www.sureshpw.com/2014/05/importing-json-with-references-into.html
  * http://www.generatedata.com/
  * https://docs.spring.io/spring/docs/current/spring-framework-reference/testing.html#testcontext-ctx-management-env-profiles
+ *
+ * I already tried to refoctor this TestDataCreator into its own module. But this is not possible,
+ * because this class depends so closely on pretty much every liquido service. And this is a good thing.
+ * We want to test everything here. => So TestDataCreator will stay an internal part of the LIQUIDO backend project.
  */
 
 @Slf4j
 @Component
 @Profile({"dev", "test"})    						// run test data creator only during development or when running tests!
-@Order(100)   		                                // seed DB first, then run the other CommandLineRunners
+@Order(100)   		                      // seed DB first, then run the other CommandLineRunners
 public class TestDataCreator implements CommandLineRunner {
 
-  static final String RECREATE_TEST_DATA     = "recreateTestData";
-  static final String LOAD_TEST_DATA         = "loadTestData";   // load test data from SAMPLE_DATA_FILE
-	static final String TEST_DATA_FILENAME   = "sampleDB-H2.sql";
-	static final String TEST_DATA_PATH       = "src/main/resources/";
+  static final String RECREATE_TEST_DATA     	= "recreateTestData";
+  static final String LOAD_TEST_DATA         	= "loadTestData";
+	static final String TEST_DATA_FILENAME   		= "sampleDB-H2.sql";
+	static final String TEST_DATA_PATH       		= "src/main/resources/";
 
 	// TestDataCreator pretty much depends on any Model, Repo and Service that we have. Which proves that we have a nice code coverage :-)
 

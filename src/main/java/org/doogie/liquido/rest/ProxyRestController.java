@@ -2,8 +2,8 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.RightToVoteModel;
 import org.doogie.liquido.model.DelegationModel;
+import org.doogie.liquido.model.RightToVoteModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.AssignProxyRequest;
 import org.doogie.liquido.security.LiquidoAuditorAware;
@@ -14,11 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.data.rest.webmvc.RepositoryRestController;
-import org.springframework.hateoas.EntityLinks;
-import org.springframework.hateoas.Link;
-import org.springframework.hateoas.Resource;
-import org.springframework.hateoas.Resources;
-import org.springframework.hateoas.mvc.ControllerLinkBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,15 +23,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 import static org.springframework.web.bind.annotation.RequestMethod.*;
 
 /**
  * Liquido REST endpoint for working with proxies.
  */
 @Slf4j
-//@BasePathAwareController   //BUGFIX: ProxyRestController MUST be a  RepositoryRestController. Otherwise the deserialization of URIs does not work in POST /my/proxy
 @RepositoryRestController
 @RequestMapping("${spring.data.rest.base-path}")   // MUST have Request Mapping on class level https://stackoverflow.com/questions/38607421/spring-data-rest-controllers-behaviour-and-usage-of-basepathawarecontroller
 																									 //https://jira.spring.io/browse/DATAREST-1327
@@ -47,9 +39,6 @@ public class ProxyRestController {
 
 	@Autowired
 	LiquidoAuditorAware liquidoAuditorAware;
-
-	@Autowired
-	EntityLinks entityLinks;
 
 	/**
 	 * Get own user information as HATEOAS
@@ -64,7 +53,7 @@ public class ProxyRestController {
 		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
 			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your own user info."));
 		log.trace("GET /my/user returns "+currentUser);
-		return resourceAssembler.toResource(currentUser);
+		return resourceAssembler.toFullResource(currentUser);
 	}
 
 	/**
@@ -82,27 +71,19 @@ public class ProxyRestController {
 		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your proxy map!"));
 
-		Link areaLink = entityLinks.linkToSingleResource(area);
 		Optional<DelegationModel> directProxy = proxyService.getDelegationToDirectProxy(area, proxy);
 		Optional<UserModel> topProxy = proxyService.findTopProxy(area, proxy);
 		//Optional<ChecksumModel> checksumOfPublicProxy = proxyService.getChecksumOfPublicProxy(area, proxy);
 
-
-		// manually build a JSON similar to the HATEOAS structure
 		Lson proxyInfo = Lson.builder()
-				.put("area", area)				// also directly inline the full area JSON, because client needs it
-				.put("directProxyDelegation", directProxy.orElse(null))			// may also be a requested delegation
-				.put("topProxy", topProxy.orElse(null))   // this inlines the topProxy information, because client needs it
+				.put("area", area)																						// also directly inline the full area JSON, because client needs it
+				.put("directProxyDelegation", directProxy.orElse(null))		// may also be a requested delegation
+				.put("topProxy", topProxy.orElse(null));  									// this inlines the topProxy information, because client needs it
+
+				//MAYBE: could add some more info, that this makes the response quite slow ...
 				//.put("isPublicProxy", checksumOfPublicProxy.isPresent())
 				//.put("acceptedDelegations", proxyService.findAcceptedDirectDelegations(area, proxy))   // these are only the direct delegations. See  getRealDelegationCount(voterToken)
 				//.put("delegationRequests", proxyService.findDelegationRequests(area, proxy))
-				.put("_links.area.href", areaLink.getHref())
-				.put("_links.area.templated", areaLink.isTemplated());
-
-		if (topProxy.isPresent()) {
-			Link topProxyLink = entityLinks.linkToSingleResource(topProxy.get());
-			proxyInfo.put("_links.topProxy.href", topProxyLink.getHref());
-		}
 
 		return proxyInfo;
 	}
@@ -115,10 +96,9 @@ public class ProxyRestController {
 	 * @throws LiquidoException
 	 */
 	@RequestMapping("/my/proxy/{areaId}/assignable")
-	public @ResponseBody Resources getAssignableProxies(@PathVariable("areaId") AreaModel area) throws LiquidoException {
+	public @ResponseBody List<UserModel> getAssignableProxies(@PathVariable("areaId") AreaModel area) throws LiquidoException {
 		List<UserModel> assignableProxies = proxyService.getAssignableProxies(area);
-		ControllerLinkBuilder controllerLinkBuilder = linkTo(methodOn(ProxyRestController.class).getAssignableProxies(null));
-		return new Resources(assignableProxies, controllerLinkBuilder.withSelfRel());
+		return assignableProxies;
 	}
 
 	/**
@@ -196,21 +176,18 @@ public class ProxyRestController {
 	 *
 	 * @param area an area
 	 * @body  JSON with voterToken
-	 * @return the checksum of the proxy in that area which is now public, ie. linked to this user as a REST resource
+	 * @return the rightToVote of the proxy in that area which is now public, ie. linked to this user
 	 * @throws LiquidoException if voterToken is not valid
 	 */
 	@RequestMapping(value = "/my/delegations/{areaId}/becomePublicProxy", method = PUT)   // PUT is idempotent, so if you PUT an object twice, it has no additional effect. And that is what we need here.
-	// I have to use a JSON as body.  Just a plain string doesn't work with @BasePathAwareController. It requires JSON.
-	public ResponseEntity<?> becomePublicProxy(@PathVariable("areaId") AreaModel area, @RequestBody Map bodyMap) throws LiquidoException {
+	public ResponseEntity becomePublicProxy(@PathVariable("areaId") AreaModel area, @RequestBody Map bodyMap) throws LiquidoException {
 		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to become a public proxy."));
 		String voterToken = (String)(bodyMap.get("voterToken"));
 		if (voterToken == null) throw new IllegalArgumentException("Need voter token to become a public proxy");
-		RightToVoteModel checksumOfProxy = proxyService.becomePublicProxy(proxy, area, voterToken);
-		// ChecksomRepo is not exposed as REST endpoint. So we build our own HATEOAS Resource.
-		Resource checksumResource = new Resource<>(checksumOfProxy);
-		checksumResource.add(entityLinks.linkToSingleResource(area));
-		return ResponseEntity.ok(checksumResource);
+		RightToVoteModel rightToVote = proxyService.becomePublicProxy(proxy, area, voterToken);
+		// ChecksomRepo is not exposed as REST endpoint. So we build our own response
+		return ResponseEntity.ok(rightToVote);
 	}
 
 	/**

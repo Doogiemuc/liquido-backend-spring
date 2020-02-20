@@ -5,7 +5,6 @@ import lombok.EqualsAndHashCode;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import org.springframework.hateoas.Identifiable;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -21,7 +20,7 @@ import java.util.Date;
 @EntityListeners(AuditingEntityListener.class)
 @EqualsAndHashCode(of="id")
 //@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-public abstract class BaseModel implements Identifiable<Long> {
+public abstract class BaseModel {
   /**
    * Internal ID of this domain object
    * Sprint Data REST will use this in its generated URLs, e.g. GET /laws/ID
