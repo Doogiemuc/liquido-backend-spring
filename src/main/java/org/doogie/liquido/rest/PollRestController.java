@@ -17,12 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
-import org.springframework.data.rest.webmvc.PersistentEntityResource;
 import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
-import org.springframework.hateoas.EntityLinks;
-import org.springframework.hateoas.Resource;
-import org.springframework.hateoas.Resources;
-import org.springframework.hateoas.mvc.ControllerLinkBuilder;
+import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,8 +28,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 
 /**
  * REST controller for working with Polls.
@@ -73,9 +70,6 @@ public class PollRestController {
 	private ProjectionFactory factory;
 
 	@Autowired
-	EntityLinks entityLinks;
-
-	@Autowired
 	LiquidoRestUtils restUtils;
 
   //see https://docs.spring.io/spring-data/rest/docs/current/reference/html/#customizing-sdr.overriding-sdr-response-handlers
@@ -83,56 +77,36 @@ public class PollRestController {
   /**
    * When an idea reaches its quorum then it becomes a proposal and its creator <i>can</i> builder a new poll for this proposal.
    * Other proposals need to join this poll before voting can be started.
-   * @param pollResource the new poll with the link to exactly one proposal, e.g.
+   * @param newPoll the poll to create with the link to exactly one proposal, e.g.
    *          <pre>{ title: "Poll Title", "proposals": [ "/liquido/v2/laws/152" ] }</pre>
-   * @param resourceAssembler spring's PersistentEntityResourceAssembler that can builder the reply
    * @return the saved poll as HATEOAS resource with all _links
    * @throws LiquidoException when sent LawModel is not in state PROPOSAL or creation of new poll failed
    */
 	@RequestMapping(value = "/polls/add", method = RequestMethod.POST)
-	public @ResponseBody Resource createNewPoll(
-		@RequestBody Resource<PollModel> pollResource,                         // how to convert URI to object? https://github.com/spring-projects/spring-hateoas/issues/292
-		PersistentEntityResourceAssembler resourceAssembler
-	) throws LiquidoException
-	{
-		PollModel pollFromRequest = pollResource.getContent();
-		if (pollFromRequest.getProposals().size() != 1)
+	public @ResponseBody PollModel createNewPoll(@RequestBody PollModel newPoll) throws LiquidoException {
+		// how to convert URI to object? https://github.com/spring-projects/spring-hateoas/issues/292
+		if (newPoll.getProposals().size() != 1)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Must pass exactly one proposal to create a new poll!");
-		LawModel proposalFromRequest = pollFromRequest.getProposals().iterator().next();             // This proposal is a "detached entity". Cannot simply be saved here. This will all be done inside pollService.
-		PollModel createdPoll = pollService.createPoll(pollFromRequest.getTitle(), proposalFromRequest);
-
-		PersistentEntityResource persistentEntityResource = resourceAssembler.toFullResource(createdPoll);
-		log.trace("<= POST /createNewPoll: created Poll "+persistentEntityResource.getLink("self").getHref());
-		return persistentEntityResource;
+		LawModel proposalFromRequest = newPoll.getProposals().iterator().next();             // This proposal is a "detached entity". Cannot simply be saved here. This will all be done inside pollService.
+		PollModel createdPoll = pollService.createPoll(newPoll.getTitle(), proposalFromRequest);
+		log.trace("<= POST /createNewPoll: created Poll "+createdPoll);
+		return createdPoll;
 	}
 
 	/**
 	 * Join a proposal into an existing poll (that must be in its ELABORATION phase)
-	 * @param joinPollRequest with poll and proposal uri
+	 * @param poll an existing poll which must be in status == elaboration
+	 * @param proposal a proposal which must be in status "proposal" that wants to join the poll.
 	 * @throws LiquidoException if poll is not in its ELABORATION phase or proposal did not reach its quorum yet
 	 */
-  @RequestMapping(value = "/joinPoll",   //TODO: refactor to POST /polls/{pollId}/join?proposal=proposalURI
-      method = RequestMethod.POST,
-      consumes = "application/json")
-  public @ResponseBody Resource joinPoll(@RequestBody JoinPollRequest joinPollRequest, PersistentEntityResourceAssembler resourceAssembler) throws LiquidoException {
-		log.info("Proposal joins poll: "+joinPollRequest);
-
-		// Now we would need to map the Spring Data Rest HATEOAS Uri to the actual entities.  But the clean solution is a bigger effort
-		// https://stackoverflow.com/questions/37186417/resolving-entity-uri-in-custom-controller-spring-hateoas
-		// https://stackoverflow.com/questions/49458567/mapping-hal-uri-in-requestbody-to-a-spring-data-rest-managed-entity
-	  // TODO: use the new Deserializers as in JoinPollRequest.java or the @JsonComponent
-
-		Long pollId = restUtils.getIdFromURI("polls", joinPollRequest.poll);
-		PollModel poll = pollRepo.findById(pollId)
-				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_JOIN_POLL, "Cannot find poll with id="+pollId));
-
-		Long proposalId = restUtils.getIdFromURI("laws", joinPollRequest.proposal);
-		LawModel proposal = lawRepo.findById(proposalId)
-				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_JOIN_POLL, "Cannot find proposal with id="+pollId));
-
+  @RequestMapping(value = "/polls/{pollId}/join/{proposalId}", method = RequestMethod.POST)    // POST is not idempotent. Can join a poll only once!
+  public @ResponseBody PollModel joinPoll(
+  		@PathVariable(name="pollId") PollModel poll,
+			@PathVariable(name="proposalId") LawModel proposal
+	) throws LiquidoException {
+		log.info("Proposal wants to join poll: "+proposal+" -> "+poll);
 		PollModel updatedPoll = pollService.addProposalToPoll(proposal, poll);
-
-		return resourceAssembler.toResource(updatedPoll);
+		return updatedPoll;
 	}
 
 	@RequestMapping(value = "/polls/{pollId}/result", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -258,10 +232,10 @@ public class PollRestController {
 		// BUG: returning resource does not add _embedded.polls: [] when List is empty. https://stackoverflow.com/questions/30286795/how-to-force-spring-hateoas-resources-to-render-an-empty-embedded-array/30297552
 		// FIX: Doogies LSON Builder for the win once again!! :-)
 		// LEARNING:  Always fine tune the returned JSON of your API !YOURSELF!  Do NOT rely on auto generated Repos.
-		ControllerLinkBuilder controllerLinkBuilder = linkTo(methodOn(PollRestController.class).findPollsByStatusAndArea(null, null));
+		WebMvcLinkBuilder webMvcLinkBuilder = linkTo(methodOn(PollRestController.class).findPollsByStatusAndArea(null, null));
 		return new Lson()
 				.put("_embedded.polls", polls)
-				.put("_links.self.href", controllerLinkBuilder.toUri());
+				.put("_links.self.href", webMvcLinkBuilder.toUri());
 	}
 
 	/**
@@ -304,29 +278,10 @@ public class PollRestController {
 		// BUG: returning resource does not add _embedded.polls: [] when List is empty. https://stackoverflow.com/questions/30286795/how-to-force-spring-hateoas-resources-to-render-an-empty-embedded-array/30297552
 		// FIX: Doogies LSON Builder for the win once again!! :-)
 		// LEARNING:  Always fine tune the returned JSON of your API !YOURSELF!  Do NOT rely on auto generated Repos.
-		ControllerLinkBuilder controllerLinkBuilder = linkTo(methodOn(PollRestController.class).findPollsWithOwnBallots(null, null, null));
+		WebMvcLinkBuilder webMvcLinkBuilder = linkTo(methodOn(PollRestController.class).findPollsWithOwnBallots(null, null, null));
 		return new Lson()
 			.put("_embedded.polls", polls)
-			.put("_links.self.href", controllerLinkBuilder.toUri());
-	}
-
-
-
-	//TODO: Move getRecentlyDiscussed() method to LawRestController (There was something about URL pathes????)
-	/**
-	 * Get recently discussed proposals.
-	 *
-	 * @see LawRepo#getRecentlyDiscussed(Date)
-	 * @return a sorted list of (max 10) proposals with recent comments.
-	 *   The list will contain LawProjections as Spring HATEOAS JSON
-	 */
-	@RequestMapping("/laws/search/recentlyDiscussed")
-	public @ResponseBody Resources<LawProjection> getRecentlyDiscussedProposals() {
-		List<LawModel> mostDiscussedProposals = lawService.getRecentlyDiscussed(10);
-		// Some more Spring HATEOAS magic:
-		// https://stackoverflow.com/questions/28139856/how-can-i-get-spring-mvchateoas-to-encode-a-list-of-resources-into-hal
-		List<LawProjection> projected = mostDiscussedProposals.stream().map(l -> factory.createProjection(LawProjection.class, l)).collect(Collectors.toList());
-		return new Resources<>(projected, linkTo(methodOn(PollRestController.class).getRecentlyDiscussedProposals()).withRel("self"));
+			.put("_links.self.href", webMvcLinkBuilder.toUri());
 	}
 
 }

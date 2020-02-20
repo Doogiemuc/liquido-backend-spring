@@ -2,7 +2,6 @@ package org.doogie.liquido.test.matchers;
 
 import org.doogie.liquido.model.UserModel;
 import org.hamcrest.Description;
-import org.hamcrest.Factory;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 
@@ -24,6 +23,5 @@ public class UserMatcher extends TypeSafeMatcher<UserModel> {
     description.appendText("user '"+email+"' not found");
   }
 
-  @Factory
   public static Matcher userWithEMail(String email) { return new UserMatcher(email); }
 }

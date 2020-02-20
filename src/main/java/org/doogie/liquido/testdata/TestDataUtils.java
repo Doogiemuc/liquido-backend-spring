@@ -171,13 +171,12 @@ public class TestDataUtils {
 		String tableName = tableAnnotation.name();
 		String hybernateDialect = (String)entityManager.getEntityManagerFactory().getProperties().getOrDefault("hibernate.dialect", "");
 		String sql = "";
-		log.debug("Using hybernateDialect="+hybernateDialect);
 		if(hybernateDialect.contains("H2Dialect")) {
 			sql = "UPDATE " + tableName + " SET "+field+" = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id=" + id;
 		} else { // MySQL
 			sql = "UPDATE " + tableName + " SET "+field+" = CURRENT_TIMESTAMP() - interval " + ageInDays + " day WHERE id=" + id;
 		}
-		log.trace("Executing sql:" + sql);
+		log.trace("Update date field (hybernate.dialect="+hybernateDialect+"): " + sql);
 		jdbcTemplate.execute(sql);
 		Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
 		model.setCreatedAt(daysAgo);

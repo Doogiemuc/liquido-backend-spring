@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import org.doogie.liquido.model.PollModel;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.hateoas.EntityLinks;
 import org.springframework.hateoas.Link;
+import org.springframework.hateoas.server.EntityLinks;
 
 import java.io.IOException;
 
@@ -38,7 +38,7 @@ public class PollAsLinkJsonSerializer extends StdSerializer<PollModel> {
 	 */
 	@Override
 	public void serialize(PollModel poll, JsonGenerator gen, SerializerProvider provider) throws IOException {
-		Link link = entityLinks.linkToSingleResource(poll);
+		Link link = entityLinks.linkToItemResource(PollModel.class, Long.valueOf(poll.getId()));
 		gen.writeStartObject();
 		gen.writeObjectFieldStart("poll");
 		gen.writeObjectField("href", link.getHref());
