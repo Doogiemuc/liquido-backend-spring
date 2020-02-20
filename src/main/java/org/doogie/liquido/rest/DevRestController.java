@@ -1,7 +1,6 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.datarepos.BallotRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
@@ -13,6 +12,7 @@ import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
+import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,9 +28,10 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
-import java.util.*;
-
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * This controller is only available for development and testing

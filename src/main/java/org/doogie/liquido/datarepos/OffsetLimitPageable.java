@@ -24,14 +24,20 @@ public class OffsetLimitPageable implements Pageable {
 		this.sort = sort;
 	}
 
+	/** page = floor(offset / limit) + 1 */
 	@Override
 	public int getPageNumber() {
-		return (int)Math.floorDiv(offset, limit)+1;     // page = floor(offset / limit) + 1
+		return (int)Math.floorDiv(offset, limit)+1;
 	}
 
+	/** Page size is limit. But can be any size of elements that can be returned. */
 	@Override
 	public int getPageSize() {
 		return (int)this.limit;
+	}
+
+	public long getLimit() {
+		return this.limit;
 	}
 
 	@Override

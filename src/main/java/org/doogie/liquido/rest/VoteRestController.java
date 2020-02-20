@@ -12,7 +12,8 @@ import org.doogie.liquido.services.ProxyService;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
-import org.springframework.hateoas.*;
+import org.springframework.hateoas.Link;
+import org.springframework.hateoas.server.EntityLinks;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,8 +21,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 
 /**
  * REST controller for voting
@@ -75,7 +77,7 @@ public class VoteRestController {
 		long delegationCount = proxyService.getRecursiveDelegationCount(voterToken);
 		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, voter);
 
-		Link areaLink = entityLinks.linkToSingleResource(AreaModel.class, area.getId());      // Spring HATEOAS Link rel
+		Link areaLink = entityLinks.linkToItemResource(AreaModel.class, area.getId());      // Spring HATEOAS Link rel
 		return Lson.builder()
 				.put("_links.area.href", areaLink.getHref())   		// return link to Area. Area Link has suffix {?projection} !
 				.put("_links.area.templated", areaLink.isTemplated())	// is true for areas
@@ -171,6 +173,7 @@ public class VoteRestController {
 		}
 
 		//Keep in mind that BallotModel is not exposed as RepositoryRestResource! Therefore we must build our own HATEOAS response format.  new Resource(..) does not work here!
+
 		Link self = linkTo(methodOn(VoteRestController.class).myBallotsInArea("", null, null)).withRel("self");
 		return new Lson()
 			.put("_embedded", ballots)

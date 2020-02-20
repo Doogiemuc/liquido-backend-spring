@@ -5,17 +5,14 @@ import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.jwt.JwtTokenProvider;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.security.LiquidoAuditorAware;
-import org.doogie.liquido.security.TwilioAuthyClient;
 import org.doogie.liquido.services.*;
 import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.util.DoogiesUtil;
-import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.data.projection.ProjectionFactory;
-import org.springframework.hateoas.ResourceAssembler;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -212,9 +209,6 @@ public class UserRestController {
 		log.info(user+ "logged in with valid email code.");
 		return jwt;
 	}
-
-	@Autowired
-	ResourceAssembler resourceAssembler;
 
 	@RequestMapping(path = "/my/newsfeed", produces = MediaType.APPLICATION_JSON_VALUE)
 	public Lson getMyNewsfeed(@RequestParam("voterToken") Optional<String> voterToken) throws LiquidoException {

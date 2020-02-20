@@ -313,15 +313,10 @@ public class LawService {
    * @return list of LawModels that match the given query
    */
   public Page<LawModel> findBySearchQuery(LawQuery lawQuery) {
+    //TODO: make it possible to also search for recently discussed and "trending" proposals
     Specification<LawModel> spec = matchesQuery(lawQuery);
 
-    /*
-    Pageable pageable = lawQuery.getSortByProperties().size() == 0
-      ? PageRequest.of(lawQuery.getPage(), lawQuery.getLimit())        // PageRequest.of does not accept empty properties array :-(  This call sets Sort.UNSORTED
-      : PageRequest.of(lawQuery.getPage(), lawQuery.getLimit(), lawQuery.getDirection(), lawQuery.getSortByPropertiesAsStringArray());
-    */
-
-    Pageable pageable = lawQuery.getSortByProperties().size() == 0
+    OffsetLimitPageable pageable = lawQuery.getSortByProperties().size() == 0
       ? new OffsetLimitPageable(lawQuery.getOffset(), lawQuery.getLimit())
       : new OffsetLimitPageable(lawQuery.getOffset(), lawQuery.getLimit(), Sort.by(lawQuery.getDirection(), lawQuery.getSortByPropertiesAsStringArray()));
 
