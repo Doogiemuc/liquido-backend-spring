@@ -191,14 +191,14 @@ public class RestEndpointTests extends BaseTest {
 	}
 
   /**
-   * Configure a HTTP REST client
-   *  - USER1 is logged in
-   *  - logs the client requetss with {@link LogClientRequestInterceptor}
+   * Configure a HTTP REST client:
+   *  - log the client requests with {@link LogClientRequestInterceptor}
+	 *  - support authentication via JWT
    *  - has a rootUri
    */
   public void initHttpClients() {
     this.rootUri = "http://localhost:"+localServerPort+basePath;
-    log.trace("====== configuring RestTemplate HTTP client for "+rootUri+ " with user "+TestFixtures.USER1_EMAIL);
+    log.trace("====== configuring RestTemplate HTTP client for "+rootUri);
 
 		// neet to manually configure Encoding of URL query parameters
 		// https://docs.spring.io/spring-framework/docs/current/spring-framework-reference/web.html#web-uri-encoding
@@ -588,7 +588,7 @@ public class RestEndpointTests extends BaseTest {
 		AreaModel area = areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
 		loginUserJWT(TestFixtures.USER1_EMAIL);
 		String assignableResources = client.getForObject("/my/proxy/{areaId}/assignable", String.class, area.getId());
-		JSONArray assignableProxies = JsonPath.read(assignableResources, "$._embedded.users");
+		JSONArray assignableProxies = JsonPath.read(assignableResources, "$");
 		assertTrue("There should be at least one assignable proxy", assignableProxies.size() > 1);
 	}
 
@@ -636,7 +636,6 @@ public class RestEndpointTests extends BaseTest {
     HttpEntity entity = new Lson()
 				.put("toProxy",  toProxyUri)
 				.put("voterToken", voterToken)
-				.put("transitive", true)
 				.toJsonHttpEntity();
     ResponseEntity<String> response = client.exchange("/my/proxy/{areaId}?voterToken={voterToken}", PUT, entity, String.class, area.getId(), voterToken);
     assertEquals(HttpStatus.CREATED, response.getStatusCode());

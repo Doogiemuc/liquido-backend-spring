@@ -44,7 +44,9 @@ public class LiquidoGeneralExceptionHandler {
 		Lson body = LiquidoRestExceptionHandler.getMessageAsJson(re, request);
 		body.put("message", "There was an internal error in Liquido. We are sorry for that.");
 		body.put("messageInternal", re.getMessage());
-		log.warn("LIQUIDO Internal Server Error\n"+body.toPrettyString());
+		log.error("LIQUIDO Internal Server Error\n"+body.toPrettyString());
+		log.error(re.toString());
+		re.printStackTrace();
 		return new ResponseEntity<>(body, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 

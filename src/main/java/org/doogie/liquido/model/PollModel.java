@@ -22,9 +22,9 @@ import java.util.*;
  * The votes within a poll are stored in anonymous ballots.
  * This is just a domain model class. All the business logic is in {@link org.doogie.liquido.services.PollService}!
  */
-@Data
 @Entity
-@NoArgsConstructor
+@Data
+@NoArgsConstructor  // lombok data includes @RequiredArgsConstructor, but does not include @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 //@RequiredArgsConstructor(suppressConstructorProperties = true)
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.

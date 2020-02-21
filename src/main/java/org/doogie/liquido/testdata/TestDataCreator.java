@@ -313,35 +313,18 @@ public class TestDataCreator implements CommandLineRunner {
 	 */
   public void seedUsers(long numUsers, String mailPrefix) {
     log.info("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
-
 		long countUsers = util.users.size();
-
     for (int i = 0; i < numUsers; i++) {
-      String email = mailPrefix + (i+1) + "@liquido.de";    // Remember that DB IDs start at 1. Testuser1 has ID=1 in DB. And there is no testuser0
-			String name  = "Test User" + (i+1);
-			if (i == 0) name = TestFixtures.USER1_NAME;           // user1 has a special fixed name. And yes  this breaks the system. That's the idea of test data :-) Sames as in areal world db.
-      UserModel newUser = new UserModel(email);
+      String email 				= mailPrefix + (i+1) + "@liquido.de";    // Remember that DB IDs start at 1. Testuser1 has ID=1 in DB. And there is no testuser0
+			String name  			 	= (i == 0) ? "Test User" + (i+1) : TestFixtures.USER1_NAME;           // user1 has a special fixed name. And yes  this breaks the system. That's the idea of test data :-) Sames as in areal world db.
+			String mobilephone 	= TestFixtures.MOBILEPHONE_PREFIX+(countUsers+i+1);
+			String website     	= "http://www.liquido.de";
+			String picture     	= TestFixtures.AVATAR_PREFIX+((i%16)+1)+".png";
+      UserModel newUser  	= new UserModel(email, name, mobilephone, website, picture);
       //TODO: newUser.setAuthyId();
-
-      UserProfileModel profile = new UserProfileModel();
-      profile.setName(name);
-      profile.setPicture(TestFixtures.AVATAR_PREFIX+((i%16)+1)+".png");
-      profile.setWebsite("http://www.liquido.de");
-      profile.setMobilephone(TestFixtures.MOBILEPHONE_PREFIX+(countUsers+i+1));  // deterministic unique phone numbers
-      newUser.setProfile(profile);
-
-      Optional<UserModel> existingUserOpt = userRepo.findByEmail(email);
-      if (existingUserOpt.isPresent()) {
-        log.debug("Updating existing user with id=" + existingUserOpt.get().getId());
-        newUser.setId(existingUserOpt.get().getId());
-      } else {
-        log.debug("Creating new user " + newUser);
-      }
-
-      UserModel savedUser = userRepo.save(newUser);
-      if (i==0) auditorAware.setMockAuditor(savedUser);   // prevent some warnings
+			UserModel savedUser = util.upsert(newUser);
+			if (i==0) auditorAware.setMockAuditor(savedUser);   // This prevents some warnings
     }
-
     util.reloadUsersCache();
   }
 
@@ -349,13 +332,9 @@ public class TestDataCreator implements CommandLineRunner {
 	 * Create the admin user with the values from application.properties
 	 */
 	public void seedAdminUser() {
-  	UserModel admin = new UserModel(prop.admin.email);
-  	UserProfileModel adminProfile = new UserProfileModel();
-  	adminProfile.setMobilephone(prop.admin.mobilephone);
-  	adminProfile.setName(prop.admin.name);
-  	admin.setProfile(adminProfile);
-		log.debug("Create admin "+admin);
-  	userRepo.save(admin);
+  	UserModel admin = new UserModel(prop.admin.email, prop.admin.name, prop.admin.mobilephone, "", prop.admin.picture);
+		//TODO: admin.setAuthyId();
+  	util.upsert(admin);
 		util.reloadUsersCache();
 	}
 

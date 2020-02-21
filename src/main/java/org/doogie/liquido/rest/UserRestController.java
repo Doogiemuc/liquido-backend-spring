@@ -233,8 +233,8 @@ public class UserRestController {
 		supportedByYou.addAll(lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.ELABORATION, currentUser));
 		supportedByYou.addAll(lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.VOTING, currentUser));
 		List<LawModel> supportedByYouSorted = supportedByYou.stream()
-				.sorted((p1, p2) -> (int) (p1.getUpdatedAt().getTime() - p2.getUpdatedAt().getTime()))
 				.limit(10)
+				.sorted((p1, p2) -> (int) (p1.getUpdatedAt().getTime() - p2.getUpdatedAt().getTime()))
 				.collect(Collectors.toList());
 
 

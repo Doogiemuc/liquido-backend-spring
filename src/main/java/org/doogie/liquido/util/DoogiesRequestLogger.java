@@ -1,5 +1,6 @@
 package org.doogie.liquido.util;
 
+import com.amazonaws.services.dynamodbv2.xspec.B;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
@@ -85,6 +86,10 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
 
 	  StringBuilder reqInfoLong = new StringBuilder(reqInfo.toString());
 
+    if (request.getHeader("Content-Type") != null) {
+			reqInfoLong.append(", header.Content-Type=")
+				.append(request.getHeader("Content-Type") );
+		}
     if (request.getAuthType() != null) {
       reqInfoLong.append(", authType=")
         .append(request.getAuthType());
@@ -116,33 +121,34 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     // We CANNOT simply read the request payload here, because then the InputStream would be consumed and cannot be read again by the actual processing/server.
     // DO NOT DO THIS:  this.logger.debug("Request body: "+DoogiesUtil._stream2String(request.getInputStream()));
     // Springs ContentCachingRequestWrapper works, but it can only log the request body AFTER the request was sent.
-    //ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request);
-    ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
-
     // So we need to apply some stronger magic on Dumbledore Level
-		BufferedRequestWrapper wrap = new BufferedRequestWrapper(request);
 
-		// Log request payload body
+
+		// Log REQUEST body (for PUT and POST requests)
+		BufferedRequestWrapper wrappedRequest = new BufferedRequestWrapper(request);
 		if (logger.isDebugEnabled()) {
-			if (wrap.getBufferedContent().length > 0) {
-				String requestBody = this.getContentAsString(wrap.getBufferedContent(), this.maxPayloadLength, request.getCharacterEncoding());
+			if (wrappedRequest.getBufferedContent().length > 0) {
+				String requestBody = this.getContentAsString(wrappedRequest.getBufferedContent(), this.maxPayloadLength, request.getCharacterEncoding());
 				if (requestBody.indexOf("\n") > 0) {
 					this.logger.debug("   Request body:\n" + requestBody);
 				} else {
-					this.logger.debug("   Request body: " + requestBody);
+					this.logger.debug("   " + requestBody);
 				}
 			} else {
 				if (HttpMethod.POST.matches(request.getMethod()) || HttpMethod.PUT.matches(request.getMethod())) {
-					this.logger.debug("   " + reqInfo + " EMPTY body in "+request.getMethod());
+					this.logger.debug("   " + requestId + " EMPTY body in "+request.getMethod());
 				}
 			}
 		}
 
+		// Also wrap the response, so that we can log the response payload and the payload is still available
+		ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
+
 		// ======== perform the actual HTTP request ==========
-    filterChain.doFilter(wrap, wrappedResponse);
+    filterChain.doFilter(wrappedRequest, wrappedResponse);
 		// ===================================================
 
-		// Log response
+		// Log RESPONSE body
     long duration = System.currentTimeMillis() - startTime;
     this.logger.debug("<= " + reqInfo + " returned " + response.getStatus() + " in "+duration + "ms.");
     if (includeResponsePayload && wrappedResponse.getContentSize() > 0) {
@@ -156,6 +162,7 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     }
 
     wrappedResponse.copyBodyToResponse();  // IMPORTANT: copy content of response back into original response
+
   }
 
 	/* Spring own implementation is nearly ok, but it cannot log the request type

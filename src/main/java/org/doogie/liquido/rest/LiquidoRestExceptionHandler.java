@@ -57,12 +57,26 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 
 	@Override
 	protected ResponseEntity<Object> handleExceptionInternal(Exception ex, Object body, HttpHeaders headers, HttpStatus status, WebRequest request) {
-		log.debug("REST Exception "+ex.toString());
+		log.debug("REST throws "+ex.toString());
 		if (HttpStatus.INTERNAL_SERVER_ERROR.equals(status)) {
 			request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, ex, WebRequest.SCOPE_REQUEST);
 		}
 		if (body == null) {
 			body = getMessageAsJson(ex, request);
+		}
+		if (log.isDebugEnabled()) {
+			try {
+				log.debug(body.toString());
+				//StackTraceElement[] firstElems = Arrays.copyOfRange(ex.getStackTrace(), 0, Math.min(5, ex.getStackTrace().length));
+				//bodyOfResponse.put("stacktrace", firstElems);    // this will be nicely serialized as JSON by my Lson utility   => but I decided to NOT return exceptions to the client!
+				for (int i = 0; i < 5; i++) {
+					if (ex.getStackTrace().length > i) {
+						log.debug("   "+ex.getStackTrace()[i].toString());
+					}
+				}
+			} catch (Throwable ignore) {
+				log.warn("something very bad happend.");
+			}
 		}
 		return new ResponseEntity<>(body, headers, status);
 	}
@@ -102,20 +116,6 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 			bodyOfResponse.put("remoteUser", request.getRemoteUser());
 		} catch (Throwable ignore) { }
 
-		if (log.isDebugEnabled()) {
-			try {
-				log.debug("LiquidoException:\n"+bodyOfResponse.toPrettyString());
-				//StackTraceElement[] firstElems = Arrays.copyOfRange(ex.getStackTrace(), 0, Math.min(5, ex.getStackTrace().length));
-				//bodyOfResponse.put("stacktrace", firstElems);    // this will be nicely serialized as JSON by my Lson utility   => but I decided to NOT return exceptions to the client!
-				for (int i = 0; i < 5; i++) {
-					if (ex.getStackTrace().length > i) {
-						log.debug("   "+ex.getStackTrace()[i].toString());
-					}
-				}
-			} catch (Throwable ignore) {
-				log.warn("something very bad happend.");
-			}
-		}
 		return bodyOfResponse;
 	}
 
