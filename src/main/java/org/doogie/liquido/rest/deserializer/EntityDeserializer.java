@@ -3,6 +3,7 @@ package org.doogie.liquido.rest.deserializer;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.fasterxml.jackson.databind.jsontype.TypeDeserializer;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.springframework.data.repository.CrudRepository;
@@ -43,15 +44,13 @@ public class EntityDeserializer<T> extends StdDeserializer<T> {
 
 	/** JPA repository for this model */
 	private CrudRepository<T, Long> repo;
+
 	/** part of the uri before the ID (normally in plural!) e.g.  "users" in  /api/users/4711 */
 	private String pathSegment;
-
-	//private Class<T> type;
 
 	public EntityDeserializer(CrudRepository<T, Long> rep, Class<T> clazz) {
 		super(clazz);
 		if (rep == null || clazz == null) throw new IllegalArgumentException("Need rep and clazz!");
-		//this.type = clazz;    // Nice hack
 		this.repo = rep;
 		this.pathSegment = repo.getClass().getInterfaces()[0].getAnnotation(RepositoryRestResource.class).path();
 	}

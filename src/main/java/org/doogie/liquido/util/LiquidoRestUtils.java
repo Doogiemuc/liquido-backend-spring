@@ -20,7 +20,7 @@ public class LiquidoRestUtils {
 	 */
 	public static Long getIdFromURI(String entityName, String uri) {
 		if (entityName == null || uri == null)
-			throw new IllegalArgumentException("Cannot getIdFromURI. Need entityName and uri!");
+			throw new IllegalArgumentException("Cannot getIdFromURI. Need entityName and uri! (entityName="+entityName+", uri="+uri+")");
 		// RegEx: non-greedy prefix when passing a fully qualified URI,
 		// then optionally the entityName enclosed with / and
 		// then a number at the end

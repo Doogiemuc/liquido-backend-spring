@@ -2,7 +2,9 @@ package org.doogie.liquido.rest.dto;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.rest.deserializer.LawModelDeserializer;
@@ -16,6 +18,8 @@ import java.util.stream.Collectors;
  * POST /castVote
  */
 @Data
+@RequiredArgsConstructor
+@NoArgsConstructor
 public class CastVoteRequest {
 	/** a poll */
 	@NonNull
@@ -24,7 +28,7 @@ public class CastVoteRequest {
 
 	/** Ordered list of URIs, one for each proposal in VOTING. */
 	@NonNull
-	@JsonDeserialize(contentUsing = LawModelDeserializer.class)   // deserialize list elements with this class
+	@JsonDeserialize(contentUsing = LawModelDeserializer.class)   		// deserialize list elements with this class
 	List<LawModel> voteOrder;
 
 	/**

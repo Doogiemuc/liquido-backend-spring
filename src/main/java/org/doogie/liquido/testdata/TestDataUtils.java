@@ -92,7 +92,7 @@ public class TestDataUtils {
 
 	public void printDelegationTree(AreaModel area, UserModel proxy) {
 		if (proxy == null) return;
-		UserModel dummyUser = new UserModel("aboveTopProxy@dummy.org");
+		UserModel dummyUser = new UserModel("aboveTopProxy@dummy.org", "Dummy User", "123567", "", "");
 		DelegationModel dummyTopProxyDel = new DelegationModel(area, proxy, dummyUser);
 		Function<DelegationModel, List<DelegationModel>> getChildrenFunc = del -> delegationRepo.findByAreaAndToProxy(area, del.getFromUser())
 				.stream().collect(Collectors.toList());

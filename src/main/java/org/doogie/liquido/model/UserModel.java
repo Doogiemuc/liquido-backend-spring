@@ -17,8 +17,7 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(of="email", callSuper = true)    // Compare users by their uniquie e-mail  (and ID)
 @Entity
 @NoArgsConstructor
-@RequiredArgsConstructor
-@EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
+@EntityListeners(AuditingEntityListener.class)  		// automatically set UpdatedAt and CreatedAt
 @Table(name = "users")
 public class UserModel extends BaseModel {
   @NotNull
@@ -34,6 +33,11 @@ public class UserModel extends BaseModel {
 	 */
 	public long authyId;
 
+	@Embedded
+	public UserProfileModel profile;
+
+	/** timestamp of last login */
+	LocalDateTime lastLogin;
 
 	public UserModel(String email, String name, String mobilephone, String website, String picture) {
 		if (email == null || email.length() == 0) throw new IllegalArgumentException("Need at least an email to create a UserModel");
@@ -44,12 +48,6 @@ public class UserModel extends BaseModel {
 		this.profile.setWebsite(website);
 		this.profile.setPicture(picture);
 	}
-
-	@Embedded
-	public UserProfileModel profile;
-
-	/** timestamp of last login */
-	LocalDateTime lastLogin;
 
   @Override
   public String toString() {
