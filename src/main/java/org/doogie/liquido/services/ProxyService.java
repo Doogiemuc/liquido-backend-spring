@@ -87,6 +87,24 @@ public class ProxyService {
 	/**
 	 * User forwards his right to vote to a proxy in one area.
 	 *
+	 * @param area area in which to assign the proxy
+	 * @param fromUser voter that forwards his right to vote
+	 * @param proxy proxy that receives the right and thus can vote in place of fromUser
+	 * @param userVoterToken user's voterToken, so that we calculate his checksum.
+	 * @return DelegationModel requested or already accepted delegation
+	 * @throws LiquidoException when the assignment would builder a circular proxy chain or when voterToken is invalid
+	 */
+	public DelegationModel assignProxy(AreaModel area, UserModel fromUser, UserModel proxy, String userVoterToken) throws LiquidoException {
+		//----- validate voterToken and get voters checksumModel, so that we can delegate it to the proxies checksum anonymously.
+		//TODO: How to check if the passed voterToken is from the currently logged in user?  (Currently this would be possible. As long as the server can create voterTokens for himself.)
+		RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(userVoterToken);
+		Optional<RightToVoteModel> rightToVoteOfProxy = getRightToVoteOfPublicProxy(area, proxy);
+		return assignProxy(area, fromUser, proxy, rightToVote, rightToVoteOfProxy);
+	}
+
+	/**
+	 * Forward own right to vote to a proxy in one area
+	 *
 	 * After some sanity checks, this methods checks for a circular delegation which would be forbidden.
 	 * If toProxy is a public proxy, then we can directly delegate user's checksum to the public proxie's checksum.
 	 * Otherwise we store a delegation request, so that the proxy needs to accept the delegation.
@@ -98,26 +116,10 @@ public class ProxyService {
 	 * when looking at the tree of delegations. The ChecksumModel only have their delegatedTo set, after the delegation
 	 * is accepted by the proxy.
 	 *
-	 * @param area area in which to assign the proxy
-	 * @param fromUser voter that forwards his right to vote
-	 * @param proxy proxy that receives the right and thus can vote in place of fromUser
-	 * @param userVoterToken user's voterToken, so that we calculate his checksum.
-	 * @return DelegationModel requested or already accepted delegation
-	 * @throws LiquidoException when the assignment would builder a circular proxy chain or when voterToken is invalid
-	 */
-	@Transactional
-	public DelegationModel assignProxy(AreaModel area, UserModel fromUser, UserModel proxy, String userVoterToken) throws LiquidoException {
-		//----- validate voterToken and get voters checksumModel, so that we can delegate it to the proxies checksum anonymously.
-		//TODO: How to check if the passed voterToken is from the currently logged in user?  (Currently this would be possible. As long as the server can create voterTokens for himself.)
-		RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(userVoterToken);
-		Optional<RightToVoteModel> rightToVoteOfProxy = getRightToVoteOfPublicProxy(area, proxy);   // get checksumModel of public proxy (may be null!)
-		return assignProxy(area, fromUser, proxy, rightToVote, rightToVoteOfProxy);
-	}
-
-	/**
 	 * This part of assigning a proxy was refactored into its own (private) method, because
 	 * when a proxy accepts pending delegations, we already have the checksum of the delegee, but not his voter token which is confidential.
-	 * @return the voter's checksum that is then either delegated or requested the delegation to proxy
+	 *
+	 * @return DelegationModel with requested or already accepted delegation
 	 */
 	@Transactional
 	private DelegationModel assignProxy(AreaModel area, UserModel fromUser, UserModel proxy, RightToVoteModel rightToVote, Optional<RightToVoteModel> proxyRightToVote) throws LiquidoException {

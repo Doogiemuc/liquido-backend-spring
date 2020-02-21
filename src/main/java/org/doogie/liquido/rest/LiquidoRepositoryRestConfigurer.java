@@ -1,11 +1,18 @@
 package org.doogie.liquido.rest;
 
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
+import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.converters.LiquidoUriToEntityConverter;
+import org.doogie.liquido.rest.deserializer.AreaModelDeserializer;
+import org.doogie.liquido.rest.deserializer.LawModelDeserializer;
+import org.doogie.liquido.rest.deserializer.PollModelDeserializer;
+import org.doogie.liquido.rest.deserializer.UserModelDeserializer;
 import org.doogie.liquido.util.DoogiesRequestLogger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -39,17 +46,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @ComponentScan("org.doogie.liquido")
 public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer {
 
-  /**
-   * configure super advanced and elaborate logging of HTTP requests and responses
-   * Log each request with ReqID, full Request URI and its duration in ms.
-   * @return DoogiesRequestLogger
-   */
-  @Bean
-  public OncePerRequestFilter requestLoggingFilter() {
-    return new DoogiesRequestLogger();
-  }
-
-
   @Override
   public void configureRepositoryRestConfiguration(RepositoryRestConfiguration config) {
     log.debug("Configuring RepositoryRestconfiguration under basePath='"+config.getBasePath().toString()+"',  baseURI='"+config.getBaseUri().toString()+"'");
@@ -68,7 +64,8 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
     config.exposeIdsFor(PollModel.class);
 		config.exposeIdsFor(BallotModel.class);
     config.exposeIdsFor(RightToVoteModel.class);
-    //TODO: config.getCorsRegistry().addMapping("").allowedOrigins("*/*");   //when available in future version of spring: config.getCorsRegistry()
+
+		//TODO: config.getCorsRegistry().addMapping("*").allowedOrigins("*/*");
 
   }
 
@@ -77,8 +74,6 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 	 * https://stackoverflow.com/questions/33288486/using-a-spring-data-rest-projection-as-a-representation-for-a-resource-in-a-cus
 	 */
 	@Bean public CollectionAwareProjectionFactory projectionFactory() { return new CollectionAwareProjectionFactory(); }
-
-  // see also LiquidoAuditorAware for handling @CreatedBy   https://jaxenter.com/rest-api-spring-java-8-112289.html
 
 
 	/* DEPRECATED.  This worked, but now I have my  org.doogie.liquido.rest.deserializer.*  @JsonComponent
@@ -105,8 +100,13 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 	}
   */
 
+	/*
+
 	@Autowired
 	AreaRepo areaRepo;
+
+	@Autowired
+	UserRepo userRepo;
 
 	@Autowired
 	LawRepo lawRepo;
@@ -114,27 +114,33 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 	@Autowired
 	PollRepo pollRepo;
 
+
+	/**
+	 * Register custom deserializer as Jackson 2 module, so that we can
+	 * @return Jackson 2 Module as Bean
+	 *
+	@Bean
+	public Module userModelDeserializer() {
+		SimpleModule module = new SimpleModule();
+		module.addDeserializer(UserModel.class, new UserModelDeserializer(userRepo));
+		return module;
+	}
+
 	/**
 	 * Add converters for REST RequestParams that can deserialize from HATEOAS URIs to spring data entities.
 	 * This is used when the client passes an areaId in rest URLs as PathParameters.
 	 * @param conversionService springs conversion service, that we'll addConverter() to
-	 */
+
 	@Override
 	public void configureConversionService(ConfigurableConversionService conversionService) {
 		//BUGFIX: must add source and target type when using generic parametrized converter
 		conversionService.addConverter(String.class, AreaModel.class, new LiquidoUriToEntityConverter<>(areaRepo, AreaModel.class));
 		conversionService.addConverter(String.class, LawModel.class,  new LiquidoUriToEntityConverter<>(lawRepo,  LawModel.class));
 		conversionService.addConverter(String.class, PollModel.class, new LiquidoUriToEntityConverter<>(pollRepo, PollModel.class));
+		conversionService.addConverter(String.class, UserModel.class, new LiquidoUriToEntityConverter<>(userRepo, UserModel.class));
 	}
+	*/
 
-	/*  DEPRECATED
-  @Override
-  public void configureHttpMessageConverters(List<HttpMessageConverter<?>> messageConverters) {
-    log.debug("====== adding HttpMessageConverter in RepositoryRestConfigurer");
-    messageConverters.add(new JoinPollRequestConverter());     something that extends AbstractHttpMessageConverter<JoinPollRequest>
-    super.configureHttpMessageConverters(messageConverters);
-  }
-  */
 
 
   /*
@@ -151,21 +157,6 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
   }
   */
 
-  /*
-   * This is necessary for being able to return plain JSON strings from REST controllers
-   * http://stackoverflow.com/questions/15507064/return-literal-json-strings-in-spring-mvc-responsebody
-   * @param messageConverters
-  @Override
-  public void configureHttpMessageConverters(List<HttpMessageConverter<?>> messageConverters) {
-    StringHttpMessageConverter stringConverter = new StringHttpMessageConverter();
-    stringConverter.setSupportedMediaTypes(Arrays.asList(
-      MediaType.APPLICATION_JSON,
-      MediaType.APPLICATION_JSON_UTF8,
-      MediaType.TEXT_PLAIN
-    ));
-    messageConverters.add(stringConverter);
-  }
-  */
 
 
 }

@@ -29,7 +29,6 @@ import java.util.Set;
  *
  * The title of every idea must be globally unique!
  */
-//Lombok @Data does not work very well with spring. Need to use the individual annotations
 @Getter
 @Setter
 @EqualsAndHashCode(of = {"title"}, callSuper = true)

@@ -110,9 +110,8 @@ public class ProxyRestController {
 	 */
 	@RequestMapping(value = "/my/proxy/{areaId}", method = PUT)
 	@ResponseStatus(value = HttpStatus.CREATED)
-	public
-	ResponseEntity assignProxy(@PathVariable("areaId") AreaModel area,	@RequestBody AssignProxyRequest assignProxyRequest) throws LiquidoException {
-		log.info("assignProxy in area(id="+area+assignProxyRequest+")");
+	public ResponseEntity assignProxy(@PathVariable("areaId") AreaModel area,	@RequestBody AssignProxyRequest assignProxyRequest) throws LiquidoException {
+		log.info("assignProxy " + assignProxyRequest + " in area(id=" + area.getId() + ")");
 		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
 				.orElseThrow(()-> new  LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Cannot save Proxy. Need an authenticated user."));
 		DelegationModel delegation = proxyService.assignProxy(area, currentUser, assignProxyRequest.getToProxy(), assignProxyRequest.getVoterToken());

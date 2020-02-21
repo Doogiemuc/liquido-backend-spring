@@ -86,7 +86,7 @@ public class CastVoteService {
 	 */
 	@Transactional
 	public String createVoterTokenAndStoreRightToVote(UserModel voter, AreaModel area, String voterTokenSecret, boolean becomePublicProxy) throws LiquidoException {
-		log.debug("createVoterTokenAndStoreRightToVote: for "+voter+" in "+area + ", becomePublicProxy="+becomePublicProxy);
+		log.debug("createVoterTokenAndStoreRightToVote: for "+voter.toStringShort()+" in "+area + ", becomePublicProxy="+becomePublicProxy);
  		if (voter == null || DoogiesUtil.isEmpty(voter.getEmail()))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need voter to build a voterToken!");
 		if (area == null)
