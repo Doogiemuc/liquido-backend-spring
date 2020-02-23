@@ -10,6 +10,7 @@ import org.doogie.liquido.rest.dto.LawQuery;
 import org.doogie.liquido.services.LawService;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +31,7 @@ import java.util.Optional;
 @Slf4j
 @RunWith(SpringRunner.class)
 @SpringBootTest
-@Transactional   // needed to prevent LazyInitalizationException when getting law.comments in law.toString()
+//@Transactional   // needed to prevent LazyInitalizationException when getting law.comments in law.toString()
 public class LawServiceTests extends BaseTest {
 
 	@Autowired

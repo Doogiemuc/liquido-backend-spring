@@ -23,7 +23,6 @@ import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.Table;
 import java.io.*;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
@@ -63,6 +62,8 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * http://www.sureshpw.com/2014/05/importing-json-with-references-into.html
  * http://www.generatedata.com/
  * https://docs.spring.io/spring/docs/current/spring-framework-reference/testing.html#testcontext-ctx-management-env-profiles
+ * https://stackoverflow.com/questions/8523423/reset-embedded-h2-database-periodically    -- how to drop H2 DB completely
+ *
  *
  * I already tried to refoctor this TestDataCreator into its own module. But this is not possible,
  * because this class depends so closely on pretty much every liquido service. And this is a good thing.
@@ -194,7 +195,7 @@ public class TestDataCreator implements CommandLineRunner {
 
 			log.info("===== TestDataCreator: Store sample data in file: "+ TEST_DATA_PATH + TEST_DATA_FILENAME);
 			jdbcTemplate.execute("SCRIPT TO '"+ TEST_DATA_PATH + TEST_DATA_FILENAME +"'");				//TODO: export schema only with  SCRIPT NODATA TO ...   and export MySQL compatible script!!!
-			removeQartzSchema();
+			adjustDbInitializationScript();
 			log.info("===== TestDataCreator: Sample data stored successfully in file: "+ TEST_DATA_PATH + TEST_DATA_FILENAME);
     }
 
@@ -219,7 +220,7 @@ public class TestDataCreator implements CommandLineRunner {
 				log.info("Loaded {} checksums.", rightToVoteRepo.count());
 				log.info("Loaded {} comments.", commentRepo.count());
 
-				log.info("TestDataCreator: Loading schema and sample data from "+ TEST_DATA_FILENAME +" => DONE");
+				log.info("===== TestDataCreator: Successfully loaded schema and sample data from "+ TEST_DATA_FILENAME +" => DONE");
 			} catch (SQLException e) {
 				String errMsg = "ERROR: Cannot load schema and sample data from "+ TEST_DATA_FILENAME;
 				log.error(errMsg);
@@ -227,30 +228,36 @@ public class TestDataCreator implements CommandLineRunner {
 			}
 		}
 
-		Optional<AreaModel> area = areaRepo.findByTitle(TestFixtures.AREA_FOR_DELEGATIONS);
-		Optional<UserModel> topProxyOpt = userRepo.findByEmail(TestFixtures.USER1_EMAIL);			// user1 is the topmost proxy in TestFixtures.java
-  	if (area.isPresent() && topProxyOpt.isPresent()) {
-			UserModel topProxy = topProxyOpt.get();
-			log.debug("====== TestDataCreator: Proxy tree =====");
-			utils.printProxyTree(area.get(), topProxy);
+    if (seedDB || loadSampleDataFromSqlScript) {
+			Optional<AreaModel> area = areaRepo.findByTitle(TestFixtures.AREA_FOR_DELEGATIONS);
+			Optional<UserModel> topProxyOpt = userRepo.findByEmail(TestFixtures.USER1_EMAIL);      // user1 is the topmost proxy in TestFixtures.java
+			if (area.isPresent() && topProxyOpt.isPresent()) {
+				UserModel topProxy = topProxyOpt.get();
+				log.debug("====== TestDataCreator: Proxy tree =====");
+				utils.printProxyTree(area.get(), topProxy);
 
-			log.debug("====== TestDataCreator: Tree of delegations =====");
-			utils.printDelegationTree(area.get(), topProxy);
+				log.debug("====== TestDataCreator: Tree of delegations =====");
+				utils.printDelegationTree(area.get(), topProxy);
 
-			try {
-				log.debug("====== TestDataCreator: RightToVotes =====");
-				String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(topProxy, area.get(), TestFixtures.USER_TOKEN_SECRET, false);
-				RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken);
-				utils.printRightToVoteTree(rightToVote);
-			} catch (LiquidoException e) {
-				log.error("Cannot get rightToVote of " + topProxy + ": " + e.getMessage());
+				try {
+					log.debug("====== TestDataCreator: RightToVotes =====");
+					String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(topProxy, area.get(), TestFixtures.USER_TOKEN_SECRET, false);
+					RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken);
+					utils.printRightToVoteTree(rightToVote);
+				} catch (LiquidoException e) {
+					log.error("Cannot get rightToVote of " + topProxy + ": " + e.getMessage());
+				}
 			}
 		}
 
   }
 
 	/**
-	 * Crude hack for nasty race condition.
+	 * We need to "massage" the DB generation script a bit:
+	 *
+	 * (1) We prepend the command <pre>DROP ALL OBJECTS</pre> so that the database is cleaned completely!
+	 *
+	 * (2) And we need a crude hack for nasty race condition:
 	 *
 	 * My nice SQL script contains the schema (CREATE TABLE ...) and data (INSERT INTO...) That way I can
 	 * very quickly init a DB from scratch.  But TestDataCreator runs after my SpringApp has started.
@@ -262,7 +269,7 @@ public class TestDataCreator implements CommandLineRunner {
 	 * The alternative would be do copy the Quartz lines into schema.sql and data.sql
 	 * Then I could also recreate Quartz sample data such as jobs.
 	 */
-	private void removeQartzSchema() {
+	private void adjustDbInitializationScript() {
 		log.trace("removeQartzSchema from SQL script: start");
 		try {
 			File sqlScript = new File(TEST_DATA_PATH + TEST_DATA_FILENAME);
@@ -293,6 +300,10 @@ public class TestDataCreator implements CommandLineRunner {
 			reader.close();
 
 			BufferedWriter writer = new BufferedWriter(new FileWriter(sqlScript));
+			writer.write("-- LIQUIDO  H2 Database initialization script\n");
+			writer.write("-- This script contains the SCHEMA and TEST DATA\n");
+			writer.write("-- BE CAREFULL: This script completely DROPs and RE-CREATES the DB !!!!!\n");
+			writer.write("DROP ALL OBJECTS;\n");
 			for(String line : lines) {
 				writer.write(line);
 				writer.newLine();		//  + System.getProperty("line.separator")
