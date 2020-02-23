@@ -15,14 +15,14 @@ import static org.junit.Assert.*;
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @Slf4j
-//@ActiveProfiles("test")   // Need to manually set test profile for tests, so that application-test.properties is loaded ???
+@Ignore  // currently disabled
+//@ActiveProfiles("test")   // Needed to manually set test profile for tests, so that application-test.properties is loaded ???
 public class MailServiceTest extends BaseTest {
 
 	@Autowired
 	MailService mailService;
 
 	@Test
-	@Ignore  // currently disabled
 	public void testSendEMail() throws Exception {
 		//GIVEN an emailToken
 		String emailToken = "testDummyEmailToken";

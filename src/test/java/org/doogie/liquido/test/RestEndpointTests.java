@@ -31,7 +31,10 @@ import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.*;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.DefaultUriBuilderFactory;
@@ -58,7 +61,8 @@ import static org.springframework.http.HttpMethod.*;
 @Slf4j
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)  // This automatically sets up everything and starts the server.
-//@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)       // Theoretically we coul tun tests against an already running server, e.g. PROD   But that's a lot of work. Instead our Cypress E2E tests can do this much better.
+//@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)       // Theoretically we could tun tests against an already running server, e.g. PROD   But that's a lot of work. Instead our Cypress E2E tests can do this much better.
+// @Sql(scripts="/sampleDB-H2.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)   //TODO: test if I can inject my SQL data this way
 public class RestEndpointTests extends BaseTest {
 
   /** path prefix for REST API from application.properties */

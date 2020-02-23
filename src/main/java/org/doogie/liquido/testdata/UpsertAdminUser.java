@@ -5,6 +5,7 @@ import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.UserModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @Order(1000)   // run "late", after DB schema has been created
+@Profile("dev")
 public class UpsertAdminUser implements CommandLineRunner {
 	@Autowired
 	UserRepo userRepo;
