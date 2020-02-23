@@ -1,5 +1,6 @@
 package org.doogie.liquido.test;
 
+import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.UserRepo;
@@ -19,6 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,12 +32,11 @@ import static org.junit.Assert.*;
 /**
  * Unit Test for Spring DB Repositories
  */
+@Slf4j
 @RunWith(SpringRunner.class)
 @SpringBootTest
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)  //BUGFIX: must make sure that spring application context is reloaded after all tests in this class have run http://www.javarticles.com/2016/03/spring-dirtiescontext-annotation-example.html
+//@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)  //BUGFIX: must make sure that spring application context is reloaded after all tests in this class have run http://www.javarticles.com/2016/03/spring-dirtiescontext-annotation-example.html
 public class RepoTests extends BaseTest {
-  private Logger log = LoggerFactory.getLogger(this.getClass());
-
   @Autowired
   LiquidoAuditorAware auditorAware;
 
