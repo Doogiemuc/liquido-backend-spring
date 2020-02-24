@@ -18,6 +18,7 @@ import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.testdata.TestDataUtils;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
+import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Lson;
 import org.junit.Assert;
 import org.junit.Before;
@@ -28,6 +29,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.*;
@@ -693,6 +695,30 @@ public class RestEndpointTests extends BaseTest {
 		}	catch (PathNotFoundException e) {
   		fail("Expected to find at least one poll in status ELABORATION: "+e.getMessage());
 		}
+	}
+
+	@Test
+	public void testJoinPoll() {
+		// GIVEN a poll in elaboration
+		List<PollModel> pollsInElaboration = pollRepo.findByStatus(PollModel.PollStatus.ELABORATION);
+		assertNotNull("Need at least one poll in voting!", pollsInElaboration.size() > 0);
+		PollModel poll = pollsInElaboration.get(0);
+		log.trace("Join poll: "+poll);
+
+		// AND a proposal
+		Page<LawModel> proposals = lawRepo.findByStatus(LawModel.LawStatus.PROPOSAL, new OffsetLimitPageable(0, 10));
+		assertTrue("Need at least one proposal", proposals.getTotalElements() > 0);
+		LawModel proposal = proposals.iterator().next();
+
+		// WHEN proposal joins the poll
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		HttpEntity<String> requestEntity = new HttpEntity<>("{\"proposal\":\"/proposals/"+proposal.getId()+"\"}", headers);
+		ResponseEntity<PollModel> res = client.postForEntity("/polls/" + poll.getId() + "/join", requestEntity, PollModel.class);
+
+		// THEN HTTP 200 is returned
+		assertEquals("ERROR: Cannot join Poll", HttpStatus.OK, res.getStatusCode());
+		log.trace("Joined Poll successfully\n"+res.getBody().toString());
 	}
 
 

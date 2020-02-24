@@ -17,13 +17,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
-import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -95,17 +95,36 @@ public class PollRestController {
 
 	/**
 	 * Join a proposal into an existing poll (that must be in its ELABORATION phase)
+	 * POST request body must contain <b>one</b> URI of a proposal
 	 * @param poll an existing poll which must be in status == elaboration
-	 * @param proposal a proposal which must be in status "proposal" that wants to join the poll.
+	 * @body URI of proposal in elaboration that wants to join
 	 * @throws LiquidoException if poll is not in its ELABORATION phase or proposal did not reach its quorum yet
 	 */
-  @RequestMapping(value = "/polls/{pollId}/join/{proposalId}", method = RequestMethod.POST)    // POST is not idempotent. Can join a poll only once!
+  @RequestMapping(
+  		value = "/polls/{pollId}/join",						// (A) Client should now know entity IDs <=> (B) I like the structure of API pathes like  /polls/{id}
+			method = RequestMethod.POST,							// This is a POST request, becase POST is _not_ idempotent. Can join a poll only once!
+			consumes = MediaType.APPLICATION_JSON_VALUE 	// There would be "text/uri-list  but I didn't get it to work
+	)
   public @ResponseBody PollModel joinPoll(
-  		@PathVariable(name="pollId") PollModel poll,
-			@PathVariable(name="proposalId") LawModel proposal
-	) throws LiquidoException {
-		log.info("Proposal wants to join poll: "+proposal+" -> "+poll);
-		PollModel updatedPoll = pollService.addProposalToPoll(proposal, poll);
+			@PathVariable(name="pollId") PollModel poll,
+			@RequestBody JoinPollRequest joinPollRequest
+			) throws LiquidoException
+	{
+		//https://stackoverflow.com/questions/49458567/mapping-hal-uri-in-requestbody-to-a-spring-data-rest-managed-entity
+  	/*
+		log.info("Proposal wants to join poll: "+proposalURI+" -> "+poll);
+		Long lawId = -1L;
+		try {
+			lawId = LiquidoRestUtils.getIdFromURI("law", proposalURI);
+		} catch (IllegalArgumentException e) {
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_JOIN_POLL, "Cannot join poll. Invalid URI of proposal: "+proposalURI);
+		}
+		Optional<LawModel> proposal = lawRepo.findById(lawId);
+
+		if (proposal.isPresent()) throw new LiquidoException(LiquidoException.Errors.CANNOT_JOIN_POLL, "Cannot join poll. Cannot find proposal: "+proposalURI);
+
+  	 */
+		PollModel updatedPoll = pollService.addProposalToPoll(joinPollRequest.getProposal(), poll);
 		return updatedPoll;
 	}
 
