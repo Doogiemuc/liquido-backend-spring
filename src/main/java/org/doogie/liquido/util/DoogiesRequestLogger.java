@@ -130,9 +130,9 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
 			if (wrappedRequest.getBufferedContent().length > 0) {
 				String requestBody = this.getContentAsString(wrappedRequest.getBufferedContent(), this.maxPayloadLength, request.getCharacterEncoding());
 				if (requestBody.indexOf("\n") > 0) {
-					this.logger.debug("   Request body:\n" + requestBody);
+					this.logger.debug("=> " + requestId + " body:\n" + requestBody);
 				} else {
-					this.logger.debug("   " + requestBody);
+					this.logger.debug("=> " + requestId + " " + requestBody);
 				}
 			} else {
 				if (HttpMethod.POST.matches(request.getMethod()) || HttpMethod.PUT.matches(request.getMethod())) {

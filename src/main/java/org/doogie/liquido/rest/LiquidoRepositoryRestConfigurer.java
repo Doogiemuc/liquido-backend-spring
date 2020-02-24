@@ -1,31 +1,21 @@
 package org.doogie.liquido.rest;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.*;
-import org.doogie.liquido.rest.converters.LiquidoUriToEntityConverter;
-import org.doogie.liquido.rest.deserializer.AreaModelDeserializer;
-import org.doogie.liquido.rest.deserializer.LawModelDeserializer;
-import org.doogie.liquido.rest.deserializer.PollModelDeserializer;
-import org.doogie.liquido.rest.deserializer.UserModelDeserializer;
-import org.doogie.liquido.util.DoogiesRequestLogger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.convert.support.ConfigurableConversionService;
 import org.springframework.data.jpa.projection.CollectionAwareProjectionFactory;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.rest.core.config.RepositoryRestConfiguration;
 import org.springframework.data.rest.core.mapping.RepositoryDetectionStrategy;
 import org.springframework.data.rest.webmvc.config.RepositoryRestConfigurer;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
-import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
  * Configure the exposed REST HATEOAS services.
@@ -46,7 +36,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @ComponentScan("org.doogie.liquido")
 public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer {
 
-  @Override
+	@Override
   public void configureRepositoryRestConfiguration(RepositoryRestConfiguration config) {
     log.debug("Configuring RepositoryRestconfiguration under basePath='"+config.getBasePath().toString()+"',  baseURI='"+config.getBaseUri().toString()+"'");
 
@@ -100,7 +90,7 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 	}
   */
 
-	/*
+
 
 	@Autowired
 	AreaRepo areaRepo;
@@ -114,6 +104,7 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 	@Autowired
 	PollRepo pollRepo;
 
+	/*
 
 	/**
 	 * Register custom deserializer as Jackson 2 module, so that we can
@@ -141,9 +132,7 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 	}
 	*/
 
-
-
-  /*
+	/*
    * Automatically generated Swagger REST API documentation
    * @return the configured docket bean
   @Bean

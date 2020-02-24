@@ -15,6 +15,11 @@ public class Matrix {
 
 	private long[][] data;
 
+	/** empty constructor is needed, e.g. for Jackson */
+	public Matrix() {
+		this(0,0);
+	}
+
 	/**
 	 * Create a new matrix. All values are 0 by default.
 	 * An empty Matrix of limit 0,0 is allowed.
