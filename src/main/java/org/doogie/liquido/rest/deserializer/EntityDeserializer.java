@@ -57,7 +57,7 @@ public class EntityDeserializer<T> extends StdDeserializer<T> {
 
 	@Override
 	public T deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-		/*  This way one could automatically get the CrudRepository
+		/*  This way one could automatically get the CrudRepository. But I cannot inject an @Autowire WebApplicationContext here.
 		Repositories repositories = new Repositories(appContext);
 		Object obj = repositories.getRepositoryFor(type)  // <=== Here we need the Class<T> hack
 				.orElseThrow(() -> new RuntimeException("Cannot find repo for "));

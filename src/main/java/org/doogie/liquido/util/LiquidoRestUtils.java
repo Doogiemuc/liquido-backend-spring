@@ -1,5 +1,6 @@
 package org.doogie.liquido.util;
 
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
 import java.util.regex.Matcher;
@@ -8,14 +9,19 @@ import java.util.regex.Pattern;
 @Service
 public class LiquidoRestUtils {
 
+	/** HTTP Media Type */
+	public static final String TEXT_URI_LIST_VALUE = "text/uri-list";
+	public static final MediaType TEXT_URI_LIST = new MediaType("text", "uri-list");
+
 	/**
 	 * Quick and dirty hack to get the entity ID from an URI.
 	 * There is no other clean way to load a HATEOAS entity from its URI.
 	 *
 	 * If you need the other way round, if you need a link for an entity, then you can use {@link org.springframework.hateoas.server.EntityLinks#linkForItemResource(Class, Object)}}
 	 *
-	 * @param entityName the name of the entitry in the URI == the @RepositoryRestResource(path="...")
-	 * @param uri        a relative or fully qualified uri of a spring data rest entity. (links.self.href or e.g. "/areas/21/"
+	 * @param entityName the name of the entitry in the URI in its plural form. See @RepositoryRestResource(path="..."),  e.g. "users" or "laws"
+	 * @param uri        a relative or fully qualified uri of a spring data rest entity. (e.g. "/areas/21/", "/liquido/v2/users/48")
+	 * @throws IllegalArgumentException if uri is not a valid uri for the given entity
 	 * @return the internal db ID of the entity, i.e. just simply the number at the end of the string.
 	 */
 	public static Long getIdFromURI(String entityName, String uri) {
