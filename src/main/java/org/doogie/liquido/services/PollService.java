@@ -98,7 +98,8 @@ public class PollService {
   }
 
   /**
-   * Add a proposals (ie. an ideas that reached its quorum) to an existing poll and save the poll.
+   * Add a proposals (ie. an ideas that reached its quorum) to an already existing poll and save the poll.
+	 * The poll must be in ELABORATION phase.
    * @param proposal a proposal (in status PROPOSAL)
    * @param poll a poll in status ELABORATION
    * @return the newly created poll

@@ -308,20 +308,22 @@ public class LawService {
   }
 
   /**
-   * Sever side search for ideas, proposals and laws. With advanced filter capabilities.
+   * Sever side search for ideas, proposals and laws. With advanced paging and filter capabilities.
+   * This can for example be used to create an data table with automatic data fetching.
    * @param lawQuery search criteria for LawModels
    * @return list of LawModels that match the given query
    */
   public Page<LawModel> findBySearchQuery(LawQuery lawQuery) {
-    //TODO: make it possible to also search for recently discussed and "trending" proposals
+    // Build a a spring-data-jpa Specification from lawQuery
+    // Create an OffsetLimitPageable from the offset and limit data in lawQuery
+    // Then find all matching LawModels from the Repo
     Specification<LawModel> spec = matchesQuery(lawQuery);
-
     OffsetLimitPageable pageable = lawQuery.getSortByProperties().size() == 0
       ? new OffsetLimitPageable(lawQuery.getOffset(), lawQuery.getLimit())
       : new OffsetLimitPageable(lawQuery.getOffset(), lawQuery.getLimit(), Sort.by(lawQuery.getDirection(), lawQuery.getSortByPropertiesAsStringArray()));
-
-    //Implementation note: This couldn't be implemented as a LawRepoCustomImpl, because I could not autowire LawRepo in the custom impl class.
     return lawRepo.findAll(spec, pageable);
+
+    // Remark: There are extra searches, e.g. for recently discussed proposals in LawRepo
   }
 }
 

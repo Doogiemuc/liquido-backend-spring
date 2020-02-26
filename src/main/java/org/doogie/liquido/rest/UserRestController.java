@@ -256,7 +256,7 @@ public class UserRestController {
 				.put("recentlyDiscussedProposals", recentlyDiscussed);
 
 	  //stuff by others
-		//result.put("trendingProposals", trendingProposals)    //TODO: what are "trendingProposals"=> improve lawService.getRecentlyDiscussed ? :-)
+		//result.put("trendingProposals", trendingProposals)    //TODO: what are "trendingProposals"=> improve lawService.getRecentlyDiscussed
 
 		return result;
 

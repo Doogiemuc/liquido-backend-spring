@@ -23,12 +23,15 @@ import java.util.Enumeration;
  * There is also {@link org.springframework.web.filter.CommonsRequestLoggingFilter}  but it cannot log request method
  * And it cannot easily be extended.
  *
+ * <b></b>This logger will only log anything if the current log level is at least DEBUG.</b>
+ *
  * https://mdeinum.wordpress.com/2015/07/01/spring-framework-hidden-gems/
  * http://stackoverflow.com/questions/8933054/how-to-read-and-copy-the-http-servlet-response-output-stream-content-for-logging
  */
 @Component
 public class DoogiesRequestLogger extends OncePerRequestFilter {
 
+	/** We can log the HTTP request response body content. */
 	@Value("${liquido.debug.log.includeResponsePayload:false}")
   private boolean includeResponsePayload;
 
@@ -46,7 +49,7 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
       if (buf.length > maxLength) s = s + " [...]";
       return s;
     } catch (UnsupportedEncodingException ex) {
-      return "Unsupported Encoding";
+      return "ERROR: Unsupported Encoding";
     }
   }
 
@@ -108,7 +111,7 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     this.logger.debug("=> " + reqInfoLong);
 
     if (logRequestHeaders) {
-    	this.logger.debug("   Request Headers:");
+    	this.logger.debug(" └─ Request Headers:");
 	    Enumeration<String> hnames = request.getHeaderNames();
       while (hnames.hasMoreElements()) {
       	String name  = hnames.nextElement();
@@ -121,22 +124,20 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
     // We CANNOT simply read the request payload here, because then the InputStream would be consumed and cannot be read again by the actual processing/server.
     // DO NOT DO THIS:  this.logger.debug("Request body: "+DoogiesUtil._stream2String(request.getInputStream()));
     // Springs ContentCachingRequestWrapper works, but it can only log the request body AFTER the request was sent.
-    // So we need to apply some stronger magic on Dumbledore Level
 
-
-		// Log REQUEST body (for PUT and POST requests)
+		// So we need to apply some stronger magic on Dumbledore Level  to be able to log the REQUEST body of PUT and POST requests, BEFORE we can send the request.
 		BufferedRequestWrapper wrappedRequest = new BufferedRequestWrapper(request);
 		if (logger.isDebugEnabled()) {
 			if (wrappedRequest.getBufferedContent().length > 0) {
 				String requestBody = this.getContentAsString(wrappedRequest.getBufferedContent(), this.maxPayloadLength, request.getCharacterEncoding());
 				if (requestBody.indexOf("\n") > 0) {
-					this.logger.debug("=> " + requestId + " body:\n" + requestBody);
+					this.logger.debug(" └─" + " body:\n" + requestBody);
 				} else {
-					this.logger.debug("=> " + requestId + " " + requestBody);
+					this.logger.debug(" └─" + requestBody);
 				}
 			} else {
 				if (HttpMethod.POST.matches(request.getMethod()) || HttpMethod.PUT.matches(request.getMethod())) {
-					this.logger.debug("   " + requestId + " EMPTY body in "+request.getMethod());
+					this.logger.debug(" └─" + requestId + " EMPTY body in "+request.getMethod());
 				}
 			}
 		}
@@ -150,14 +151,14 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
 
 		// Log RESPONSE body
     long duration = System.currentTimeMillis() - startTime;
-    this.logger.debug("<= " + reqInfo + " returned " + response.getStatus() + " in "+duration + "ms.");
+    this.logger.debug("<= " + requestId + " returned " + response.getStatus() + " in "+duration + "ms. " + reqInfo);
     if (includeResponsePayload && wrappedResponse.getContentSize() > 0) {
       byte[] buf = wrappedResponse.getContentAsByteArray();
       String responseStr = getContentAsString(buf, this.maxPayloadLength, response.getCharacterEncoding());
       if (responseStr.indexOf("\n") > 0) {
-	      this.logger.debug("   server's response body:\n"+responseStr);
+	      this.logger.debug(" └─ server's response body:\n"+responseStr);
       } else {
-	      this.logger.debug("   server's response body: "+responseStr);
+	      this.logger.debug(" └─ server's response body: "+responseStr);
       }
     }
 
@@ -165,7 +166,7 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
 
   }
 
-	/* Spring own implementation is nearly ok, but it cannot log the request type
+	/* Spring own implementation is nearly ok, but it cannot log the request type and it cannot log the response body
 	@Bean
 	public CommonsRequestLoggingFilter requestLoggingFilter() {
 		log.debug("Configuring request logging filter");

@@ -1,5 +1,6 @@
 package org.doogie.liquido.datarepos;
 
+import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.LawProjection;
 import org.doogie.liquido.model.UserModel;
@@ -31,11 +32,15 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>
 {
   // Spring Data reference Doc: https://docs.spring.io/spring-data/rest/docs/current/reference/html/
 
-
   Optional<LawModel> findByTitle(@Param("title") String title);   // title is unique!
 
   /** can for example be used to find all with status=IDEA. Supports paging */
   Page<LawModel> findByStatus(@Param("status") LawModel.LawStatus status, Pageable p);
+
+  /** find a idea/proposal/law by its status in one given area */
+  Page<LawModel> findByStatusAndArea(@Param("status") LawModel.LawStatus status, @Param("area") AreaModel area, Pageable p);
+
+  //See lawService.findBySearchQuery
 
   /**
    * find recently created ideas
@@ -106,12 +111,12 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>
 
   /**
    * Get proposals that have a comment newer than the passed ate
-   * @param since a day in the past. Format <pre>yyyy-MM-dd</pre>
+   * @param since a day in the past. Format ISO.DATE_TIME  <pre>yyyy-MM-ddZ12:00:00Z</pre>
    * @return list of LawModels (they will at least be in status PROPOSAL because they have comments)
    */
   @RestResource(path = "recentlyDiscussed")
   @Query("SELECT distinct l FROM LawModel l JOIN CommentModel c ON c.proposal = l WHERE l.status = 1 AND c.createdAt > :since")  // Cannot order by c.createdAt desc   :-(
-  List<LawModel> getRecentlyDiscussed(@DateTimeFormat(pattern = "yyyy-MM-dd") @Param("since") Date since);
+  List<LawModel> getRecentlyDiscussed(@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) @Param("since") Date since);
 
   @Query("SELECT distinct l FROM LawModel l JOIN CommentModel c ON c.proposal = l WHERE l.status = 1 AND c.createdAt > :since AND l.createdBy = :createdBy")  // Cannot order by c.createdAt desc   :-(
   List<LawModel> getRecentlyDiscussed(@DateTimeFormat(pattern = "yyyy-MM-dd") @Param("since") Date since, UserModel createdBy);
