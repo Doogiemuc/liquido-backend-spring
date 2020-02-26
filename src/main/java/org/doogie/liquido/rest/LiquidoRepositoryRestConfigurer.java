@@ -6,10 +6,12 @@ import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.*;
+import org.doogie.liquido.rest.converters.LiquidoUriToEntityConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.support.ConfigurableConversionService;
 import org.springframework.data.jpa.projection.CollectionAwareProjectionFactory;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.rest.core.config.RepositoryRestConfiguration;
@@ -119,18 +121,21 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 
 	/**
 	 * Add converters for REST RequestParams that can deserialize from HATEOAS URIs to spring data entities.
-	 * This is used when the client passes an areaId in rest URLs as PathParameters.
+	 * This is used when the client passes an URI, e.g. "/laws/4711" in rest URLs as PathParameters.
+	 * Spring's own implementation can already convert from numerical ID to Entity, but not from URI like e.g. "/laws/4711" to entity.
 	 * @param conversionService springs conversion service, that we'll addConverter() to
 
 	@Override
 	public void configureConversionService(ConfigurableConversionService conversionService) {
-		//BUGFIX: must add source and target type when using generic parametrized converter
+		//  It seems like everything works already without this.
 		conversionService.addConverter(String.class, AreaModel.class, new LiquidoUriToEntityConverter<>(areaRepo, AreaModel.class));
 		conversionService.addConverter(String.class, LawModel.class,  new LiquidoUriToEntityConverter<>(lawRepo,  LawModel.class));
 		conversionService.addConverter(String.class, PollModel.class, new LiquidoUriToEntityConverter<>(pollRepo, PollModel.class));
 		conversionService.addConverter(String.class, UserModel.class, new LiquidoUriToEntityConverter<>(userRepo, UserModel.class));
 	}
 	*/
+
+
 
 	/*
    * Automatically generated Swagger REST API documentation

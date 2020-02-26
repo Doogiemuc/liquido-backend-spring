@@ -44,6 +44,7 @@ public class StartupJobs implements CommandLineRunner {
 			throw e;
 		}
 
+		/*
 		if (springEnv.acceptsProfiles(Profiles.of("dev", "test"))) {
 			log.info("===== Spring environment properties ");
 			MutablePropertySources propSrcs = ((AbstractEnvironment) springEnv).getPropertySources();
@@ -59,7 +60,7 @@ public class StartupJobs implements CommandLineRunner {
 				}
 			}
 
-			/*
+			/*   or the same as stream
 			// https://stackoverflow.com/questions/23506471/spring-access-all-environment-properties-as-a-map-or-properties-object
 			StreamSupport.stream(propSrcs.spliterator(), false)
 				.forEach(propSrc -> log.debug(propSrc.getName()))
@@ -68,8 +69,10 @@ public class StartupJobs implements CommandLineRunner {
 				.flatMap(Arrays::<String>stream)
 				.forEach(propName -> log.debug(propName + "=" + springEnv.getProperty(propName)));
 
-			 */
+
 		}
+		*/
+
 
 
 	}

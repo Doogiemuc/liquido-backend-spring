@@ -18,7 +18,6 @@ import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.testdata.TestDataUtils;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
-import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Lson;
 import org.junit.Assert;
 import org.junit.Before;
@@ -33,20 +32,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.*;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
@@ -401,11 +394,9 @@ public class RestEndpointTests extends BaseTest {
     headers.setContentType(MediaType.APPLICATION_JSON);
     HttpEntity<String> entity = new HttpEntity<>(newLawJson.toString(), headers);
 
-    LawModel createdLaw = client.postForObject("/laws", entity, LawModel.class);  // this actually deserializes the response into a LawModel. But that's ok. Makes the assertions much easier than digging around in a plain String response.
-    assertNotNull("ERROR: could not post proposal for new proposal", createdLaw);   // createdLaw will be null, when there was an error.  (I hate methods that return null instead of throwing exceptions!)
-    assertEquals("ERROR: builder proposal title does not match", newLawTitle, createdLaw.getTitle());
-
-    log.trace("TEST postAlternativeProposal successfully created "+createdLaw);
+		ResponseEntity<LawModel> res = client.postForEntity("/laws", entity, LawModel.class);
+		assertEquals("ERROR: builder proposal title does not match", HttpStatus.CREATED, res.getStatusCode());
+    log.trace("TEST postAlternativeProposal successfully created.");
   }
 
   /*
@@ -475,7 +466,7 @@ public class RestEndpointTests extends BaseTest {
   @Test
   //With user Details only works with MockMvc:  @WithUserDetails(value=TestFixtures.USER1_EMAIL , userDetailsServiceBeanName="liquidoUserDetailsService")
   public void testIdeaReachesQuorum() {
-    log.trace("TEST ideaReachesQuorum");
+    log.debug("TEST ideaReachesQuorum");
 
 		loginUserJWT(TestFixtures.USER1_EMAIL);
     LawModel idea = postNewIdea("Idea from testIdeaReachesQuorum");
@@ -544,13 +535,14 @@ public class RestEndpointTests extends BaseTest {
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
     HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
 
 		ResponseEntity<LawModel> createdIdea = client.postForEntity("/laws", entity, LawModel.class);
 
     // Keep in mind that createdIdea.createdBy is not filled, because this is just the serialized idea not the ideaProjection
     assertEquals(HttpStatus.CREATED, createdIdea.getStatusCode());
-    return createdIdea.getBody();
+		return createdIdea.getBody();
   }
 
 	/**
@@ -559,6 +551,7 @@ public class RestEndpointTests extends BaseTest {
 	 * @param idea
 	 */
   private ResponseEntity<String> addSupporterToIdea(String supporterURI, LawModel idea) {
+
 		String supportersURL = "/laws/"+idea.getId()+"/like";
 		/*
 		HttpHeaders headers = new HttpHeaders();
@@ -570,6 +563,7 @@ public class RestEndpointTests extends BaseTest {
 		log.debug("Added supporter to idea: "+supporterURI);
 		return addSupporterResponse;
 	}
+
 
   /** helper to get the currently logged in user's voterToken via REST*/
   private String getVoterToken(long areaId) {
@@ -706,8 +700,8 @@ public class RestEndpointTests extends BaseTest {
 		log.trace("Join poll: "+poll);
 
 		// AND a proposal
-		Page<LawModel> proposals = lawRepo.findByStatus(LawModel.LawStatus.PROPOSAL, new OffsetLimitPageable(0, 10));
-		assertTrue("Need at least one proposal", proposals.getTotalElements() > 0);
+		Page<LawModel> proposals = lawRepo.findByStatusAndArea(LawModel.LawStatus.PROPOSAL, poll.getArea(), new OffsetLimitPageable(0, 10));
+		assertTrue("Need at least one PROPOSAL in area "+poll.getArea(), proposals.getTotalElements() > 0);
 		LawModel proposal = proposals.iterator().next();
 
 		// WHEN proposal joins the poll

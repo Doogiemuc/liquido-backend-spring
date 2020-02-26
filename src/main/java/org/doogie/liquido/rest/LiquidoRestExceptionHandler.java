@@ -57,9 +57,12 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 
 	@Override
 	protected ResponseEntity<Object> handleExceptionInternal(Exception ex, Object body, HttpHeaders headers, HttpStatus status, WebRequest request) {
-		log.debug("REST throws "+ex.toString());
+
 		if (HttpStatus.INTERNAL_SERVER_ERROR.equals(status)) {
+			log.error("Internal server error "+ex.toString());
 			request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, ex, WebRequest.SCOPE_REQUEST);
+		} else {
+			log.debug("Liquido Rest throws: "+ex.toString());
 		}
 		if (body == null) {
 			body = getMessageAsJson(ex, request);

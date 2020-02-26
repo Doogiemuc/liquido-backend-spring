@@ -89,7 +89,7 @@ public class PollRestController {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Must pass exactly one proposal to create a new poll!");
 		LawModel proposalFromRequest = newPoll.getProposals().iterator().next();             // This proposal is a "detached entity". Cannot simply be saved here. This will all be done inside pollService.
 		PollModel createdPoll = pollService.createPoll(newPoll.getTitle(), proposalFromRequest);
-		log.trace("<= POST /createNewPoll: created Poll "+createdPoll);
+		log.info("Created new poll "+createdPoll);
 		return createdPoll;
 	}
 
@@ -102,17 +102,24 @@ public class PollRestController {
 	 */
   @RequestMapping(
   		value = "/polls/{pollId}/join",						// (A) Client should now know entity IDs <=> (B) I like the structure of API pathes like  /polls/{id}
-			method = RequestMethod.POST,							// This is a POST request, becase POST is _not_ idempotent. Can join a poll only once!
-			consumes = MediaType.APPLICATION_JSON_VALUE 	// There would be "text/uri-list  but I didn't get it to work
+			method = RequestMethod.POST,							// This is a POST request, becasue POST is _not_ idempotent. Can join a poll only once!
+			consumes = MediaType.APPLICATION_JSON_VALUE
 	)
   public @ResponseBody PollModel joinPoll(
 			@PathVariable(name="pollId") PollModel poll,
 			@RequestBody JoinPollRequest joinPollRequest
 			) throws LiquidoException
 	{
-		//https://stackoverflow.com/questions/49458567/mapping-hal-uri-in-requestbody-to-a-spring-data-rest-managed-entity
+		log.info("Proposal wants to join poll: "+joinPollRequest.getProposal()+" -> "+poll);
+
   	/*
-		log.info("Proposal wants to join poll: "+proposalURI+" -> "+poll);
+  	//https://stackoverflow.com/questions/49458567/mapping-hal-uri-in-requestbody-to-a-spring-data-rest-managed-entity
+  	//https://stackoverflow.com/questions/37186417/resolving-entity-uri-in-custom-controller-spring-hateoas
+
+  	I tried so that client can smply pass the proposal's URI as the body of the request
+  	But having text/uri-list as body of a POST request is not easily possible with spring-data-rest and HATEOAS
+
+
 		Long lawId = -1L;
 		try {
 			lawId = LiquidoRestUtils.getIdFromURI("law", proposalURI);
@@ -124,7 +131,10 @@ public class PollRestController {
 		if (proposal.isPresent()) throw new LiquidoException(LiquidoException.Errors.CANNOT_JOIN_POLL, "Cannot join poll. Cannot find proposal: "+proposalURI);
 
   	 */
+
+  	// sanity checks are all inside the service method:
 		PollModel updatedPoll = pollService.addProposalToPoll(joinPollRequest.getProposal(), poll);
+		log.info("Proposal(id="+joinPollRequest.getProposal().getId()+") joined poll "+updatedPoll);
 		return updatedPoll;
 	}
 
