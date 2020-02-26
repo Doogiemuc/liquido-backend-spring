@@ -14,9 +14,10 @@ import java.lang.reflect.Type;
  * It is added as a converter in {@link org.doogie.liquido.rest.LiquidoRepositoryRestConfigurer}.
  * Now you can use plain numerical IDs (eg. myentity=4711)  or URIs (/entities/4711) as REST @RequestParams in the request URL.
  *
- * Spring data rest would be able to do this for plain IDs (myentityid=4711) but not for URIs.
+ * Spring's {@link org.springframework.data.rest.core.UriToEntityConverter} is able to do convert from plain numerical IDs
+ * to entities, but it cannot handle URIs, e.g. "/laws/4711"
  *
- * The other way round from entity to URI can be done like this:
+ * The other way round from entity to URI can easily be archived like this:
  * Link areaLink = entityLinks.linkToSingleResource(AreaModel.class, area.getId());
  *
  * @see org.springframework.data.rest.core.UriToEntityConverter

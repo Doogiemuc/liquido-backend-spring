@@ -43,6 +43,15 @@ public class LawRestController {
 	LiquidoAuditorAware liquidoAuditorAware;
 
 	@Autowired
+	LawRepo lawRepo;
+
+	@Autowired
+	AreaRepo areaRepo;
+
+	@Autowired
+	DelegationRepo delegationRepo;
+
+	@Autowired
 	ProjectionFactory factory;
 
 	/**
@@ -59,72 +68,6 @@ public class LawRestController {
 		return ResponseEntity.ok("Thank you for supporting this idea.");
 	}
 
-	@Autowired
-	LawRepo lawRepo;
-
-	@Autowired
-	AreaRepo areaRepo;
-
-	@Autowired
-	DelegationRepo delegationRepo;
-
-	/*  DOES NOT WORK
-
-	  HEre I tried to return the list of LawModels "supportedByYou" as HATEOAS Resources.   But did not yet manage to do so.
-	  Error: Infinite recursion from Jackson => which field???
-
-	@RequestMapping(path = "/my/newsfeed2", produces = MediaType.APPLICATION_JSON_VALUE)
-	public @ResponseBody Lson getMyNewsfeed2(PersistentEntityResourceAssembler assembler) throws LiquidoException {
-		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
-				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Must be logged in to get newsfeed!"));
-
-		LocalDateTime twoWeeksAgo = LocalDateTime.now().minusWeeks(2);
-
-		// users ideas that recently reached their quorum and became a proposal
-		List<LawModel> reachedQuorum = lawRepo.findByReachedQuorumAtGreaterThanEqualAndCreatedBy(twoWeeksAgo, currentUser);
-
-		// own proposals that are in a poll which is in voting phase
-		List<LawModel> ownProposalsInVoting = lawRepo.findDistinctByStatusAndCreatedBy(LawModel.LawStatus.VOTING, currentUser);
-		List<LawProjection> ownPropsInVotingProjected = ownProposalsInVoting.stream().map(p -> factory.createProjection(LawProjection.class, p)).collect(Collectors.toList());
-
-		// ideas and proposals that are supported by current user
-		List<LawModel> supportedByYou = new ArrayList<>();
-		supportedByYou.addAll(lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.IDEA, currentUser));
-		supportedByYou.addAll(lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.PROPOSAL, currentUser));
-		supportedByYou.addAll(lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.ELABORATION, currentUser));
-		supportedByYou.addAll(lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.VOTING, currentUser));
-		List<PersistentEntityResource> resourceList = supportedByYou.stream()
-				.sorted((p1, p2) -> (int) (p1.getUpdatedAt().getTime() - p2.getUpdatedAt().getTime()))
-				.limit(10)
-				.map(p -> assembler.toFullResource(p))
-				.collect(Collectors.toList());
-
-		Resources<PersistentEntityResource> ddd = new Resources<>(resourceList, linkTo(methodOn(LawRestController.class).getMyNewsfeed2(null)).withRel("self"));
-
-		// Own proposals that have recent comments
-		List<LawModel> recentlyDiscussed = lawRepo.getRecentlyDiscussed(java.sql.Timestamp.valueOf(twoWeeksAgo), currentUser);
-
-		// Delegation requests in all areas
-		List<DelegationModel> delegationRequests = new ArrayList<>();
-		for (AreaModel area: areaRepo.findAll()) {
-			delegationRequests.addAll(delegationRepo.findDelegationRequests(area, currentUser));
-		}
-
-		return new Lson()
-				// users own stuff
-				.put("delegationRequests", delegationRequests)
-				.put("reachedQuorum", reachedQuorum)
-				.put("supportedByYouResources", ddd)
-				.put("ownProposalsInVoting", ownPropsInVotingProjected)   // return LawProjection with info about poll
-				.put("recentlyDiscussedProposals", recentlyDiscussed)
-				// recently won polls :-)
-				//stuff by others
-
-
-				;
-	}
-  */
-
 	/**
 	 * Search for ideas, proposals or laws with advanced search criteria
 	 * @param lawQuery search criteria
@@ -137,16 +80,17 @@ public class LawRestController {
 		Page<LawModel> resultPage = lawService.findBySearchQuery(lawQuery);
 		if (log.isTraceEnabled()) log.trace("findByQuery: got "+resultPage.getTotalElements()+" LawModels");
 
-		//Scrap all this STUPID spring HATEOAS stuff FOREVER and just simply build JSON by hand and return that!!!
 		long offset = ((OffsetLimitPageable)resultPage.getPageable()).getOffset();
 		long limit  = ((OffsetLimitPageable)resultPage.getPageable()).getLimit();
+		//  Spring-data-rest correctly serializes the stream of LawModels into JSON, with the projected entities as values of the array.
 		Lson result = Lson.builder()
-			.put("_embedded", Lson.builder("laws", resultPage))
-			.put("_link.self.href", buildLink(offset, limit, IanaLinkRelations.SELF))
-			.put("_link.self.first", buildLink(0, limit, IanaLinkRelations.FIRST))
-			.put("query", lawQuery)
-			.put("totalElements", resultPage.getTotalElements());
-
+			.put("_embedded.laws", resultPage.get())
+			.put("_links.self.href", buildLink(offset, limit, IanaLinkRelations.SELF))
+			.put("_links.self.first", buildLink(0, limit, IanaLinkRelations.FIRST))
+			.put("_page.offset", offset)
+			.put("_page.limit", limit)
+			.put("_page.totalElements", resultPage.getTotalElements())	// totalElement is the total size of the query result without any limit
+			.put("_query", lawQuery);
 		return result;
 	}
 

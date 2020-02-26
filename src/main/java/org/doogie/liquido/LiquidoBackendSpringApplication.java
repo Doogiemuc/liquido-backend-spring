@@ -13,6 +13,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
@@ -49,7 +50,6 @@ public class LiquidoBackendSpringApplication {
 		System.out.println("| |___   | |  | |_| | | |_| |  | |  | |_| | | |_| |");
 		System.out.println("|_____| |___|  \\__\\_\\  \\___/  |___| |____/   \\___/ ");
 
-
 		/*
 		try {
 			Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
@@ -64,7 +64,7 @@ public class LiquidoBackendSpringApplication {
 
 	@EventListener(ApplicationReadyEvent.class)
 	public void applicationStarted() {
-		String dbUrl = "unknown";
+		String dbUrl = "[unknown]";
 		try {
 			dbUrl = jdbcTemplate.getDataSource().getConnection().getMetaData().getURL();
 		} catch (SQLException e) {
@@ -74,8 +74,16 @@ public class LiquidoBackendSpringApplication {
 		log.info("=== LIQUIDO backend API is up and running under");
 		log.info(" BackendBasePath: http://localhost:"+this.serverPort+this.basePath);
 		log.info(" DB: "+dbUrl);
-		log.info("=======================================================");
+		try {
+			ResultSet resultSet = jdbcTemplate.getDataSource().getConnection().getMetaData().getTables(null, null, "AREAS", null);
+			if (resultSet.next()) {
+				log.info(" Liquido table AREAS exists.");
+			}
+		} catch (Exception e) {
+			// ignore
+		}
 		log.info(ppp.toString());
+		log.info("=======================================================");
 	}
 
 }
