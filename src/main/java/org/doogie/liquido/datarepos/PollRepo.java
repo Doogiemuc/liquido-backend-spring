@@ -31,6 +31,15 @@ public interface PollRepo extends CrudRepository<PollModel, Long> {
   @Query("SELECT DISTINCT poll FROM PollModel poll JOIN LawModel prop on prop.poll = poll WHERE poll.status = :status and prop.area = :area order by poll.createdAt desc")
   List<PollModel> findByStatusAndArea(@Param("status") PollModel.PollStatus status, @Param("area")AreaModel area);
 
+  /**
+   * find all polls in one area
+   * @param area an area
+   * @return list of polls in that rea
+   */
+  @Query("SELECT DISTINCT poll FROM PollModel poll JOIN LawModel prop on prop.poll = poll WHERE prop.area = :area order by poll.createdAt desc")
+  List<PollModel> findByArea(@Param("area")AreaModel area);
+
+
   // the /polls  endpoint is READ-ONLY!!  To builder a poll one must use the PollRestController
 
   @RestResource(exported = false)

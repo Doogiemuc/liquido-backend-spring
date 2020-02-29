@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
  * Only that voter can proof that he has a right to vote by presenting his voterToken which hashes to
  * the stored value.
  *
+ * RightToVote is <b>per area!</b>. The user needs to request a seperate right to vote for each area.
+ *
  * When a voter requests a voterToken for an area , then the server calculates two values:
  * 1. voterToken  = hash(user.email, userSecret, serverSecret, area)   This voterToken is returned to the voter.
  * 2. rightToVote = hash(voterToken, serverSecret)    The rightToVote is anonymously stored on the server.

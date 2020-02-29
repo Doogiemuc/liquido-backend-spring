@@ -48,7 +48,6 @@ public class VoteRestController {
 	@Autowired
 	LiquidoAuditorAware liquidoAuditorAware;
 
-
 	@Autowired
 	EntityLinks entityLinks;
 

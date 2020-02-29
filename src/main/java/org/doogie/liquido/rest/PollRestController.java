@@ -17,12 +17,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
-import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -36,8 +34,10 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
  * REST controller for working with Polls.
  */
 @Slf4j
-@BasePathAwareController		// expose controller under basePath
-//@RepositoryRestController   and    @RequestMapping("postBallot")    Both do not really work:
+//@RestController
+//@RequestMapping("${spring.data.rest.base-path}")
+//@RepositoryRestController
+@BasePathAwareController
 // https://jira.spring.io/browse/DATAREST-972
 // https://faithfull.me/overriding-spring-data-rest-repositories/
 public class PollRestController {
@@ -74,7 +74,7 @@ public class PollRestController {
 
   //see https://docs.spring.io/spring-data/rest/docs/current/reference/html/#customizing-sdr.overriding-sdr-response-handlers
 
-  /**
+  /*
    * When an idea reaches its quorum then it becomes a proposal and its creator <i>can</i> builder a new poll for this proposal.
    * Other proposals need to join this poll before voting can be started.
    * @param newPoll the poll to create with the link to exactly one proposal, e.g.
@@ -82,9 +82,8 @@ public class PollRestController {
    * @return the saved poll as HATEOAS resource with all _links
    * @throws LiquidoException when sent LawModel is not in state PROPOSAL or creation of new poll failed
    */
-	@RequestMapping(value = "/polls/add", method = RequestMethod.POST)
+	@RequestMapping(value = "/polls", method = RequestMethod.POST)
 	public @ResponseBody PollModel createNewPoll(@RequestBody PollModel newPoll) throws LiquidoException {
-		// how to convert URI to object? https://github.com/spring-projects/spring-hateoas/issues/292
 		if (newPoll.getProposals().size() != 1)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Must pass exactly one proposal to create a new poll!");
 		LawModel proposalFromRequest = newPoll.getProposals().iterator().next();             // This proposal is a "detached entity". Cannot simply be saved here. This will all be done inside pollService.
@@ -92,6 +91,8 @@ public class PollRestController {
 		log.info("Created new poll "+createdPoll);
 		return createdPoll;
 	}
+
+
 
 	/**
 	 * Join a proposal into an existing poll (that must be in its ELABORATION phase)
@@ -116,7 +117,7 @@ public class PollRestController {
   	//https://stackoverflow.com/questions/49458567/mapping-hal-uri-in-requestbody-to-a-spring-data-rest-managed-entity
   	//https://stackoverflow.com/questions/37186417/resolving-entity-uri-in-custom-controller-spring-hateoas
 
-  	I tried so that client can smply pass the proposal's URI as the body of the request
+  	I tried so that client can simply pass the proposal's URI as the body of the request
   	But having text/uri-list as body of a POST request is not easily possible with spring-data-rest and HATEOAS
 
 
@@ -137,6 +138,7 @@ public class PollRestController {
 		log.info("Proposal(id="+joinPollRequest.getProposal().getId()+") joined poll "+updatedPoll);
 		return updatedPoll;
 	}
+
 
 	@RequestMapping(value = "/polls/{pollId}/result", produces = MediaType.APPLICATION_JSON_VALUE)
 	public @ResponseBody Lson getPollResult(@PathVariable(name="pollId") PollModel poll) throws LiquidoException {
@@ -246,6 +248,9 @@ public class PollRestController {
 	 * }
 	 * </pre>
    */
+
+	//TODO: deprecate this. Has been superseeded by findPolls below.   Need to adapt client.
+
 	@RequestMapping("/polls/search/findByStatusAndArea")
 	public @ResponseBody Lson findPollsByStatusAndArea(@RequestParam("status") String status, @RequestParam("area")AreaModel area) throws LiquidoException {
 		PollModel.PollStatus pollStatus = null;
@@ -268,46 +273,50 @@ public class PollRestController {
 	}
 
 	/**
-	 * Flexible search for polls.
+	 * Flexible search for polls that can search for polls by status and/or area.
+	 * You can also search for polls that you have already voted in by passing your voterToken.
+	 *
 	 * @param status (optionally) only return polls with that status
 	 * @param area (optionally) filter by that area
-	 * @param voterToken if given, then only return polls, that the user has a ballot in, casted with that voter token
+	 * @param voterToken (optionally) only return polls, that the user has a ballot in, casted with that voter token
 	 * @return list of polls
-	 * @throws LiquidoException when voterToken is invalid
+	 * @throws LiquidoException when no search criteria is given at all or voterToken is invalid
 	 */
 	@RequestMapping("/polls/search/find")
-	public @ResponseBody Lson findPollsWithOwnBallots(
+	public @ResponseBody Lson findPolls(
 			@RequestParam("status") Optional<PollModel.PollStatus> status,
 			@RequestParam("area") Optional<AreaModel> area,
-			@RequestParam("voterToken") Optional<String> voterToken) throws LiquidoException {
-
-		/*  old version with nice error message. Error messages are yet another reason to completely not use RestRepositories but use our own manually build controllers.
-		PollModel.PollStatus pollStatus = null;
-		try {
-			pollStatus = PollModel.PollStatus.valueOf(status);
-		} catch (IllegalArgumentException e) {
-			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Unknown status for poll '"+status+"'. Must be one of ELABORATION, VOTING or FINISHED");
-		}
-		*/
+			@RequestParam("voterToken") Optional<String> voterToken) throws LiquidoException
+	{
+		if (!status.isPresent() && !area.isPresent() && !voterToken.isPresent())
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "You must pass at least one search criteria for a poll");
 
 		List<PollModel> polls = new ArrayList<>();
-		if (status.isPresent() && area.isPresent()) {
+		// If voterToken is given, then first search polls with ballots created with that voter token.
+		// because this will most probably be smalles number of polls.
+		// Keep in mind that a voterToken already is per area!
+		if (voterToken.isPresent()) {
+			RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken.get());
+			if (area.isPresent() && rightToVote.getArea().equals(area.get()))
+				throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "voterToken's area and passed area do not match!");
+			polls = ballotRepo.findByRightToVote(rightToVote).stream()
+					.map(ballot -> ballot.getPoll())
+					.filter(poll -> !status.isPresent() || poll.getStatus().equals(status.get()))  // if status is given, then filter by status
+					.collect(Collectors.toList());
+		} else if (status.isPresent() && area.isPresent()) {
 			polls = pollRepo.findByStatusAndArea(status.get(), area.get());
 		} else if (status.isPresent()) {
 			polls = pollRepo.findByStatus(status.get());
+		} else if (area.isPresent()) {
+			polls = pollRepo.findByArea(area.get());
 		}
-		if (voterToken.isPresent()) {
-			RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken.get());
-			polls = polls.stream().filter(poll -> ballotRepo.findByPollAndRightToVote(poll, rightToVote).isPresent()).collect(Collectors.toList());
-		}
-
 
 		// Implementation note: PollRepo is deliberately NOT exposed as REST resource. Polls MUST be handled through this custom PollRestController.
 		// CODE: return new Resources<>(pollsInArea, linkTo(methodOn(PollRestController.class).findPollsByStatusAndArea(null, null)).withRel("self"));
 		// BUG: returning resource does not add _embedded.polls: [] when List is empty. https://stackoverflow.com/questions/30286795/how-to-force-spring-hateoas-resources-to-render-an-empty-embedded-array/30297552
 		// FIX: Doogies LSON Builder for the win once again!! :-)
 		// LEARNING:  Always fine tune the returned JSON of your API !YOURSELF!  Do NOT rely on auto generated Repos.
-		WebMvcLinkBuilder webMvcLinkBuilder = linkTo(methodOn(PollRestController.class).findPollsWithOwnBallots(null, null, null));
+		WebMvcLinkBuilder webMvcLinkBuilder = linkTo(methodOn(PollRestController.class).findPolls(null, null, null));
 		return new Lson()
 			.put("_embedded.polls", polls)
 			.put("_links.self.href", webMvcLinkBuilder.toUri());
