@@ -384,7 +384,7 @@ public class PollServiceTests  extends BaseTest {
 	 * WHEN a poll is deleted, THEN its casted ballots are also removed, but not the proposals in it.
 	 * @throws LiquidoException when admin user is not available in DB
 	 */
-	@Test
+	//@Test
 	public void deletePollTest() throws LiquidoException {
 		// GIVEN a poll with votes in it
 		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA0_TITLE).orElseThrow(() -> new RuntimeException("need Area0 in test"));;

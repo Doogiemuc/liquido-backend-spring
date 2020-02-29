@@ -41,6 +41,7 @@ public class TestFixtures {
 	public static final String USER10_EMAIL = MAIL_PREFIX+"10@liquido.de";
 	public static final String USER11_EMAIL = MAIL_PREFIX+"11@liquido.de";
 	public static final String USER12_EMAIL = MAIL_PREFIX+"12@liquido.de";
+	public static final String USER16_EMAIL = MAIL_PREFIX+"16@liquido.de";
 
 	// Ideas
 	public static final String IDEA_0_TITLE = "Idea 0 title from TestFixtures";
