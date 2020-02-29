@@ -17,8 +17,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.rest.webmvc.BasePathAwareController;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -73,7 +76,6 @@ public class PollRestController {
 	LiquidoRestUtils restUtils;
 
   //see https://docs.spring.io/spring-data/rest/docs/current/reference/html/#customizing-sdr.overriding-sdr-response-handlers
-
   /*
    * When an idea reaches its quorum then it becomes a proposal and its creator <i>can</i> builder a new poll for this proposal.
    * Other proposals need to join this poll before voting can be started.
@@ -82,14 +84,20 @@ public class PollRestController {
    * @return the saved poll as HATEOAS resource with all _links
    * @throws LiquidoException when sent LawModel is not in state PROPOSAL or creation of new poll failed
    */
-	@RequestMapping(value = "/polls", method = RequestMethod.POST)
-	public @ResponseBody PollModel createNewPoll(@RequestBody PollModel newPoll) throws LiquidoException {
+	@RequestMapping(
+		value = "/polls",
+		method = RequestMethod.POST,
+		consumes = MediaType.APPLICATION_JSON_VALUE
+	)
+	public @ResponseBody ResponseEntity<PollModel> createNewPoll(@RequestBody EntityModel<PollModel> newPollEntity) throws LiquidoException {
+		//BUGFIX: for no-string argument constructor: The old HATEOAS class "Resource" now is EntityModel.   Cannot just simply deserialize from a PollModel. There is a problem with creating the poll.proposals[] -> LawModel.  I really tried hard. But no it works like this.
+		PollModel newPoll = newPollEntity.getContent();
 		if (newPoll.getProposals().size() != 1)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Must pass exactly one proposal to create a new poll!");
 		LawModel proposalFromRequest = newPoll.getProposals().iterator().next();             // This proposal is a "detached entity". Cannot simply be saved here. This will all be done inside pollService.
 		PollModel createdPoll = pollService.createPoll(newPoll.getTitle(), proposalFromRequest);
 		log.info("Created new poll "+createdPoll);
-		return createdPoll;
+		return new ResponseEntity(createdPoll, HttpStatus.CREATED);
 	}
 
 
@@ -102,7 +110,7 @@ public class PollRestController {
 	 * @throws LiquidoException if poll is not in its ELABORATION phase or proposal did not reach its quorum yet
 	 */
   @RequestMapping(
-  		value = "/polls/{pollId}/join",						// (A) Client should now know entity IDs <=> (B) I like the structure of API pathes like  /polls/{id}
+  		value = "/polls/{pollId}/join",						// (A) Client should not now know entity IDs <=> (B) I like the structure of API pathes like  /polls/{id}
 			method = RequestMethod.POST,							// This is a POST request, becasue POST is _not_ idempotent. Can join a poll only once!
 			consumes = MediaType.APPLICATION_JSON_VALUE
 	)
