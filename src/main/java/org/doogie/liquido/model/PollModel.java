@@ -58,7 +58,7 @@ public class PollModel extends BaseModel {
   @OneToMany(cascade = CascadeType.MERGE, mappedBy="poll", fetch = FetchType.EAGER) //, orphanRemoval = true/false ??  Should a proposals be removed when the poll is deleted? => NO
   @NotNull
   @NonNull
-	//@JsonDeserialize(contentUsing = LawModelDeserializer.class)    If I do this then deserialization of LawModels does not work anymore ?????? Why ?????
+	//@JsonDeserialize(contentUsing = LawModelDeserializer.class)  //  If I do this then deserialization of LawModels does not work anymore ?????? Why ?????
 	Set<LawModel> proposals = new HashSet<>();
 
   // Some older notes, when proposals still was a SortedSet.  Not relevant anymore, but still very interesting reads!
@@ -107,6 +107,11 @@ public class PollModel extends BaseModel {
     return proposals.size();
   }
 
+	/**
+	 * The poll's are is deducted from the area of its proposals.
+	 * All proposals in a poll MUST be in the same area.
+	 * @return poll's area
+	 */
   public AreaModel getArea() {
   	if (getNumCompetingProposals() == 0) throw new RuntimeException("poll has no area, because there are no proposals in it yet.");   // This should never happen
 	  return this.proposals.iterator().next().getArea();
@@ -114,11 +119,17 @@ public class PollModel extends BaseModel {
 
   @Override
   public String toString() {
-    return "PollModel{" +
-        "id=" + id +
-        ", status=" + status +
-		    ", title='" + title + "'" +
-		    ", numProposals=" + (proposals != null ? proposals.size() : "<NULL>") +
-        '}';
+  	StringBuilder sb = new StringBuilder()
+			.append("PollModel[")
+			.append("id=").append(id)
+			.append(", status=").append(status)
+			.append(", title='").append(title).append("'")
+			.append(", area.id=");
+  	if (proposals != null) {		// be carefull and clean in toString()   :-)
+    	if (proposals.size() > 0) sb.append(", area.id=").append(getArea().id);
+    	sb.append(", numProposals="+this.proposals.size());
+		}
+  	sb.append(']');
+  	return sb.toString();
   }
 }

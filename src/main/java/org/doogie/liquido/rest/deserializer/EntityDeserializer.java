@@ -50,7 +50,7 @@ public class EntityDeserializer<T> extends StdDeserializer<T> {
 
 	public EntityDeserializer(CrudRepository<T, Long> rep, Class<T> clazz) {
 		super(clazz);
-		if (rep == null || clazz == null) throw new IllegalArgumentException("Need rep and clazz!");
+		//if (rep == null || clazz == null) throw new IllegalArgumentException("Need rep and clazz!");
 		this.repo = rep;
 		this.pathSegment = repo.getClass().getInterfaces()[0].getAnnotation(RepositoryRestResource.class).path();
 	}

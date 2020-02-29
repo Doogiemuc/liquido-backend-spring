@@ -508,6 +508,42 @@ public class RestEndpointTests extends BaseTest {
 	}
 
 	/**
+	 * This tests the deserialization from a proposal URI to the actual entity class.
+	 */
+	@Test
+	public void testCreateNewPoll() {
+		log.debug("ENTER: Creating new poll");
+
+		// GIVEN a PROPOSAL of currently logged in user
+		loginUserJWT(TestFixtures.USER1_EMAIL);
+		List<LawModel> proposals = lawRepo.findDistinctByStatusAndCreatedBy(LawModel.LawStatus.PROPOSAL, getCurrentUser());
+		assertTrue("Need at least one proposal of "+TestFixtures.USER1_EMAIL, proposals.size() > 0);
+		List<String> propURIs = Collections.singletonList("/laws/"+proposals.get(0).getId());
+
+		// WHEN user starts a new poll
+		String jsonBody = Lson.builder()
+				.put("title", "poll created by test "+System.currentTimeMillis())
+				.putArray("proposals", propURIs)
+				.toString();
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+		HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
+
+		ResponseEntity<PollModel> createdPoll = client.postForEntity("/polls", entity, PollModel.class);
+
+		// THEN the poll is created successfully and in correct status
+		assertEquals("expected HTTP 200", HttpStatus.CREATED, createdPoll.getStatusCode());
+		assertNotNull("Poll should have an ID", createdPoll.getBody().getId());
+		assertEquals("Poll should be in status ELABORATION", PollModel.PollStatus.ELABORATION, createdPoll.getBody().getStatus());
+
+		log.debug("SUCCESSFULLY Create new poll");
+	}
+
+	//TODO: testFindPoll
+
+	/**
 	 * fetch currently logged in user
 	 * @return
 	 */
