@@ -7,6 +7,7 @@ import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.converters.LiquidoUriToEntityConverter;
+import org.doogie.liquido.rest.deserializer.LawModelDeserializer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -124,18 +125,14 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 	 * This is used when the client passes an URI, e.g. "/laws/4711" in rest URLs as PathParameters.
 	 * Spring's own implementation can already convert from numerical ID to Entity, but not from URI like e.g. "/laws/4711" to entity.
 	 * @param conversionService springs conversion service, that we'll addConverter() to
-
+   */
 	@Override
 	public void configureConversionService(ConfigurableConversionService conversionService) {
-		//  It seems like everything works already without this.
 		conversionService.addConverter(String.class, AreaModel.class, new LiquidoUriToEntityConverter<>(areaRepo, AreaModel.class));
 		conversionService.addConverter(String.class, LawModel.class,  new LiquidoUriToEntityConverter<>(lawRepo,  LawModel.class));
 		conversionService.addConverter(String.class, PollModel.class, new LiquidoUriToEntityConverter<>(pollRepo, PollModel.class));
 		conversionService.addConverter(String.class, UserModel.class, new LiquidoUriToEntityConverter<>(userRepo, UserModel.class));
 	}
-	*/
-
-
 
 	/*
    * Automatically generated Swagger REST API documentation
