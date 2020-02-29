@@ -400,7 +400,7 @@ public class RestEndpointTests extends BaseTest {
   }
 
   /*
-  //TODO: Test duplicate vote (with differenet faked voterToken)
+  //TODO: Test duplicate vote (with different faked voterToken)
   @Test
   public void testPostDuplicateVote() throws JSONException {
     log.trace("TEST postDuplicateVote");
@@ -440,7 +440,7 @@ public class RestEndpointTests extends BaseTest {
 	public void testSupportOwnIdea() {
 		log.trace("TEST supportOwnIdea");
 		//GIVEN
-		LawModel idea = postNewIdea("Idea from testSupportOwnIdea");
+		LawModel idea = postNewIdea("Idea from testSupportOwnIdea", this.areas.get(0));
 		UserModel currentUser = getCurrentUser();
 		String supporterURI = basePath + "/users/" + currentUser.getId();
 		try {
@@ -469,7 +469,7 @@ public class RestEndpointTests extends BaseTest {
     log.debug("TEST ideaReachesQuorum");
 
 		loginUserJWT(TestFixtures.USER1_EMAIL);
-    LawModel idea = postNewIdea("Idea from testIdeaReachesQuorum");
+    LawModel idea = postNewIdea("Idea from testIdeaReachesQuorum", this.areas.get(0));
     log.trace(idea.toString());
     assertEquals(0, idea.getNumSupporters());
 
@@ -558,10 +558,10 @@ public class RestEndpointTests extends BaseTest {
    *                        because title MUST be unique.
    * @return the created idea (but without dependant entities such as area and createdBy filled!)
    */
-  private LawModel postNewIdea(String ideaTitlePrefix) {
+  private LawModel postNewIdea(String ideaTitlePrefix, AreaModel area) {
     String ideaTitle = ideaTitlePrefix+" "+System.currentTimeMillis();;  // title must be unique!
     String ideaDesc  = "This idea was created from a test case";
-    String areaUri   = basePath + "/areas/" + this.areas.get(0).getId();
+    String areaUri   = basePath + "/areas/" + area.getId();
 
 		String jsonBody = Lson.builder()
 		  .put("title", ideaTitle)
@@ -729,24 +729,33 @@ public class RestEndpointTests extends BaseTest {
 
 	@Test
 	public void testJoinPoll() {
+		// User 16 did not join any poll yet
+		loginUserJWT(TestFixtures.USER16_EMAIL);
+
 		// GIVEN a poll in elaboration
-		List<PollModel> pollsInElaboration = pollRepo.findByStatus(PollModel.PollStatus.ELABORATION);
-		assertNotNull("Need at least one poll in voting!", pollsInElaboration.size() > 0);
+		List<PollModel> pollsInElaboration = pollRepo.findByStatusAndArea(PollModel.PollStatus.ELABORATION, this.areas.get(0));
+		assertNotNull("Need at least one poll in elaboration!", pollsInElaboration.size() > 0);
 		PollModel poll = pollsInElaboration.get(0);
 		log.trace("Join poll: "+poll);
 
-		// AND a proposal
-		Page<LawModel> proposals = lawRepo.findByStatusAndArea(LawModel.LawStatus.PROPOSAL, poll.getArea(), new OffsetLimitPageable(0, 10));
-		assertTrue("Need at least one PROPOSAL in area "+poll.getArea(), proposals.getTotalElements() > 0);
-		LawModel proposal = proposals.iterator().next();
+		// AND a new proposal in this area
+		LawModel proposal = postNewIdea("Idea create by test to join poll", this.areas.get(0));
+		for (int j = 0; j < prop.supportersForProposal; j++) {
+			//Keep in mind that user 16 must not support his own idea
+			String supporterURI = basePath + "/users/" + this.users.get(j).getId();
+			loginUserJWT(this.users.get(j).getEmail());
+			addSupporterToIdea(supporterURI, proposal);
+		}
 
-		// WHEN proposal joins the poll
+
+
+		// WHEN this proposal joins the poll
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 		HttpEntity<String> requestEntity = new HttpEntity<>("{\"proposal\":\"/proposals/"+proposal.getId()+"\"}", headers);
 		ResponseEntity<PollModel> res = client.postForEntity("/polls/" + poll.getId() + "/join", requestEntity, PollModel.class);
 
-		// THEN HTTP 200 is returned
+		// THEN HTTP OK(200) is returned
 		assertEquals("ERROR: Cannot join Poll", HttpStatus.OK, res.getStatusCode());
 		log.trace("Joined Poll successfully\n"+res.getBody().toString());
 	}

@@ -178,7 +178,7 @@ public class TestDataCreator implements CommandLineRunner {
         log.debug("Create test data from scratch via spring-data for DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
       seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX);
-      seedAdminUser();
+      util.seedAdminUser();
       auditorAware.setMockAuditor(util.user(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
       seedAreas();
       AreaModel area = areaMap.get(TestFixtures.AREA0_TITLE);   // most testdata is created in this area
@@ -340,16 +340,6 @@ public class TestDataCreator implements CommandLineRunner {
   }
 
 	/**
-	 * Create the admin user with the values from application.properties
-	 */
-	public void seedAdminUser() {
-  	UserModel admin = new UserModel(prop.admin.email, prop.admin.name, prop.admin.mobilephone, "", prop.admin.picture);
-		//TODO: admin.setAuthyId();
-  	util.upsert(admin);
-		util.reloadUsersCache();
-	}
-
-  /**
    * Create some areas with unique titles. All created by user0
    */
   private void seedAreas() {

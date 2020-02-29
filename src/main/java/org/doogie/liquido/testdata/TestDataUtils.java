@@ -23,6 +23,10 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Base class for my test data creators.
+ * Offers some utility classes that make the life of a test developer a lot easier.
+ */
 @Slf4j
 @Component
 public class TestDataUtils {
@@ -69,6 +73,16 @@ public class TestDataUtils {
 			this.usersMap.put(user.getEmail(), user);
 			this.users.add(user);
 		});
+	}
+
+	/**
+	 * Create the admin user with the values from application.properties
+	 */
+	public void seedAdminUser() {
+		UserModel admin = new UserModel(prop.admin.email, prop.admin.name, prop.admin.mobilephone, "", prop.admin.picture);
+		//TODO: admin.setAuthyId();
+		upsert(admin);
+		reloadUsersCache();
 	}
 
 	public UserModel user(int index) {
