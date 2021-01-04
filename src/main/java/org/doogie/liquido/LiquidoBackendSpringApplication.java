@@ -50,6 +50,12 @@ public class LiquidoBackendSpringApplication {
 		System.out.println("| |___   | |  | |_| | | |_| |  | |  | |_| | | |_| |");
 		System.out.println("|_____| |___|  \\__\\_\\  \\___/  |___| |____/   \\___/ ");
 
+		try {
+			Class.forName("org.h2.Driver");
+		} catch (ClassNotFoundException e) {
+			log.error("ERROR: Cannot load org.h2.Driver!");
+		}
+
 		/*
 		try {
 			Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
@@ -71,7 +77,7 @@ public class LiquidoBackendSpringApplication {
 			// ignore
 		}
 		log.info("=====================================================");
-		log.info("=== LIQUIDO backend API is up and running under");
+		log.info(" LIQUIDO backend API is up and running.");
 		log.info(" BackendBasePath: http://localhost:"+this.serverPort+this.basePath);
 		log.info(" DB: "+dbUrl);
 		try {
@@ -82,7 +88,7 @@ public class LiquidoBackendSpringApplication {
 		} catch (Exception e) {
 			// ignore
 		}
-		log.info(ppp.toString());
+		log.info(" "+ppp.toString());
 		log.info("=======================================================");
 	}
 

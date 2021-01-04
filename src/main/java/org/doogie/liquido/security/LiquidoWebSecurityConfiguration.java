@@ -73,8 +73,6 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
 				.antMatchers(basePath+"/castVote").permitAll()   				// allow anonymous voting
 			  .anyRequest().authenticated()																				// everything else must be authenticated
 			//TODO: .and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);   Do I need this?
-			.and()									//TODO: remove httpBasic auth
-				.httpBasic()
 			.and()
 			  .csrf().disable();   //TODO: reenable CSRF
 
@@ -92,7 +90,7 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
 
 	/**
 	 * Bean for default Password encoder. Needed since
-	 * <a href="https://spring.io/blog/2017/11/01/spring-security-5-0-0-rc1-released#password-encoding">Sprint-securty 5.0</a>
+	 * <a href="https://spring.io/blog/2017/11/01/spring-security-5-0-0-rc1-released#password-encoding">Sprint-security 5.0</a>
 	 * @return a default delegatingPasswordEncoder
 	 */
 	@Bean
