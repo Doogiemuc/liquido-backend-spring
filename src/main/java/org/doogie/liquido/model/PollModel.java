@@ -123,7 +123,7 @@ public class PollModel extends BaseModel {
 			.append("PollModel[")
 			.append("id=").append(id)
 			.append(", status=").append(status)
-			.append(", title='").append(title).append("'")
+			.append(", title='").append(title).append("'") 
 			.append(", area.id=");
   	if (proposals != null) {		// be carefull and clean in toString()   :-)
     	if (proposals.size() > 0) sb.append(", area.id=").append(getArea().id);

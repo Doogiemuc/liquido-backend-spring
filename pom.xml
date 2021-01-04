@@ -100,14 +100,14 @@
 			<version>42.2.9</version>
 		</dependency -->
 
-		<!--Jwt-->
+		<!-- Json Web Tokens (JWT) -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt</artifactId>
 			<version>${jjwt.version}</version>
 		</dependency>
 
-		<!-- Json Web Tokens (JWT)
+		<!-- Spring Security also has a JWT implementation, but io.jsonwebtoken is much simpler to use
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-jwt</artifactId>
@@ -168,13 +168,13 @@
 
 		-->
 
-		<!-- AWS SDK, currently used for sending SMS via AWS SNS.  https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk -->
+		<!-- AWS SDK, currently used for sending SMS via AWS SNS.  https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk</artifactId>
 			<version>1.11.670</version>
 		</dependency>
-
+		-->
 
 		<!-- Apache Http Client for PATCH requests  https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
 		<dependency>
