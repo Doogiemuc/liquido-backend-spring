@@ -238,9 +238,9 @@ public class RestEndpointTests extends BaseTest {
 				.build();
 		try {
 			ResponseEntity<String> res = anonymousClient.exchange("/laws", HttpMethod.GET, null, String.class);
-			fail("Should have thrown an exception with unauthorized(401)");
+			fail("Should have thrown an exception with forbidden(403)");
 		} catch (HttpClientErrorException err) {
-			assertEquals("Response should have status unauthorized(401)", HttpStatus.UNAUTHORIZED, err.getStatusCode());
+			assertEquals("Response should have status forbidden(403)", HttpStatus.FORBIDDEN, err.getStatusCode());
 		}
 	}
 
