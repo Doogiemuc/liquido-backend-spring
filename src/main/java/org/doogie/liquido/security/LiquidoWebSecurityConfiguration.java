@@ -67,6 +67,10 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
 	  http
 			//.antMatcher(basePath).authenticationProvider(new LiquidoTokenAuthProvider()) // can I add my token auth that way?
 			.authorizeRequests()
+				.antMatchers(basePath+"/graphiql").permitAll()
+				.antMatchers("/graphiql").permitAll()
+				.antMatchers(basePath+"/graphql").permitAll()
+				.antMatchers("/graphql").permitAll()
 			  .antMatchers(basePath+"/_ping").permitAll()        			// allow is alive
 				.antMatchers(basePath+"/globalProperties").permitAll()		// allow fetching properties
 			  .antMatchers(basePath+"/auth/**").permitAll()      			// allow login via one time token
