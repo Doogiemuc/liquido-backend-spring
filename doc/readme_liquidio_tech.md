@@ -264,6 +264,20 @@ then you can fetch a JWT like this. You MUST pass the devLoginToken that is conf
 https://www.draw.io/#LLiquido%20Architecture
 
 
+# GraphQL
+
+The new team endpoint is implemented qith GraphQL. We use [GraphQL-SPQR](https://github.com/leangen/graphql-spqr) to automatically create the GraphQL schema.
+
+Sample GraphQL PST request payload. 
+(Keep in mind: this is a JSON POST payload with one attribute "query" that holds the actual GraphQL request as one string! There is no tutorial anywhere that tells you that :-)
+
+    { 
+      "query" : 
+      "{ getAllTeams { teamName, inviteCode, id, createdAt, updatedAt, members { id, email, profile { name } }} }" 
+    }
+
+See also this tutorial: https://medium.com/@saurabh1226/getting-started-with-graphql-spqr-with-springboot-bb9d232053ec
+
 # Roadmap
 
  * MAYBE package-by-feature  http://www.javapractices.com/topic/TopicAction.do?Id=205  => and then invent microservices :-)
