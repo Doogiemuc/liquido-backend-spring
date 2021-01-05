@@ -80,6 +80,34 @@
 			<version>2.9.8</version>
 		</dependency>
 
+		<!-- Spring Graphql Tooling
+		<dependency>
+			<groupId>com.graphql-java</groupId>
+			<artifactId>graphql-spring-boot-starter</artifactId>
+			<version>5.0.2</version>
+		</dependency>
+		<dependency>
+			<groupId>com.graphql-java</groupId>
+			<artifactId>graphql-java-tools</artifactId>
+			<version>5.2.4</version>
+		</dependency>
+		-->
+
+		<!-- Graphiql - GraphQL Web debug tool
+		<dependency>
+			<groupId>com.graphql-java</groupId>
+			<artifactId>graphiql-spring-boot-starter</artifactId>
+			<version>5.0.2</version>
+		</dependency>
+		-->
+
+		<!-- GraphQL Spqr - automatically generate GraphQL schema from entities -->
+		<dependency>
+			<groupId>io.leangen.graphql</groupId>
+			<artifactId>spqr</artifactId>
+			<version>0.10.0</version>
+		</dependency>
+
 		<!-- Spring Security -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -1,5 +1,7 @@
 package org.doogie.liquido.util;
 
+import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.connector.Request;
 import org.springframework.http.HttpMethod;
 import org.springframework.util.StreamUtils;
 
@@ -19,6 +21,7 @@ import java.util.Map;
  * but my wrapper can read the requests body and POST request parameters
  * BEFORE the request is sent.
  */
+@Slf4j
 public class BufferedRequestWrapper extends HttpServletRequestWrapper {
 
 	private static final String FORM_CONTENT_TYPE = "application/x-www-form-urlencoded";
@@ -32,6 +35,11 @@ public class BufferedRequestWrapper extends HttpServletRequestWrapper {
 	 */
 	public BufferedRequestWrapper(HttpServletRequest request) throws IOException {
 		super(request);
+
+		//Bugfix for error message when trying to login H2-console: "No suitable driver found for 08001/0"
+		//https://stackoverflow.com/questions/39854172/h2-console-error-no-suitable-driver-found-for-08001-0
+		//Need to call this, because this does "something" to the parameters of a POST request ...
+		request.getParameterNames();
 		bufIs = new BufferedServletInputStream(request.getInputStream());
 		if (request.getContentType() != null && request.getContentType().contains(FORM_CONTENT_TYPE) &&
 				HttpMethod.POST.matches(request.getMethod()) &&
