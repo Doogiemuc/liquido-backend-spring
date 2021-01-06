@@ -12,10 +12,11 @@ public class LiquidoException extends Exception {
   Errors error;
 
 	public enum Errors {
-		UNAUTHORIZED(1, HttpStatus.UNAUTHORIZED),          					// when client tries to call something without being authenticated!
+
+		CANNOT_CREATE_NEW_TEAM(1, HttpStatus.BAD_REQUEST),						// Cannot create a new team when registering
 	  CANNOT_REGISTER(2, HttpStatus.BAD_REQUEST),									// error in registration
-		USER_EXISTS(3, HttpStatus.CONFLICT),												// user with that email or mobile phonen umber already exists
-		CANNOT_LOGIN_MOBILE_NOT_FOUND(4, HttpStatus.UNAUTHORIZED),	// when requesting an SMS login token and mobile number is not known
+		USER_EXISTS(3, HttpStatus.CONFLICT),													// user with that email or mobile phonen umber already exists
+		CANNOT_LOGIN_MOBILE_NOT_FOUND(4, HttpStatus.UNAUTHORIZED),		// when requesting an SMS login token and mobile number is not known
 		CANNOT_LOGIN_EMAIL_NOT_FOUND(5, HttpStatus.UNAUTHORIZED),   // when requesting a login email and email is not known
 		CANNOT_LOGIN_TOKEN_INVALID(6, HttpStatus.UNAUTHORIZED),     // when a email or sms login token is invalid or expired
 		CANNOT_LOGIN_INTERNAL_ERROR(7, HttpStatus.INTERNAL_SERVER_ERROR),  // when sending of email is not possible
@@ -39,6 +40,8 @@ public class LiquidoException extends Exception {
 		CANNOT_ADD_SUPPORTER(25, HttpStatus.BAD_REQUEST),							// e.g. when user tries to support his own proposal
 		CANNOT_CALCULATE_UNIQUE_RANKED_PAIR_WINNER(26, HttpStatus.INTERNAL_SERVER_ERROR),		// this is only used in the exceptional situation, that no unique winner can be calculated in RankedPairVoting
 		CANNOT_VERIFY_CHECKSUM(27, HttpStatus.NOT_FOUND),							// ballot's checksum could not be verified
+
+		UNAUTHORIZED(90, HttpStatus.UNAUTHORIZED),          					// when client tries to call something without being authenticated!
 		INTERNAL_ERROR(99, HttpStatus.INTERNAL_SERVER_ERROR);
 
 		int liquidoErrorCode;
