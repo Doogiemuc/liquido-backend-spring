@@ -15,17 +15,19 @@ import java.util.Map;
 /**
  * Liquido json builder "LSON". Yet another JSON builder with a very nice fluid API.
  */
-public class Lson extends HashMap<String, Object> {
+public class Lson extends HashMap<String, Object> implements Map<String, Object> {
 
-	public static ObjectMapper mapper;
+	public static ObjectMapper mapper = new ObjectMapper();
 
 	/**
 	 * Create a builder for JSON.
 	 * Use its fluid syntax to add attributes
 	 * <pre>String json = new Lson().put("some.attr", "value").toString()</pre>
 	 */
-	public Lson() {
-		mapper = new ObjectMapper();
+	public Lson() { }
+
+	public Lson(Map<? extends String, ? extends Object> map) {
+		super(map);
 	}
 
 	public Lson(String path, Object value) {
