@@ -60,14 +60,14 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
    */
   @Override
   protected void configure(HttpSecurity http) throws Exception {
-    log.debug("Configuring HttpSecurity for "+ basePath);
+    log.info("Configuring HttpSecurity for "+ basePath);
 
     //TODO: I need a central place for URL pathes: LiquidoUrlPathes.java
 
 	  http
 			//.antMatcher(basePath).authenticationProvider(new LiquidoTokenAuthProvider()) // can I add my token auth that way?
 			.authorizeRequests()
-				.antMatchers("/graphql").permitAll()
+				.antMatchers(basePath+"/graphql").permitAll()
 				.antMatchers("/graphiql/**").permitAll()
 				.antMatchers("/vendor/**").permitAll()
 				.antMatchers("/subscriptions").permitAll()

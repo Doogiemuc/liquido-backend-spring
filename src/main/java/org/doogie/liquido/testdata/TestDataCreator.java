@@ -325,7 +325,7 @@ public class TestDataCreator implements CommandLineRunner {
 	public void seedTeams() {
 		log.info("Seeding Teams ...");
 		for (int i = 0; i < 2; i++) {
-			String teamName     = "testTeam"+(i+1);
+			String teamName     = TestFixtures.TEAM_NAME_PREFIX+(i+1);
 			String name  			 	= "user" + (i+1) + "_" + teamName;
 			String email 				= name + "@liquido.de";
 			String mobilephone 	= TestFixtures.MOBILEPHONE_PREFIX+"555"+(i+1);
