@@ -1,14 +1,15 @@
 package org.doogie.liquido.graphql;
 
-import graphql.*;
+import graphql.ExceptionWhileDataFetching;
+import graphql.ExecutionResult;
+import graphql.GraphQL;
+import graphql.GraphQLError;
 import graphql.execution.AsyncExecutionStrategy;
-import graphql.execution.DataFetcherExceptionHandler;
 import graphql.schema.GraphQLSchema;
 import io.leangen.graphql.GraphQLSchemaGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.TeamService;
-import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -62,7 +62,7 @@ public class LiquidoGraphQLController {
 	public Map<String,Object> execute(@RequestBody @NotNull Map<String, String> request, HttpServletRequest raw) throws LiquidoException {
 		ExecutionResult result = graphQL.execute(request.get("query"));
 
-		// GraphQL swallows exceptions. So we have to unwrap them here
+		// GraphQL swallows exceptions. So we have to unwrap them here, because we want to return LiquidoExceptions to our client.
 		if (result.getErrors() != null && result.getErrors().size() > 0) {
 			GraphQLError err = result.getErrors().get(0);
 			String msg = err.getMessage();
