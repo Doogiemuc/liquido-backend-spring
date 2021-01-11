@@ -8,11 +8,9 @@ import com.jayway.jsonpath.PathNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import net.minidev.json.JSONArray;
 import org.doogie.liquido.datarepos.*;
-import org.doogie.liquido.jwt.JwtTokenProvider;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
-import org.doogie.liquido.test.testUtils.JwtAuthInterceptor;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.testdata.TestDataUtils;
@@ -24,18 +22,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.boot.web.server.LocalServerPort;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.*;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.DefaultUriBuilderFactory;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
@@ -56,22 +50,11 @@ import static org.springframework.http.HttpMethod.*;
 @Slf4j
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)  // This automatically sets up everything and starts the server.
-//@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)       // Theoretically we could tun tests against an already running server, e.g. PROD   But that's a lot of work. Instead our Cypress E2E tests can do this much better.
+//@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)       // Theoretically we could run tests against an already running server, e.g. PROD   But that's a lot of work. Instead our Cypress E2E tests can do this much better.
 // @Sql(scripts="/sampleDB-H2.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)   //TODO: test if I can inject my SQL data this way
-public class RestEndpointTests extends BaseTest {
+public class RestEndpointTests extends HttpBaseTest {
 
-  /** path prefix for REST API from application.properties */
-  @Value(value = "${spring.data.rest.base-path}")
-  String basePath;
-
-  /** (random) port of local backend under test that spring creates */
-  @LocalServerPort
-  int localServerPort;
-
-  /** full uri: https://localhost:{port}/{basePath}/ */
-  String rootUri;
-
-  // My spring-data-jpa repositories for loading test data directly
+   // My spring-data-jpa repositories for loading test data directly
   @Autowired
   UserRepo userRepo;
 
@@ -110,20 +93,16 @@ public class RestEndpointTests extends BaseTest {
 	List<LawModel>  proposals;
 	List<LawModel>  laws;
 
-  //@Autowired
-  //Environment springEnv;
+	/**
+	 * This runs before every test method.
+	 * Here we (fake) generation of a JWT token by directly calling jwtTokenProvider
+	 * By Default USER1_EMAIL is logged in
+	 */
 
-  /** our HTTP REST client */
-  RestTemplate client;
-
-  /** anonymous HTTP client without any auth, for testing register, login and cast vote */
-	RestTemplate anonymousClient;
-
-	// Json Web Tokens   JWT
-	@Autowired
-	JwtTokenProvider jwtTokenProvider;
-
-	JwtAuthInterceptor jwtAuthInterceptor = new JwtAuthInterceptor();
+	@Before
+	public void beforeEachTest() {
+		this.loginUserJWT(TestFixtures.USER1_EMAIL);
+	}
 
 	/**
 	 * This is executed, when the Bean has been created and @Autowired references are injected and ready.
@@ -169,58 +148,6 @@ public class RestEndpointTests extends BaseTest {
 		log.trace("loaded "+this.laws.size()+ " laws");
 
 	}
-
-	/**
-	 * This runs before every test method.
-	 * Here we (fake) generation of a JWT token by directly calling jwtTokenProvider
-	 * By Default USER1_EMAIL is logged in
-	 */
-	@Before
-	public void beforeEachTest() {
-		loginUserJWT(TestFixtures.USER1_EMAIL);
-	}
-
-	/**
-	 * little helper to quickly login a specific user
-	 */
-	private void loginUserJWT(String email) {
-		// Here we see that advantage of a completely stateless server. We simply generate a JWT and that's it. No login state is stored on the server.
-		String jwt = jwtTokenProvider.generateToken(email);
-		jwtAuthInterceptor.setJwtToken(jwt);
-	}
-
-  /**
-   * Configure a HTTP REST client:
-   *  - log the client requests with {@link LogClientRequestInterceptor}
-	 *  - support authentication via JWT
-   *  - has a rootUri
-   */
-  public void initHttpClients() {
-    this.rootUri = "http://localhost:"+localServerPort+basePath;
-    log.trace("====== configuring RestTemplate HTTP client for "+rootUri);
-
-		// neet to manually configure Encoding of URL query parameters
-		// https://docs.spring.io/spring-framework/docs/current/spring-framework-reference/web.html#web-uri-encoding
-		DefaultUriBuilderFactory uriBuilderFactory = new DefaultUriBuilderFactory();
-		uriBuilderFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.VALUES_ONLY);
-
-	  this.client = new RestTemplateBuilder()
-      //TODO: .errorHandler(new LiquidoTestErrorHandler())     // the DefaultResponseErrorHandler throws exceptions
-		  //TODO: need to add CSRF header https://stackoverflow.com/questions/32029780/json-csrf-interceptor-for-resttemplate
-      .additionalInterceptors(new LogClientRequestInterceptor())
-			.additionalInterceptors(this.jwtAuthInterceptor)
-			//.uriTemplateHandler(uriBuilderFactory)
-      .rootUri(rootUri)
-      .build();
-
-		this.anonymousClient = new RestTemplateBuilder()
-				.additionalInterceptors(new LogClientRequestInterceptor())
-				.uriTemplateHandler(uriBuilderFactory)
-				.rootUri(rootUri)
-				.build();
-	}
-
-
 
 	//========= Tests HTTP Security =============
 
