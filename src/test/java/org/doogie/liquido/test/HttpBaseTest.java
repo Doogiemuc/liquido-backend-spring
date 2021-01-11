@@ -11,18 +11,20 @@ import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 
+import javax.annotation.PostConstruct;
+
 @Slf4j
 public class HttpBaseTest extends BaseTest {
 	/** path prefix for REST API from application.properties */
 	@Value(value = "${spring.data.rest.base-path}")
-	String basePath;
+	public String basePath;
 
 	/** (random) port of local backend under test that spring creates */
 	@LocalServerPort
 	int localServerPort;
 
 	/** full uri: https://localhost:{port}/{basePath}/ */
-	String rootUri;
+	public String rootUri;
 
 	/** This provider can create Json Web Tokens (JWT) */
 	@Autowired
@@ -35,19 +37,10 @@ public class HttpBaseTest extends BaseTest {
 	 * Authenticated HTTP REST client
 	 * You MUST call this.loginUserJWT(email)
 	 */
-	RestTemplate client;
+	public RestTemplate client;
 
 	/** Anonymous, not authenticated HTTP REST client */
-	RestTemplate anonymousClient;
-
-	/**
-	 * little helper to quickly login a specific user
-	 */
-	public void loginUserJWT(String email) {
-		// Here we see that advantage of a completely stateless server. We simply generate a JWT and that's it. No login state is stored on the server.
-		String jwt = jwtTokenProvider.generateToken(email);
-		jwtAuthInterceptor.setJwtToken(jwt);
-	}
+	public RestTemplate anonymousClient;
 
 	/**
 	 * Configure a HTTP REST client:
@@ -55,6 +48,7 @@ public class HttpBaseTest extends BaseTest {
 	 *  - support authentication via JWT
 	 *  - has a rootUri
 	 */
+	@PostConstruct
 	public void initHttpClients() {
 		this.rootUri = "http://localhost:" + localServerPort + basePath;
 		log.trace("====== configuring RestTemplate HTTP client for " + rootUri);
@@ -77,5 +71,14 @@ public class HttpBaseTest extends BaseTest {
 			.uriTemplateHandler(uriBuilderFactory)
 			.rootUri(rootUri)
 			.build();
+	}
+
+	/**
+	 * little helper to quickly login a specific user
+	 */
+	public void loginUserJWT(String email) {
+		// Here we see that advantage of a completely stateless server. We simply generate a JWT and that's it. No login state is stored on the server.
+		String jwt = jwtTokenProvider.generateToken(email);
+		jwtAuthInterceptor.setJwtToken(jwt);
 	}
 }

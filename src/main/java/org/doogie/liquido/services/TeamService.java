@@ -11,9 +11,14 @@ import org.doogie.liquido.model.UserModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 
 import java.util.Optional;
 
+/**
+ * Create a new Team, join an existing team, get information about existing team and its members.
+ * This service is directly exposed as GraphQL.
+ */
 @Slf4j
 @Service
 public class TeamService {
@@ -32,18 +37,34 @@ public class TeamService {
 	}
 
 
+	/**
+	 * Create a new team. The first user will become the admin of the team.
+	 * @param teamName Name of new team. Must be unique.
+	 * @param adminName Admin's name
+	 * @param adminEmail email of admin. (Must not be unique. One email MAY be the admin of several teams.)
+	 * @return The newly created team, incl. ID and inviteCode
+	 * @throws LiquidoException when teamName is not unique.
+	 */
 	@GraphQLMutation(name = "createNewTeam", description = "Create a new team")
-	public TeamModel createNewTeam(@GraphQLArgument(name = "teamName") @GraphQLNonNull String teamName) throws LiquidoException {
-		//TODO: most likely we will need a CreateNewTeamRequestDTO
-		//TODO: add validation logic
+	public TeamModel createNewTeam(
+			@GraphQLArgument(name = "teamName") @GraphQLNonNull String teamName,
+			@GraphQLArgument(name = "adminName") @GraphQLNonNull String adminName,
+			@GraphQLArgument(name = "adminEmail") @GraphQLNonNull String adminEmail
+	) throws LiquidoException {
+		Assert.hasText(teamName, "need teamName");
+		Assert.hasText(adminName, "need adminName");
+		Assert.hasText(adminEmail, "need adminEmail");
+
 		log.info("Create new team "+teamName);
-		UserModel admin = new UserModel("admin222@graphql.org", "graphql admin", null, null, null);
-		TeamModel newTeam = new TeamModel("teamName222", admin);
+		UserModel admin = new UserModel(adminEmail, adminName, null, null, null);
+		TeamModel newTeam = new TeamModel(teamName, admin);
+
 		try {
 			teamRepo.save(newTeam);
 		} catch (DataIntegrityViolationException ex) {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_NEW_TEAM, "Cannot create new team: A team with that name ('"+teamName+"') already exists");
 		}
+
 		return newTeam;
 	}
 }
