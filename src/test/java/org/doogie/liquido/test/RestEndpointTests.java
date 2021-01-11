@@ -98,7 +98,6 @@ public class RestEndpointTests extends HttpBaseTest {
 	 * Here we (fake) generation of a JWT token by directly calling jwtTokenProvider
 	 * By Default USER1_EMAIL is logged in
 	 */
-
 	@Before
 	public void beforeEachTest() {
 		this.loginUserJWT(TestFixtures.USER1_EMAIL);

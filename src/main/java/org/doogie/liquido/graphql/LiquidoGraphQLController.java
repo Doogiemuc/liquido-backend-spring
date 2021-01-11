@@ -13,6 +13,7 @@ import org.doogie.liquido.services.TeamService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
@@ -20,10 +21,12 @@ import javax.validation.constraints.NotNull;
 import java.util.Map;
 
 /**
- * GraphQL controller that handles POST requests to /graphql endpoint
+ * GraphQL controller that handles POST requests to GraphQL endpoint.
+ * The LIQUIDO graphql endpoint is located under the versioned URL prefix: <pre>/liquido/v2/graphql</pre>
  */
 @Slf4j
 @RestController
+@RequestMapping("${spring.data.rest.base-path}")
 public class LiquidoGraphQLController {
 
 	private final GraphQL graphQL;
