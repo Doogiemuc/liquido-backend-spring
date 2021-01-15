@@ -41,6 +41,7 @@ public interface PollRepo extends CrudRepository<PollModel, Long> {
 
 
   // the /polls  endpoint is READ-ONLY!!  To builder a poll one must use the PollRestController
+  //TODO: set @RepositoryRestResource(exported=false) and the only export  specific read-only methods!
 
   @RestResource(exported = false)
   PollModel save(PollModel pollModel);
