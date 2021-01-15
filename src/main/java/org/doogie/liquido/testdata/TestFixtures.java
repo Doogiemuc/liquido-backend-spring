@@ -24,6 +24,8 @@ public class TestFixtures {
 	public static final String AREA0_TITLE = "Area 0";
 	public static final String AREA1_TITLE = "Area 1";
 
+	public static final String TEAM_NAME_PREFIX = "TestTeam";
+	public static final String USER_NAME_PREFIX = "TestUser";
 	public static final String MAIL_PREFIX = "testuser";
 	public static final String MOBILEPHONE_PREFIX = "+4912345";
 

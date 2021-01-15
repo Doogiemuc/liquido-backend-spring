@@ -2,29 +2,38 @@ package org.doogie.liquido.test;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.UserRepo;
+import org.doogie.liquido.jwt.JwtTokenProvider;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.security.LiquidoAuthUser;
 import org.doogie.liquido.security.LiquidoUserDetailsService;
 import org.doogie.liquido.services.LiquidoException;
+import org.doogie.liquido.test.testUtils.JwtAuthInterceptor;
+import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.junit.Rule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.stereotype.Component;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.DefaultUriBuilderFactory;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
  * Base for all test classes.
- * Also contains some utility methods.
+ * Provides many utility functions,
+ * an anonymous HTTP client,
+ * and a logged in HTTP client
  */
 @Slf4j
 @ActiveProfiles("test")			// Activate spring profile "test". Needed when run via maven. I am wondergin why this is not the default
@@ -58,6 +67,8 @@ public class BaseTest {
 			log.debug("===== TEST SUCCESS "+descr.getDisplayName());
 		}
 	};
+
+
 
 	/**
 	 * Login a user into spring's SecurityContext for testing

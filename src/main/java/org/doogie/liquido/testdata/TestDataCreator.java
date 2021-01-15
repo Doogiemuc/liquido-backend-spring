@@ -87,6 +87,9 @@ public class TestDataCreator implements CommandLineRunner {
   UserRepo userRepo;
 
   @Autowired
+	TeamRepo teamRepo;
+
+  @Autowired
   AreaRepo areaRepo;
   private List<AreaModel> areas = new ArrayList<>();
   private Map<String, AreaModel> areaMap = new HashMap<>();
@@ -180,7 +183,8 @@ public class TestDataCreator implements CommandLineRunner {
       seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX);
       util.seedAdminUser();
       auditorAware.setMockAuditor(util.user(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
-      seedAreas();
+      seedTeams();
+			seedAreas();
       AreaModel area = areaMap.get(TestFixtures.AREA0_TITLE);   // most testdata is created in this area
       seedIdeas();
       seedProposals();
@@ -314,6 +318,22 @@ public class TestDataCreator implements CommandLineRunner {
 		} catch (Exception e) {
 			log.error("Could not remove Quarts statements from Schema: "+e.getMessage());
   		throw new RuntimeException("Could not remove Quarts statements from Schema: "+e.getMessage(), e);
+		}
+	}
+
+	/** Seed two teams with an admin user each. */
+	public void seedTeams() {
+		log.info("Seeding Teams ...");
+		for (int i = 0; i < 2; i++) {
+			String teamName     = TestFixtures.TEAM_NAME_PREFIX+(i+1);
+			String name  			 	= "user" + (i+1) + "_" + teamName;
+			String email 				= name + "@liquido.de";
+			String mobilephone 	= TestFixtures.MOBILEPHONE_PREFIX+"555"+(i+1);
+			String website     	= "http://www.liquido.de";
+			String picture     	= TestFixtures.AVATAR_PREFIX+((i%16)+1)+".png";
+			UserModel admin = new UserModel(email, name, mobilephone, website, picture);
+			TeamModel team = new TeamModel(teamName, admin);
+			teamRepo.save(team);
 		}
 	}
 

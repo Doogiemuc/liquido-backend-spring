@@ -47,7 +47,6 @@ public class LawServiceTests extends BaseTest {
 	LawService lawService;
 
 	@Test
-
 	public void testFindLaw() {
 		// GIVEN
 		LawQuery lawQuery = new LawQuery();

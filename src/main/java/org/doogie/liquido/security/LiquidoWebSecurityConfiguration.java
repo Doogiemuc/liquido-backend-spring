@@ -60,21 +60,23 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
    */
   @Override
   protected void configure(HttpSecurity http) throws Exception {
-    log.debug("Configuring HttpSecurity for "+ basePath);
+    log.info("Configuring HttpSecurity for "+ basePath);
 
     //TODO: I need a central place for URL pathes: LiquidoUrlPathes.java
 
 	  http
 			//.antMatcher(basePath).authenticationProvider(new LiquidoTokenAuthProvider()) // can I add my token auth that way?
 			.authorizeRequests()
+				.antMatchers(basePath+"/graphql").permitAll()
+				.antMatchers("/graphiql/**").permitAll()
+				.antMatchers("/vendor/**").permitAll()
+				.antMatchers("/subscriptions").permitAll()
 			  .antMatchers(basePath+"/_ping").permitAll()        			// allow is alive
 				.antMatchers(basePath+"/globalProperties").permitAll()		// allow fetching properties
 			  .antMatchers(basePath+"/auth/**").permitAll()      			// allow login via one time token
 				.antMatchers(basePath+"/castVote").permitAll()   				// allow anonymous voting
 			  .anyRequest().authenticated()																				// everything else must be authenticated
 			//TODO: .and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);   Do I need this?
-			.and()									//TODO: remove httpBasic auth
-				.httpBasic()
 			.and()
 			  .csrf().disable();   //TODO: reenable CSRF
 
@@ -92,7 +94,7 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
 
 	/**
 	 * Bean for default Password encoder. Needed since
-	 * <a href="https://spring.io/blog/2017/11/01/spring-security-5-0-0-rc1-released#password-encoding">Sprint-securty 5.0</a>
+	 * <a href="https://spring.io/blog/2017/11/01/spring-security-5-0-0-rc1-released#password-encoding">Sprint-security 5.0</a>
 	 * @return a default delegatingPasswordEncoder
 	 */
 	@Bean
