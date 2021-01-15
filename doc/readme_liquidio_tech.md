@@ -1,12 +1,12 @@
 # LIQUIDO - Tech Guide
 
-This is the technical documentation of the LQIUIDO backend. The backend is is implemented in Java SPRING BOOT.
+This is the technical documentation of the LQIUIDO backend. The backend is implemented in Java SPRING BOOT.
 
 # Data Model
 
 ## Process Model from an idea to a Law
 
- - At first there is an short rough idea. (NEW_IDEA)
+ - At first there is a short rough idea. (NEW_IDEA)
  - When an idea reaches its quorum, then it becomes a proposal. (NEW_PROPOSAL)
  - Alternative proposals can be added to that initial proposal. (NEW_PROPOSAL)
    But they first need to reach a certain quorum too, before they can be voted upon.
@@ -264,6 +264,34 @@ then you can fetch a JWT like this. You MUST pass the devLoginToken that is conf
 https://www.draw.io/#LLiquido%20Architecture
 
 
+# GraphQL
+
+The new team endpoint is implemented qith GraphQL. We use [GraphQL-SPQR](https://github.com/leangen/graphql-spqr) to automatically create the GraphQL schema.
+
+Sample GraphQL PST request payload. 
+(Keep in mind: If you want to send this as an HTTP POST request, you have to wrap this into JSON like so: {"query": "<GraphQL query from below>" }  ! There is no tutorial anywhere that tells you that :-)
+
+    // A sample query
+    { getAllTeams { teamName, inviteCode, id, createdAt, updatedAt, members { id, email, profile { name } }} } 
+
+    // A sample mutation
+    mutation {
+        createNewTeam(teamName: "GraphQLTEam") {
+            id
+            teamName
+            inviteCode
+            members {
+                id
+                email
+            }
+        }
+    }
+
+
+
+
+See also this tutorial: https://medium.com/@saurabh1226/getting-started-with-graphql-spqr-with-springboot-bb9d232053ec
+
 # Roadmap
 
  * MAYBE package-by-feature  http://www.javapractices.com/topic/TopicAction.do?Id=205  => and then invent microservices :-)
@@ -301,7 +329,7 @@ https://www.draw.io/#LLiquido%20Architecture
 ## Oauth 2.0
 
  - [Spring-Security 5.1 now natively supports OAuth 2.0](https://docs.spring.io/spring-security/site/docs/current/reference/html/new.html)
- - [Baelddung Oauth Tutorials Overview](https://www.baeldung.com/spring-security-oauth)
+ - [Baeldung Oauth Tutorials Overview](https://www.baeldung.com/spring-security-oauth)
  - [Baeldung Tutorial Oauth with JWT](https://www.baeldung.com/spring-security-oauth-jwt)
  - [Very nice Sprint Boot example app for JWT](https://github.com/nydiarra/springboot-jwt)
 

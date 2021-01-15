@@ -1,10 +1,10 @@
 package org.doogie.liquido.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import org.springframework.data.rest.core.annotation.RestResource;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * One user / voter / citizen
  */
 @Data
-@EqualsAndHashCode(of="email", callSuper = true)    // Compare users by their uniquie e-mail  (and ID)
+@EqualsAndHashCode(of="email", callSuper = true)    // Compare users by their unique e-mail  (and ID)
 @Entity
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)  		// automatically set UpdatedAt and CreatedAt
@@ -29,7 +29,6 @@ public class UserModel extends BaseModel {
 
 	/**
 	 * www.twilio.com Authy user id for authentication
-	 * @param authyId
 	 */
 	public long authyId;
 

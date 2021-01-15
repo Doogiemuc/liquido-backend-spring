@@ -1,5 +1,4 @@
 @startuml
-
 ' Split into 4 pages
 'page 2x2
 'skinparam pageMargin 10
@@ -8,31 +7,24 @@
 
 package liquido.model {
 
-interface Identifyable<Long>
 
-BaseModel --|> Identifyable
-LawModel --|> BaseModel
+
 DelegationModel --> AreaModel: delegation\nin area
 LawModel --> AreaModel: law\nin area
-PollModel ..> AreaModel: poll is\nin area\n(calculated)
+PollModel ..> AreaModel: poll\nin area\n(calculated)
 PollModel "0..1" <-> "N" LawModel: proposals{}\n in poll
-CommentModel "N" <--> "1" LawModel: comments{}
-BallotModel "0..1" --> "N" PollModel: ballot in poll
+BallotModel "N" --> "1" PollModel: ballot in poll
 BallotModel "0..1" --> "N" LawModel: voteOrder[]: sorted\nproposals in ballot
-BallotModel "1" -> "1" RightToVoteModel
-DelegationModel "1" -up-> "1" RightToVoteModel
+BallotModel "1" -right-> "1" RightToVoteModel: right2Vote
+DelegationModel <.up.> RightToVoteModel: No direct link\nTwo parallel trees
+Team "1" -> "N" UserModel: members
+Team "1" --> "N" PollModel: polls in team
 
 ' These are just for layout
-PollModel -[hidden]left-> DelegationModel
-UserModel -[hidden]> AreaModel
-KeyValueModel -[hidden]left> AreaModel
-OneTimeToken -[hidden]left> AreaModel
-
-class BaseModel {
-  Long ID
-  Date createdAt
-  Date updatedAt
-}
+' PollModel -[hidden]left-> DelegationModel
+' UserModel -[hidden]> AreaModel
+' KeyValueModel -[hidden]left> AreaModel
+' OneTimeToken -[hidden]left> AreaModel
 
 class AreaModel {
   Long id
@@ -60,8 +52,8 @@ class LawModel {
   String toStringShort()
   ==
   LawModel is the central entity in LIQUIDO.
-  A law becomes a proposal when it reaches its quorum.
-  Then it can join a poll.
+  An idea becomes a proposal when it reaches
+  its quorum. Then it can join a poll.
 }
 
 class PollModel {
@@ -75,8 +67,7 @@ class PollModel {
   AreaModel getArea()
   int getNumCompetingProposals()
   ==
-  Poll has an unsorted list of proposals that joined the poll.
-  A poll has no direkt link to ballots when in VOTING.
+  A Poll contains proposals that joined the poll.
   Ballots should not be exposed before the poll is FINISHED.
 }
 
@@ -91,17 +82,6 @@ class BallotModel {
   Every ballot is anonymous!
   The voteOrder in this ballot does not necessarily
   need to contain all proposals of a poll.
-}
-
-class CommentModel {
-  Long ID
-  String comment
-  UserModel createdBy
-  Set<UserModel> upvoters
-  Set<UserModel> downvoters
-  CommentModel parent
-  List<CommentModel> replies
-  LawModel proposal
 }
 
 class DelegationModel {
@@ -130,8 +110,17 @@ class RightToVoteModel {
   ==
   Digital representation of a users right to vote.
   A user has one right to vote per area, ie.
-  [area,publicProxy] must be unique.
-  A rightToVote can be delegated to the proxies rightToVote.
+  [area, publicProxy] must be unique.
+  When user has a proxy, then his right2vote
+  is delegated to the proxy.
+}
+
+class Team {
+  Long ID
+  String teamName
+  String inviteCode
+  Set<User> members
+  Set<Poll> polls
 }
 
 class UserModel {
@@ -146,29 +135,6 @@ class UserModel {
   linked to some entities as createdBy
 }
 
-class KeyValueModel {
-  Long ID
-  String key
-  String value
-  ==
-  persistant configuration
-}
-
-class OneTimeToken {
-  Long ID
-  String token
-  UserModel user
-  TokenType tokenType = {EMAIL, SMS}
-  Date validUntil
-  ==
-  uses for login without password
-}
-
-
-
 ' end package
 }
-
-
-
 @enduml

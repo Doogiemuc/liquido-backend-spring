@@ -1,6 +1,5 @@
 package org.doogie.liquido.util;
 
-import com.amazonaws.services.dynamodbv2.xspec.B;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
@@ -35,7 +34,8 @@ public class DoogiesRequestLogger extends OncePerRequestFilter {
 	@Value("${liquido.debug.log.includeResponsePayload:false}")
   private boolean includeResponsePayload;
 
-	@Value("${liquido.debug.log.maxPayloadLength:1000}")
+	/** Maximum number of chars to log for POST body. */
+	@Value("${liquido.debug.log.maxPayloadLength:200}")
 	private int maxPayloadLength;
 
 	@Value("${liquido.debug.log.logRequestHeaders:false}")

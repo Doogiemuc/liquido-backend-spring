@@ -80,6 +80,34 @@
 			<version>2.9.8</version>
 		</dependency>
 
+		<!-- Spring Graphql Tooling
+		<dependency>
+			<groupId>com.graphql-java</groupId>
+			<artifactId>graphql-spring-boot-starter</artifactId>
+			<version>5.0.2</version>
+		</dependency>
+		<dependency>
+			<groupId>com.graphql-java</groupId>
+			<artifactId>graphql-java-tools</artifactId>
+			<version>5.2.4</version>
+		</dependency>
+		-->
+
+		<!-- Graphiql - GraphQL Web debug tool -->
+		<dependency>
+			<groupId>com.graphql-java</groupId>
+			<artifactId>graphiql-spring-boot-starter</artifactId>
+			<version>5.0.2</version>
+		</dependency>
+
+
+		<!-- GraphQL Spqr - automatically generate GraphQL schema from entities -->
+		<dependency>
+			<groupId>io.leangen.graphql</groupId>
+			<artifactId>spqr</artifactId>
+			<version>0.10.0</version>
+		</dependency>
+
 		<!-- Spring Security -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -100,14 +128,14 @@
 			<version>42.2.9</version>
 		</dependency -->
 
-		<!--Jwt-->
+		<!-- Json Web Tokens (JWT) -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt</artifactId>
 			<version>${jjwt.version}</version>
 		</dependency>
 
-		<!-- Json Web Tokens (JWT)
+		<!-- Spring Security also has a JWT implementation, but io.jsonwebtoken is much simpler to use
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-jwt</artifactId>
@@ -168,13 +196,13 @@
 
 		-->
 
-		<!-- AWS SDK, currently used for sending SMS via AWS SNS.  https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk -->
+		<!-- AWS SDK, currently used for sending SMS via AWS SNS.  https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk</artifactId>
 			<version>1.11.670</version>
 		</dependency>
-
+		-->
 
 		<!-- Apache Http Client for PATCH requests  https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
 		<dependency>
