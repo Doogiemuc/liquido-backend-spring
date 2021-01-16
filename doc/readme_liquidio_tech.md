@@ -276,7 +276,7 @@ Sample GraphQL PST request payload.
 
     // A sample mutation
     mutation {
-        createNewTeam(teamName: "GraphQLTEam") {
+        createNewTeam(teamName: "GraphQLTEam", adminName: "John Admin", adminEmail: "john_admin@testliqu.com", adminMobilephone:"+4955512345") {
             id
             teamName
             inviteCode
@@ -291,6 +291,11 @@ Sample GraphQL PST request payload.
 
 
 See also this tutorial: https://medium.com/@saurabh1226/getting-started-with-graphql-spqr-with-springboot-bb9d232053ec
+
+## GraphQL and Security (Authentication via JWT)
+
+See this really nice spring example: https://github.com/Blacktoviche/springboot-graphql-sqqr-jwt-demo/
+
 
 # Roadmap
 

@@ -1,11 +1,12 @@
 package org.doogie.liquido.graphql;
 
 import graphql.ExceptionWhileDataFetching;
-import graphql.execution.*;
+import graphql.execution.DataFetcherExceptionHandler;
+import graphql.execution.DataFetcherExceptionHandlerParameters;
+import graphql.execution.DataFetcherExceptionHandlerResult;
+import graphql.execution.ExecutionPath;
 import graphql.language.SourceLocation;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.util.Lson;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +19,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class LiquidoGraphQLExceptionHandler implements DataFetcherExceptionHandler {
 
-	@SneakyThrows
+	/**
+	 * Instead of just dumping the whole stacktrace, we log usefull information.
+	 * The "exception" is not necessarily "bad". This is also called for unauthorized (parts of) graphQL queries.
+	 * Or for duplicate key exceptions etc.
+	 *
+	 * @param params contains usefull detail information about the GraphQL exception
+	 * @return DataFetcherExceptionHandlerResult that contains the list of errors.
+	 */
 	@Override
 	public DataFetcherExceptionHandlerResult onException(DataFetcherExceptionHandlerParameters params) {
 		Throwable exception = params.getException();
@@ -26,19 +34,9 @@ public class LiquidoGraphQLExceptionHandler implements DataFetcherExceptionHandl
 		ExecutionPath path = params.getPath();
 		ExceptionWhileDataFetching error = new ExceptionWhileDataFetching(path, exception, sourceLocation);
 
-		//This is was the SimpleDataFetcherExceptionHandler would log:   log.warn("GraphQL Error"+error.getMessage(), exception);
+		//SimpleDataFetcherExceptionHandler logs the whole stacktrace:  log.warn("GraphQL Error"+error.getMessage(), exception); But we can do better
 		Lson lson = new Lson(error.toSpecification());
-		log.debug("GraphQL Error:\n"+lson.toPrettyString());
-
-		/*
-		//TODO: should I throw instead? => then let Spring handle the HTTP response incl. status?
-		if (exception instanceof LiquidoException) {
-			throw exception;
-		} else {
-			throw new LiquidoException(LiquidoException.Errors.INTERNAL_ERROR, lson.toString(), exception);
-		}
-
-		 */
+		log.debug("GraphQL exception while data fetching:\n"+lson.toPrettyString());
 
 		return DataFetcherExceptionHandlerResult.newResult().error(error).build();
 	}

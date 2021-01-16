@@ -144,7 +144,7 @@ public class UserRestController {
 	 */
 	@RequestMapping(value = "/auth/requestEmailToken")
 	public ResponseEntity requestEmailToken(@RequestParam("email") String email) throws LiquidoException {
-		if (DoogiesUtil.isEmpty(email)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_EMAIL_NOT_FOUND,  "Need email!");
+		if (DoogiesUtil.hasText(email)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_EMAIL_NOT_FOUND,  "Need email!");
 		log.info("request email login code for email="+email);
 		UserModel user = userRepo.findByEmail(email)
 			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_EMAIL_NOT_FOUND,  "No user found with email "+email+". You must register first."));
@@ -182,8 +182,8 @@ public class UserRestController {
 		@RequestParam("token") String token
 	) throws LiquidoException {
 		log.debug("Request to login with email token="+token);
-		if (DoogiesUtil.isEmpty(email)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_EMAIL_NOT_FOUND, "Need email to login!");
-		if (DoogiesUtil.isEmpty(token)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Need login token!");
+		if (DoogiesUtil.hasText(email)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_EMAIL_NOT_FOUND, "Need email to login!");
+		if (DoogiesUtil.hasText(token)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Need login token!");
 
 		OneTimeToken oneTimeToken = ottRepo.findByToken(token);
 		if (oneTimeToken == null || email == null ||

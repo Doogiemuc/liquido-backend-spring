@@ -1,6 +1,8 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.security.LiquidoUserDetailsService;
+import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.util.Lson;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -8,6 +10,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -23,9 +26,9 @@ import org.springframework.web.context.request.WebRequest;
 public class LiquidoGeneralExceptionHandler {
 
 	//TODO: Now also Resource not found is a 500 instead of 404 :-(  TODO: only call my really generalException Method  AFTER RepositoryRestExceptionHandler has done its job.
-	//TODO: AccessDeniedException should also not be a 500
 
-	//TODO: This is normally handeld by RepositoryRestExceptionHandler.  But I want to catch EVERY exception below => MAYBE check Order
+
+	//TODO: This is normally handeled by RepositoryRestExceptionHandler. But I want to catch EVERY exception below => MAYBE check Order
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	@ResponseBody
 	ResponseEntity handleDataIntegrityViolationException(Exception re, WebRequest request) {
@@ -36,18 +39,17 @@ public class LiquidoGeneralExceptionHandler {
 		return new ResponseEntity<>(body, new HttpHeaders(), HttpStatus.CONFLICT);
 	}
 
-
+	//TODO: AccessDeniedException should also not be a 500
+	//@ExceptionHandler(AccessDeniedException.class)
 
 	@ExceptionHandler(Exception.class)
 	@ResponseBody
-	ResponseEntity handleGeneralException(Exception re, WebRequest request) {
-		Lson body = LiquidoRestExceptionHandler.getMessageAsJson(re, request);
-		body.put("message", "There was an internal error in Liquido. We are sorry for that.");
-		body.put("messageInternal", re.getMessage());
-		log.error("LIQUIDO Internal Server Error\n"+body.toPrettyString());
-		log.error(re.toString());
-		re.printStackTrace();
-		return new ResponseEntity<>(body, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR);
+	ResponseEntity handleGeneralException(Exception ex, WebRequest request) {
+		LiquidoException lex = new LiquidoException(LiquidoException.Errors.INTERNAL_ERROR, "There was an internal LIQUIDO error. " +
+			"We are sorry for that. Maybe you can try again laiter.", ex);
+		log.error("LIQUIDO Internal Server Error\n"+lex.toString());
+		lex.printStackTrace();
+		return new ResponseEntity<>(lex, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 
 }

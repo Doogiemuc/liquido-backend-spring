@@ -183,14 +183,14 @@ public class TestDataUtils {
 		if (ageInDays < 0) throw new IllegalArgumentException("ageInDays must be positive");
 		Table tableAnnotation = model.getClass().getAnnotation(javax.persistence.Table.class);
 		String tableName = tableAnnotation.name();
-		String hybernateDialect = (String)entityManager.getEntityManagerFactory().getProperties().getOrDefault("hibernate.dialect", "");
+		String hibernateDialect = (String)entityManager.getEntityManagerFactory().getProperties().getOrDefault("hibernate.dialect", "");
 		String sql = "";
-		if(hybernateDialect.contains("H2Dialect")) {
+		if(hibernateDialect.contains("H2Dialect")) {
 			sql = "UPDATE " + tableName + " SET "+field+" = DATEADD('DAY', -" + ageInDays + ", NOW()) WHERE id=" + id;
 		} else { // MySQL
 			sql = "UPDATE " + tableName + " SET "+field+" = CURRENT_TIMESTAMP() - interval " + ageInDays + " day WHERE id=" + id;
 		}
-		log.trace("Update date field (hybernate.dialect="+hybernateDialect+"): " + sql);
+		log.trace("Update date field (hybernate.dialect="+hibernateDialect+"): " + sql);
 		jdbcTemplate.execute(sql);
 		Date daysAgo = DoogiesUtil.daysAgo(ageInDays);
 		model.setCreatedAt(daysAgo);

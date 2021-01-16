@@ -42,7 +42,7 @@ public class LiquidoUserDetailsService implements UserDetailsService {
    *
    * Remark: LiquidoAuthUser contains the Liquido specific {@link UserModel}
    *
-   * @param email Liquido uses email adress as username
+   * @param email Liquido uses email addresses as "usernames"
    * @return the currently logged in {@link LiquidoAuthUser} or null if no user is currently logged in
    * @throws UsernameNotFoundException if email could not be found in the user DB.
    */
@@ -51,9 +51,6 @@ public class LiquidoUserDetailsService implements UserDetailsService {
     log.trace("loading user "+email+" from DB for authentication");
     UserModel userModel = userRepo.findByEmail(email)
      .orElseThrow(()-> new UsernameNotFoundException("Could not find user '"+email+"'"));
-    if (DoogiesUtil.isEmpty(userModel.getEmail()))
-    	throw new UsernameNotFoundException("User's eMail is empty.");
-
     // NO PASSWORD!   We authenticate voters with voterTokens! Yeah!
     return new LiquidoAuthUser(userModel.getEmail(), getGrantedAuthorities(userModel), userModel);
   }

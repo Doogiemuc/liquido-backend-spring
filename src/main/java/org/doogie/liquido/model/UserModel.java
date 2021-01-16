@@ -38,8 +38,9 @@ public class UserModel extends BaseModel {
 	/** timestamp of last login */
 	LocalDateTime lastLogin;
 
-	public UserModel(String email, String name, String mobilephone, String website, String picture) {
-		if (email == null || email.length() == 0) throw new IllegalArgumentException("Need at least an email to create a UserModel");
+	public UserModel(@NotNull String email, @NotNull String name, String mobilephone, String website, String picture) {
+		if (email == null || email.length() == 0) throw new IllegalArgumentException("Need an email to create a UserModel");
+		if (mobilephone == null || mobilephone.length() == 0) throw new IllegalArgumentException("Need mobilephone to create a UserModel");
 		this.email = email;
 		this.profile = new UserProfileModel();
 		this.profile.setName(name);

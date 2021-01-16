@@ -36,7 +36,7 @@ public class TeamModel extends BaseModel {
 
   /** Members of this team. The first member of the team is its admin. */
 	@GraphQLQuery(name = "members")
-	@OneToMany(cascade = CascadeType.PERSIST)
+	@OneToMany(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)  // when a team is loaded also load its members
   List<UserModel> members = new ArrayList<>();
 
 	/** Create a new Team entity */
@@ -54,7 +54,6 @@ public class TeamModel extends BaseModel {
 	public UserModel getAdmin() {
 		return this.members.get(0);
 	}
-
 
   @Override
   public String toString() {

@@ -114,10 +114,10 @@ public class PollService {
       throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Added proposal must be in the same area as the other proposals in this poll.");
 		if(poll.getProposals().contains(proposal))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Poll.id="+poll.getId()+" already contains proposal.id="+proposal.getId());
-    for (LawModel p : poll.getProposals()) {
-			if (p.getCreatedBy().equals(proposal.getCreatedBy()))
-				throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, p.getCreatedBy().getEmail()+"(id="+p.getCreatedBy().getId()+") already has a proposal in poll(id="+poll.getId()+")");
-    }
+		if (poll.getProposals().stream().anyMatch(prop -> prop.title.equals(proposal.title)))
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Poll.id="+poll.getId()+" already contains a proposal with the same title="+proposal.getTitle());
+    if (poll.getProposals().stream().anyMatch(prop -> prop.getCreatedBy().equals(proposal.getCreatedBy())))
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, proposal.getCreatedBy().toStringShort() + " already has a proposal in poll(id="+poll.getId()+")");
 
     log.debug("addProposalToPoll(proposal.id="+proposal.getId()+", poll.id="+poll.getId()+")");
     proposal.setStatus(LawModel.LawStatus.ELABORATION);
@@ -166,7 +166,7 @@ public class PollService {
   /**
 	 * Schedule a Quartz job that will end the voting phase of this poll
 	 * @param poll a poll in voting phase
-	 * @throws SchedulerException
+	 * @throws SchedulerException when job cannot be scheduled
 	 */
 	private void scheduleJobToFinishPoll(@NonNull PollModel poll, Date votingEndAtDate) throws SchedulerException {
 		JobKey finishPollJobKey = new JobKey("finishVoting_pollId="+poll.getId(), "finishPollJobGroup");
@@ -249,7 +249,7 @@ public class PollService {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_FINISH_POLL, "Poll must be in status finished to calcDuelMatrix!");
 
 		// Ordered list of proposal IDs in poll.  (Keep in mind that the proposal in a poll are not ordered.)
-		List<Long> allIds = poll.getProposals().stream().map(p -> p.getId()).collect(Collectors.toList());
+		List<Long> allIds = poll.getProposals().stream().map(BaseModel::getId).collect(Collectors.toList());
 
 		// map the vote order of each ballot to a List of ids
 		List<List<Long>> idsInBallots = ballots.stream().map(
@@ -268,7 +268,7 @@ public class PollService {
 		if (winnerIndexes.size() > 1) log.warn("There is more than one winner in "+poll);
 		long firstWinnerId = allIds.get(winnerIndexes.get(0));
 		for(LawModel prop: poll.getProposals()) {
-			if (prop.getId().longValue() == firstWinnerId)	return prop;
+			if (prop.getId() == firstWinnerId)	return prop;
 		}
 		throw new RuntimeException("Couldn't find winning Id in poll.");  // This should mathematically never happen!
 	}
@@ -276,12 +276,10 @@ public class PollService {
 
   public Lson calcPollResults(PollModel poll) {
 	  Long ballotCount = ballotRepo.countByPoll(poll);
-		Lson lson = Lson.builder()
+		return Lson.builder()
 				.put("winner", poll.getWinner())
 				.put("numBallots", ballotCount)
-				.put("duelMatrix", poll.getDuelMatrix())
-				;
-		return lson;
+				.put("duelMatrix", poll.getDuelMatrix());
 	}
 
 	/**
