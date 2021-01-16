@@ -18,6 +18,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.core.env.*;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.data.domain.Page;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.stereotype.Component;
@@ -141,6 +142,9 @@ public class TestDataCreator implements CommandLineRunner {
 	String basePath;
 
 	@Autowired
+	LiquidoProperties liquidoProps;
+
+	@Autowired
   Environment springEnv;
 
 	@Autowired
@@ -148,6 +152,12 @@ public class TestDataCreator implements CommandLineRunner {
 
 	@Autowired
 	TestDataUtils utils;
+
+	// I thought about this question for a long time:
+	// Should TestDataCreator be completely deterministic. Or is it ok if it creates some random data.
+	// One the one hand the system MUST be stable enough to handle random data.
+	// But on the other hand, when debugging a very complex deeply hidden issue, then 100% repeatable test conditions are a must.
+  // => Currently TestDataCreator has some random titles and descriptions.
 
   // very simple random number generator
   Random rand;
@@ -244,13 +254,19 @@ public class TestDataCreator implements CommandLineRunner {
 				utils.printDelegationTree(area.get(), topProxy);
 
 				try {
-					log.debug("====== TestDataCreator: RightToVotes =====");
 					String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(topProxy, area.get(), TestFixtures.USER_TOKEN_SECRET, false);
 					RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken);
+					log.debug("====== TestDataCreator: RightToVotes =====");
 					utils.printRightToVoteTree(rightToVote);
 				} catch (LiquidoException e) {
 					log.error("Cannot get rightToVote of " + topProxy + ": " + e.getMessage());
 				}
+			}
+
+			log.debug("====== TestDataCreator: Teams =====");
+			Page<TeamModel> teams = teamRepo.findAll(new OffsetLimitPageable(0, 10));
+			for (TeamModel team: teams) {
+				log.debug(team.toString());
 			}
 		}
 
@@ -326,12 +342,12 @@ public class TestDataCreator implements CommandLineRunner {
 		log.info("Seeding Teams ...");
 		for (int i = 0; i < 2; i++) {
 			String teamName     = TestFixtures.TEAM_NAME_PREFIX+(i+1);
-			String name  			 	= "user" + (i+1) + "_" + teamName;
-			String email 				= name + "@liquido.de";
+			String adminName  	= "admin_" + teamName;
+			String adminEmail 	= adminName + "@liquido.de";
 			String mobilephone 	= TestFixtures.MOBILEPHONE_PREFIX+"555"+(i+1);
 			String website     	= "http://www.liquido.de";
 			String picture     	= TestFixtures.AVATAR_PREFIX+((i%16)+1)+".png";
-			UserModel admin = new UserModel(email, name, mobilephone, website, picture);
+			UserModel admin = new UserModel(adminEmail, adminName, mobilephone, website, picture);
 			TeamModel team = new TeamModel(teamName, admin);
 			teamRepo.save(team);
 		}
@@ -361,15 +377,20 @@ public class TestDataCreator implements CommandLineRunner {
 
 	/**
    * Create some areas with unique titles. All created by user0
+	 * The first one is the default area.
    */
   private void seedAreas() {
     log.info("Seeding Areas ...");
     this.areas = new ArrayList<>();
-
     UserModel createdBy = util.user(TestFixtures.USER1_EMAIL);
 
+    // Seed default area
+		AreaModel defaultArea = new AreaModel(liquidoProps.defaultAreaTitle, "Default Area", createdBy);
+		defaultArea = areaRepo.save(defaultArea);
+		this.areaMap.put(defaultArea.getTitle(), defaultArea);
+
     for (int i = 0; i < TestFixtures.NUM_AREAS; i++) {
-      String areaTitle = "Area " + i;
+      String areaTitle =  "Area " + i;
       AreaModel newArea = new AreaModel(areaTitle, "Nice description for test area #"+i, createdBy);
 
       Optional<AreaModel> existingArea = areaRepo.findByTitle(areaTitle);
@@ -420,7 +441,7 @@ public class TestDataCreator implements CommandLineRunner {
       String ideaTitle = "Idea " + i + " that suggest that we definitely need a longer title for ideas";
       if (i == 0) ideaTitle = TestFixtures.IDEA_0_TITLE;   // special fixed title for first idea
       StringBuffer ideaDescr = new StringBuffer();
-      ideaDescr.append(DoogiesUtil.randString(8));    // prepend with some random chars to test sorting
+      ideaDescr.append(DoogiesUtil.randToken(8));    // prepend with some random chars to test sorting
       ideaDescr.append(" ");
       ideaDescr.append(util.getLoremIpsum(0,400));
 
@@ -462,7 +483,7 @@ public class TestDataCreator implements CommandLineRunner {
 
   private LawModel createRandomProposal(String title) {
     StringBuffer description = new StringBuffer();
-    description.append(DoogiesUtil.randString(8));    // prepend with some random chars to test sorting
+    description.append(DoogiesUtil.randToken(8));    // prepend with some random chars to test sorting
     description.append(" ");
     description.append(util.getLoremIpsum(0,400));
     UserModel createdBy = this.util.randUser();

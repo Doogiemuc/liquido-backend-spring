@@ -87,11 +87,11 @@ public class CastVoteService {
 	@Transactional
 	public String createVoterTokenAndStoreRightToVote(UserModel voter, AreaModel area, String voterTokenSecret, boolean becomePublicProxy) throws LiquidoException {
 		log.debug("createVoterTokenAndStoreRightToVote: for "+voter.toStringShort()+" in "+area + ", becomePublicProxy="+becomePublicProxy);
- 		if (voter == null || DoogiesUtil.isEmpty(voter.getEmail()))
+ 		if (voter == null || DoogiesUtil.hasText(voter.getEmail()))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need voter to build a voterToken!");
 		if (area == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Cannot build a voterToken. Could not find area.");
-		if (DoogiesUtil.isEmpty(voterTokenSecret))
+		if (DoogiesUtil.hasText(voterTokenSecret))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need your tokenSecret to build a voterToken!");
 
 		// Create a new voterToken for this user in that area with the BCRYPT hashing algorithm
@@ -205,7 +205,7 @@ public class CastVoteService {
 		log.info("castVote: "+ castVoteRequest);
 		if (castVoteRequest.getPoll() == null || castVoteRequest.getPoll().getId() == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Need poll to cast vote");
-		if (DoogiesUtil.isEmpty(castVoteRequest.getVoterToken()))
+		if (DoogiesUtil.hasText(castVoteRequest.getVoterToken()))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Need voterToken to cast vote");
 		if (castVoteRequest.getVoteOrder() == null || castVoteRequest.getVoteOrder().size() == 0)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Need voteOrder to cast vote");

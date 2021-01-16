@@ -200,7 +200,7 @@ public class TwilioAuthyClient {
 			ResponseEntity<String> response = this.getRestClient().getForEntity(url, String.class);
 			if (!HttpStatus.OK.equals(response.getStatusCode()))
 				throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Authy Token is invalid (userAuthyId="+userAuthyId+")");
-			log.debug("AUTHY: userAuthyId="+userAuthyId+" authenticated successfully with valid OTP.", response);
+			log.debug("AUTHY: userAuthyId="+userAuthyId+" authenticated successfully with valid OTP.");
 			return response.getBody();
 		} catch (RestClientResponseException err) {		// Authy returns HTTP 401 when OTP is invalid => Spring RestTemplate then throws a RuntimeExceptions!
 			if (err.getRawStatusCode() == 401) {
@@ -208,7 +208,7 @@ public class TwilioAuthyClient {
 				throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Invalid Authy OTP provided. (userAuthyId=" + userAuthyId + ")", err);
 			} else {
 				log.warn("ERROR verifyOneTimePassword userAuthIy=" + userAuthyId, err);
-				throw new LiquidoException(LiquidoException.Errors.INTERNAL_ERROR, "ERROR: Cannot verifyOneTimePassword from Authy (userAuthyId=" + userAuthyId + ")", err);
+				throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "ERROR: Cannot verifyOneTimePassword from Authy (userAuthyId=" + userAuthyId + ")", err);
 			}
 		}
 	}

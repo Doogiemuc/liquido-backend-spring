@@ -9,6 +9,7 @@ import lombok.NonNull;
 import org.doogie.liquido.model.converter.MatrixConverter;
 import org.doogie.liquido.rest.deserializer.LawModelDeserializer;
 import org.doogie.liquido.util.Matrix;
+import org.hibernate.validator.constraints.UniqueElements;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.lang.Nullable;
 
@@ -37,9 +38,11 @@ public class PollModel extends BaseModel {
 		this.title = title;
 	}
 
-	/** The title of a poll can be edited by anyone who has a proposal in this poll. */
-	@Nullable
+	/** The title of a poll must be unique. It can be edited by anyone who has a proposal in this poll. */
+	@Column(unique=true)    //TODO: @UniqueConstraint:  title in team is unique
 	String title;
+
+	//TODO: TeamModel team;
 
   /**
    * The set of proposals in this poll. All of these proposal must already have reached their quorum.

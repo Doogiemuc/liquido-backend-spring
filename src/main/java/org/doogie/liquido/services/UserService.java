@@ -39,8 +39,8 @@ public class UserService {
 	public UserModel registerUser(UserModel newUser) throws LiquidoException {
 		//----- sanity checks
 		if (newUser == null || newUser.getProfile() == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need data for new user");
-		if (DoogiesUtil.isEmpty(newUser.getEmail())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need email for new user");
-		if (DoogiesUtil.isEmpty(newUser.getProfile().getMobilephone())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need mobile phone for new user");
+		if (DoogiesUtil.hasText(newUser.getEmail())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need email for new user");
+		if (DoogiesUtil.hasText(newUser.getProfile().getMobilephone())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need mobile phone for new user");
 		Optional<UserModel> existingByEmail = userRepo.findByEmail(newUser.getEmail());
 		if (existingByEmail.isPresent()) throw new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that email already exists");
 		Optional<UserModel> existingByMobile = userRepo.findByProfileMobilephone(newUser.getProfile().getMobilephone());
@@ -64,7 +64,7 @@ public class UserService {
 	 * @return
 	 */
 	public String requestPushAuthentication(String mobilephone) throws LiquidoException {
-		if (DoogiesUtil.isEmpty(mobilephone)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "Need mobile phone number!");
+		if (DoogiesUtil.hasText(mobilephone)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "Need mobile phone number!");
 		final String cleanMobile = LiquidoRestUtils.cleanMobilephone(mobilephone);
 		UserModel user = userRepo.findByProfileMobilephone(cleanMobile)
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "No user found with mobile number "+cleanMobile+" in LIQUIDO. You must register first."));
@@ -79,7 +79,7 @@ public class UserService {
 	 * @throws LiquidoException when no user with that mobile phone is found or OTP was invalid
 	 */
 	public String verifyOneTimePassword(String mobile, String token) throws LiquidoException {
-		if (DoogiesUtil.isEmpty(mobile)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "Need mobile phone number!");
+		if (DoogiesUtil.hasText(mobile)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "Need mobile phone number!");
 		final String cleanMobile = LiquidoRestUtils.cleanMobilephone(mobile);
 		UserModel user = userRepo.findByProfileMobilephone(cleanMobile)
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "No user found with mobile number "+cleanMobile+". You must register first."));

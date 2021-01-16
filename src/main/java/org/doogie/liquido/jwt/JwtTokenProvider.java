@@ -9,6 +9,10 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.Date;
 
+/**
+ * Utility class to generate and then validate JsonWebTokens for Liquido.
+ * Each JWT contains the user's <b>email</b> as JWT "subject" claim.
+ */
 @Slf4j
 @Component
 public class JwtTokenProvider {
@@ -46,6 +50,7 @@ public class JwtTokenProvider {
 
 	/**
 	 * Validates if a token has the correct unmalformed signature and is not expired or unsupported.
+	 * @throws LiquidoException when token is invalid.
 	 */
 	public boolean validateToken(String authToken) throws LiquidoException {
 		try {

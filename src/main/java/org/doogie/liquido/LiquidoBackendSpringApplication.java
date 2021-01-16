@@ -1,6 +1,8 @@
 package org.doogie.liquido;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.datarepos.AreaRepo;
+import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.testdata.LiquidoProperties;
 import org.quartz.SchedulerException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,12 +11,12 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Optional;
 
 /**
  * Main entry class for Liquido Backend
@@ -34,27 +36,39 @@ public class LiquidoBackendSpringApplication {
 	String basePath;
 
 	@Autowired
-	LiquidoProperties ppp;
+	LiquidoProperties liquidoProps;
 
 	@Autowired
 	JdbcTemplate jdbcTemplate;
+
+	@Autowired
+	AreaRepo areaRepo;
 
   /**
    * Main entry point for Liquido Spring backend.
    * @param args command line arguments (none currently used)
    */
   public static void main(String[] args) throws SchedulerException {
+  	//BUGFIX: The code in here may be executed twice: https://stackoverflow.com/questions/49527862/spring-boot-application-start-twice
+		System.out.println("====================== Starting LIQUIDO ==========================");
+		SpringApplication.run(LiquidoBackendSpringApplication.class, args);
+	}
+
+	@EventListener(ApplicationReadyEvent.class)
+	public void applicationRady() throws Exception {
+		System.out.println();
+		System.out.println("=====================================================");
 		System.out.println(" _       ___    ___    _   _   ___   ____     ___  ");
 		System.out.println("| |     |_ _|  / _ \\  | | | | |_ _| |  _ \\   / _ \\ ");
 		System.out.println("| |      | |  | | | | | | | |  | |  | | | | | | | |");
 		System.out.println("| |___   | |  | |_| | | |_| |  | |  | |_| | | |_| |");
 		System.out.println("|_____| |___|  \\__\\_\\  \\___/  |___| |____/   \\___/ ");
+		System.out.println("=====================================================");
+		System.out.println();
 
-		try {
-			Class.forName("org.h2.Driver");
-		} catch (ClassNotFoundException e) {
-			log.error("ERROR: Cannot load org.h2.Driver!");
-		}
+		log.info("=====================================================");
+		log.info(" LIQUIDO backend API is up and running.");
+		log.info(" Running some sanity checks ...");
 
 		/*
 		try {
@@ -65,19 +79,30 @@ public class LiquidoBackendSpringApplication {
 			throw e;
 		}
 		*/
-		SpringApplication.run(LiquidoBackendSpringApplication.class, args);
-	}
 
-	@EventListener(ApplicationReadyEvent.class)
-	public void applicationStarted() {
+		try {
+			Class.forName("org.h2.Driver");
+		} catch (ClassNotFoundException e) {
+			log.error("ERROR: Cannot load org.h2.Driver!");
+		}
 		String dbUrl = "[unknown]";
 		try {
 			dbUrl = jdbcTemplate.getDataSource().getConnection().getMetaData().getURL();
 		} catch (SQLException e) {
-			// ignore
+			log.error("Cannot get dbUrl: "+e.getMessage());
+			throw e;
 		}
-		log.info("=====================================================");
-		log.info(" LIQUIDO backend API is up and running.");
+
+		AreaModel defaultArea = areaRepo.findByTitle(liquidoProps.defaultAreaTitle).orElse(null);
+		if (defaultArea == null) {
+			String errMsg = "Cannot find default area with title '"+ liquidoProps.defaultAreaTitle+"'";
+			log.error(errMsg);
+			throw new Exception(errMsg);
+		}
+		liquidoProps.setDefaultArea(defaultArea);
+
+		log.info(" ... sanity checks: successful.");
+
 		log.info(" BackendBasePath: http://localhost:"+this.serverPort+this.basePath);
 		log.info(" DB: "+dbUrl);
 		try {
@@ -88,7 +113,7 @@ public class LiquidoBackendSpringApplication {
 		} catch (Exception e) {
 			// ignore
 		}
-		log.info(" "+ppp.toString());
+		log.info(" "+ liquidoProps.toString());
 		log.info("=======================================================");
 	}
 

@@ -22,6 +22,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+/**
+ * This filter is added before the default spring UsernamePasswordAuthenticationFilter.class
+ * It can authenticate user's from the header "Authentication: Bearer [jwt]".
+ * The JWT contains the user's email. This will be used to load the UserDetails.
+ */
 @Slf4j
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -46,8 +51,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			String jwt = getJwtFromRequest(request);
 			if (StringUtils.hasText(jwt) && jwtTokenProvider.validateToken(jwt)) {
 				//log.trace("Trying to authenticate JWT: "+jwt);
-				String username = jwtTokenProvider.getSubjectFromJWT(jwt);
-				UserDetails userDetails = liquidoUserDetailsService.loadUserByUsername(username);
+				String email = jwtTokenProvider.getSubjectFromJWT(jwt);   // jwt subject is user's email
+				UserDetails userDetails = liquidoUserDetailsService.loadUserByUsername(email);
 				//----- if token is valid and user was found, then login that user as principal.
 				UsernamePasswordAuthenticationToken authentication =
 						new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());  // <==== no password. User is authenticated by JWT
@@ -60,7 +65,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		} catch (UsernameNotFoundException e) {
 			log.debug("Authenticate JWT: Username from JWT does not exist", e);
 			throw e;
-		} catch (LiquidoException lex) {
+		} catch (LiquidoException lex) {  // thrown when token is invalid
+			//BUGFIX: https://stackoverflow.com/questions/19767267/handle-spring-security-authentication-exceptions-with-exceptionhandler
 			log.debug(lex.toString());
 			response.setStatus(lex.getHttpResponseStatus().value());
 			response.setContentType("application/json");
@@ -68,7 +74,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			lson.put("requestURL", request.getRequestURL().toString());
 			response.getWriter().println(lson.toString());
 		}
-		//MAYBE: catch (Exception e)    for example for unhandled internal server errors.  See LiquidoRestExceptionHandler
 	}
 
 	//https://stackoverflow.com/questions/34595605/how-to-manage-exceptions-thrown-in-filters-in-spring/34633687#34633687
@@ -79,6 +84,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	 * Extract the token from the Authorization request header
 	 */
 	private String getJwtFromRequest(HttpServletRequest request) {
+		//FUN FACT: in the Micronaut framework, this same logic is implemented in five classes :-)
 		String bearerToken = request.getHeader(tokenRequestHeader);
 		if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(tokenRequestHeaderPrefix)) {
 			//log.info("Extracted Token: " + bearerToken);
