@@ -1,0 +1,137 @@
+@startuml
+' Split into 4 pages
+'page 2x2
+'skinparam pageMargin 10
+'skinparam pageExternalColor gray
+'skinparam pageBorderColor black
+
+package Liquido {
+
+
+
+Delegation --> Area: delegation\nin area
+Law --> Area: law\nin area
+Poll ..> Area: poll\nin area\n(calculated)
+Poll "0..1" -> "N" Law: proposals{}\n in poll
+Ballot "N" --> "1" Poll: casted ballots\nin a poll
+Ballot "0..1" --> "N" Law: voteOrder[]: sorted\nproposals in ballot
+Ballot "N" -right-> "1" Right2Vote: casted wihth a\nRight2Vote
+Team "1" -up-> "N" User: team members
+Team "1" --> "N" Poll: polls in team
+Right2Vote -up-> Right2Vote: can be\ndelegated to\nproxy
+
+
+note "No direct link between\nProxy Delegations\nand delegated Right2Votes!\nThese are two parallel trees." as Note1
+Delegation .[hidden]up. Note1
+Note1 .[hidden]up. Right2Vote
+
+
+' These are just for layout
+Law -[hidden]right-> Delegation
+
+
+
+class Area {
+  Long id
+  String title
+  String description
+}
+
+class Law {
+  Long ID
+  String title
+  String description
+  Area area
+  LawStatus status = [
+    IDEA, PROPOSAL, ELABORATION, VOTING, LAW
+    LOST, RETENTION, RETRACTED]
+  Poll poll // is null when IDEA
+  Set<User> supporters
+  List<Comment> comments
+  Date reachedQuorumAt
+  ==
+  Law is the central entity in LIQUIDO.
+  An idea becomes a proposal when it reaches
+  its quorum. Then it can join a poll.
+}
+
+class Poll {
+  Set<Law> proposals    // unsorted Set
+  String status = [ELABORATION, VOTING, FINISHED]
+  Date votingStartAt
+  Date votingEndAt
+  Law winner
+  Matrix duelMatrix
+  Area getArea()
+  int getNumCompetingProposals()
+  ==
+  A Poll contains a set of proposals 
+  that joined the poll.
+  Ballots should not be exposed
+  before the poll is FINISHED.
+}
+
+class Ballot {
+  String checksum // calculated MD5
+  int level
+  Poll poll
+  Right2Vode right2Vote
+  List<Law> voteOrder // sorted
+  ==
+  Every ballot is anonymous!
+  The voteOrder in this ballot does not necessarily
+  need to contain all proposals of a poll.
+}
+
+class Delegation {
+  Area area // one delegation per area
+  User fromUser
+  User toProxy
+  Date requestedDelegationAt
+  Right2Vote requestedDelegationFrom
+  boolean isDelegationRequest()
+  ==
+  A voter can delegate his Right2Vote to a proxy.
+  If the proxy is not a public proxy, then the
+  delegation can only be requested and must then be
+  accepted by the proxy.
+}
+
+class Right2Vote {
+  String hashedVoterToken // is ID
+  Area area
+  Right2Vote delegatedTo
+  User publicProxy // may be null
+  Date expiresAt
+  --
+  boolean isDelegated()
+  ==
+  Digital representation of a users right to vote.
+  A user has one right to vote per area, ie.
+  [area, publicProxy] must be unique.
+  A Right2Vote is anonymous!
+  When a user has chosen a proxy, then his right2vote
+  is delegated to the proxy's right2vote.
+}
+
+class Team {
+  String teamName
+  String inviteCode
+  Set<User> members
+  Set<Poll> polls
+}
+
+class User {
+  String email
+  String profile.name
+  String profile.mobilephone
+  String profile.website
+  String profile.picture
+  Date lastlogin
+  ==
+  Linked to many entities in createdBy
+}
+
+' end package
+}
+@enduml
