@@ -14,11 +14,13 @@ public class OffsetLimitPageable implements Pageable {
 	Sort sort = Sort.unsorted();
 
 	public OffsetLimitPageable(long offset, long limit) {
+		if (offset < 0) offset = 0;
 		this.offset = offset;
 		this.limit = limit;
 	}
 
 	public OffsetLimitPageable(long offset, long limit, Sort sort) {
+		if (offset < 0) offset = 0;
 		this.offset = offset;
 		this.limit = limit;
 		this.sort = sort;

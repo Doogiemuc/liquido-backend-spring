@@ -5,25 +5,69 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Handy little utility functions that you <b>always</b> need.
- * See also spring.core.util.*
- * or Google Guava
+ * See also
+ *  - spring.core.util.*
+ *  - org.springframework.util.Assert   CollectionUtils
+ *  - or Google Guava
  */
 public class DoogiesUtil {
 
-  public static boolean isEmpty(String s) {
+	/**
+	 * Check if s is null or empty or only contains spaces
+	 * @return true when s is null, empty or contains only spaces
+	 */
+  public static boolean hasText(String s) {
     return s == null || s.trim().length() == 0;
   }
 
-	public static boolean isNotEmpty(String s) { return !isEmpty(s);	}
+	public static final String eMailRegEx = "\\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,64}\\b";
+  public static final Pattern p = Pattern.compile(eMailRegEx);
+
+	/**
+	 * Check if s looks like an email adress.
+	 * The official specification for the format of an email adress
+	 * is alreay quite complex: https://tools.ietf.org/html/rfc2822#page-16
+	 * This method uses a simple regular expression to validate email adresses.
+	 * This method of course does not check if that email can actually receive mails.
+	 *
+	 * @param s an email adress to check for correct format.
+	 * @return true if s looks like a valid email.
+	 */
+	public static boolean isEmail(String s) {
+		if (s == null) return false;
+		Matcher m = p.matcher(s);
+		return m.matches();
+	}
+
+	/**
+	 * Check if an Iterable (e.g. a Collection, List or Set) contains an element that
+	 * fulfills a given Predicate. If so, then the <b>first</b> matching element is returned.
+	 * What this method returns if predicate is null or iterable contains null element(s)
+	 * solely depends on predicate.
+	 * @param it an Iterable, e.g. a Colletion, List or Set
+	 * @param predicate A function that takes an element as input and returns true
+	 *                  if this element fullfills the predicate.
+	 * @param <T> type of elements in Iterable
+	 * @return An optional that contains the first element in <pre>it</pre> that matches <pre>predicate</pre>
+	 *         or Optional.empty() if no element <pre>it</pre> has that predicate
+	 */
+	public static <T> Optional<T> doesContain(Iterable<T> it, Predicate<T> predicate) {
+		for(T elem : it) {
+			if (predicate.test(elem))
+				return Optional.of(elem);
+		}
+		return Optional.empty();
+	}
+
 
   //http://stackoverflow.com/questions/309424/read-convert-an-inputstream-to-a-string
   public static String stream2String(InputStream inputStream) throws IOException {
@@ -51,20 +95,20 @@ public class DoogiesUtil {
   {
     Calendar cal = Calendar.getInstance();
     cal.setTime(date);
-    cal.add(Calendar.DATE, days); //minus number would decrement the days
+    cal.add(Calendar.DATE, days); //negative number of days is possible
     return cal.getTime();
   }
 
   static final Random rand = new Random();
-  /** There is deliberately no number 1(one), and no letters i and j in this array, because they can be interchanged so easily in many fonts. */
-  private static final char[] EASY_CHARS = "234567890ABCDEFGHKLMNOPQRSTUVWXYZabcdefghklmnopqrstuvwxyz".toCharArray();
+  /** There is deliberately no number 0/O/o 1/I/i/j/l/L this array, because they can be confused so easily in many fonts. */
+  private static final char[] EASY_CHARS = "234567890ABCDEFGHKLMNPQRSTUVWXYZabcdefghkmnpqrstuvwxyz".toCharArray();
 
   /**
-   * Simply generate some random characters
+   * Generate some random characters that can be used for human readable tokens.
    * @param len number of chars to generate
    * @return a String of length len with "easy" random characters and numbers
    */
-  public static String randString(int len) {
+  public static String randToken(int len) {
     StringBuffer buf = new StringBuffer();
     for (int i = 0; i < len; i++) {
       buf.append(EASY_CHARS[rand.nextInt(EASY_CHARS.length)]);
@@ -141,6 +185,7 @@ public class DoogiesUtil {
 	 * @param <T> type of nodes. Nodes may be anything. The only requirement is that the printer function can print the node.
 	 */
 	public static <T> void printTreeRec(String indent, T node, BiConsumer<String, T> printer, Function<T, List<T>> getChildrenFunc, boolean isTail) {
+		// We could also apply some FUNCTIONAL programming wizardry: Skip the first parameter "indent". Instead curry the printer function in each recursion level *G*
 		String nodeConnection = isTail ? "└─ " : "├─ ";
 		printer.accept(indent + nodeConnection, node);		// print the current node with that prefix
 		List<T> children = getChildrenFunc.apply(node);
@@ -162,5 +207,5 @@ public class DoogiesUtil {
 		return o1.equals(o2);
 	}
 
-	// We could also apply some FUNCTIONAL programming wizardry: Skip the first parameter "indent".  Instead curry the printer function in each recursion level *G*
+
 }

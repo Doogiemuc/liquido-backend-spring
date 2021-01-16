@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +17,6 @@ import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import org.springframework.web.util.WebUtils;
-
-import java.util.Arrays;
 
 /**
  * Global Liquido REST exception handler
@@ -114,8 +111,8 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 			bodyOfResponse.put("httpMethod", ((ServletWebRequest) request).getHttpMethod());
 			String requestURL  = ((ServletWebRequest)request).getRequest().getRequestURL().toString();
 			String queryString = ((ServletWebRequest)request).getRequest().getQueryString();
-			if (!DoogiesUtil.isEmpty(queryString)) requestURL += "?" + queryString;
-			if (!DoogiesUtil.isEmpty(requestURL)) bodyOfResponse.put("requestURL", requestURL);
+			if (!DoogiesUtil.hasText(queryString)) requestURL += "?" + queryString;
+			if (!DoogiesUtil.hasText(requestURL)) bodyOfResponse.put("requestURL", requestURL);
 			bodyOfResponse.put("remoteUser", request.getRemoteUser());
 		} catch (Throwable ignore) { }
 

@@ -3,6 +3,7 @@ package org.doogie.liquido.testdata;
 import lombok.Data;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.model.AreaModel;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -24,11 +25,18 @@ public class LiquidoProperties {
 	public Integer daysUntilVotingStarts;
 	public Integer durationOfVotingPhase;
 	public Integer rightToVoteExpirationHours;
+	public String  defaultAreaTitle;
+	public AreaModel defaultArea;  // will be set once application has started
 	public String  frontendUrl;
 	@ToString.Exclude
 	public String  devLoginToken;
 
 	public Backend backend = new Backend();
+
+	public void setDefaultArea(AreaModel defaultArea) {
+		this.defaultArea = defaultArea;
+	}
+
 	@Data
 	public static class Backend {
 		public String version;

@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * Just the same as spring's BasicAuthorizationInterceptor. But mine can change teh user :-)
  */
+@Deprecated  // not used anymore
 public class LiquidoBasicAuthInterceptor implements ClientHttpRequestInterceptor {
 	private String username;
 	private String password;
