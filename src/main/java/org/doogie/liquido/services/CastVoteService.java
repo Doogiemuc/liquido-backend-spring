@@ -263,7 +263,8 @@ public class CastVoteService {
 				log.trace("   Will not overwrite existing ballot with vote at already smaller level " + existingBallot);
 				return null;
 			}
-			log.trace("  Update existing ballot "+existingBallot.getId());
+			log.trace("  Update existing ballot "+existingBallot.getId
+				());
 			existingBallot.setVoteOrder(newBallot.getVoteOrder());
 			existingBallot.setLevel(newBallot.getLevel());
 			savedBallot = ballotRepo.save(existingBallot);

@@ -24,7 +24,6 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.*;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -87,11 +86,6 @@ public class RestEndpointTests extends HttpBaseTest {
 
 	// preloaded data that most test cases need.
   List<UserModel> users;
-  List<AreaModel> areas;
-  Map<String, AreaModel> areaMap;  // areas by title
-	List<LawModel>  ideas;
-	List<LawModel>  proposals;
-	List<LawModel>  laws;
 
 	/**
 	 * This runs before every test method.
@@ -108,7 +102,7 @@ public class RestEndpointTests extends HttpBaseTest {
 	 * This runs once for every test!
 	 */
 	@PostConstruct
-	public void postConstruct() {
+	public void postConstruct() throws LiquidoException {
 		initHttpClients();
 
 		// Here you can do any one time setup necessary
@@ -119,32 +113,6 @@ public class RestEndpointTests extends HttpBaseTest {
 			this.users.add(userModel);
 		}
 		log.trace("loaded "+this.users.size()+ " users");
-
-		this.areas = new ArrayList<>();
-		this.areaMap = new HashMap<>();
-		for (AreaModel areaModel : areaRepo.findAll()) {
-			this.areas.add(areaModel);
-			this.areaMap.put(areaModel.getTitle(), areaModel);
-		}
-		log.trace("loaded "+this.areas.size()+ " areas");
-
-		this.ideas = new ArrayList<>();
-		for (LawModel lawModel : lawRepo.findByStatus(LawModel.LawStatus.IDEA, Pageable.unpaged())) {
-			this.ideas.add(lawModel);
-		}
-		log.trace("loaded "+this.ideas.size()+ " ideas");
-
-		this.proposals = new ArrayList<>();
-		for (LawModel lawModel : lawRepo.findByStatus(LawModel.LawStatus.PROPOSAL, Pageable.unpaged())) {
-			this.ideas.add(lawModel);
-		}
-		log.trace("loaded "+this.proposals.size()+ " proposals");
-
-		this.laws = new ArrayList<>();
-		for (LawModel lawModel : lawRepo.findByStatus(LawModel.LawStatus.LAW, Pageable.unpaged())) {
-			this.ideas.add(lawModel);
-		}
-		log.trace("loaded "+this.laws.size()+ " laws");
 
 	}
 
@@ -259,7 +227,7 @@ public class RestEndpointTests extends HttpBaseTest {
     headers.setContentType(MediaType.APPLICATION_JSON);
     HttpEntity<String> entity = new HttpEntity<>(newAreaJSON.toString(), headers);
 
-    Long areaId = this.areas.get(0).getId();
+    Long areaId = getDefaultArea().getId();
     ResponseEntity<AreaModel> response = client.exchange("/areas/"+areaId, PATCH, entity, AreaModel.class);
     AreaModel updatedArea = response.getBody();
     assertEquals(newDescription, updatedArea.getDescription());
@@ -302,7 +270,7 @@ public class RestEndpointTests extends HttpBaseTest {
     //   ResponseEntity<BallotModel> createdBallot = client.postForEntity("/ballot", newBallot, BallotModel.class);
     // because I do not want the test to success just because of on spring's very clever serialization and deserialization.
     // Instead I want to post plain JSON as a client would:
-    String areaUri  = basePath + "/areas/" + this.areas.get(0).getId();
+    String areaUri  = basePath + "/areas/" + getDefaultArea().getId();
     String pollUri  = basePath + "/polls/" + polls.get(0).getId();
     String newLawTitle = "Law from test "+System.currentTimeMillis() % 10000;  // proposal.title must be unique!!
 
@@ -366,7 +334,7 @@ public class RestEndpointTests extends HttpBaseTest {
 	public void testSupportOwnIdea() {
 		log.trace("TEST supportOwnIdea");
 		//GIVEN
-		LawModel idea = postNewIdea("Idea from testSupportOwnIdea", this.areas.get(0));
+		LawModel idea = postNewIdea("Idea from testSupportOwnIdea", this.getDefaultArea());
 		UserModel currentUser = getCurrentUser();
 		String supporterURI = basePath + "/users/" + currentUser.getId();
 		try {
@@ -395,7 +363,7 @@ public class RestEndpointTests extends HttpBaseTest {
     log.debug("TEST ideaReachesQuorum");
 
 		loginUserJWT(TestFixtures.USER1_EMAIL);
-    LawModel idea = postNewIdea("Idea from testIdeaReachesQuorum", this.areas.get(0));
+    LawModel idea = postNewIdea("Idea from testIdeaReachesQuorum", this.getDefaultArea());
     log.trace(idea.toString());
     assertEquals(0, idea.getNumSupporters());
 
@@ -539,15 +507,15 @@ public class RestEndpointTests extends HttpBaseTest {
    */
   @Test
   public void testGetVoterToken() {
-    AreaModel area = this.areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
+    AreaModel area = this.getDefaultArea();
     String voterToken = getVoterToken(area.getId());
     assertTrue("Voter token is invalid", voterToken != null && voterToken.startsWith("$2") && voterToken.length() > 10);
-    log.trace("TEST SUCCESS: found expected "+TestFixtures.USER1_DELEGATIONS +" delegations for "+TestFixtures.USER1_EMAIL + " in area "+TestFixtures.AREA_FOR_DELEGATIONS);
+    log.trace("TEST SUCCESS: found expected "+TestFixtures.USER1_DELEGATIONS +" delegations for "+TestFixtures.USER1_EMAIL + " in " + this.getDefaultArea().toString());
   }
 
   @Test
   public void testGetAssignableProxies() {
-		AreaModel area = areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
+		AreaModel area = this.getDefaultArea();
 		loginUserJWT(TestFixtures.USER1_EMAIL);
 		String assignableResources = client.getForObject("/my/proxy/{areaId}/assignable", String.class, area.getId());
 		JSONArray assignableProxies = JsonPath.read(assignableResources, "$");
@@ -556,7 +524,7 @@ public class RestEndpointTests extends HttpBaseTest {
 
 	@Test
 	public void testDelegationsCount() {
-		AreaModel area = areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
+		AreaModel area = this.getDefaultArea();
 		loginUserJWT(TestFixtures.USER1_EMAIL);
 
 		String tokenJson = client.getForObject("/my/voterToken/{areaId}?tokenSecret={tokenSecret}", String.class, area.getId(), TestFixtures.USER_TOKEN_SECRET);
@@ -565,32 +533,32 @@ public class RestEndpointTests extends HttpBaseTest {
 
 		String delegationsJSON = client.getForObject("/my/delegations/{areaId}?voterToken={voterToken}", String.class, area.getId(), voterToken);
 		int delegationCount = JsonPath.read(delegationsJSON, "$.delegationCount");
-		assertEquals(TestFixtures.USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegated votes in area='"+TestFixtures.AREA_FOR_DELEGATIONS+"'", TestFixtures.USER1_DELEGATIONS, delegationCount);
+		assertEquals(TestFixtures.USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegated votes "+this.getDefaultArea().toString(), TestFixtures.USER1_DELEGATIONS, delegationCount);
 		assertEquals("DelegationCount from GET /my/voterToken must equal the returned delegation count from GET /my/delegations/{areaId}", delegationCountFromVoterToken, delegationCount);
 	}
 
 	@Test
   public void testRequestedDelegation() {
-		AreaModel area = areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
+		AreaModel area = this.getDefaultArea();
 		String email = TestFixtures.USER2_EMAIL;
 		loginUserJWT(email);
 		String voterToken = getVoterToken(area.getId());
 		String delegationsJSON = client.getForObject("/my/delegations/{areaId}?voterToken={voterToken}", String.class, area.getId(), voterToken);
 		Boolean isPublicProxy = JsonPath.read(delegationsJSON, "$.isPublicProxy");
 		int delegationCount = JsonPath.read(delegationsJSON, "$.delegationCount");
-		assertFalse(email + " should NOT be a public proxy in area " + TestFixtures.AREA_FOR_DELEGATIONS, isPublicProxy);
+		assertFalse(email + " should NOT be a public proxy in " + this.getDefaultArea().toString(), isPublicProxy);
 		assertEquals(email + " should have one delegation request", TestFixtures.USER2_DELEGATIONS, delegationCount);
 	}
 
 
   /**
-   * This updates a delegation and changes the toProxy via PUT to the /saveProxy endpoint
+   * This updates a delegation and changes the toProxy via PUT to the /my/proxy endpoint
    */
   @Test
   public void testAssignAndRemoveProxy() {
     UserModel fromUser = this.users.get(15);
     UserModel toProxy  = this.users.get(10);
-    AreaModel area     = this.areas.get(0);
+    AreaModel area     = this.getDefaultArea();
     String toProxyUri  = basePath + "/users/" + toProxy.getId();
 
     loginUserJWT(fromUser.getEmail());
@@ -600,14 +568,16 @@ public class RestEndpointTests extends HttpBaseTest {
 				.put("voterToken", voterToken)
 				.toJsonHttpEntity();
     ResponseEntity<String> response = client.exchange("/my/proxy/{areaId}?voterToken={voterToken}", PUT, entity, String.class, area.getId(), voterToken);
-    assertEquals(HttpStatus.CREATED, response.getStatusCode());
-    String updatedDelegationJson = response.getBody();
-		log.debug("received updated delegation: \n"+updatedDelegationJson);
-    String actualProxyEmail = JsonPath.read(updatedDelegationJson, "$.toProxy.email");
-    assertEquals("expected toProxy to be updated", toProxy.getEmail(), actualProxyEmail);
-
-    client.delete("/my/proxy/{areaId}?voterToken={voterToken}", area.getId(), voterToken);
-
+    try {
+			assertEquals(HttpStatus.CREATED, response.getStatusCode());
+			String updatedDelegationJson = response.getBody();
+			log.debug("received updated delegation: \n"+updatedDelegationJson);
+			String actualProxyEmail = JsonPath.read(updatedDelegationJson, "$.toProxy.email");
+			assertEquals("expected toProxy to be updated", toProxy.getEmail(), actualProxyEmail);
+		} finally {
+    	// delete delegation. This is important. Otherwise other tests that depend on unchanged delegations from TestFixtures will fail.
+			client.delete("/my/proxy/{areaId}?voterToken={voterToken}", area.getId(), voterToken);
+		}
   }
 
   @Test
@@ -659,21 +629,19 @@ public class RestEndpointTests extends HttpBaseTest {
 		loginUserJWT(TestFixtures.USER16_EMAIL);
 
 		// GIVEN a poll in elaboration
-		List<PollModel> pollsInElaboration = pollRepo.findByStatusAndArea(PollModel.PollStatus.ELABORATION, this.areas.get(0));
-		assertNotNull("Need at least one poll in elaboration!", pollsInElaboration.size() > 0);
+		List<PollModel> pollsInElaboration = pollRepo.findByStatusAndArea(PollModel.PollStatus.ELABORATION, this.getDefaultArea());
+		assertTrue("Need at least one poll in elaboration!", pollsInElaboration.size() > 0);
 		PollModel poll = pollsInElaboration.get(0);
 		log.trace("Join poll: "+poll);
 
 		// AND a new proposal in this area
-		LawModel proposal = postNewIdea("Idea create by test to join poll", this.areas.get(0));
+		LawModel proposal = postNewIdea("Idea create by test to join poll", this.getDefaultArea());
 		for (int j = 0; j < prop.supportersForProposal; j++) {
 			//Keep in mind that user 16 must not support his own idea
 			String supporterURI = basePath + "/users/" + this.users.get(j).getId();
 			loginUserJWT(this.users.get(j).getEmail());
 			addSupporterToIdea(supporterURI, proposal);
 		}
-
-
 
 		// WHEN this proposal joins the poll
 		HttpHeaders headers = new HttpHeaders();

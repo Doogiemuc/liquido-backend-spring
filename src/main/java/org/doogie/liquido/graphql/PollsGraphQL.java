@@ -63,13 +63,10 @@ public class PollsGraphQL {
 	public PollModel createPoll(
 		@GraphQLNonNull @GraphQLArgument(name="title") String title
 	) throws LiquidoException {
-		PollModel poll = new PollModel(title);
-		try {
-			poll = pollRepo.save(poll);
-		} catch (DataIntegrityViolationException e) {
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "A Poll with the title '"+title+"' already exists in your team!");
-		}
-		return poll;
+		AreaModel defaultArea = areaRepo.findByTitle(liquidoProps.getDefaultAreaTitle()).orElseThrow(
+			() -> new LiquidoException(LiquidoException.Errors.INTERNAL_ERROR, "Cannot find default area!")
+		);
+		return pollService.createPoll(title, defaultArea);
 	}
 
 	/**
@@ -88,10 +85,18 @@ public class PollsGraphQL {
 		@GraphQLNonNull @GraphQLArgument(name = "description") String description,
 		@GraphQLArgument(name = "areaId") Long areaId
 	) throws LiquidoException {
-
-		AreaModel area = areaRepo.findById(areaId).orElse(liquidoProps.defaultArea);
+		AreaModel area;
+		if (areaId != null) {
+			area = areaRepo.findById(areaId).orElseThrow(
+				() -> new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposal: Area(id=" + areaId + ") not found.")
+			);
+		} else {
+			area = areaRepo.findByTitle(liquidoProps.defaultAreaTitle).orElseThrow(
+				() -> new LiquidoException(LiquidoException.Errors.INTERNAL_ERROR, "Cannot addProposal: DefaultAreaNotFound not found.")
+			);
+		}
 		PollModel poll = pollRepo.findById(pollId).orElseThrow(
-			() -> new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot find poll with id="+pollId)
+			() -> new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposal: There is no poll with id="+pollId)
 		);
 		LawModel proposal = new LawModel(title, description, area);
 		pollService.addProposalToPoll(proposal, poll);
