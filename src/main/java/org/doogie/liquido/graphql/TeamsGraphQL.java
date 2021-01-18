@@ -57,46 +57,22 @@ public class TeamsGraphQL {
 	@PersistenceContext
 	private EntityManager entityManager;
 
-	/*
-
-	   @Deprecated: Login is done via REST
-
-	 * Login with email and oneTimeToken
-	 * @param mobile user's mobile phone number
-	 * @param loginToken one time token
-	 * @return <pre>{ "login": "...jwt..."}</pre> with JWT for next authenticated requests
-	 * @throws LiquidoException when email or OTT is invalid
-
-	@GraphQLQuery(name = "loginWithToken")
-	public String login(
-		@GraphQLNonNull @GraphQLArgument(name = "mobile") String mobile,
-		@GraphQLNonNull @GraphQLArgument(name = "token") String loginToken
-	) throws LiquidoException {
-		return userService.verifyOneTimePassword(mobile, mobile);
-	}
-	*/
-
 
 	/**
 	 * Get information about user's own team, including the team's polls.
 	 * @return info about user's own team.
 	 * @throws LiquidoException
 	 */
-	//@PreAuthorize(HAS_ROLE_USER)
+	@PreAuthorize(HAS_ROLE_USER)
 	@GraphQLQuery(name = "team")
 	@Transactional  //BUGFIX for error: No EntityManager with actual transaction available for current thread - cannot reliably process 'merge' call"
 	public TeamModel getOwnTeam() throws LiquidoException {
 		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
 			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to query for your own team's info."));
-
-		currentUser = entityManager.merge(currentUser);
-
-
-		TeamModel team = currentUser.getTeam();
-
-		//TeamModel team = teamRepo.findById(currentUser.teamId)
-	  //	.orElseThrow(LiquidoException.notFound("Cannot find team with id="+currentUser.teamId));
-
+		//BUGFIX: MUST merge currentUser into current hibernate transaction https://stackoverflow.com/questions/65752757/hibernate-lazy-loading-and-springs-userdetails
+		// currentUser = entityManager.merge(currentUser);
+		Long teamId = currentUser.getTeamId();
+		TeamModel team = teamRepo.findById(teamId).orElseThrow(LiquidoException.notFound("Cannot find a team with team.id="+teamId));
 		return team;
 	}
 
@@ -115,12 +91,10 @@ public class TeamsGraphQL {
 		@GraphQLArgument(name = "adminEmail") @GraphQLNonNull String adminEmail,
 		@GraphQLArgument(name = "adminMobilephone") @GraphQLNonNull String adminMobilephone
 	) throws LiquidoException {
-		// GraphQLArgument without a default value are automatically checked as REQUIRED.
 		UserModel admin = UserModel.asTeamAdmin(adminEmail, adminName, adminMobilephone, null, null);
 		TeamModel newTeam = new TeamModel(teamName, admin);
 		try {
-			//admin.setTeamId(newTeam.id);			// link admin user to team. This MUST be done manually here. After save(newTeam)
-			admin.setTeam(newTeam);
+			admin.setTeamId(newTeam.id);			// link admin user to team. This MUST be done manually here. After save(newTeam)
 			newTeam = teamRepo.save(newTeam);
 			//userRepo.save(admin);
 			log.info("Created new team: "+newTeam.toString());
@@ -161,8 +135,7 @@ public class TeamsGraphQL {
 			// Otherwise add a new user to the team
 			try {
 				UserModel newUser = new UserModel(userEmail, userName, userMobilephone, null, null);
-				//newUser.setTeamId(team.id);
-				newUser.setTeam(team);
+				newUser.setTeamId(team.id);
 				team.getMembers().add(newUser);
 				userRepo.save(newUser);
 				team = teamRepo.save(team);

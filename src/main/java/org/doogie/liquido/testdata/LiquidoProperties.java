@@ -26,16 +26,11 @@ public class LiquidoProperties {
 	public Integer durationOfVotingPhase;
 	public Integer rightToVoteExpirationHours;
 	public String  defaultAreaTitle;
-	public AreaModel defaultArea;  // will be set once application has started
 	public String  frontendUrl;
 	@ToString.Exclude
 	public String  devLoginToken;
 
 	public Backend backend = new Backend();
-
-	public void setDefaultArea(AreaModel defaultArea) {
-		this.defaultArea = defaultArea;
-	}
 
 	@Data
 	public static class Backend {

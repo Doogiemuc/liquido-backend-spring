@@ -95,7 +95,7 @@ public class PollRestController {
 		if (newPoll.getProposals().size() != 1)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Must pass exactly one proposal to create a new poll!");
 		LawModel proposalFromRequest = newPoll.getProposals().iterator().next();             // This proposal is a "detached entity". Cannot simply be saved here. This will all be done inside pollService.
-		PollModel createdPoll = pollService.createPoll(newPoll.getTitle(), proposalFromRequest);
+		PollModel createdPoll = pollService.createPollWithProposal(newPoll.getTitle(), proposalFromRequest);
 		log.info("Created new poll "+createdPoll);
 		return new ResponseEntity(createdPoll, HttpStatus.CREATED);
 	}

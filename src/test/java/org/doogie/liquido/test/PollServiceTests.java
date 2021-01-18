@@ -319,7 +319,7 @@ public class PollServiceTests  extends BaseTest {
 		UserModel expectedProxy;
 
 		// GIVEN a poll in voting
-		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA_FOR_DELEGATIONS).orElseThrow(() -> new RuntimeException("need Area for delegations in test"));;
+		AreaModel area = areaRepo.findByTitle(prop.defaultAreaTitle).orElseThrow(() -> new LiquidoException(LiquidoException.Errors.INTERNAL_ERROR, "Cannot find default area"));
 		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 3);
 		String pollURI = basePath + "/polls/" + poll.getId();
 

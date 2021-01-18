@@ -12,6 +12,7 @@ import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
+import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.testdata.TestDataUtils;
 import org.junit.Test;
@@ -49,6 +50,9 @@ public class ProxyServiceTests extends BaseTest {
 	RightToVoteRepo rightToVoteRepo;
 
 	@Autowired
+	LiquidoProperties props;
+
+	@Autowired
 	TestDataUtils utils;
 
 	/**
@@ -60,12 +64,12 @@ public class ProxyServiceTests extends BaseTest {
 	 *   AND the proxyMap of V contains P in area A
 	 */
 	@Test
-	@WithUserDetails(USER2_EMAIL)
+	@WithUserDetails(USER13_EMAIL)
 	public void testAssignProxy() throws LiquidoException {
 		//GIVEN
-		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL).get();
-		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL).get();
-		AreaModel area = areaRepo.findByTitle(AREA1_TITLE).orElseThrow(() -> new RuntimeException("need Area1 in test"));
+		UserModel fromUser = userRepo.findByEmail(USER13_EMAIL).get();   // use other users as in the delegation tests
+		UserModel toProxy  = userRepo.findByEmail(USER14_EMAIL).get();
+		AreaModel area = getDefaultArea();
 
 		//Make sure that toProxy is a public proxy
 		String proxyVoterToken = castVoteService.createVoterTokenAndStoreRightToVote(toProxy, area, USER_TOKEN_SECRET, true);
@@ -94,7 +98,7 @@ public class ProxyServiceTests extends BaseTest {
 	@WithUserDetails(USER1_EMAIL)
 	public void testGetNumVotes() throws LiquidoException {
 		log.trace("ENTER: testGetNumVotes");
-		AreaModel area = areaRepo.findByTitle(AREA0_TITLE).orElseThrow(() -> new RuntimeException("need Area0 in test"));;
+		AreaModel area = getDefaultArea();
 
 		UserModel proxy = userRepo.findByEmail(USER1_EMAIL).get();
 		String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(proxy, area, USER_TOKEN_SECRET, true);
@@ -124,7 +128,7 @@ public class ProxyServiceTests extends BaseTest {
 	public void findTopProxy() {
 		log.trace("testGetTopmostProxy");
 		// all this data must match TestFixtures.java !!!
-		AreaModel area = areaRepo.findByTitle(AREA0_TITLE).orElseThrow(() -> new RuntimeException("need Area0 in test"));;
+		AreaModel area = getDefaultArea();
 		UserModel voter;
 		UserModel expectedTopProxy;
 		Optional<UserModel> topProxy;
@@ -162,9 +166,9 @@ public class ProxyServiceTests extends BaseTest {
 	@WithUserDetails(USER2_EMAIL)
 	public void testCircularDelegationErrorCases() throws LiquidoException {
 		//GIVEN
-		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL).get();
-		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL).get();
-		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE).orElseThrow(() -> new RuntimeException("need Area1 in test"));;
+		UserModel fromUser = userRepo.findByEmail(USER8_EMAIL).get();
+		UserModel toProxy  = userRepo.findByEmail(USER9_EMAIL).get();
+		AreaModel area     = getDefaultArea();
 		//String proxyVoterToken = castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, toProxy.getPasswordHash(), true);
 
 		//WHEN
@@ -186,9 +190,9 @@ public class ProxyServiceTests extends BaseTest {
 	@Test
 	public void testRemoveProxy() throws LiquidoException {
 		//GIVEN
-		UserModel fromUser = userRepo.findByEmail(USER2_EMAIL).get();
-		UserModel toProxy  = userRepo.findByEmail(USER1_EMAIL).get();
-		AreaModel area     = areaRepo.findByTitle(AREA1_TITLE).orElseThrow(() -> new RuntimeException("need Area1 in test"));;
+		UserModel fromUser = userRepo.findByEmail(USER14_EMAIL).get();
+		UserModel toProxy  = userRepo.findByEmail(USER15_EMAIL).get();
+		AreaModel area     = getDefaultArea();
 
 		//WHEN
 		String userVoterToken = castVoteService.createVoterTokenAndStoreRightToVote(fromUser, area, USER_TOKEN_SECRET, true);

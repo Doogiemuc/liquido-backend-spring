@@ -31,7 +31,7 @@ public class TestFixtures {
 	public static final String MOBILEPHONE_PREFIX = "+4912345";
 
 	public static final String AVATAR_PREFIX = "/static/img/avatars/Avatar";
-	public static final String USER1_NAME = "Donald Duck";
+	public static final String USER1_NAME = "Donald Duck";										// special name for user1
   public static final String USER1_EMAIL = MAIL_PREFIX+"1@liquido.de";      // testuser1 has  ID 1 in the DB !
   public static final String USER2_EMAIL = MAIL_PREFIX+"2@liquido.de";
   public static final String USER3_EMAIL = MAIL_PREFIX+"3@liquido.de";
@@ -44,6 +44,9 @@ public class TestFixtures {
 	public static final String USER10_EMAIL = MAIL_PREFIX+"10@liquido.de";
 	public static final String USER11_EMAIL = MAIL_PREFIX+"11@liquido.de";
 	public static final String USER12_EMAIL = MAIL_PREFIX+"12@liquido.de";
+	public static final String USER13_EMAIL = MAIL_PREFIX+"13@liquido.de";
+	public static final String USER14_EMAIL = MAIL_PREFIX+"14@liquido.de";
+	public static final String USER15_EMAIL = MAIL_PREFIX+"15@liquido.de";
 	public static final String USER16_EMAIL = MAIL_PREFIX+"16@liquido.de";
 
 	// Teams and their admins
@@ -55,7 +58,7 @@ public class TestFixtures {
 	static {
 		for (int i = 0; i < NUM_TEAMS; i++) {
 			TEAM_NAMES.add(TEAM_NAME_PREFIX + i);
-			TEAM_ADMIN_EMAILS.add(TEAM_ADMIN_EMAIL_PREFIX +i+"@liquido.org");
+			TEAM_ADMIN_EMAILS.add(TEAM_ADMIN_EMAIL_PREFIX + i +"@liquido.org");
 		}
 	}
 
@@ -131,12 +134,11 @@ DEBUG .(CastVoteService.java:88).createVoterTokenAndStoreRightToVote()       | c
 
   // This test data must match RestEndpointTests.testGetProxyMap()  and ProxyServiceTests.testGetNumVotes !!!
   public static List<String[]> delegations = new ArrayList<>();
-	public static final String AREA_FOR_DELEGATIONS = AREA0_TITLE;
 	public static final String TOP_PROXY_EMAIL = USER1_EMAIL;
 	// Number of delegations.  (without the voter's own one. This would be votecCount)
-	public static final long USER1_DELEGATIONS = 8;     // testuser1@liquido.de  has 7 delegations to him (5 -> 2 is still only requested)
-	public static final long USER2_DELEGATIONS = 0;		 // testuser2@liquido.de  has a requested delegation. He has no accepted delegations yet.
-	public static final long USER4_DELEGATIONS = 4;     // testuser4@liquido.de  has 4 delegations from below him
+	public static final long USER1_DELEGATIONS = 8;   		// testuser1@liquido.de  has 7 delegations to him (5 -> 2 is still only requested)
+	public static final long USER2_DELEGATIONS = 0;				// testuser2@liquido.de  has a requested delegation. He has no accepted delegations yet.
+	public static final long USER4_DELEGATIONS = 4;   		// testuser4@liquido.de  has 4 delegations from below him
 	public static final long USER1_VOTE_COUNT_WHEN_USER4_VOTED = 3;   // When top proxy user1 votes while user4 has already voted, then his ballot counts 3 times.
 	static {
 		// fromUser, toProxy, transitive?

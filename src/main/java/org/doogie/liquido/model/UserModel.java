@@ -1,5 +1,6 @@
 package org.doogie.liquido.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -40,10 +41,13 @@ public class UserModel extends BaseModel {
 	 * is also used as the HTTP Principal in spring-security. So it needs to be lightweight.
 	 * When the team data (with polls, etc) is needed then it must be loaded manually via the teamRepo.
  	 */
-	//public Long teamId;
+	public Long teamId;
 
+	/*
+	@JsonBackReference
 	@ManyToOne(fetch = FetchType.LAZY)
 	public TeamModel team;
+	*/
 
 	/**
 	 * Every user implicitly has {@link LiquidoAuthUser#ROLE_USER}. (This does not need to be stored in the DB. Its added by default.)
@@ -51,6 +55,7 @@ public class UserModel extends BaseModel {
 	 * (More roles by be added in future versions of LIQUIDO.)
 	 */
 	@ElementCollection(fetch = FetchType.EAGER)
+	@CollectionTable(name="USER_ROLES")
 	public Set<String> roles = new HashSet<>();
 
 	@Embedded

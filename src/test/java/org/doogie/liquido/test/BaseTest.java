@@ -1,8 +1,10 @@
 package org.doogie.liquido.test;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.jwt.JwtTokenProvider;
+import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.security.LiquidoAuthUser;
@@ -10,11 +12,13 @@ import org.doogie.liquido.security.LiquidoUserDetailsService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.testUtils.JwtAuthInterceptor;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
+import org.doogie.liquido.testdata.LiquidoProperties;
 import org.junit.Rule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureTestEntityManager;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.security.authentication.TestingAuthenticationToken;
@@ -47,6 +51,14 @@ public class BaseTest {
 	@Autowired
 	LiquidoUserDetailsService liquidoUserDetailsService;
 
+	@Autowired
+	LiquidoProperties props;
+
+	@Autowired
+	AreaRepo areaRepo;
+
+	private AreaModel defaultArea = null;
+
 	/**
 	 * Entry and exit logging for <b>all</b> test cases. Jiipppiiee. Did I already mention that I am a logging fanatic *G*
 	 */
@@ -68,7 +80,19 @@ public class BaseTest {
 		}
 	};
 
-
+	/**
+	 * Lazily load the default area from the default. See liquido.defaultAreaTitle in application.properties
+	 * @return the default area
+	 * @throws RuntimeException when there is no area with that title
+	 */
+	public AreaModel getDefaultArea() throws RuntimeException {
+		if (this.defaultArea == null) {
+			this.defaultArea = areaRepo.findByTitle(props.getDefaultAreaTitle()).orElseThrow(
+				() -> new RuntimeException("Cannot find default area")
+			);
+		}
+		return this.defaultArea;
+	}
 
 	/**
 	 * Login a user into spring's SecurityContext for testing

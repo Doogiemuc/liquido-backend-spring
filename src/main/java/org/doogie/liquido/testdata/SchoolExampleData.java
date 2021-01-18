@@ -192,7 +192,7 @@ public class SchoolExampleData implements CommandLineRunner {
 		LawModel sports2 = util.createProposal("No sports on friday", "We should not schedule sports on a friday, because on that day there is no bus, so we have to carry our sport bags the whole long way.", areaTimetable, util.user(1), 20, 3);
 		LawModel sports3 = util.createProposal("More sports classes", "There should be sports classes two times a day", areaTimetable, util.user(2), 8, 7);
 
-		PollModel poll = new PollModel("When should we do sports classes?");
+		PollModel poll = new PollModel("When should we do sports classes?", this.areaTimetable);
 		pollService.addProposalToPoll(sports1, poll);
 		pollService.addProposalToPoll(sports2, poll);
 		pollService.addProposalToPoll(sports3, poll);
@@ -209,7 +209,7 @@ public class SchoolExampleData implements CommandLineRunner {
 		LawModel prop2 = util.createProposal("City Library", "We want our next excursion to go to the city library, so that we can read more books", areaExcursions, util.user(1), 9, 7);
 		LawModel prop3 = util.createProposal("Theater", "Go to the theater. Spring ballet is in town. I heard it is awesome!!!", areaExcursions, util.user(2), 10, 2);
 
-		PollModel poll = new PollModel("Where should we travel in our next excursion?");
+		PollModel poll = new PollModel("Where should we travel in our next excursion?", this.areaExcursions);
 		pollService.addProposalToPoll(prop1, poll);
 		pollService.addProposalToPoll(prop2, poll);
 		pollService.addProposalToPoll(prop3, poll);

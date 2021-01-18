@@ -97,7 +97,6 @@ public class LiquidoBackendSpringApplication {
 			log.error(errMsg);
 			throw new Exception(errMsg);
 		}
-		liquidoProps.setDefaultArea(defaultArea);
 
 		log.info(" ... sanity checks: successful.");
 
