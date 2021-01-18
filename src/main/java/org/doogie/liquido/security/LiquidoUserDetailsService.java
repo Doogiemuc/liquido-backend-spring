@@ -13,6 +13,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.*;
 
+import static org.doogie.liquido.security.LiquidoAuthUser.ROLE_TEAM_ADMIN;
+import static org.doogie.liquido.security.LiquidoAuthUser.ROLE_USER;
+
 /**
  * This class loads users from the DB via {@link UserRepo} and grants them roles.
  *
@@ -27,9 +30,9 @@ public class LiquidoUserDetailsService implements UserDetailsService {
   @Autowired
   LiquidoProperties prop;
 
-  // TODO: Cache autenticated users, because loadUserByUsername is called very often! MAYBE simply extend CachingUserDetailsService ?
+  // TODO: Cache authenticated users, because loadUserByUsername is called very often! MAYBE simply extend CachingUserDetailsService ?
   /*See:
-   @Cacheable("authenticedUsers")
+   @Cacheable("authenticatedUsers")
    https://spring.io/guides/gs/caching/
    https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-caching.html
    https://docs.spring.io/spring/docs/current/spring-framework-reference/html/cache.html#cache-store-configuration-caffeine
@@ -55,18 +58,17 @@ public class LiquidoUserDetailsService implements UserDetailsService {
     return new LiquidoAuthUser(userModel.getEmail(), getGrantedAuthorities(userModel), userModel);
   }
 
-  private List<GrantedAuthority> getGrantedAuthorities(UserModel userModel) {
+  /**
+   * Translate from liquido UserModel.roles to spring's SimpleGrantedAuthority
+   * @param userModel a liquido user model with roles.
+   * @return set of GrantedAuthorities for spring.
+   */
+  private Set<GrantedAuthority> getGrantedAuthorities(UserModel userModel) {
     if (userModel == null) throw new RuntimeException("Cannot getGrantedAuthorities for null user!");
-    List<GrantedAuthority> authorities = new ArrayList<>();
-    if (prop.admin != null &&
-        prop.admin.email != null && prop.admin.email.equals(userModel.getEmail()) &&
-        prop.admin.name  != null && prop.admin.name.equals(userModel.getProfile().getName()) &&
-        prop.admin.mobilephone != null && prop.admin.mobilephone.equals(userModel.getProfile().getMobilephone())
-    ) {
-      authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
-      log.info("The ADMIN logged in!");
-    }
-    authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+    Set<GrantedAuthority> authorities = new HashSet<>();
+    authorities.add(new SimpleGrantedAuthority(ROLE_USER));
+    if (userModel.roles.contains(ROLE_TEAM_ADMIN))
+      authorities.add(new SimpleGrantedAuthority(ROLE_TEAM_ADMIN));
     return authorities;
   }
 }

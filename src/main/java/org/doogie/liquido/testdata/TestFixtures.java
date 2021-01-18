@@ -8,11 +8,12 @@ import java.util.List;
 
 /**
  * Fixed test data.
- * All tests may rely on the data that is created in {@link TestDataCreator}
- * These test fixtures are IDs, keys and attribute values that were created there.
+ * {@link TestDataCreator} will create DB entities as defined here.
+ * All JUnit Test Cases may then simply rely on this pre-created models.
  */
 public class TestFixtures {
 
+	public static final int NUM_TEAMS = 5;
 	public static final int NUM_USERS = 20;
 	public static final int NUM_VOTES = 15;			// number of casted votes.  Must be smaller than NUM_USERS!
 	public static final int NUM_AREAS = 10;
@@ -24,7 +25,7 @@ public class TestFixtures {
 	public static final String AREA0_TITLE = "Area 0";
 	public static final String AREA1_TITLE = "Area 1";
 
-	public static final String TEAM_NAME_PREFIX = "TestTeam";
+
 	public static final String USER_NAME_PREFIX = "TestUser";
 	public static final String MAIL_PREFIX = "testuser";
 	public static final String MOBILEPHONE_PREFIX = "+4912345";
@@ -45,12 +46,26 @@ public class TestFixtures {
 	public static final String USER12_EMAIL = MAIL_PREFIX+"12@liquido.de";
 	public static final String USER16_EMAIL = MAIL_PREFIX+"16@liquido.de";
 
+	// Teams and their admins
+	public static final String TEAM_NAME_PREFIX = "TestTeam";
+	public static List<String> TEAM_NAMES = new ArrayList<>();
+	public static final String TEAM_ADMIN_EMAIL_PREFIX = "teamadmin";
+	public static List<String> TEAM_ADMIN_EMAILS = new ArrayList<>();
+
+	static {
+		for (int i = 0; i < NUM_TEAMS; i++) {
+			TEAM_NAMES.add(TEAM_NAME_PREFIX + i);
+			TEAM_ADMIN_EMAILS.add(TEAM_ADMIN_EMAIL_PREFIX +i+"@liquido.org");
+		}
+	}
+
+
 	// Ideas
 	public static final String IDEA_0_TITLE = "Idea 0 title from TestFixtures";
 
 	// Laws
 	public static final  int NUM_LAWS = 2;
-	public static final String LAW_TITLE = "Law 1";
+
 
   /**
    * This secret is used when a test needs to create a voter token

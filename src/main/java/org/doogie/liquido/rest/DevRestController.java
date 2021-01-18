@@ -10,6 +10,7 @@ import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.security.LiquidoAuthUser;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.testdata.LiquidoProperties;
@@ -169,7 +170,7 @@ public class DevRestController {
 	 * @throws LiquidoException for example when voting phase cannot be started because of wrong status in poll
 	 */
 	@RequestMapping(value = "/dev/polls/{pollId}/startVotingPhase")
-	@PreAuthorize("hasRole('ROLE_ADMIN')")
+	@PreAuthorize(LiquidoAuthUser.HAS_ROLE_TEAM_ADMIN)
 	public @ResponseBody Lson devStartVotingPhase(@PathVariable(name="pollId") PollModel poll) throws LiquidoException {
 		if (poll == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Cannot find poll with that id");
@@ -185,7 +186,7 @@ public class DevRestController {
 	 * @throws LiquidoException for example when poll is not in correct status
 	 */
 	@RequestMapping(value = "/dev/polls/{pollId}/finishVotingPhase")
-	@PreAuthorize("hasRole('ROLE_ADMIN')")
+	@PreAuthorize(LiquidoAuthUser.HAS_ROLE_TEAM_ADMIN)
 	public @ResponseBody Lson devFinishVotingPhase(@PathVariable(name="pollId") PollModel poll) throws LiquidoException {
 		if (poll == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Cannot find poll with that id");
@@ -207,7 +208,7 @@ public class DevRestController {
 	 * @return HTTP 200
 	 */
 	@RequestMapping(value = "/dev/polls/{pollId}", method = RequestMethod.DELETE)
-	@PreAuthorize("hasRole('ROLE_ADMIN')")
+	@PreAuthorize(LiquidoAuthUser.HAS_ROLE_TEAM_ADMIN)
 	public @ResponseBody Lson deletePoll(
 		@PathVariable(name="pollId") PollModel poll,
 		@RequestParam(name="deleteProposals") boolean deleteProposals
