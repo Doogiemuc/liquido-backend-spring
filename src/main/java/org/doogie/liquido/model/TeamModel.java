@@ -1,17 +1,19 @@
 package org.doogie.liquido.model;
 
+import graphql.Assert;
 import io.leangen.graphql.annotations.GraphQLQuery;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.doogie.liquido.security.LiquidoAuthUser;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * A Team with members
@@ -34,34 +36,48 @@ public class TeamModel extends BaseModel {
 	@GraphQLQuery(name = "inviteCode")
   String inviteCode = null;
 
-  /** Members of this team. The first member of the team is its admin. */
+  /**
+	 * Members of this team.
+	 * A team must have at least one TEAM_ADMIN, but it may have several admins.
+	 */
 	@GraphQLQuery(name = "members")
 	@OneToMany(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)  // when a team is loaded also load its members
-  List<UserModel> members = new ArrayList<>();
+  Set<UserModel> members = new HashSet<>();
+
+	@GraphQLQuery(name = "polls")
+	@OneToMany(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)  // when a team is loaded also load its polls
+	Set<UserModel> polls = new HashSet<>();   //BUGFIX: Changed from List to Set https://stackoverflow.com/questions/4334970/hibernate-throws-multiplebagfetchexception-cannot-simultaneously-fetch-multipl
 
 	/** Create a new Team entity */
 	public TeamModel(String teamName, UserModel admin) {
+		Assert.assertTrue(admin.roles.contains(LiquidoAuthUser.ROLE_TEAM_ADMIN), "Team needs an admin");
 		this.teamName = teamName;
 		this.members.add(admin);
+		//admin.setTeamId(this.id);  //BUGFIX: this needs to be done manually **after** TeamModel has been saved and thus has an ID.
 		this.inviteCode = DigestUtils.md5Hex(teamName).substring(0,6).toUpperCase();
 	}
 
 	/**
-	 * First member of team is admin
-	 * @return the admin user of this team
+	 * Get TEAM_ADMIN(s)
+	 * @return the admins of this team
 	 */
-	@GraphQLQuery(name = "admin")
-	public UserModel getAdmin() {
-		return this.members.get(0);
+	@GraphQLQuery(name = "admins")
+	public Set<UserModel> getAdmins() {
+		return this.members.stream()
+			.filter(user -> user.roles.contains(LiquidoAuthUser.ROLE_TEAM_ADMIN))
+			.collect(Collectors.toSet());
 	}
 
   @Override
   public String toString() {
   	StringBuffer buf = new StringBuffer();
+  	Iterator adminsIterator = this.getAdmins().iterator();
     buf.append("TeamModel[");
 		buf.append("id=" + id);
 		buf.append(", teamName='" + this.teamName + '\'');
-		buf.append(", adminEmail='" + this.getAdmin().email + "'");
+		if (adminsIterator.hasNext()) {
+			buf.append(", firstAdmin='" + adminsIterator.next().toString() + "'");
+		}
 		buf.append(", numMembers="+this.members.size());
 		buf.append(']');
 		return buf.toString();

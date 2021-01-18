@@ -3,6 +3,7 @@ package org.doogie.liquido.testdata;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
+import org.doogie.liquido.graphql.TeamsGraphQL;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.rest.dto.CastVoteResponse;
@@ -35,16 +36,17 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
 /**
  * <h1>TestDataCreator</h1>
  *
- * This Spring Command Line Runner can init the database in two ways:
+ * Every test needs data. This testdata is extremely important. Here we create it.
  *
  * (1) Create sample data from scratch with JPA
  *
  * In application.properties  set  spring.jpa.hibernate.ddl-auto=create   to let Spring-JPA init the DB schema.
  * Then run this app with createSampleData=true
- * TestDataCreator will create test data from scratch via spring data and JPA.  This takes around a minute.
- * The schema and testdata will be exported into an SQL script  sample-DB.sql
+ * TestDataCreator will create test data from scratch. It will call plain spring-data-jpa methods
+ * and use service methods very useful.   This whole creation takes around 1-2 minutes.
+ * The resulting schema and testdata will be exported into an SQL script  sample-DB.sql
  *
- * (2) Load testdata from an SQL script that contains schema <b>and</b> data
+ * (2) Load schema <b>and</b> testdata from that SQL script.
  *
  * In application.properties  set  spring.jpa.hibernate.ddl-auto=none (Then a data.sql is not loaded!)
  * And set the environment variable loadSampleDB=true
@@ -52,6 +54,8 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  *
  * You can create a sample-data.sql from the embedded H2 console with the SQL command
  * <pre>SCRIPT TO 'sample-DB.sql'</pre>
+ *
+ *
  *
  * This is executed right after SpringApplication.run(...)
  * See http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/htmlsingle/#boot-features-command-line-runner
@@ -64,7 +68,6 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * http://www.generatedata.com/
  * https://docs.spring.io/spring/docs/current/spring-framework-reference/testing.html#testcontext-ctx-management-env-profiles
  * https://stackoverflow.com/questions/8523423/reset-embedded-h2-database-periodically    -- how to drop H2 DB completely
- *
  *
  * I already tried to refoctor this TestDataCreator into its own module. But this is not possible,
  * because this class depends so closely on pretty much every liquido service. And this is a good thing.
@@ -112,6 +115,9 @@ public class TestDataCreator implements CommandLineRunner {
 
   @Autowired
 	RightToVoteRepo rightToVoteRepo;
+
+  @Autowired
+	TeamsGraphQL teamService;
 
   @Autowired
   PollService pollService;
@@ -173,7 +179,7 @@ public class TestDataCreator implements CommandLineRunner {
    *  - there is a command line parmaeter "--seedDB"
    * @param args command line args
    */
-  public void run(String... args) {
+  public void run(String... args) throws LiquidoException {
 		boolean seedDB = "true".equalsIgnoreCase(springEnv.getProperty(RECREATE_TEST_DATA));
     for(String arg : args) {
       if (("--"+ RECREATE_TEST_DATA).equalsIgnoreCase(arg)) { seedDB = true; }
@@ -329,7 +335,7 @@ public class TestDataCreator implements CommandLineRunner {
 				writer.newLine();		//  + System.getProperty("line.separator")
 			}
 			writer.close();
-			log.trace("removeQartzSchema from SQL script successfull: "+sqlScript.getAbsolutePath());
+			log.trace("removeQuartzSchema from SQL script successfull: "+sqlScript.getAbsolutePath());
 
 		} catch (Exception e) {
 			log.error("Could not remove Quarts statements from Schema: "+e.getMessage());
@@ -338,18 +344,14 @@ public class TestDataCreator implements CommandLineRunner {
 	}
 
 	/** Seed two teams with an admin user each. */
-	public void seedTeams() {
+	public void seedTeams() throws LiquidoException {
 		log.info("Seeding Teams ...");
-		for (int i = 0; i < 2; i++) {
-			String teamName     = TestFixtures.TEAM_NAME_PREFIX+(i+1);
-			String adminName  	= "admin_" + teamName;
-			String adminEmail 	= adminName + "@liquido.de";
-			String mobilephone 	= TestFixtures.MOBILEPHONE_PREFIX+"555"+(i+1);
-			String website     	= "http://www.liquido.de";
-			String picture     	= TestFixtures.AVATAR_PREFIX+((i%16)+1)+".png";
-			UserModel admin = new UserModel(adminEmail, adminName, mobilephone, website, picture);
-			TeamModel team = new TeamModel(teamName, admin);
-			teamRepo.save(team);
+		for (int i = 0; i < TestFixtures.NUM_TEAMS; i++) {
+			String teamName    = TestFixtures.TEAM_NAME_PREFIX+(i+1);
+			String adminName   = "Admin " + teamName;
+			String adminEmail  = TestFixtures.TEAM_ADMIN_EMAILS.get(i);
+			String adminMobilephone = TestFixtures.MOBILEPHONE_PREFIX+"555"+(i+1);
+			teamService.createNewTeam(teamName, adminName, adminEmail, adminMobilephone);
 		}
 	}
 

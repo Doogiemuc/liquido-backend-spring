@@ -4,11 +4,14 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.doogie.liquido.security.LiquidoAuthUser;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * One user / voter / citizen
@@ -25,12 +28,30 @@ public class UserModel extends BaseModel {
   @Column(unique = true)
   public String email;
 
-  //NO PASSWORD!  Passwords are soooo old fashioned :-)
-
 	/**
 	 * www.twilio.com Authy user id for authentication
+	 * NO PASSWORD!  Passwords are soooo old fashioned :-)
 	 */
 	public long authyId;
+
+	/**
+	 * Link to the team that the user is a member (or admin) of.
+	 * The TeamModel is not directly referenced here, because our Liquido UserModel
+	 * is also used as the HTTP Principal in spring-security. So it needs to be lightweight.
+	 * When the team data (with polls, etc) is needed then it must be loaded manually via the teamRepo.
+ 	 */
+	//public Long teamId;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	public TeamModel team;
+
+	/**
+	 * Every user implicitly has {@link LiquidoAuthUser#ROLE_USER}. (This does not need to be stored in the DB. Its added by default.)
+	 * Admins will also have {@link LiquidoAuthUser#ROLE_TEAM_ADMIN} here.
+	 * (More roles by be added in future versions of LIQUIDO.)
+	 */
+	@ElementCollection(fetch = FetchType.EAGER)
+	public Set<String> roles = new HashSet<>();
 
 	@Embedded
 	public UserProfileModel profile;
@@ -47,6 +68,16 @@ public class UserModel extends BaseModel {
 		this.profile.setMobilephone(mobilephone);
 		this.profile.setWebsite(website);
 		this.profile.setPicture(picture);
+	}
+
+	/**
+	 * Create an admin of a team. You <b>MUST</b> then manually call <pre>admin.setTeamId(team.id)</pre>!
+	 * @return the newly created admin UserModel
+	 */
+	public static UserModel asTeamAdmin(@NotNull String email, @NotNull String name, String mobilephone, String website, String picture) {
+		UserModel admin = new UserModel(email, name, mobilephone, website, picture);
+		admin.roles.add(LiquidoAuthUser.ROLE_TEAM_ADMIN);
+		return admin;
 	}
 
   @Override

@@ -6,7 +6,6 @@ import graphql.GraphQL;
 import graphql.GraphQLError;
 import graphql.execution.AsyncExecutionStrategy;
 import graphql.schema.GraphQLSchema;
-import graphql.schema.idl.SchemaPrinter;
 import io.leangen.graphql.GraphQLSchemaGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.services.LiquidoException;
@@ -47,8 +46,8 @@ public class LiquidoGraphQLController {
 
 		this.graphQL = new GraphQL.Builder(schema)
 
-			//TODO: The default SimpleDataFetcherExceptionHandler  swallows exception and logs the full stack trace. So we register our own more sophisticated exception handler:
-			//      See also https://stackoverflow.com/questions/57215323/correct-way-to-return-errors-in-graphql-spqr
+			//The default SimpleDataFetcherExceptionHandler  swallows exception and logs the full stack trace. So we register our own more sophisticated exception handler:
+			//See also https://stackoverflow.com/questions/57215323/correct-way-to-return-errors-in-graphql-spqr
 			.queryExecutionStrategy(new AsyncExecutionStrategy(exceptionHandler))
 			//.mutationExecutionStrategy(new AsyncExecutionStrategy(exceptionHandler))
 			.build();
@@ -74,7 +73,8 @@ public class LiquidoGraphQLController {
 
 
 	/**
-	 * HTTP endpoint for graphQL queries.
+	 * HTTP endpoint for graphQL queries. The /graphql endpoint itself is public.
+	 * But most GraphQL query resolver will need an authenticated user (via JWT)
 	 * @param request request body with "query" field.
 	 * @param raw the raw HttpServletRequest  (POST)
 	 * @return
