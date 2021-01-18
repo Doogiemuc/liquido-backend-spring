@@ -20,8 +20,6 @@ import java.util.Optional;
 
 /**
  * Main entry class for Liquido Backend
- *
- * Starts the SpringApplication.
  */
 @SpringBootApplication
 @EnableScheduling
@@ -55,7 +53,7 @@ public class LiquidoBackendSpringApplication {
 	}
 
 	@EventListener(ApplicationReadyEvent.class)
-	public void applicationRady() throws Exception {
+	public void applicationReady() throws Exception {
 		System.out.println();
 		System.out.println("=====================================================");
 		System.out.println(" _       ___    ___    _   _   ___   ____     ___  ");

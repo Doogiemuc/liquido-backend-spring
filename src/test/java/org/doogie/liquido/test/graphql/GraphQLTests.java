@@ -4,11 +4,14 @@ import com.jayway.jsonpath.JsonPath;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.OffsetLimitPageable;
 import org.doogie.liquido.datarepos.TeamRepo;
+import org.doogie.liquido.jwt.JwtTokenProvider;
 import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.LawService;
+import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.HttpBaseTest;
 import org.doogie.liquido.testdata.TestFixtures;
+import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.Lson;
 import org.junit.Assert;
 import org.junit.Before;
@@ -29,34 +32,57 @@ import java.util.List;
  */
 @Slf4j
 @RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)   // automatically fire up the integraded webserver on a random port
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)   // automatically fire up the integrated webserver on a random port
 public class GraphQLTests extends HttpBaseTest {
 
 	@Autowired
 	TeamRepo teamRepo;
 
+	@Autowired
+	JwtTokenProvider jwtTokenProvider;
+
+	/**
+	 * Login one admin user
+	 */
 	@Before
 	public void beforeEachTest() {
-		this.loginUserJWT(TestFixtures.USER1_EMAIL);
+		this.loginUserJWT(TestFixtures.TEAM_ADMIN_EMAILS.get(0));
 	}
 
 	String GraphQLPath = "/graphql";
 
-	/** Make a simple GraphQL query against the backend */
+	/*
 	@Test
-	public void testGetAllTeams() {
-		// GIVEN a graphQLQuery for all teams
-		String graphQLQuery = "{ teams { teamName, inviteCode, id, createdAt, updatedAt, members { id, email, profile { name } }} }";  // this is not JSON! This is a graphQL query String!
+	public void testGraphQLLogin() throws LiquidoException {
+		// GIVEN a graphQL query to login      => This is not JSON! This is a graphQL query String!
+		String userEmail = TestFixtures.TEAM_ADMIN_EMAILS.get(0);
+		String graphQLQuery = "query { login(email: \"" + userEmail + "\", token: \"dummyToken\") }";
 
 		// WHEN we send this query
 		Lson entity = new Lson("query", graphQLQuery);  // must send this as JSON with field "query".
-		ResponseEntity<String> res = this.client.exchange(this.GraphQLPath, HttpMethod.POST, entity.toJsonHttpEntity(), String.class);
+		ResponseEntity<String> res = this.anonymousClient.exchange(this.GraphQLPath, HttpMethod.POST, entity.toJsonHttpEntity(), String.class);
 
-		// THEN we receive a list of teams
-		String teamName = JsonPath.read(res.getBody(), "$.teams[0].teamName");
-		Assert.assertNotNull(teamName);
-		Assert.assertTrue("Expected teamName to start with "+TestFixtures.TEAM_NAME_PREFIX, teamName.startsWith(TestFixtures.TEAM_NAME_PREFIX));
+		// THEN we receive a JWT
+		String jwt = JsonPath.read(res.getBody(), "$.login");
+		Assert.assertTrue("Expected valid JWT", jwtTokenProvider.validateToken(jwt));
 	}
+	*/
+
+	@Test
+	public void getOwnTeam() {
+		//GIVEN a logged in user and his team
+		String teamName   = TestFixtures.TEAM_NAMES.get(0);
+		String adminEmail = TestFixtures.TEAM_ADMIN_EMAILS.get(0);
+		String graphQL    = "{ team { id teamName } }";
+
+		//WHEN querying for the user's team
+		String actualTeamName = executeGraphQl(graphQL, "$.team.teamName");
+
+		//THEN the correct teamName is returned
+		Assert.assertEquals("Expected teamName="+teamName, actualTeamName);
+
+	}
+
 
 	/** Create a new team */
 	@Test
@@ -106,6 +132,8 @@ public class GraphQLTests extends HttpBaseTest {
 		Assert.assertTrue("Cannot find userEmail in joinedTeam.members", members.contains(userEmail));
 	}
 
+
+
 	/** Admin creates a new poll in his team. */
 	@Test
 	public void testAdminCreatesNewPoll() {
@@ -113,7 +141,7 @@ public class GraphQLTests extends HttpBaseTest {
 		Page<TeamModel> teams = teamRepo.findAll(new OffsetLimitPageable(0, 1));
 		TeamModel team = teams.iterator().next();
 		Assert.assertNotNull("Need at least one team to testCreatePoll!", team);
-		UserModel admin = team.getAdmin();
+		UserModel admin = team.getAdmins().stream().findFirst().get();
 
 		// AND a graphQL mutation to createPoll
 		String title = "Poll from test " + System.currentTimeMillis() * 10000;
@@ -129,5 +157,13 @@ public class GraphQLTests extends HttpBaseTest {
 	}
 
 
+
+	// ========================= private utility methods ======================
+
+	private String executeGraphQl(String graphQL, String resJsonPath) {
+		Lson entity = new Lson("query", graphQL);
+		ResponseEntity<String> res = this.client.exchange(this.GraphQLPath, HttpMethod.POST, entity.toJsonHttpEntity(), String.class);
+		return JsonPath.read(res.getBody(), resJsonPath);
+	}
 
 }

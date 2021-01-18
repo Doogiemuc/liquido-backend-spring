@@ -46,7 +46,7 @@ public class LiquidoGeneralExceptionHandler {
 	@ResponseBody
 	ResponseEntity handleGeneralException(Exception ex, WebRequest request) {
 		LiquidoException lex = new LiquidoException(LiquidoException.Errors.INTERNAL_ERROR, "There was an internal LIQUIDO error. " +
-			"We are sorry for that. Maybe you can try again laiter.", ex);
+			"We are sorry for that. Maybe you can try again later.", ex);
 		log.error("LIQUIDO Internal Server Error\n"+lex.toString());
 		lex.printStackTrace();
 		return new ResponseEntity<>(lex, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR);

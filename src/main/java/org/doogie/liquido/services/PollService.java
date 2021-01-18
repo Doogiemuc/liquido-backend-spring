@@ -3,6 +3,7 @@ package org.doogie.liquido.services;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
+import org.doogie.liquido.security.LiquidoAuthUser;
 import org.doogie.liquido.services.scheduler.FinishPollJob;
 import org.doogie.liquido.services.voting.RankedPairVoting;
 import org.doogie.liquido.testdata.LiquidoProperties;
@@ -401,7 +402,7 @@ public class PollService {
 	 * @param poll The poll to delete
 	 * @param deleteProposals wether to delete the porposals in the poll
 	 */
-	@PreAuthorize("hasRole('ROLE_ADMIN')")  // only the admin may delete polls.  See application.properties for admin name and email
+	@PreAuthorize(LiquidoAuthUser.HAS_ROLE_TEAM_ADMIN)  // only the admin may delete polls.  See application.properties for admin name and email
 	@Transactional
 	public void deletePoll(@NonNull PollModel poll, boolean deleteProposals) {
 		log.info("DELETE "+poll);

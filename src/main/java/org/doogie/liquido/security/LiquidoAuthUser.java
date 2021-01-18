@@ -16,6 +16,11 @@ import java.util.Collection;
 public class LiquidoAuthUser extends User {  // org.springframework.security.core.userdetails.User implements UserDetails, CredentialsContainer
   private UserModel liquidoUserModel;
 
+  public static final String ROLE_USER = "ROLE_USER";
+  public static final String ROLE_TEAM_ADMIN = "ROLE_TEAM_ADMIN";
+  public static final String HAS_ROLE_USER = "hasRole('" + ROLE_USER + "')";
+  public static final String HAS_ROLE_TEAM_ADMIN = "hasRole('" + ROLE_TEAM_ADMIN +"')";
+
   /**
    * Create a new Liquido authentication user that contains a custom liquidoUserModel.
    * No password here!

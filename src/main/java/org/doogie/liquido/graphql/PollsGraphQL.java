@@ -3,6 +3,7 @@ package org.doogie.liquido.graphql;
 import io.leangen.graphql.annotations.GraphQLArgument;
 import io.leangen.graphql.annotations.GraphQLMutation;
 import io.leangen.graphql.annotations.GraphQLNonNull;
+import io.leangen.graphql.annotations.GraphQLQuery;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.PollRepo;
@@ -15,6 +16,8 @@ import org.doogie.liquido.testdata.LiquidoProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 /**
  * GraphQL queries and mutations for Liquido posts.
@@ -37,6 +40,18 @@ public class PollsGraphQL {
 	PollService pollService;
 
 
+	/**
+	 * Get one poll by its ID
+	 * @param pollId pollId (mandatory)
+	 * @return the PollModel
+	 */
+	@GraphQLQuery(name = "poll")
+	public PollModel getPollById(@GraphQLNonNull @GraphQLArgument(name = "pollId") Long pollId) throws LiquidoException {
+		Optional<PollModel> pollOpt = pollRepo.findById(pollId);
+		if (!pollOpt.isPresent())
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "Poll.id=" + pollId + " not found.");
+		return pollOpt.get();
+	}
 
 	/**
 	 * Admin of a team creates a new poll.
