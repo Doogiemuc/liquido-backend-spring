@@ -2,10 +2,7 @@ package org.doogie.liquido.model;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
+import lombok.*;
 import org.doogie.liquido.model.converter.MatrixConverter;
 import org.doogie.liquido.rest.deserializer.LawModelDeserializer;
 import org.doogie.liquido.util.Matrix;
@@ -28,19 +25,21 @@ import java.util.*;
 @Entity
 @Data
 @NoArgsConstructor  		// BUGFIX: lombok data includes @RequiredArgsConstructor, but does not include @NoArgsConstructor !
+@RequiredArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 //@RequiredArgsConstructor(suppressConstructorProperties = true)
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "polls")
 public class PollModel extends BaseModel {
 
-	public PollModel(String title) {
-		this.title = title;
-	}
-
 	/** The title of a poll must be unique. It can be edited by anyone who has a proposal in this poll. */
 	@Column(unique=true)    //TODO: @UniqueConstraint:  title in team is unique
+	@NonNull
 	String title;
+
+	@NonNull
+	@OneToOne
+	AreaModel area;
 
 	//TODO: TeamModel team;
 
@@ -59,9 +58,7 @@ public class PollModel extends BaseModel {
 	   To make that work, the content of the HashSet, ie. the URI will be deserialized with LawModelDeserializer.class
 	*/
   @OneToMany(cascade = CascadeType.MERGE, mappedBy="poll", fetch = FetchType.EAGER) //, orphanRemoval = true/false ??  Should a proposals be removed when the poll is deleted? => NO
-  @NotNull
-  @NonNull
-	//@JsonDeserialize(contentUsing = LawModelDeserializer.class)  //  If I do this then deserialization of LawModels does not work anymore ?????? Why ?????
+  //@JsonDeserialize(contentUsing = LawModelDeserializer.class)  //  If I do this then deserialization of LawModels does not work anymore ?????? Why ?????
 	Set<LawModel> proposals = new HashSet<>();
 
   // Some older notes, when proposals still was a SortedSet.  Not relevant anymore, but still very interesting reads!
@@ -84,15 +81,14 @@ public class PollModel extends BaseModel {
   PollStatus status = PollStatus.ELABORATION;
 
   /** Date when the voting phase started. Will be set in PollService */
-  LocalDateTime votingStartAt;
+  LocalDateTime votingStartAt = null;
 
   /** Date when the voting phase will end. Will be set in PollService */
-	LocalDateTime votingEndAt;
+	LocalDateTime votingEndAt = null;
 
 	/** The wining proposal of this poll, that became a proposal. Filled after poll is FINISHED. */
 	@OneToOne
 	LawModel winner = null;
-
 
 	/**
 	 * The calculated duelMatrix when the voting phase is finished.
@@ -100,7 +96,7 @@ public class PollModel extends BaseModel {
 	 * This attribute is serialized as JSON array of arrays and then stored as VARCHAR
 	 */
 	@Convert(converter = MatrixConverter.class)
-	Matrix duelMatrix;
+	Matrix duelMatrix = null;
 
 	//Implementation note: A poll does not contain a link to its BallotModels. We do not want to expose the ballots while the voting phase is still running.
 
@@ -108,16 +104,6 @@ public class PollModel extends BaseModel {
   public int getNumCompetingProposals() {
     if (proposals == null) return 0;
     return proposals.size();
-  }
-
-	/**
-	 * The poll's are is deducted from the area of its proposals.
-	 * All proposals in a poll MUST be in the same area.
-	 * @return poll's area
-	 */
-  public AreaModel getArea() {
-  	if (getNumCompetingProposals() == 0) throw new RuntimeException("poll has no area, because there are no proposals in it yet.");   // This should never happen
-	  return this.proposals.iterator().next().getArea();
   }
 
   @Override

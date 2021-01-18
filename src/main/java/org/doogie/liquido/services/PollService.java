@@ -65,6 +65,26 @@ public class PollService {
   //@Autowired
 	//TaskScheduler scheduler;
 
+	/**
+	 * Create a new poll. Then proposals can be added to this poll.
+	 * @param title Title of the poll
+	 * @return the saved PollModel
+	 */
+	public PollModel createPoll(@NonNull String title, AreaModel area) {
+		log.info("Create new poll. Title='"+title+"'");
+		PollModel poll = new PollModel(title, area);
+
+		// Automatically schedule voting phase if configured.
+		if (prop.daysUntilVotingStarts > 0) {
+			LocalDateTime votingStart = LocalDateTime.now().truncatedTo(ChronoUnit.DAYS).plusDays(prop.daysUntilVotingStarts);
+			poll.setVotingStartAt(votingStart);
+			poll.setVotingEndAt(votingStart.plusDays(prop.durationOfVotingPhase));
+		}
+
+		PollModel savedPoll = pollRepo.save(poll);
+		return savedPoll;
+	}
+
 
 	/**
    * Start a new poll from an already existing proposal.
@@ -73,46 +93,40 @@ public class PollService {
    * @throws LiquidoException if passed LawModel is not in state PROPOSAL.
    */
   @Transactional    // run inside a transaction (all or nothing)
-  public PollModel createPoll(@NonNull String title, @NonNull LawModel proposal) throws LiquidoException {
-    //===== sanity checks
-    if (proposal == null)
-      throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Proposal must not be null");
-    // The proposal must be in status PROPOSAL
-    if (!LawModel.LawStatus.PROPOSAL.equals(proposal.getStatus()))
-      throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Need proposal with quorum for creating a poll!");
-    // that proposal must not already be linked to another poll
-    if (proposal.getPoll() != null)
-      throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_POLL, "Proposal (id="+proposal.getId()+") is already part of another poll!");
-
-    //===== builder new Poll with one initial proposal
-    log.info("Create new poll from proposal "+proposal.toStringShort());
-    PollModel poll = new PollModel();
-    poll.setTitle(title);
-    // voting starts n days in the future (at midnight)
-    LocalDateTime votingStart = LocalDateTime.now().truncatedTo(ChronoUnit.DAYS).plusDays(prop.daysUntilVotingStarts);
-    poll.setVotingStartAt(votingStart);
-    poll.setVotingEndAt(votingStart.plusDays(prop.durationOfVotingPhase));
-    //LawModel proposalInDB = lawRepo.findByTitle(proposal.getTitle());  //BUGFIX: I have to load the proposal from DB, otherwise: exception "Detached entity passed to persist" => Fixed by setting cascade = CascadeType.MERGE in PollModel
-    poll = addProposalToPoll(proposal, poll);
-    PollModel savedPoll = pollRepo.save(poll);
-    return savedPoll;
+  public PollModel createPollWithProposal(@NonNull String title, @NonNull LawModel proposal) throws LiquidoException {
+    PollModel poll = this.createPoll(title, proposal.getArea());
+    poll = this.addProposalToPoll(proposal, poll);
+    return poll;
   }
 
   /**
    * Add a proposals (ie. an ideas that reached its quorum) to an already existing poll and save the poll.
-	 * The poll must be in ELABORATION phase.
+	 *
+	 * Preconditions
+	 * <ol>
+	 *   <li>Proposal must be in status PROPOSAL</li>
+	 *   <li>Poll must be in ELABORATION phase.</li>
+	 *   <li>Proposal must be in the same area as the poll.</li>
+	 *   <li>Proposal must not already be part of another poll.</li>
+	 *   <li>Poll must not yet contain this proposal.</li>
+	 *   <li>Poll must not yet contain a proposal with the same title.</li>
+	 *   <li>User must not yet have a proposal in this poll.</li>
+	 * </ol>
+	 *
    * @param proposal a proposal (in status PROPOSAL)
    * @param poll a poll in status ELABORATION
    * @return the newly created poll
    * @throws LiquidoException if area or status of proposal or poll is wrong. And also when user already has a proposal in this poll.
    */
   public PollModel addProposalToPoll(@NonNull LawModel proposal, @NonNull PollModel poll) throws LiquidoException {
-    if (proposal.getStatus() != LawModel.LawStatus.PROPOSAL)
-      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot add proposal(id="+proposal.getId()+") to poll(id="+poll.getId()+", because proposal is not in state PROPOSAL.");
+  	if (proposal.getStatus() != LawModel.LawStatus.PROPOSAL)
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposalToPoll: poll(id="+poll.getId()+", Proposal(id="+proposal.getId()+") is not in state PROPOSAL.");
     if (poll.getStatus() != PollModel.PollStatus.ELABORATION)
-      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot add proposal, because poll id="+poll.getId()+" is not in ELABORATION phase");
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposalToPoll: Poll(id="+poll.getId()+") is not in ELABORATION phase");
     if (poll.getProposals().size() > 0 && !proposal.getArea().equals(poll.getArea()))
-      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Added proposal must be in the same area as the other proposals in this poll.");
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposalToPoll: Proposal must be in the same area as the other proposals in poll(id="+poll.getId()+")");
+    if (proposal.getPoll() != null)
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposalToPoll: proposal(id="+proposal.getId()+") is already part of another poll.");
 		if(poll.getProposals().contains(proposal))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Poll.id="+poll.getId()+" already contains proposal.id="+proposal.getId());
 		if (poll.getProposals().stream().anyMatch(prop -> prop.title.equals(proposal.title)))
@@ -407,6 +421,9 @@ public class PollService {
 	public void deletePoll(@NonNull PollModel poll, boolean deleteProposals) {
 		log.info("DELETE "+poll);
 		if (poll == null) return;
+
+		//TODO: !!! check that poll is in current user's team !!!
+
 
 		// unlink proposals/laws from poll and then (optionally) delete them
 		for (LawModel prop : poll.getProposals()) {

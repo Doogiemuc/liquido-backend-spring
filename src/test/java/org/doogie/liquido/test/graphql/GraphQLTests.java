@@ -42,7 +42,7 @@ public class GraphQLTests extends HttpBaseTest {
 	JwtTokenProvider jwtTokenProvider;
 
 	/**
-	 * Login one admin user
+	 * Always login the admin of team0.
 	 */
 	@Before
 	public void beforeEachTest() {
@@ -51,36 +51,19 @@ public class GraphQLTests extends HttpBaseTest {
 
 	String GraphQLPath = "/graphql";
 
-	/*
-	@Test
-	public void testGraphQLLogin() throws LiquidoException {
-		// GIVEN a graphQL query to login      => This is not JSON! This is a graphQL query String!
-		String userEmail = TestFixtures.TEAM_ADMIN_EMAILS.get(0);
-		String graphQLQuery = "query { login(email: \"" + userEmail + "\", token: \"dummyToken\") }";
-
-		// WHEN we send this query
-		Lson entity = new Lson("query", graphQLQuery);  // must send this as JSON with field "query".
-		ResponseEntity<String> res = this.anonymousClient.exchange(this.GraphQLPath, HttpMethod.POST, entity.toJsonHttpEntity(), String.class);
-
-		// THEN we receive a JWT
-		String jwt = JsonPath.read(res.getBody(), "$.login");
-		Assert.assertTrue("Expected valid JWT", jwtTokenProvider.validateToken(jwt));
-	}
-	*/
-
+	/** Load information about team if currently logged in user */
 	@Test
 	public void getOwnTeam() {
-		//GIVEN a logged in user and his team
+		//GIVEN a query for team of currently logged in user
+		this.loginUserJWT(TestFixtures.TEAM_ADMIN_EMAILS.get(0));
 		String teamName   = TestFixtures.TEAM_NAMES.get(0);
-		String adminEmail = TestFixtures.TEAM_ADMIN_EMAILS.get(0);
 		String graphQL    = "{ team { id teamName } }";
 
 		//WHEN querying for the user's team
 		String actualTeamName = executeGraphQl(graphQL, "$.team.teamName");
 
 		//THEN the correct teamName is returned
-		Assert.assertEquals("Expected teamName="+teamName, actualTeamName);
-
+		Assert.assertEquals("Expected teamName="+teamName, teamName, actualTeamName);
 	}
 
 
@@ -97,12 +80,9 @@ public class GraphQLTests extends HttpBaseTest {
 			"{ id, teamName, inviteCode, members { id, email } } }", teamName, adminName, adminEmail, adminMobilephone);
 
 		// WHEN we send this mutation
-		Lson entity = new Lson("query", graphQLMutation);
-		ResponseEntity<String> res = this.client.exchange(this.GraphQLPath, HttpMethod.POST, entity.toJsonHttpEntity(), String.class);
+		String actualTeamName = executeGraphQl(graphQLMutation, "$.createNewTeam.teamName");
 
 		// THEN we receive a list of teams
-		String actualTeamName = JsonPath.read(res.getBody(), "$.createNewTeam.teamName");
-		Assert.assertNotNull(actualTeamName);
 		Assert.assertEquals("Expected teamName="+teamName, teamName, actualTeamName);
 	}
 
@@ -144,16 +124,14 @@ public class GraphQLTests extends HttpBaseTest {
 		UserModel admin = team.getAdmins().stream().findFirst().get();
 
 		// AND a graphQL mutation to createPoll
-		String title = "Poll from test " + System.currentTimeMillis() * 10000;
-		String graphQLMutation = "mutation { createPoll(title: \"" + title + "\") { id, title, }";
+		String pollTitle = "Poll from test " + System.currentTimeMillis() * 10000;
+		String graphQLMutation = "mutation { createPoll(title: \"" + pollTitle + "\") { id, title } }";
 
 		//WHEN the admin creates a new poll
-		Lson entity = new Lson("query", graphQLMutation);
-		ResponseEntity<String> res = this.client.exchange(this.GraphQLPath, HttpMethod.POST, entity.toJsonHttpEntity(), String.class);
+		String actualTitle = executeGraphQl(graphQLMutation, "$.createPoll.title");
 
 		//THEN poll is created
-		String actualTitle = JsonPath.read(res.getBody(), "$.title");
-		Assert.assertEquals("Poll title should be returned", title, actualTitle);
+		Assert.assertEquals("Poll title should be returned", pollTitle, actualTitle);
 	}
 
 

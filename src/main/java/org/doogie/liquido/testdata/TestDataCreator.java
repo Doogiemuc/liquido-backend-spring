@@ -38,7 +38,18 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  *
  * Every test needs data. This testdata is extremely important. Here we create it.
  *
- * (1) Create sample data from scratch with JPA
+ * <h3>Fixed or random testdata</h3>
+ * On the one hand the application of course must be able to handle arbitrary user data.
+ * But on the other hand, especially when debugging, then determenistic and  repeatable test conditions are indispensible.
+ *
+ * For data that need to be fixed we use TestFixtures. For the rest we can create random data (e.g. for loremIpsum text blocks)
+ *
+ *
+ * <h3>How to use TestDataCreator</h3>
+ *
+ * TestDataCreator can be un in two modes:
+ *
+ * <h4>Create sample data from scratch with JPA</h4>
  *
  * In application.properties  set  spring.jpa.hibernate.ddl-auto=create   to let Spring-JPA init the DB schema.
  * Then run this app with createSampleData=true
@@ -46,7 +57,7 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * and use service methods very useful.   This whole creation takes around 1-2 minutes.
  * The resulting schema and testdata will be exported into an SQL script  sample-DB.sql
  *
- * (2) Load schema <b>and</b> testdata from that SQL script.
+ * <h4>Load schema and testdata from SQL script</h4>
  *
  * In application.properties  set  spring.jpa.hibernate.ddl-auto=none (Then a data.sql is not loaded!)
  * And set the environment variable loadSampleDB=true
@@ -95,8 +106,6 @@ public class TestDataCreator implements CommandLineRunner {
 
   @Autowired
   AreaRepo areaRepo;
-  private List<AreaModel> areas = new ArrayList<>();
-  private Map<String, AreaModel> areaMap = new HashMap<>();
 
   @Autowired
   LawRepo lawRepo;
@@ -159,13 +168,15 @@ public class TestDataCreator implements CommandLineRunner {
 	@Autowired
 	TestDataUtils utils;
 
+	/* Cache default area. Will be initialized in seedAreas() */
+	private AreaModel defaultArea;
+
+
 	// I thought about this question for a long time:
 	// Should TestDataCreator be completely deterministic. Or is it ok if it creates some random data.
 	// One the one hand the system MUST be stable enough to handle random data.
 	// But on the other hand, when debugging a very complex deeply hidden issue, then 100% repeatable test conditions are a must.
   // => Currently TestDataCreator has some random titles and descriptions.
-
-  // very simple random number generator
   Random rand;
 
   public TestDataCreator() {
@@ -201,15 +212,15 @@ public class TestDataCreator implements CommandLineRunner {
       auditorAware.setMockAuditor(util.user(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
       seedTeams();
 			seedAreas();
-      AreaModel area = areaMap.get(TestFixtures.AREA0_TITLE);   // most testdata is created in this area
+
       seedIdeas();
       seedProposals();
 			seedProxies(TestFixtures.delegations);
-			seedPollInElaborationPhase(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
-			seedPollInVotingPhase(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);						      // seed one poll in voting
-			PollModel poll = seedPollInVotingPhase(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
+			seedPollInElaborationPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
+			seedPollInVotingPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);						      // seed one poll in voting
+			PollModel poll = seedPollInVotingPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
 			seedVotes(poll, TestFixtures.NUM_VOTES);
-			seedPollFinished(area, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
+			seedPollFinished(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
       seedLaws();
       auditorAware.setMockAuditor(null);
 
@@ -228,17 +239,14 @@ public class TestDataCreator implements CommandLineRunner {
 
 				// Fill userMap as cache
 				util.reloadUsersCache();
-				if (this.areaMap == null) this.areaMap= new HashMap<>();
-				for (AreaModel area: areaRepo.findAll()) {
-					this.areaMap.put(area.getTitle(), area);
-				}
-				log.info("Loaded {} users from sample data script", userRepo.count());
-				log.info("Loaded {} areas.", areaRepo.count());
+				log.info("Loaded {} teams", teamRepo.count());
+				log.info("Loaded {} users", userRepo.count());
+				log.info("Loaded {} areas", areaRepo.count());
 				log.info("Loaded {} ideas, proposals and laws.", lawRepo.count());
-				log.info("Loaded {} polls.", pollRepo.count());
-				log.info("Loaded {} delegations.", delegationRepo.count());
-				log.info("Loaded {} checksums.", rightToVoteRepo.count());
-				log.info("Loaded {} comments.", commentRepo.count());
+				log.info("Loaded {} polls", pollRepo.count());
+				log.info("Loaded {} delegations", delegationRepo.count());
+				log.info("Loaded {} checksums", rightToVoteRepo.count());
+				log.info("Loaded {} comments", commentRepo.count());
 
 				log.info("===== TestDataCreator: Successfully loaded schema and sample data from "+ TEST_DATA_FILENAME +" => DONE");
 			} catch (SQLException e) {
@@ -248,19 +256,20 @@ public class TestDataCreator implements CommandLineRunner {
 			}
 		}
 
-    if (seedDB || loadSampleDataFromSqlScript) {
-			Optional<AreaModel> area = areaRepo.findByTitle(TestFixtures.AREA_FOR_DELEGATIONS);
+    // log proxy structure in default area if tracing is enabled
+    if ((seedDB || loadSampleDataFromSqlScript) && log.isTraceEnabled()) {
+			AreaModel area = this.defaultArea;
 			Optional<UserModel> topProxyOpt = userRepo.findByEmail(TestFixtures.USER1_EMAIL);      // user1 is the topmost proxy in TestFixtures.java
-			if (area.isPresent() && topProxyOpt.isPresent()) {
+			if (topProxyOpt.isPresent()) {
 				UserModel topProxy = topProxyOpt.get();
 				log.debug("====== TestDataCreator: Proxy tree =====");
-				utils.printProxyTree(area.get(), topProxy);
+				utils.printProxyTree(area, topProxy);
 
 				log.debug("====== TestDataCreator: Tree of delegations =====");
-				utils.printDelegationTree(area.get(), topProxy);
+				utils.printDelegationTree(area, topProxy);
 
 				try {
-					String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(topProxy, area.get(), TestFixtures.USER_TOKEN_SECRET, false);
+					String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(topProxy, area, TestFixtures.USER_TOKEN_SECRET, false);
 					RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken);
 					log.debug("====== TestDataCreator: RightToVotes =====");
 					utils.printRightToVoteTree(rightToVote);
@@ -269,11 +278,6 @@ public class TestDataCreator implements CommandLineRunner {
 				}
 			}
 
-			log.debug("====== TestDataCreator: Teams =====");
-			Page<TeamModel> teams = teamRepo.findAll(new OffsetLimitPageable(0, 10));
-			for (TeamModel team: teams) {
-				log.debug(team.toString());
-			}
 		}
 
   }
@@ -343,11 +347,11 @@ public class TestDataCreator implements CommandLineRunner {
 		}
 	}
 
-	/** Seed two teams with an admin user each. */
+	/** Seed teams and their admin users. */
 	public void seedTeams() throws LiquidoException {
 		log.info("Seeding Teams ...");
 		for (int i = 0; i < TestFixtures.NUM_TEAMS; i++) {
-			String teamName    = TestFixtures.TEAM_NAME_PREFIX+(i+1);
+			String teamName    = TestFixtures.TEAM_NAMES.get(i);
 			String adminName   = "Admin " + teamName;
 			String adminEmail  = TestFixtures.TEAM_ADMIN_EMAILS.get(i);
 			String adminMobilephone = TestFixtures.MOBILEPHONE_PREFIX+"555"+(i+1);
@@ -361,11 +365,11 @@ public class TestDataCreator implements CommandLineRunner {
 	 * @param mailPrefix
 	 */
   public void seedUsers(long numUsers, String mailPrefix) {
-    log.info("Seeding Users ... this will bring up some 'Cannot getCurrentAuditor' WARNings that you can ignore.");
-		long countUsers = util.users.size();
+    log.info("Seeding Users ... this may bring up a 'Cannot getCurrentAuditor' warning, that you can ignore.");
+		long countUsers = userRepo.count();
     for (int i = 0; i < numUsers; i++) {
-      String email 				= mailPrefix + (i+1) + "@liquido.de";    // Remember that DB IDs start at 1. Testuser1 has ID=1 in DB. And there is no testuser0
-			String name  			 	= (i == 0) ? "Test User" + (i+1) : TestFixtures.USER1_NAME;           // user1 has a special fixed name. And yes  this breaks the system. That's the idea of test data :-) Sames as in areal world db.
+      String email 				= mailPrefix + (i+1) + "@liquido.de";
+			String name  			 	= (i == 0) ? "Test User" + (i+1) : TestFixtures.USER1_NAME;           // user1 has a special fixed name.
 			String mobilephone 	= TestFixtures.MOBILEPHONE_PREFIX+(countUsers+i+1);
 			String website     	= "http://www.liquido.de";
 			String picture     	= TestFixtures.AVATAR_PREFIX+((i%16)+1)+".png";
@@ -383,14 +387,13 @@ public class TestDataCreator implements CommandLineRunner {
    */
   private void seedAreas() {
     log.info("Seeding Areas ...");
-    this.areas = new ArrayList<>();
     UserModel createdBy = util.user(TestFixtures.USER1_EMAIL);
 
     // Seed default area
-		AreaModel defaultArea = new AreaModel(liquidoProps.defaultAreaTitle, "Default Area", createdBy);
+		this.defaultArea = new AreaModel(liquidoProps.defaultAreaTitle, "Default Area", createdBy);
 		defaultArea = areaRepo.save(defaultArea);
-		this.areaMap.put(defaultArea.getTitle(), defaultArea);
 
+		// Seed more areas
     for (int i = 0; i < TestFixtures.NUM_AREAS; i++) {
       String areaTitle =  "Area " + i;
       AreaModel newArea = new AreaModel(areaTitle, "Nice description for test area #"+i, createdBy);
@@ -402,10 +405,7 @@ public class TestDataCreator implements CommandLineRunner {
       } else {
         log.debug("Creating new area " + newArea);
       }
-
       AreaModel savedArea = areaRepo.save(newArea);
-      this.areas.add(savedArea);
-      this.areaMap.put(savedArea.getTitle(), savedArea);
     }
   }
 
@@ -417,7 +417,7 @@ public class TestDataCreator implements CommandLineRunner {
   private void seedProxies(List<String[]> delegations) {
 		log.info("Seeding Proxies ...");
 
-		AreaModel area = areaMap.get(TestFixtures.AREA_FOR_DELEGATIONS);
+		AreaModel area = this.defaultArea;
     for(String[] delegationData: delegations) {
       UserModel fromUser   = util.user(delegationData[0]);
       UserModel toProxy    = util.user(delegationData[1]);
@@ -449,7 +449,7 @@ public class TestDataCreator implements CommandLineRunner {
 
       UserModel createdBy = util.randUser();
       auditorAware.setMockAuditor(createdBy);
-      AreaModel area = this.areas.get(i % this.areas.size());
+      AreaModel area = this.defaultArea;
       LawModel newIdea = new LawModel(ideaTitle, ideaDescr.toString(), area);
       lawRepo.save(newIdea);
 
@@ -489,7 +489,7 @@ public class TestDataCreator implements CommandLineRunner {
     description.append(" ");
     description.append(util.getLoremIpsum(0,400));
     UserModel createdBy = this.util.randUser();
-    AreaModel area = this.areas.get(rand.nextInt(TestFixtures.NUM_AREAS));
+    AreaModel area = this.defaultArea;
     int ageInDays = rand.nextInt(10);
     int reachQuorumDaysAgo = (int)(ageInDays*rand.nextFloat());
     LawModel proposal = createProposal(title, description.toString(), area, createdBy, ageInDays, reachQuorumDaysAgo);
@@ -510,7 +510,7 @@ public class TestDataCreator implements CommandLineRunner {
 			UserModel createdBy = util.user(TestFixtures.USER1_EMAIL);
     	String title = "Proposal " + i + " for user "+createdBy.getEmail();
       String description = util.getLoremIpsum(100,400);
-      AreaModel area = this.areas.get(rand.nextInt(TestFixtures.NUM_AREAS));
+      AreaModel area = this.defaultArea;
       int ageInDays = rand.nextInt(10);
       int reachedQuorumDaysAgo = (int)(ageInDays*rand.nextFloat());
       LawModel proposal = createProposal(title, description, area, createdBy, ageInDays, reachedQuorumDaysAgo);
@@ -604,7 +604,7 @@ public class TestDataCreator implements CommandLineRunner {
       LawModel initialProposal = createProposal(title, desc, area, createdBy, 10, 7);
 			initialProposal = addCommentsToProposal(initialProposal);
 			String pollTitle = "Poll in ELABORATION from TestDataCreator "+System.currentTimeMillis() % 10000;
-      PollModel newPoll = pollService.createPoll(pollTitle, initialProposal);
+      PollModel newPoll = pollService.createPollWithProposal(pollTitle, initialProposal);
       newPoll.setTitle("Poll from TestDataCreator "+System.currentTimeMillis() % 10000);
 
       //===== add alternative proposals
@@ -704,17 +704,16 @@ public class TestDataCreator implements CommandLineRunner {
 
   public void seedLaws() {
     log.info("Seeding laws");
-    AreaModel area = this.areas.get(0);
     UserModel createdBy = util.user(TestFixtures.USER1_EMAIL);
     auditorAware.setMockAuditor(createdBy);
 
-		//TODO: realLaw actually needs to have been part of a (finished) poll with alternative proposals
+		//TODO: a real law actually needs to have been part of a (finished) poll with alternative proposals
     //PollModel poll = new PollModel();
     //pollRepo.save(poll);
 
     for (int i = 0; i < TestFixtures.NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
-      LawModel realLaw = createProposal(lawTitle, util.getLoremIpsum(100,400), area, createdBy, 12, 10);
+      LawModel realLaw = createProposal(lawTitle, util.getLoremIpsum(100,400), this.defaultArea, createdBy, 12, 10);
 			realLaw = addSupportersToIdea(realLaw, prop.supportersForProposal+2);
 			//realLaw.setPoll(poll);
 			LocalDateTime reachQuorumAt = LocalDateTime.now().minusDays(10);

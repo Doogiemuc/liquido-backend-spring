@@ -39,9 +39,11 @@ import java.util.Set;
 @Table(name = "laws")
 public class LawModel extends BaseModel implements Comparable<LawModel> {
 
-  @NotNull
-  @NonNull
-  @Column(unique = true)
+	/* Title of an idea/proposal. Must (really!) :-) not be null. */
+	@javax.validation.constraints.NotNull
+	@org.springframework.lang.NonNull
+	@lombok.NonNull
+	@Column(unique = true)
   public String title;
 
 	/**

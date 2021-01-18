@@ -46,6 +46,6 @@ public class LiquidoAuthUser extends User {  // org.springframework.security.cor
   @Override
   public String getPassword() {
     log.debug("SEC TRACE: LiquidoAuthUser.java: Some code is getting the password of "+this.getUsername()+ "!!! There are no passwords in LIQUIDO. This call should never happen!");
-    return null;     //BUGFIX: Cannot throw RuntimeException, cause sometimes during tests some method calls this.
+    return null;     //BUGFIX: Cannot throw RuntimeException, cause sometimes during tests some spring methods actually do calls this.
   }
 }
