@@ -70,7 +70,8 @@ public class PollsGraphQL {
 	}
 
 	/**
-	 * Add a proposal to a poll. One user is only allowed to have one proposal in each poll.
+	 * Create a new proposal and add it to a poll. A user is only allowed to have one proposal in each poll.
+	 *
 	 * @param pollId the poll, MUST exist
 	 * @param title Title of the new proposal. MUST be unique within the poll.
 	 * @param description Longer description of the proposal
@@ -85,6 +86,7 @@ public class PollsGraphQL {
 		@GraphQLNonNull @GraphQLArgument(name = "description") String description,
 		@GraphQLArgument(name = "areaId") Long areaId
 	) throws LiquidoException {
+		// If areaId is given, then lookup that AreaModel. Otherwise lookup defaultArea;
 		AreaModel area;
 		if (areaId != null) {
 			area = areaRepo.findById(areaId).orElseThrow(
@@ -95,10 +97,15 @@ public class PollsGraphQL {
 				() -> new LiquidoException(LiquidoException.Errors.INTERNAL_ERROR, "Cannot addProposal: DefaultAreaNotFound not found.")
 			);
 		}
+		// Find the poll
 		PollModel poll = pollRepo.findById(pollId).orElseThrow(
 			() -> new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposal: There is no poll with id="+pollId)
 		);
+		// Create a new proposal and add it to the poll (via PollService)
 		LawModel proposal = new LawModel(title, description, area);
+		if (liquidoProps.supportersForProposal <= 0) {
+			proposal.setStatus(LawModel.LawStatus.PROPOSAL);
+		}
 		pollService.addProposalToPoll(proposal, poll);
 		return poll;
 	}

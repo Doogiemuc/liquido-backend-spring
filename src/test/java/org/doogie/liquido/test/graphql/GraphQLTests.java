@@ -3,15 +3,15 @@ package org.doogie.liquido.test.graphql;
 import com.jayway.jsonpath.JsonPath;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.OffsetLimitPageable;
+import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.TeamRepo;
 import org.doogie.liquido.jwt.JwtTokenProvider;
+import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.LawService;
-import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.HttpBaseTest;
 import org.doogie.liquido.testdata.TestFixtures;
-import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.Lson;
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,6 +40,9 @@ public class GraphQLTests extends HttpBaseTest {
 
 	@Autowired
 	JwtTokenProvider jwtTokenProvider;
+
+	@Autowired
+	PollRepo pollRepo;
 
 	/**
 	 * Always login the admin of team0.
@@ -120,7 +123,7 @@ public class GraphQLTests extends HttpBaseTest {
 		//GIVEN a team with an admin
 		Page<TeamModel> teams = teamRepo.findAll(new OffsetLimitPageable(0, 1));
 		TeamModel team = teams.iterator().next();
-		Assert.assertNotNull("Need at least one team to testCreatePoll!", team);
+		Assert.assertNotNull("Need at least one team to testAdminCreatesNewPoll!", team);
 		UserModel admin = team.getAdmins().stream().findFirst().get();
 
 		// AND a graphQL mutation to createPoll
@@ -128,16 +131,49 @@ public class GraphQLTests extends HttpBaseTest {
 		String graphQLMutation = "mutation { createPoll(title: \"" + pollTitle + "\") { id, title } }";
 
 		//WHEN the admin creates a new poll
+		loginUserJWT(admin.getEmail());
 		String actualTitle = executeGraphQl(graphQLMutation, "$.createPoll.title");
 
 		//THEN poll is created
 		Assert.assertEquals("Poll title should be returned", pollTitle, actualTitle);
 	}
 
+	@Test
+	public void testAddProposalToPoll() {
+		//GIVEN a poll in ELABORATION
+		List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.ELABORATION);
+		Assert.assertTrue("Need at least one poll in elaboration to testAddProposalToPoll", polls.size() > 0);
+		PollModel poll = polls.get(0);
+
+		// AND data for a new proposal
+		Long now = System.currentTimeMillis() % 10000;
+		String title = "Proposal added from Test "+now;
+		String description = getLoremIpsum(0, 200);
+
+		// AND a graphQL mutation to add a proposal to this poll
+		String pollTitle = "Poll from test " + System.currentTimeMillis() * 10000;
+		String graphQL = String.format(
+			"mutation { addProposal(pollId: \"%s\", title: \"%s\", description: \"%s\") { id, title, proposals { id, title, description } } }",
+			poll.getId(), title, description
+		);
+
+		//WHEN this proposal is added to the poll
+		Lson entity = new Lson("query", graphQL);
+		ResponseEntity<String> res = this.client.exchange(this.GraphQLPath, HttpMethod.POST, entity.toJsonHttpEntity(), String.class);
+
+		//THEN poll is created
+		Assert.assertTrue("Proposal with that title should have been added", res.getBody().contains(title));
+	}
 
 
 	// ========================= private utility methods ======================
 
+	/**
+	 * Execute a GraphQL query or mutation and return the result of a JsonPath expression
+	 * @param graphQL GraphQL query or mutation  This will be wrapped in a JSON   { "query" : "[graphQL]" }
+	 * @param resJsonPath A JsonPath path
+	 * @return the String result of your JsonPath expression. Result must be a string value
+	 */
 	private String executeGraphQl(String graphQL, String resJsonPath) {
 		Lson entity = new Lson("query", graphQL);
 		ResponseEntity<String> res = this.client.exchange(this.GraphQLPath, HttpMethod.POST, entity.toJsonHttpEntity(), String.class);
