@@ -22,7 +22,7 @@ import java.util.Set;
  *
  * This is the central model class in Liquido.
  *
- * Any user can add an ideas. Once an idea reaches its quorum, then it becomes a proposal. When a proposal joins
+ * Any user can add an idea. Once an idea reaches its quorum, then it becomes a proposal. When a proposal joins
  * a poll, then it can be discussed and elaborated. When the voting phase of the poll starts, then a
  * proposal must not be changed anymore. Users can vote in the poll. When the voting phase is finished,
  * then the winning proposal becomes a law. All other proposals in the poll are dropped.
@@ -75,7 +75,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 		LawStatus(int id) { this.statusId = id; }
 	}
 
-	/** current status of this proposal */
+	/** Current status: idea, proposal, in elaboratin, in voting, law, ... */
 	@NotNull
 	@NonNull
 	public LawStatus status =  LawStatus.IDEA;

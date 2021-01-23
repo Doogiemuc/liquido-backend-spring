@@ -394,7 +394,7 @@ public class PollServiceTests  extends BaseTest {
 		Long firstProposalId = poll.getProposals().iterator().next().getId();
 
 		// WHEN login as ADMIN
-		this.loginUser(prop.admin.email);
+		this.loginMockUser(prop.admin.email);
 
 		//  AND poll is deleted
 		pollService.deletePoll(poll, false);
