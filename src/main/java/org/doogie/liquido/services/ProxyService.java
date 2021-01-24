@@ -160,6 +160,12 @@ public class ProxyService {
 			delegation.setRequestedDelegationFrom(null);
 			delegation.setRequestedDelegationAt(null);
 			rightToVote.setDelegatedTo(proxyRightToVote.get());
+
+			// Remark:
+			// Theoretically there could be some polls that are currently open for voting and fromUser did not vote in them yet, but his new proxy already did.
+			// LIQUIDO will not automatically create delegated ballots for these polls here. Only future votes of his proxy will also be counted for fromUser.
+			// Of course fromUser may ALWAYS vote for himself in ANY poll.
+
 			log.info("assignProxy: Proxy assigned "+delegation);
 		}
 		else

@@ -8,26 +8,58 @@ participant "Liquido Backend" as BE
 participant AuthyAPI
 participant AuthyApp
 
-User -> LiquidoApp: Open App
+note over AuthyAPI: ""https://api.authy.com/protected/json""
+
+== Register ==
+
+User -> LiquidoApp: register
+activate LiquidoApp
+
+LiquidoApp -> BE: ""POST /auth/register\n {email, profile.mobilephone}""
+
+BE -> AuthyAPI: ""POST /users/new""
+
+AuthyAPI --> BE: HTTP 200 OK
+
+BE --> LiquidoApp: HTTP 200 OK
+
+LiquidoApp --> User: registered successfully
+deactivate LiquidoApp
+
+== Login ==
+
+User -> LiquidoApp: Open LiquidoApp
+activate LiquidoApp
 
 LiquidoApp -> BE: Request\nOne-Time-Token\n(OTT)
 
-BE -> AuthyAPI: ""GET https://api.authy.com/protected/json/sms/{AUTHY_ID}""
+BE -> AuthyAPI: ""GET /sms/{AUTHY_ID}""
 AuthyAPI -> AuthyApp: push notification
+deactivate LiquidoApp
+activate AuthyApp
 
-note right of AuthyApp: Show OTT to user
 
-User -> LiquidoApp: user enters OTT\nfrom AuthyApp
+note left of AuthyApp: AuthyApp pops up and\nshows a One Time Token (OTT) to user\n2FA: User switches back to LiquidoApp
+
+AuthyApp -[#blue]->o User: One time token (OTT). 2FA: This is not a technical callback! This is human interaction.
+deactivate AuthyApp
+
+User -> LiquidoApp: user manually enters OTT\nin LiquidoApp
+activate LiquidoApp
 
 LiquidoApp -> BE: login with OTT
-BE -> AuthyAPI: ""GET https://api.authy.com/protected/json/verify/{TOKEN}/{AUTHY_ID}""
-AuthyAPI --> BE: HTTP 200
+BE -> AuthyAPI: ""GET verify/{TOKEN}/{AUTHY_ID}""
+AuthyAPI --> BE: HTTP 200 OK
 
 BE --> LiquidoApp: JsonWebToken (JWT)
+LiquidoApp -> LiquidoApp: cache JWT
 LiquidoApp --> User: login successful
+deactivate LiquidoApp
+
+== Authenticated ==
 
 LiquidoApp -> BE: authenticated requests\nwith JWT in header
-BE --> LiquidoApp: OK
+BE --> LiquidoApp: HTTP 200 OK
 
 
 @enduml

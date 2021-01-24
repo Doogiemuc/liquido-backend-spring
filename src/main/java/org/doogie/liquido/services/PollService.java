@@ -335,13 +335,12 @@ public class PollService {
 	 * @return (optionally) the ballot of the vote's direct proxy in this poll, if voter has a direct proxy
 	 * @throws LiquidoException when this voter did not delegate his checksum to any proxy in this area
 	 */
-	public Optional<BallotModel> getBallotOfEffectiveProxy(PollModel poll, RightToVoteModel voterChecksum) throws LiquidoException {
+	public Optional<BallotModel> getBallotOfDirectProxy(PollModel poll, RightToVoteModel voterChecksum) throws LiquidoException {
 		if (PollModel.PollStatus.ELABORATION.equals(poll.getStatus()))
 			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Cannot get ballot of poll in ELABORATION");
 		return ballotRepo.findByPollAndRightToVote(poll, voterChecksum.getDelegatedTo());
 	}
 
-	//TODO: actually I need getBallotOfEffectiveProxy
 	public Optional<BallotModel> getBallotOfTopProxy(PollModel poll, RightToVoteModel voterChecksum) throws LiquidoException {
 		if (PollModel.PollStatus.ELABORATION.equals(poll.getStatus()))
 			throw new LiquidoException(LiquidoException.Errors.INVALID_POLL_STATUS, "Cannot get ballot of poll in ELABORATION");
