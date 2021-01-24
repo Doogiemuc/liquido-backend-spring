@@ -15,9 +15,13 @@ import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.testdata.LiquidoProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+
+import static org.doogie.liquido.security.LiquidoAuthUser.HAS_ROLE_TEAM_ADMIN;
+import static org.doogie.liquido.security.LiquidoAuthUser.HAS_ROLE_USER;
 
 /**
  * GraphQL queries and mutations for Liquido posts.
@@ -46,6 +50,7 @@ public class PollsGraphQL {
 	 * @return the PollModel
 	 */
 	@GraphQLQuery(name = "poll")
+	@PreAuthorize(HAS_ROLE_USER)
 	public PollModel getPollById(@GraphQLNonNull @GraphQLArgument(name = "pollId") Long pollId) throws LiquidoException {
 		Optional<PollModel> pollOpt = pollRepo.findById(pollId);
 		if (!pollOpt.isPresent())
@@ -60,6 +65,7 @@ public class PollsGraphQL {
 	 * @return the newly created poll
 	 */
 	@GraphQLMutation(name = "createPoll", description = "Admin creates a new poll")
+	@PreAuthorize(HAS_ROLE_TEAM_ADMIN)
 	public PollModel createPoll(
 		@GraphQLNonNull @GraphQLArgument(name="title") String title
 	) throws LiquidoException {
@@ -72,14 +78,22 @@ public class PollsGraphQL {
 	/**
 	 * Create a new proposal and add it to a poll. A user is only allowed to have one proposal in each poll.
 	 *
+	 * @See {@link PollService#addProposalToPoll(LawModel, PollModel)}
+	 *
+	 * You must set supportersForProposal = -1 in application.properties for this to work.
+	 * Otherwise the idea must first reach its quorum, before it can be added to a poll.
+	 *
+	 * Creating ideas is currently not supported via the GraphQL endpoints. The workflow for the mobile app is simplified.
+	 *
 	 * @param pollId the poll, MUST exist
 	 * @param title Title of the new proposal. MUST be unique within the poll.
 	 * @param description Longer description of the proposal
-	 * @param areaId AreaID. DEFAULT_AREA will be used if not set.
+	 * @param areaId (optional) AreaId. DEFAULT_AREA will be used if not set.
 	 * @return The updated poll with the added proposal
 	 * @throws LiquidoException when proposal title already exists in this poll.
 	 */
 	@GraphQLMutation(name = "addProposal", description = "Add new proposal to a poll")
+	@PreAuthorize(HAS_ROLE_USER)
 	public PollModel addProposalToPoll_GraphQL(
 		@GraphQLNonNull @GraphQLArgument(name = "pollId") long pollId,
 		@GraphQLNonNull @GraphQLArgument(name = "title") String title,

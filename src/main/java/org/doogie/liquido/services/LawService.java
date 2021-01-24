@@ -100,7 +100,6 @@ public class LawService {
       return lawRepo.save(idea);
     }
     return idea;
-    //TODO: What happens with a proposal when a supporter gets removed?
   }
 
 

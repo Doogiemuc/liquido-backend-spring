@@ -12,12 +12,14 @@ import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.jwt.JwtTokenProvider;
 import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.rest.dto.CreateNewTeamResponse;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.UserService;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoRestUtils;
+import org.doogie.liquido.util.Lson;
 import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -65,7 +67,7 @@ public class TeamsGraphQL {
 	 */
 	@PreAuthorize(HAS_ROLE_USER)
 	@GraphQLQuery(name = "team")
-	@Transactional  //BUGFIX for error: No EntityManager with actual transaction available for current thread - cannot reliably process 'merge' call"
+	@Transactional
 	public TeamModel getOwnTeam() throws LiquidoException {
 		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
 			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to query for your own team's info."));
@@ -78,35 +80,40 @@ public class TeamsGraphQL {
 
 	/**
 	 * Create a new team. The first user will become the admin of the team.
+	 * This can be called anonymously.
+	 *
 	 * @param teamName Name of new team. Must be unique.
 	 * @param adminName Admin's name
 	 * @param adminEmail email of admin. (Must not be unique. One email MAY be the admin of several teams.)
-	 * @return The newly created team, incl. ID and inviteCode
+	 * @return The newly created team, incl. ID, inviteCode  and a JsonWebToken
 	 * @throws LiquidoException when teamName is not unique.
 	 */
 	@GraphQLMutation(name = "createNewTeam", description = "Create a new team")
-	public TeamModel createNewTeam(
+	public CreateNewTeamResponse createNewTeam(
 		@GraphQLArgument(name = "teamName") @GraphQLNonNull String teamName,
 		@GraphQLArgument(name = "adminName") @GraphQLNonNull String adminName,
-		@GraphQLArgument(name = "adminEmail") @GraphQLNonNull String adminEmail,
-		@GraphQLArgument(name = "adminMobilephone") @GraphQLNonNull String adminMobilephone
+		@GraphQLArgument(name = "adminEmail") @GraphQLNonNull String adminEmail
 	) throws LiquidoException {
-		UserModel admin = UserModel.asTeamAdmin(adminEmail, adminName, adminMobilephone, null, null);
+		UserModel admin = UserModel.asTeamAdmin(adminEmail, adminName);
 		TeamModel newTeam = new TeamModel(teamName, admin);
 		try {
-			admin.setTeamId(newTeam.id);			// link admin user to team. This MUST be done manually here. After save(newTeam)
 			newTeam = teamRepo.save(newTeam);
-			//userRepo.save(admin);
+			admin.setTeamId(newTeam.id);			// link admin user to team. This MUST be done manually here. After save(newTeam)
+			userRepo.save(admin);
 			log.info("Created new team: "+newTeam.toString());
 		} catch (DataIntegrityViolationException ex) {
 			log.debug(ex.getMessage());
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_NEW_TEAM, "Cannot create new team: A team with that name ('"+teamName+"') already exists");
+			throw new LiquidoException(LiquidoException.Errors.TEAM_WITH_SAME_NAME_EXISTS, "Cannot create new team: A team with that name ('"+teamName+"') already exists");
 		}
-		return newTeam;
+		String jwt = jwtTokenProvider.generateToken(adminEmail);
+		return new CreateNewTeamResponse(newTeam, jwt);
+
 	}
 
 	/**
-	 * Join an existing team
+	 * Join an existing team.
+	 * This can be called anonymously.
+	 *
 	 * @param inviteCode valid invite code of the team to join
 	 * @param userName new user name
 	 * @param userEmail new user's email

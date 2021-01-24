@@ -354,8 +354,7 @@ public class TestDataCreator implements CommandLineRunner {
 			String teamName    = TestFixtures.TEAM_NAMES.get(i);
 			String adminName   = "Admin " + teamName;
 			String adminEmail  = TestFixtures.TEAM_ADMIN_EMAILS.get(i);
-			String adminMobilephone = TestFixtures.MOBILEPHONE_PREFIX+"555"+(i+1);
-			teamService.createNewTeam(teamName, adminName, adminEmail, adminMobilephone);
+			teamService.createNewTeam(teamName, adminName, adminEmail);
 		}
 	}
 
@@ -454,10 +453,11 @@ public class TestDataCreator implements CommandLineRunner {
       lawRepo.save(newIdea);
 
 	    // add some supporters, but not enough to become a proposal
-      int numSupporters = rand.nextInt(prop.supportersForProposal-1);
-      //log.debug("adding "+numSupporters+" supporters to idea "+newIdea);
-      addSupportersToIdea(newIdea, numSupporters);
-
+      if (prop.supportersForProposal > 0) {
+				int numSupporters = rand.nextInt(prop.supportersForProposal - 1);
+				//log.debug("adding "+numSupporters+" supporters to idea "+newIdea);
+				addSupportersToIdea(newIdea, numSupporters);
+			}
       //LawModel savedIdea = lawRepo.save(newIdea);
       util.fakeCreateAt(newIdea, i+1);
       util.fakeUpdatedAt(newIdea, i);
@@ -472,7 +472,13 @@ public class TestDataCreator implements CommandLineRunner {
     LawModel proposal = new LawModel(title, description, area);
 		lawRepo.save(proposal);
 
-    proposal = addSupportersToIdea(proposal, prop.supportersForProposal);
+		if (prop.supportersForProposal > 0) {
+			proposal = addSupportersToIdea(proposal, prop.supportersForProposal);
+		} else {
+			//lawService.checkQuorum(proposal);
+			proposal.setStatus(LawStatus.PROPOSAL);   // this is quicker, cause checkQuorum saves
+		}
+
 		LocalDateTime reachQuorumAt = LocalDateTime.now().minusDays(reachedQuorumDaysAgo);
     proposal.setReachedQuorumAt(reachQuorumAt);			// fake reachQuorumAt date to be in the past
 
@@ -529,6 +535,7 @@ public class TestDataCreator implements CommandLineRunner {
    * @return the idea with the added supporters. The idea might have reached its quorum and now be a proposal
    */
   private LawModel addSupportersToIdea(@NonNull LawModel idea, int num) {
+  	if (num <= 0) return idea;
     if (num >= util.users.size()-1) throw new RuntimeException("Cannot at "+num+" supporters to idea. There are not enough usersMap.");
     if (idea.getId() == null) throw new RuntimeException(("Idea must must be saved to DB before you can add supporter to it. IdeaModel must have an Id"));
 
