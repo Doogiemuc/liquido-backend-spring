@@ -66,7 +66,6 @@ public class UserModel extends BaseModel {
 
 	public UserModel(@NotNull String email, @NotNull String name, String mobilephone, String website, String picture) {
 		if (email == null || email.length() == 0) throw new IllegalArgumentException("Need an email to create a UserModel");
-		if (mobilephone == null || mobilephone.length() == 0) throw new IllegalArgumentException("Need mobilephone to create a UserModel");
 		this.email = email;
 		this.profile = new UserProfileModel();
 		this.profile.setName(name);
@@ -79,8 +78,8 @@ public class UserModel extends BaseModel {
 	 * Create an admin of a team. You <b>MUST</b> then manually call <pre>admin.setTeamId(team.id)</pre>!
 	 * @return the newly created admin UserModel
 	 */
-	public static UserModel asTeamAdmin(@NotNull String email, @NotNull String name, String mobilephone, String website, String picture) {
-		UserModel admin = new UserModel(email, name, mobilephone, website, picture);
+	public static UserModel asTeamAdmin(@NotNull String email, @NotNull String name) {
+		UserModel admin = new UserModel(email, name, null, null, null);
 		admin.roles.add(LiquidoAuthUser.ROLE_TEAM_ADMIN);
 		return admin;
 	}

@@ -54,7 +54,7 @@ public class GraphQLTests extends HttpBaseTest {
 
 	String GraphQLPath = "/graphql";
 
-	/** Load information about team if currently logged in user */
+	/** Load information about team of currently logged in user */
 	@Test
 	public void getOwnTeam() {
 		//GIVEN a query for team of currently logged in user
@@ -114,8 +114,6 @@ public class GraphQLTests extends HttpBaseTest {
 		List<String> members = JsonPath.read(res.getBody(), "$.joinTeam.members..email");
 		Assert.assertTrue("Cannot find userEmail in joinedTeam.members", members.contains(userEmail));
 	}
-
-
 
 	/** Admin creates a new poll in his team. */
 	@Test

@@ -26,33 +26,8 @@ This is the technical documentation of the LQIUIDO backend. The backend is imple
 ## Login
 
 ##### Sequence Diagram for login flow
-```
-@startuml
-autonumber
 
-participant Mobile
-participant WebApp
-participant Backend
-
-WebApp -> Backend: /auth/requestSmsToken?mobile={mobile}
-note over Backend: create and store OneTimeToken
-Backend --> Mobile: Send 6-digit token via SMS
-
-Mobile -> WebApp: Enter token from SMS
-
-WebApp -> Backend: /auth/loginWithSmsToken?mobile={mobile}&token={token}
-note over Backend 
-  validate OneTimeToken
-  then delete it, if valid
-end note
-Backend -> WebApp: return JWT
-
-note over WebApp: storeJwt()
-
-WebApp -> Backend: send authenticated requests with JWT in header
-
-@enduml
-```
+See Liquido Authy Login Sequence.plantuml   and .svg
 
 
 
