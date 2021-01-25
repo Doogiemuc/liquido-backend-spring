@@ -7,15 +7,16 @@ import io.leangen.graphql.annotations.GraphQLQuery;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.PollRepo;
-import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.LawModel;
-import org.doogie.liquido.model.PollModel;
+import org.doogie.liquido.model.*;
+import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.security.LiquidoAuthUser;
+import org.doogie.liquido.security.LiquidoUserDetailsService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.testdata.LiquidoProperties;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -38,10 +39,13 @@ public class PollsGraphQL {
 	PollRepo pollRepo;
 
 	@Autowired
+	PollService pollService;
+
+	@Autowired
 	LiquidoProperties liquidoProps;
 
 	@Autowired
-	PollService pollService;
+	LiquidoUserDetailsService userDetailsService;
 
 
 	/**
@@ -58,6 +62,17 @@ public class PollsGraphQL {
 		return pollOpt.get();
 	}
 
+
+	/*
+	@GraphQLQuery(name = "polls")
+	@PreAuthorize(HAS_ROLE_USER)
+	public Iterable<PollModel> getPollsOfTeam() throws LiquidoException {
+		//UserModel currentUser = liquidoAuditorAware.getCurrentAuditor().get();
+		return pollRepo.findAll();
+	}
+
+	 */
+
 	/**
 	 * Admin of a team creates a new poll.
 	 * The VOTING phase of this poll will be started manually by the admin later.
@@ -72,7 +87,8 @@ public class PollsGraphQL {
 		AreaModel defaultArea = areaRepo.findByTitle(liquidoProps.getDefaultAreaTitle()).orElseThrow(
 			() -> new LiquidoException(LiquidoException.Errors.INTERNAL_ERROR, "Cannot find default area!")
 		);
-		return pollService.createPoll(title, defaultArea);
+		TeamModel team = userDetailsService.getTeam();
+		return pollService.createPoll(title, defaultArea, team);
 	}
 
 	/**

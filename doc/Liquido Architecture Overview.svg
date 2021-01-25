@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="979px" preserveAspectRatio="none" style="width:601px;height:979px;" version="1.1" viewBox="0 0 601 979" width="601px" zoomAndPan="magnify"><defs><filter height="300%" id="fn9s38efxo3pf" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[00bb3e99353533a3af1fd5d46c36287c]
+cluster LIQUIDO MobileApp--><polygon fill="#FFFFFF" filter="url(#fn9s38efxo3pf)" points="304,6,464,6,471,28.2969,542,28.2969,542,226,304,226,304,6" style="stroke:#000000;stroke-width:1.5;"/><line style="stroke:#000000;stroke-width:1.5;" x1="304" x2="471" y1="28.2969" y2="28.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="154" x="308" y="20.9951">LIQUIDO MobileApp</text><!--MD5=[9072815b394c2f6184d3edfdf73823a2]
+cluster LIQUIDO Web--><polygon fill="#FFFFFF" filter="url(#fn9s38efxo3pf)" points="28,6,138,6,145,28.2969,280,28.2969,280,226,28,226,28,6" style="stroke:#000000;stroke-width:1.5;"/><line style="stroke:#000000;stroke-width:1.5;" x1="28" x2="145" y1="28.2969" y2="28.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="104" x="32" y="20.9951">LIQUIDO Web</text><!--MD5=[e2d0c48e8ed6eac78f2f9bdd1ab0ce28]
+cluster Spring Backend--><rect fill="#FFFFFF" filter="url(#fn9s38efxo3pf)" height="614" style="stroke:#000000;stroke-width:1.5;" width="582" x="7" y="353"/><line style="stroke:#000000;stroke-width:1.5;" x1="7" x2="589" y1="373.2969" y2="373.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="125" x="235.5" y="367.9951">Spring Backend</text><!--MD5=[816102c3991bd41d17f6da46477ad63a]
+entity GraphQLClient--><rect fill="#FEFECE" filter="url(#fn9s38efxo3pf)" height="62.5938" style="stroke:#A80036;stroke-width:1.5;" width="153" x="333.5" y="147"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="466.5" y="152"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="464.5" y="154"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="464.5" y="158"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="110" x="348.5" y="179.9951">GraphQL Client</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="113" x="348.5" y="196.292">incl. local cache</text><!--MD5=[d0e7ab35c1ac9bc52482d85fb23cdba7]
+entity VuJS Web Components--><rect fill="#FEFECE" filter="url(#fn9s38efxo3pf)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="205" x="320.5" y="41"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="505.5" y="46"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="503.5" y="48"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="503.5" y="52"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="165" x="335.5" y="73.9951">VuJS Web Components</text><!--MD5=[ef2d146e090650fe540f48b2c5b63fc4]
+entity RestClient--><rect fill="#FEFECE" filter="url(#fn9s38efxo3pf)" height="62.5938" style="stroke:#A80036;stroke-width:1.5;" width="153" x="85.5" y="147"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="218.5" y="152"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="216.5" y="154"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="216.5" y="158"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="84" x="100.5" y="179.9951">REST Client</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="113" x="100.5" y="196.292">incl. local cache</text><!--MD5=[a624f2c3e3a916b4daf86de03f515ce7]
+entity VuJS Mobile Components--><rect fill="#FEFECE" filter="url(#fn9s38efxo3pf)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="220" x="44" y="41"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="244" y="46"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="242" y="48"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="242" y="52"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="180" x="59" y="73.9951">VuJS Mobile Components</text><!--MD5=[3ab6bc66408bc465e62c4c0dcccb802d]
+entity Services--><polygon fill="#FEFECE" filter="url(#fn9s38efxo3pf)" points="25.5,494,110.5,494,117.5,516.2969,572.5,516.2969,572.5,705.2969,25.5,705.2969,25.5,494" style="stroke:#000000;stroke-width:1.5;"/><line style="stroke:#000000;stroke-width:1.5;" x1="25.5" x2="117.5" y1="516.2969" y2="516.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="67" x="35.5" y="509.9951">Services</text><svg x="35.5" y="523.2969"><defs><filter height="300%" id="fvmfulsj2aby8" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[a251655bb3e9bacfe7695398b81628ed]
+entity LawService--><rect fill="#FEFECE" filter="url(#fvmfulsj2aby8)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="120" x="13.5" y="7"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="113.5" y="12"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="111.5" y="14"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="111.5" y="18"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="80" x="28.5" y="39.9951">LawService</text><!--MD5=[9722a640f4fcc743d5445e5286d1360b]
+entity PollService--><rect fill="#FEFECE" filter="url(#fvmfulsj2aby8)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="119" x="169" y="7"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="268" y="12"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="266" y="14"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="266" y="18"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79" x="184" y="39.9951">PollService</text><!--MD5=[619b6d81e774b421e32d147011d417e8]
+entity CastVoteService--><rect fill="#FEFECE" filter="url(#fvmfulsj2aby8)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="160" x="323.5" y="7"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="463.5" y="12"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="461.5" y="14"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="461.5" y="18"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="120" x="338.5" y="39.9951">CastVoteService</text><!--MD5=[670f3ff2654007258d7abcff04eff8d6]
+entity ProxyService--><rect fill="#FEFECE" filter="url(#fvmfulsj2aby8)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="133" x="7" y="113"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="120" y="118"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="118" y="120"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="118" y="124"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="93" x="22" y="145.9951">ProxyService</text><!--MD5=[43a817812dddb31c7306ddcbea69bb00]
+entity UserService--><rect fill="#FEFECE" filter="url(#fvmfulsj2aby8)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="124" x="175.5" y="113"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="279.5" y="118"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="277.5" y="120"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="277.5" y="124"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="84" x="190.5" y="145.9951">UserService</text><!--MD5=[201be4835d1a40c7350eb8acb1bfcc15]
+entity RankedPairVoting--><rect fill="#FEFECE" filter="url(#fvmfulsj2aby8)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="169" x="335" y="113"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="484" y="118"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="482" y="120"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="482" y="124"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="129" x="350" y="145.9951">RankedPairVoting</text><!--MD5=[5170bb6a6aac453eeb7b733e3b9aaf5d]
+link LawService to PollService--><!--MD5=[c453823443b5d5c5b4bffb3fcea52b72]
+link PollService to CastVoteService--><!--MD5=[5796649211828c0c589e17a44d1c66bf]
+link LawService to ProxyService--><!--MD5=[43f865d2b73dd4bd4834daa66297a4bd]
+link ProxyService to UserService--><!--MD5=[7a8a20fd58d769bd438af88b838a2c6e]
+link UserService to RankedPairVoting--><!--MD5=[f031ad16f72987b1d8cff8c640c60cdb]
+@startuml
+component LawService
+component PollService
+component CastVoteService
+component ProxyService
+component UserService
+component RankedPairVoting
+@enduml
+
+PlantUML version 1.2021.01beta3(Unknown compile time)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg><!--MD5=[13496da38da07b328272a23158d1810f]
+entity Security--><rect fill="#FEFECE" filter="url(#fn9s38efxo3pf)" height="62.5938" style="stroke:#000000;stroke-width:1.5;" width="104" x="469" y="765"/><path d="M503.6667,765 L503.6667,770 L496.6667,777 L469,777 " fill="none" style="stroke:#000000;stroke-width:1.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="59" x="484" y="797.9951">Security</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="64" x="484" y="814.292">JWT, OTT</text><!--MD5=[ca73e4f6ec3b50150f4a88dd5bb62e34]
+entity Models--><rect fill="#FEFECE" filter="url(#fn9s38efxo3pf)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="138" x="238" y="896.5"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="356" y="901.5"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="354" y="903.5"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="354" y="907.5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="98" x="253" y="929.4951">Entity Models</text><!--MD5=[9d77520cd384252f300292a32284b150]
+entity TestDataCreator--><rect fill="#FEFECE" filter="url(#fn9s38efxo3pf)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="161" x="411.5" y="896.5"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="552.5" y="901.5"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="550.5" y="903.5"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="550.5" y="907.5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="121" x="426.5" y="929.4951">TestDataCreator</text><!--MD5=[5d1cbc87d0e7b8054c9b5fcaba1275ad]
+entity Exception--><rect fill="#FEFECE" filter="url(#fn9s38efxo3pf)" height="62.5938" style="stroke:#000000;stroke-width:1.5;" width="179" x="23.5" y="765"/><path d="M83.1667,765 L83.1667,770 L76.1667,777 L23.5,777 " fill="none" style="stroke:#000000;stroke-width:1.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="139" x="38.5" y="797.9951">Exception Handling</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="87" x="38.5" y="814.292">and Logging</text><!--MD5=[2c8113cc364a23b9ee674e814acb7abf]
+entity Config--><rect fill="#FEFECE" filter="url(#fn9s38efxo3pf)" height="62.5938" style="stroke:#000000;stroke-width:1.5;" width="138" x="65" y="888"/><path d="M111,888 L111,893 L104,900 L65,900 " fill="none" style="stroke:#000000;stroke-width:1.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="98" x="80" y="920.9951">Configuration</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="77" x="80" y="937.292">properties</text><!--MD5=[8ca05dcb2d722261f922cfe88f941f68]
+entity RestController--><rect fill="#FEFECE" filter="url(#fn9s38efxo3pf)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="146" x="103" y="388"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="229" y="393"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="227" y="395"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="227" y="399"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="106" x="118" y="420.9951">RestController</text><!--MD5=[b6d6ac56b2625447f2b3978d0776f9f2]
+entity GraphQL Controller--><rect fill="#FEFECE" filter="url(#fn9s38efxo3pf)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="180" x="306" y="388"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="466" y="393"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="464" y="395"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="464" y="399"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="140" x="321" y="420.9951">GraphQL Controller</text><!--MD5=[90f22bdaf27c32a6603fc0eff4775818]
+entity JPA Data Repositories--><rect fill="#FEFECE" filter="url(#fn9s38efxo3pf)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="196" x="238" y="773.5"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="414" y="778.5"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="412" y="780.5"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="412" y="784.5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="156" x="253" y="806.4951">JPA Data Repositories</text><!--MD5=[bd5f618b12816bd4b75416c1e6e531a6]
+entity REST--><ellipse cx="165" cy="299" fill="#FEFECE" filter="url(#fn9s38efxo3pf)" rx="8" ry="8" style="stroke:#A80036;stroke-width:1.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="37" x="146.5" y="328.9951">REST</text><!--MD5=[d60bd75c1ec67d2a1febbb865c863456]
+entity GraphQL--><ellipse cx="402" cy="299" fill="#FEFECE" filter="url(#fn9s38efxo3pf)" rx="8" ry="8" style="stroke:#A80036;stroke-width:1.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="63" x="370.5" y="328.9951">GraphQL</text><!--MD5=[b043ae61958fa9f81c454e01c57d6c3a]
+link VuJS Web Components to GraphQLClient--><path d="M420.432,87.226 C418.648,102.663 416.231,123.575 414.173,141.385 " fill="none" id="VuJS Web Components-to-GraphQLClient" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#A80036" points="413.547,146.803,418.5542,138.322,414.1213,141.8361,410.6071,137.4031,413.547,146.803" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[dc5f6ed4d00b982585c26da788f1f4a8]
+link VuJS Mobile Components to RestClient--><path d="M155.581,87.226 C156.678,102.663 158.165,123.575 159.432,141.385 " fill="none" id="VuJS Mobile Components-to-RestClient" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#A80036" points="159.817,146.803,163.1666,137.5412,159.4613,141.8157,155.1868,138.1104,159.817,146.803" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[01bba155ee4a8eeb20751492ae4159cd]
+link RestController to Services--><path d="M190.593,434.126 C200.078,448.509 213.23,468.45 227.108,489.493 " fill="none" id="RestController-to-Services" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#A80036" points="229.892,493.715,228.2749,483.9998,227.1386,489.5414,221.5971,488.4052,229.892,493.715" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[853158b5580de726fc8e0feaf3dc653e]
+link GraphQL Controller to Services--><path d="M384.492,434.126 C377.043,448.449 366.726,468.284 355.832,489.23 " fill="none" id="GraphQL Controller-to-Services" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#A80036" points="353.5,493.715,361.2017,487.5762,355.8072,489.2791,354.1043,483.8847,353.5,493.715" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[3d559c23529b2be2583650d5d3f26a86]
+link Services to JPA Data Repositories--><path d="M318.854,705.135 C323.297,728.553 327.636,751.419 330.837,768.29 " fill="none" id="Services-to-JPA Data Repositories" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#A80036" points="331.793,773.328,334.0465,763.7404,330.8616,768.4155,326.1866,765.2306,331.793,773.328" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[78ebc2834cae4969a8a223bfc6be04b3]
+link JPA Data Repositories to Models--><path d="M330.681,819.693 C325.837,839.905 318.67,869.807 313.491,891.4188 " fill="none" id="JPA Data Repositories-to-Models" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#A80036" points="312.285,896.4474,318.2724,888.6275,313.4503,891.5851,310.4927,886.763,312.285,896.4474" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[4ab0e818e419eeeb6813deea5e15821d]
+link REST to RestController--><path d="M165.827,308.268 C167.496,324.956 171.316,363.164 173.771,387.713 " fill="none" id="REST-RestController" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[7a952abdc2c4115ecf0c7c67eb630966]
+link GraphQL to GraphQL Controller--><path d="M401.549,308.268 C400.639,324.956 398.555,363.164 397.216,387.713 " fill="none" id="GraphQL-GraphQL Controller" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[937f29f2baf1d0ba0ab858eca03d775e]
+link RestClient to REST--><path d="M162.773,210.017 C163.383,234.13 164.206,266.62 164.661,284.608 " fill="none" id="RestClient-to-REST" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#A80036" points="164.79,289.7,168.5599,280.6012,164.6629,284.7016,160.5624,280.8046,164.79,289.7" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[d67d2ebda75cf704308f940479e0cc71]
+link GraphQLClient to GraphQL--><path d="M407.94,210.017 C406.312,234.13 404.118,266.62 402.904,284.608 " fill="none" id="GraphQLClient-to-GraphQL" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#A80036" points="402.56,289.7,407.1578,280.9902,402.8971,284.7114,399.176,280.4508,402.56,289.7" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[b30c151d528942e0a0ea0a72d0806cf7]
+reverse link Models to TestDataCreator--><!--MD5=[4ba348598dae1fa659034ba1af277ebb]
+reverse link JPA Data Repositories to Security--><!--MD5=[7871f0a2a8ed67bcfa7c13c49e673638]
+link Exception to JPA Data Repositories--><!--MD5=[84c0d7bf0fbcc5f689b2a0527ee7d420]
+link Config to Models--><!--MD5=[ff4d19c3f58609207f6c79bfe0daa3c0]
+@startuml
+package "LIQUIDO MobileApp" {
+  component GraphQLClient [
+    GraphQL Client
+    incl. local cache
+  ]
+  [VuJS Web Components] -down-> [GraphQLClient]
+}
+
+package "LIQUIDO Web" {
+  component RestClient [
+    REST Client
+    incl. local cache
+  ]
+  [VuJS Mobile Components] -down-> [RestClient]
+}
+
+
+card "Spring Backend" {
+  package Services [
+    {{
+    component LawService
+    component PollService
+    component CastVoteService
+    component ProxyService
+    component UserService
+    component RankedPairVoting
+    }}
+  ]
+
+  frame Security [
+    Security
+    JWT, OTT
+  ]
+
+  component "Entity Models" as Models
+  component TestDataCreator
+  frame "Exception Handling\nand Logging" as Exception
+  frame "Configuration\nproperties" as Config  
+  
+  [RestController] -down-> Services
+  [GraphQL Controller] -down-> Services
+  [Services] -down-> [JPA Data Repositories]
+  [JPA Data Repositories] -down-> Models
+
+}
+
+REST -down- [RestController]
+GraphQL -down- [GraphQL Controller]
+[RestClient] -down-> REST
+[GraphQLClient] -down-> GraphQL
+
+'for layout only
+
+[TestDataCreator] -[hidden]left-> Models
+[Security] -[hidden]left-> [JPA Data Repositories]
+Exception -[hidden]right-> [JPA Data Repositories]
+Config -[hidden]right-> Models
+@enduml
+
+@startuml
+package "LIQUIDO MobileApp" {
+  component GraphQLClient [
+    GraphQL Client
+    incl. local cache
+  ]
+  [VuJS Web Components] -down-> [GraphQLClient]
+}
+
+package "LIQUIDO Web" {
+  component RestClient [
+    REST Client
+    incl. local cache
+  ]
+  [VuJS Mobile Components] -down-> [RestClient]
+}
+
+
+card "Spring Backend" {
+  package Services [
+    {{
+    component LawService
+    component PollService
+    component CastVoteService
+    component ProxyService
+    component UserService
+    component RankedPairVoting
+    }}
+  ]
+
+  frame Security [
+    Security
+    JWT, OTT
+  ]
+
+  component "Entity Models" as Models
+  component TestDataCreator
+  frame "Exception Handling\nand Logging" as Exception
+  frame "Configuration\nproperties" as Config  
+  
+  [RestController] -down-> Services
+  [GraphQL Controller] -down-> Services
+  [Services] -down-> [JPA Data Repositories]
+  [JPA Data Repositories] -down-> Models
+
+}
+
+REST -down- [RestController]
+GraphQL -down- [GraphQL Controller]
+[RestClient] -down-> REST
+[GraphQLClient] -down-> GraphQL
+
+
+[TestDataCreator] -[hidden]left-> Models
+[Security] -[hidden]left-> [JPA Data Repositories]
+Exception -[hidden]right-> [JPA Data Repositories]
+Config -[hidden]right-> Models
+@enduml
+
+PlantUML version 1.2021.01beta3(Unknown compile time)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

@@ -84,12 +84,15 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
 		http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
   }
 
+  /*
 	//see http://docs.spring.io/spring-security/site/docs/current/reference/htmlsingle/#jc-authentication-userdetailsservice
 	@Bean
 	public LiquidoUserDetailsService liquidoUserDetailsService() {
 		log.debug("creating LiquidoUserDetailsService");
 		return new LiquidoUserDetailsService();
 	}
+
+   */
 
 
 	/**

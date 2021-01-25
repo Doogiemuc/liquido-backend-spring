@@ -14,6 +14,7 @@ import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.CreateNewTeamResponse;
 import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.security.LiquidoUserDetailsService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.UserService;
 import org.doogie.liquido.testdata.TestFixtures;
@@ -54,10 +55,7 @@ public class TeamsGraphQL {
 	PollRepo pollRepo;
 
 	@Autowired
-	LiquidoAuditorAware liquidoAuditorAware;
-
-	@PersistenceContext
-	private EntityManager entityManager;
+	LiquidoUserDetailsService userDetailsService;
 
 
 	/**
@@ -69,13 +67,9 @@ public class TeamsGraphQL {
 	@GraphQLQuery(name = "team")
 	@Transactional
 	public TeamModel getOwnTeam() throws LiquidoException {
-		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
-			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to query for your own team's info."));
+		return userDetailsService.getTeam();
 		//BUGFIX: MUST merge currentUser into current hibernate transaction https://stackoverflow.com/questions/65752757/hibernate-lazy-loading-and-springs-userdetails
 		// currentUser = entityManager.merge(currentUser);
-		Long teamId = currentUser.getTeamId();
-		TeamModel team = teamRepo.findById(teamId).orElseThrow(LiquidoException.notFound("Cannot find a team with team.id="+teamId));
-		return team;
 	}
 
 	/**

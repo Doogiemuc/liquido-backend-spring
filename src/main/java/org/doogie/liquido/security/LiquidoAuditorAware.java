@@ -1,7 +1,9 @@
 package org.doogie.liquido.security;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.services.LiquidoException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
@@ -33,6 +35,7 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
    */
   @Override
   public Optional<UserModel> getCurrentAuditor() {
+    //TODO: replace all calls to this with a LiquidoUserDetailsService#getCurrnetUser()  that return the UserModel directly or throws. (No optional)
     if (mockAuditor != null) {
     	// warn about mock users, but only if we are not in dev or test or int
 			if (!springEnv.acceptsProfiles(Profiles.of("dev", "test", "int")))
@@ -70,4 +73,5 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
     }
     this.mockAuditor = mockAuditor;
   }
+
 }
