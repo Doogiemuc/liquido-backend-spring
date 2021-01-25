@@ -36,7 +36,7 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
 /**
  * <h1>TestDataCreator</h1>
  *
- * Every test needs data. This testdata is extremely important. Here we create it.
+ * Every test needs data. This test data is extremely important. Here we create it.
  *
  * <h3>Fixed or random testdata</h3>
  * On the one hand the application of course must be able to handle arbitrary user data.
@@ -216,8 +216,10 @@ public class TestDataCreator implements CommandLineRunner {
       seedIdeas();
       seedProposals();
 			seedProxies(TestFixtures.delegations);
+			seedPollInTeam();
 			seedPollInElaborationPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
 			seedPollInVotingPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);						      // seed one poll in voting
+
 			PollModel poll = seedPollInVotingPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
 			seedVotes(poll, TestFixtures.NUM_VOTES);
 			seedPollFinished(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
@@ -667,6 +669,14 @@ public class TestDataCreator implements CommandLineRunner {
       throw new RuntimeException("Cannot seed Poll in voting phase", e);
     }
   }
+
+  public PollModel seedPollInTeam() {
+  	log.info("Seeding one empty poll in a team");
+		TeamModel team = teamRepo.findAll().iterator().next();
+  	String title = "Poll in Team "+team.getTeamName();
+  	PollModel poll = pollService.createPoll(title, this.defaultArea, team);
+  	return poll;
+	}
 
 	/**
 	 * Seed one poll where the voting phase is already finished and we have a winner.
