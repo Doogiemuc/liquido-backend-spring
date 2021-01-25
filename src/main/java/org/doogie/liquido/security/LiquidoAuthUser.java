@@ -37,7 +37,6 @@ public class LiquidoAuthUser extends User {  // org.springframework.security.cor
   	return liquidoUserModel;
   }
 
-
   /**
    * There are no passwords in LIQUIDO. Instead we use JsonWebTokens with a 2-factor-authentication.
    * So we throw an exception when someone calls this!

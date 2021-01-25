@@ -1,0 +1,59 @@
+@startuml
+package "LIQUIDO MobileApp" {
+  component GraphQLClient [
+    GraphQL Client
+    incl. local cache
+  ]
+  [VuJS Web Components] -down-> [GraphQLClient]
+}
+
+package "LIQUIDO Web" {
+  component RestClient [
+    REST Client
+    incl. local cache
+  ]
+  [VuJS Mobile Components] -down-> [RestClient]
+}
+
+
+card "Spring Backend" {
+  package Services [
+    {{
+    component LawService
+    component PollService
+    component CastVoteService
+    component ProxyService
+    component UserService
+    component RankedPairVoting
+    }}
+  ]
+
+  frame Security [
+    Security
+    JWT, OTT
+  ]
+
+  component "Entity Models" as Models
+  component TestDataCreator
+  frame "Exception Handling\nand Logging" as Exception
+  frame "Configuration\nproperties" as Config
+
+  [RestController] -down-> Services
+  [GraphQL Controller] -down-> Services
+  [Services] -down-> [JPA Data Repositories]
+  [JPA Data Repositories] -down-> Models
+
+}
+
+REST -down- [RestController]
+GraphQL -down- [GraphQL Controller]
+[RestClient] -down-> REST
+[GraphQLClient] -down-> GraphQL
+
+'for layout only
+
+[TestDataCreator] -[hidden]left-> Models
+[Security] -[hidden]left-> [JPA Data Repositories]
+Exception -[hidden]right-> [JPA Data Repositories]
+Config -[hidden]right-> Models
+@enduml

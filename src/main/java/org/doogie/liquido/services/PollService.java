@@ -71,6 +71,7 @@ public class PollService {
 	 * @return the saved PollModel
 	 */
 	public PollModel createPoll(@NonNull String title, AreaModel area) {
+		//TODO: only allow creating a poll inside a team
 		log.info("Create new poll. Title='"+title+"'");
 		PollModel poll = new PollModel(title, area);
 
@@ -83,6 +84,12 @@ public class PollService {
 
 		PollModel savedPoll = pollRepo.save(poll);
 		return savedPoll;
+	}
+
+	public PollModel createPoll(@NonNull String title, AreaModel area, TeamModel team) {
+		PollModel poll = this.createPoll(title, area);
+		poll.setTeam(team);
+		return pollRepo.save(poll);
 	}
 
 

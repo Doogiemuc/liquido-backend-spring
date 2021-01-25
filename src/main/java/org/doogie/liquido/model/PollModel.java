@@ -27,7 +27,6 @@ import java.util.*;
 @NoArgsConstructor  		// BUGFIX: lombok data includes @RequiredArgsConstructor, but does not include @NoArgsConstructor !
 @RequiredArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-//@RequiredArgsConstructor(suppressConstructorProperties = true)
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "polls")
 public class PollModel extends BaseModel {
@@ -35,13 +34,16 @@ public class PollModel extends BaseModel {
 	/** The title of a poll must be unique. It can be edited by anyone who has a proposal in this poll. */
 	@Column(unique=true)    //TODO: @UniqueConstraint:  title in team is unique
 	@NonNull
+	@NotNull
 	String title;
 
 	@NonNull
+	@NotNull
 	@OneToOne
 	AreaModel area;
 
-	//TODO: TeamModel team;
+	@ManyToOne(fetch = FetchType.LAZY)
+	TeamModel team;
 
   /**
    * The set of proposals in this poll. All of these proposal must already have reached their quorum.
