@@ -75,18 +75,18 @@ public class LiquidoGraphQLController {
 	/**
 	 * HTTP endpoint for graphQL queries. The /graphql endpoint itself is public.
 	 * But most GraphQL query resolver will need an authenticated user (via JWT)
-	 * @param request request body with "query" field.
-	 * @param raw the raw HttpServletRequest  (POST)
+	 * @param body request body with GraphQL {query: "..."}
+	 * @param request the raw HttpServletRequest (POST)
 	 * @return
 	 * @throws LiquidoException
 	 */
 	@PostMapping(value = "/graphql")
-	public Map<String,Object> execute(@RequestBody @NotNull Map<String, String> request, HttpServletRequest raw) throws LiquidoException {
+	public Map<String,Object> execute(@RequestBody Map<String, String> body, HttpServletRequest request) throws LiquidoException {
 		// The actual graphQL query is a string(not JSON!). It is wrapped in a "query" field so that the request body is valid JSON.
-		ExecutionResult result = graphQL.execute(request.get("query"));
+		ExecutionResult result = graphQL.execute(body.get("query"));
 
-		// GraphQL swallows exceptions. Instead a list of errors is returned in result. But result.getData() would just be <null>.
-		// So we have to unwrap the errors here, because we want to return a meaningful LiquidoExceptions to our client and not just null.
+		// graphql-java swallows exceptions. Instead a list of errors is returned in result. But result.getData() would just be <null>.
+		// So we have to unwrap the errors here, because we want to return a meaningful LiquidoException to our client and not just null.
 		for(GraphQLError err : result.getErrors()) {
 			String msg = err.getMessage();
 			Throwable ex = null;

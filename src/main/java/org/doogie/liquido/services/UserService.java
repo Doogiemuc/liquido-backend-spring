@@ -38,22 +38,21 @@ public class UserService {
 	 */
 	public UserModel registerUser(UserModel newUser) throws LiquidoException {
 		//----- sanity checks
-		if (newUser == null || newUser.getProfile() == null) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need data for new user");
-		if (DoogiesUtil.hasText(newUser.getEmail())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need email for new user");
-		if (DoogiesUtil.hasText(newUser.getProfile().getMobilephone())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Need mobile phone for new user");
+		if (DoogiesUtil.hasText(newUser.getEmail())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER_NEED_EMAIL, "Need email for new user");
+		if (DoogiesUtil.hasText(newUser.getMobilephone())) throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER_NEED_MOBILEPHONE, "Need mobile phone for new user");
 		Optional<UserModel> existingByEmail = userRepo.findByEmail(newUser.getEmail());
-		if (existingByEmail.isPresent()) throw new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that email already exists");
-		Optional<UserModel> existingByMobile = userRepo.findByProfileMobilephone(newUser.getProfile().getMobilephone());
-		if (existingByMobile.isPresent()) throw new LiquidoException(LiquidoException.Errors.USER_EXISTS, "User with that mobile phone number already exists");
+		if (existingByEmail.isPresent()) throw new LiquidoException(LiquidoException.Errors.USER_EMAIL_EXISTS, "User with that email already exists");
+		Optional<UserModel> existingByMobile = userRepo.findByMobilephone(newUser.getMobilephone());
+		if (existingByMobile.isPresent()) throw new LiquidoException(LiquidoException.Errors.USER_MOBILEPHONE_EXISTS, "User with that mobile phone number already exists");
 
 		//----- save new user and register him at TWILIO.com  (mobile phone number is automatically cleaned in UserProfileModel.java)
 		try {
-			long authyId = twilio.createTwilioUser(newUser.getEmail(), newUser.getProfile().getMobilephone(), "49");
+			long authyId = twilio.createTwilioUser(newUser.getEmail(), newUser.getMobilephone(), "49");
 			newUser.setAuthyId(authyId);
 			return userRepo.save(newUser);
 		} catch (Exception e) {
 			log.error("Cannot create twilio user", e);
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_REGISTER, "Cannot create twilio user", e);
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CREATE_TWILIO_USER, "Cannot create twilio user", e);
 		}
 	}
 
@@ -66,7 +65,7 @@ public class UserService {
 	public String requestPushAuthentication(String mobilephone) throws LiquidoException {
 		if (DoogiesUtil.hasText(mobilephone)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "Need mobile phone number!");
 		final String cleanMobile = LiquidoRestUtils.cleanMobilephone(mobilephone);
-		UserModel user = userRepo.findByProfileMobilephone(cleanMobile)
+		UserModel user = userRepo.findByMobilephone(cleanMobile)
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "No user found with mobile number "+cleanMobile+" in LIQUIDO. You must register first."));
 		return twilio.sendSmsOrPushNotification(user.getAuthyId());
 	}
@@ -81,14 +80,14 @@ public class UserService {
 	public String verifyOneTimePassword(String mobile, String token) throws LiquidoException {
 		if (DoogiesUtil.hasText(mobile)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "Need mobile phone number!");
 		final String cleanMobile = LiquidoRestUtils.cleanMobilephone(mobile);
-		UserModel user = userRepo.findByProfileMobilephone(cleanMobile)
+		UserModel user = userRepo.findByMobilephone(cleanMobile)
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "No user found with mobile number "+cleanMobile+". You must register first."));
 
 		// The admin, and only the admin is allowed to login with a secret static devLoginToken
 		if (DoogiesUtil.equals(prop.devLoginToken, token) &&
 				DoogiesUtil.equals(prop.admin.mobilephone, mobile) &&
 				DoogiesUtil.equals(prop.admin.email, user.getEmail()) &&
-				DoogiesUtil.equals(prop.admin.name, user.getProfile().getName())
+				DoogiesUtil.equals(prop.admin.name, user.getName())
 		) {
 			log.info("[DEV] Admin login as "+user);
 		} else {

@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @EntityListeners(AuditingEntityListener.class)  		// automatically set UpdatedAt and CreatedAt
 @Table(name = "teams")
 public class TeamModel extends BaseModel {
-  /** Name of team. Must be unique over all teams. */
+  /** Name of team. TeamName must be unique over all teams! */
 	@NotNull
   @NonNull
   @Column(unique = true)

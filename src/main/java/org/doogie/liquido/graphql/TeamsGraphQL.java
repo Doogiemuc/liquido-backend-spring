@@ -5,30 +5,22 @@ import io.leangen.graphql.annotations.GraphQLMutation;
 import io.leangen.graphql.annotations.GraphQLNonNull;
 import io.leangen.graphql.annotations.GraphQLQuery;
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.datarepos.OffsetLimitPageable;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.TeamRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.jwt.JwtTokenProvider;
 import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
-import org.doogie.liquido.rest.dto.CreateNewTeamResponse;
-import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.rest.dto.CreateOrJoinTeamResponse;
 import org.doogie.liquido.security.LiquidoUserDetailsService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.UserService;
-import org.doogie.liquido.testdata.TestFixtures;
-import org.doogie.liquido.util.DoogiesUtil;
-import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Lson;
-import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 import javax.transaction.Transactional;
 import java.util.Optional;
 
@@ -49,6 +41,9 @@ public class TeamsGraphQL {
 	UserRepo userRepo;
 
 	@Autowired
+	UserService userService;
+
+	@Autowired
 	JwtTokenProvider jwtTokenProvider;
 
 	@Autowired
@@ -57,6 +52,10 @@ public class TeamsGraphQL {
 	@Autowired
 	LiquidoUserDetailsService userDetailsService;
 
+	@GraphQLQuery(name = "ping")
+	public Lson pingApi() {
+		return Lson.builder("api", "LIQUIDO API is available");
+	}
 
 	/**
 	 * Get information about user's own team, including the team's polls.
@@ -83,12 +82,13 @@ public class TeamsGraphQL {
 	 * @throws LiquidoException when teamName is not unique.
 	 */
 	@GraphQLMutation(name = "createNewTeam", description = "Create a new team")
-	public CreateNewTeamResponse createNewTeam(
+	public CreateOrJoinTeamResponse createNewTeam(
 		@GraphQLArgument(name = "teamName") @GraphQLNonNull String teamName,
 		@GraphQLArgument(name = "adminName") @GraphQLNonNull String adminName,
 		@GraphQLArgument(name = "adminEmail") @GraphQLNonNull String adminEmail
 	) throws LiquidoException {
 		UserModel admin = UserModel.asTeamAdmin(adminEmail, adminName);
+		//TOOD: also register user at twilio. This Needs a mobilephone! userService.registerUser(admin);
 		TeamModel newTeam = new TeamModel(teamName, admin);
 		try {
 			newTeam = teamRepo.save(newTeam);
@@ -100,7 +100,7 @@ public class TeamsGraphQL {
 			throw new LiquidoException(LiquidoException.Errors.TEAM_WITH_SAME_NAME_EXISTS, "Cannot create new team: A team with that name ('"+teamName+"') already exists");
 		}
 		String jwt = jwtTokenProvider.generateToken(adminEmail);
-		return new CreateNewTeamResponse(newTeam, jwt);
+		return new CreateOrJoinTeamResponse(newTeam, admin, jwt);
 
 	}
 
@@ -111,15 +111,15 @@ public class TeamsGraphQL {
 	 * @param inviteCode valid invite code of the team to join
 	 * @param userName new user name
 	 * @param userEmail new user's email
-	 * @return the team
+	 * @return Info about the joined team and a JsonWebToken
 	 * @throws LiquidoException when inviteCode is invalid
 	 */
 	@GraphQLMutation(name = "joinTeam", description = "Join an existing team")
-	public TeamModel joinNewTeam(
+	public CreateOrJoinTeamResponse joinNewTeam(
 		@GraphQLArgument(name = "inviteCode") @GraphQLNonNull String inviteCode,
 		@GraphQLArgument(name = "userName") @GraphQLNonNull String userName,
-		@GraphQLArgument(name = "userEmail") @GraphQLNonNull String userEmail,
-		@GraphQLArgument(name = "userMobilephone") @GraphQLNonNull String userMobilephone
+		@GraphQLArgument(name = "userEmail") @GraphQLNonNull String userEmail
+		//@GraphQLArgument(name = "userMobilephone") @GraphQLNonNull String userMobilephone
 	) throws LiquidoException {
 		TeamModel team = teamRepo.findByInviteCode(inviteCode).orElseThrow(
 			() -> new LiquidoException(LiquidoException.Errors.CANNOT_JOIN_TEAM, "Invalid inviteCode '"+inviteCode+"'")
@@ -128,14 +128,16 @@ public class TeamsGraphQL {
 		Optional<UserModel> existingUser = team.getMembers().stream()
 			.filter(u -> u.email.equals(userEmail))
 			.findFirst();
+		UserModel newUser;
 		if (existingUser.isPresent()) {
-			if (!userName.equals(existingUser.get().profile.getName()))
+			if (!userName.equals(existingUser.get().getName()))
 				throw new LiquidoException(LiquidoException.Errors.CANNOT_JOIN_TEAM, "A user with that email but a different name is already in the team!");
+			newUser = existingUser.get();
 			log.info("User <" + userEmail + "> already is in team: " + team.toString());
 		} else {
 			// Otherwise add a new user to the team
 			try {
-				UserModel newUser = new UserModel(userEmail, userName, userMobilephone, null, null);
+				newUser = new UserModel(userEmail, userName, null, null, null);
 				newUser.setTeamId(team.id);
 				team.getMembers().add(newUser);
 				userRepo.save(newUser);
@@ -145,7 +147,8 @@ public class TeamsGraphQL {
 				throw new LiquidoException(LiquidoException.Errors.CANNOT_JOIN_TEAM, "Error: Cannot join team.", e);
 			}
 		}
-		return team;
+		String jwt = jwtTokenProvider.generateToken(userEmail);
+		return new CreateOrJoinTeamResponse(team, newUser, jwt);
 	}
 
 
