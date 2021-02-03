@@ -1,12 +1,12 @@
 package org.doogie.liquido.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.doogie.liquido.security.LiquidoAuthUser;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.springframework.lang.Nullable;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -15,22 +15,28 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * One user / voter / citizen
+ * One user / voter / citizen / member of a team
+ * This class is also used as HTTP Principal in spring-security. So it needs to be lightweight
  */
 @Data
-@EqualsAndHashCode(of="email", callSuper = true)    // Compare users by their unique e-mail  (and ID)
+@EqualsAndHashCode(of="id", callSuper = true)    // Compare users by their unique ID  (email may appear in several teams)
 @Entity
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)  		// automatically set UpdatedAt and CreatedAt
-@Table(name = "users")
+@Table(name = "users", uniqueConstraints= {
+	@UniqueConstraint(columnNames = {"email", "teamId"})  // Email must be unique within one team.
+})
 public class UserModel extends BaseModel {
-  @NotNull
+	/**
+	 * User's email adress. This email must be unique within the team.
+	 * A user may be registered with the same email in <em>different</em> teams.
+	 */
+	@NotNull
   @NonNull
-  @Column(unique = true)
   public String email;
 
 	/**
-	 * www.twilio.com Authy user id for authentication
+	 * www.twilio.com Authy user id for 2FA authentication.
 	 * NO PASSWORD!  Passwords are soooo old fashioned :-)
 	 */
 	public long authyId;
@@ -43,7 +49,7 @@ public class UserModel extends BaseModel {
  	 */
 	public Long teamId;
 
-	/*
+	/*  Decided to only reference the teamId.
 	@JsonBackReference
 	@ManyToOne(fetch = FetchType.LAZY)
 	public TeamModel team;
@@ -58,8 +64,22 @@ public class UserModel extends BaseModel {
 	@CollectionTable(name="USER_ROLES")
 	public Set<String> roles = new HashSet<>();
 
-	@Embedded
-	public UserProfileModel profile;
+	/** Username, Nickname */
+	@NotNull
+	@NonNull
+	String name;
+
+	/** (optional) User's website or bio or social media profile link */
+	@Nullable
+	String website = null;
+
+	/** Avatar picture URL */
+	@Nullable
+	String picture = null;
+
+	/** User's mobile phone number. Needed for login via SMS code */
+	//@Column(unique = true)  Are you really sure that every user have their own mobile phone? Or do some people share their mobilephone? Think worldwide!
+	String mobilephone;
 
 	/** timestamp of last login */
 	LocalDateTime lastLogin;
@@ -67,11 +87,10 @@ public class UserModel extends BaseModel {
 	public UserModel(@NotNull String email, @NotNull String name, String mobilephone, String website, String picture) {
 		if (email == null || email.length() == 0) throw new IllegalArgumentException("Need an email to create a UserModel");
 		this.email = email;
-		this.profile = new UserProfileModel();
-		this.profile.setName(name);
-		this.profile.setMobilephone(mobilephone);
-		this.profile.setWebsite(website);
-		this.profile.setPicture(picture);
+		this.name = name;
+		this.mobilephone = mobilephone;
+		this.website = website;
+		this.picture = picture;
 	}
 
 	/**
@@ -90,10 +109,9 @@ public class UserModel extends BaseModel {
     buf.append("UserModel[");
 		buf.append("id=" + id);
 		buf.append(", email='" + email + '\'');
-		if (this.getProfile() != null) {
-			buf.append(", profile.mobilephone=" + this.getProfile().getMobilephone());
-			buf.append(", profile.picture=" + this.getProfile().getPicture());
-		}
+		buf.append(", name='" + name + '\'');
+		buf.append(", mobilephone=" + mobilephone);
+		buf.append(", picture=" + picture);
 		buf.append(']');
 		return buf.toString();
   }

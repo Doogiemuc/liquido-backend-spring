@@ -64,7 +64,7 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>
       "UPPER(l.title) like CONCAT('%', UPPER(:s), '%') OR " +
       "UPPER(l.description) like CONCAT('%', UPPER(:s), '%') OR " +
       "UPPER(l.createdBy.email) like CONCAT('%', UPPER(:s), '%') OR " +
-      "UPPER(l.createdBy.profile.name) like CONCAT('%', UPPER(:s), '%') " +
+      "UPPER(l.createdBy.name) like CONCAT('%', UPPER(:s), '%') " +
       ")")
   Page<LawModel> fulltextSearch(@Param("s") String searchterm, @Param("status") LawModel.LawStatus status, Pageable p);
 
@@ -88,7 +88,7 @@ public interface LawRepo extends PagingAndSortingRepository<LawModel, Long>
    * @return list of proposals that match the query
    */
   @RestResource(path = "reachedQuorumSinceAndCreatedBy")
-  List<LawModel> findByReachedQuorumAtGreaterThanEqualAndCreatedBy(@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime since, @Param("createdBy") UserModel createdBy);  // Do I need a @DateTimeFormat(pattern = "yyyy-MM-dd") @Param("since")  for HTTP GET?
+  List<LawModel> findByReachedQuorumAtGreaterThanEqualAndCreatedBy(@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime since, @Param("createdBy") UserModel createdBy);
 
   /**
    * Find ideas or proposals that were created by a given user
