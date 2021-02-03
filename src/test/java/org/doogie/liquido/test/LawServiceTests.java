@@ -93,7 +93,7 @@ public class LawServiceTests extends BaseTest {
 			log.debug(law.toString());
 		});
 		LawModel firstLaw = getFirstResult(page);
-		Assert.assertEquals(firstLaw.getCreatedBy().getProfile().getName(), TestFixtures.USER1_NAME);
+		Assert.assertEquals(firstLaw.getCreatedBy().getName(), TestFixtures.USER1_NAME);
 	}
 
 

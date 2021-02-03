@@ -126,7 +126,7 @@ public class DevRestController {
 	) throws LiquidoException {
 		if (!token.equals(prop.devLoginToken))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Dev Login failed. Token for mobile="+mobile+" is invalid!");
-		UserModel user = userRepo.findByProfileMobilephone(mobile)
+		UserModel user = userRepo.findByMobilephone(mobile)
 			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "DevLogin: user for mobile phone " + mobile + " not found."));
 		log.info("DEV Login: " + user);
 		user.setLastLogin(LocalDateTime.now());

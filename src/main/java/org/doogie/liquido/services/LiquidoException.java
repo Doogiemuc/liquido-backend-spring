@@ -21,25 +21,26 @@ public class LiquidoException extends Exception {
 	 * usefull and localized messages to a human depending on these codes.
 	 */
 	public enum Errors {
-		//Create Team errors
-		CANNOT_CREATE_NEW_TEAM(1, HttpStatus.BAD_REQUEST),						// Cannot create a new team when registering
-		TEAM_WITH_SAME_NAME_EXISTS(2, HttpStatus.BAD_REQUEST),
+		//Create New Team
+		TEAM_WITH_SAME_NAME_EXISTS(1, HttpStatus.BAD_REQUEST),
 
 		//Join Team errors
-		CANNOT_JOIN_TEAM(3, HttpStatus.BAD_REQUEST),
-	  CANNOT_REGISTER(4, HttpStatus.BAD_REQUEST),
-		USER_EXISTS(5, HttpStatus.CONFLICT),													// user with that email or mobile phonen umber already exists
+		CANNOT_JOIN_TEAM(10, HttpStatus.BAD_REQUEST),
+	  CANNOT_REGISTER_NEED_EMAIL(11, HttpStatus.BAD_REQUEST),
+		CANNOT_REGISTER_NEED_MOBILEPHONE(12, HttpStatus.BAD_REQUEST),
+		CANNOT_CREATE_TWILIO_USER(13, HttpStatus.INTERNAL_SERVER_ERROR),
+		USER_EMAIL_EXISTS(14, HttpStatus.CONFLICT),										// user with that email  already exists
+		USER_MOBILEPHONE_EXISTS(15, HttpStatus.CONFLICT),							// user with that mobilephone already exists
 
 		//Login Errors
-		CANNOT_LOGIN_MOBILE_NOT_FOUND(6, HttpStatus.UNAUTHORIZED),		// when requesting an SMS login token and mobile number is not known
-		CANNOT_LOGIN_EMAIL_NOT_FOUND(7, HttpStatus.UNAUTHORIZED),   // when requesting a login email and email is not known
-		CANNOT_LOGIN_TOKEN_INVALID(8, HttpStatus.UNAUTHORIZED),     // when a email or sms login token is invalid or expired
-		CANNOT_LOGIN_INTERNAL_ERROR(9, HttpStatus.INTERNAL_SERVER_ERROR),  // when sending of email is not possible
+		CANNOT_LOGIN_MOBILE_NOT_FOUND(20, HttpStatus.UNAUTHORIZED),					// when requesting an SMS login token and mobile number is not known
+		CANNOT_LOGIN_EMAIL_NOT_FOUND(21, HttpStatus.UNAUTHORIZED),   				// when requesting a login email and email is not known
+		CANNOT_LOGIN_TOKEN_INVALID(22, HttpStatus.UNAUTHORIZED),     				// when a email or sms login token is invalid or expired
+		CANNOT_LOGIN_INTERNAL_ERROR(23, HttpStatus.INTERNAL_SERVER_ERROR),		// when sending of email is not possible
 
 		//JWT Erros
-		JWT_TOKEN_INVALID(22, HttpStatus.UNAUTHORIZED),
-		JWT_TOKEN_EXPIRED(23, HttpStatus.UNAUTHORIZED),
-
+		JWT_TOKEN_INVALID(24, HttpStatus.UNAUTHORIZED),
+		JWT_TOKEN_EXPIRED(25, HttpStatus.UNAUTHORIZED),
 
 		// use case errors
 		INVALID_VOTER_TOKEN(50, HttpStatus.UNAUTHORIZED),
@@ -62,9 +63,9 @@ public class LiquidoException extends Exception {
 		CANNOT_VERIFY_CHECKSUM(80, HttpStatus.NOT_FOUND),							// ballot's checksum could not be verified
 
 		// general errors
-		CANNOT_FIND_ENTITY(101, HttpStatus.NOT_FOUND),   								// 404: cannot find entity
-		UNAUTHORIZED(102, HttpStatus.UNAUTHORIZED),          					  // when client tries to call something without being authenticated!
-		GRAPHQL_ERROR(103, HttpStatus.BAD_REQUEST),											// e.g. missing required fields, unknown GraphQL query, ...
+		GRAPHQL_ERROR(400, HttpStatus.BAD_REQUEST),											// e.g. missing required fields, invalid GraphQL query, ...
+		UNAUTHORIZED(401, HttpStatus.UNAUTHORIZED),          					  // when client tries to call something without being authenticated!
+		CANNOT_FIND_ENTITY(404, HttpStatus.NOT_FOUND),   								// 404: cannot find entity
 		INTERNAL_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR);
 
 		int liquidoErrorCode;

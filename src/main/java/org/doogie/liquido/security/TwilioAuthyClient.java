@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
+import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -131,7 +132,7 @@ public class TwilioAuthyClient {
 	 * @param countryCode two digit mobile country code. (No leading plus sign!)
 	 * @return authy's user id
 	 */
-	public long createTwilioUser(String email, String mobilephone, String countryCode) {
+	public long createTwilioUser(@NotNull String email, @NotNull String mobilephone, String countryCode) {
 		String url = prop.authy.apiUrl + "/protected/json/users/new";
 
 		try {

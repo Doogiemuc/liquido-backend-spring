@@ -1,19 +1,15 @@
 package org.doogie.liquido.model;
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.*;
 import org.doogie.liquido.model.converter.MatrixConverter;
-import org.doogie.liquido.rest.deserializer.LawModelDeserializer;
 import org.doogie.liquido.util.Matrix;
-import org.hibernate.validator.constraints.UniqueElements;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import org.springframework.lang.Nullable;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Data model for a poll. A poll has a list of competing proposals
@@ -28,11 +24,15 @@ import java.util.*;
 @RequiredArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
-@Table(name = "polls")
+@Table(name = "polls", uniqueConstraints= {
+	@UniqueConstraint(columnNames = {"title", "team_id"})  // Poll title must be unique within team
+})
 public class PollModel extends BaseModel {
 
-	/** The title of a poll must be unique. It can be edited by anyone who has a proposal in this poll. */
-	@Column(unique=true)    //TODO: @UniqueConstraint:  title in team is unique
+	/**
+	 * The title of a poll must be unique within the team.
+	 * It can be edited by anyone who has a proposal in this poll.
+	 */
 	@NonNull
 	@NotNull
 	String title;
@@ -59,7 +59,7 @@ public class PollModel extends BaseModel {
 	   When creating a new poll via POST /polls/add  , then the first proposal can be passed as URI:   {"title":"Poll created by test 1582701066468","proposals":["http://localhost:8080/liquido/v2/laws/405"]}
 	   To make that work, the content of the HashSet, ie. the URI will be deserialized with LawModelDeserializer.class
 	*/
-  @OneToMany(cascade = CascadeType.MERGE, mappedBy="poll", fetch = FetchType.EAGER) //, orphanRemoval = true/false ??  Should a proposals be removed when the poll is deleted? => NO
+  @OneToMany(cascade = CascadeType.MERGE, mappedBy="poll", fetch = FetchType.EAGER) //, orphanRemoval = true/false ?? Should a proposals be removed when the poll is deleted? => NO. Liquido Proposals may join other polls ...
   //@JsonDeserialize(contentUsing = LawModelDeserializer.class)  //  If I do this then deserialization of LawModels does not work anymore ?????? Why ?????
 	Set<LawModel> proposals = new HashSet<>();
 
