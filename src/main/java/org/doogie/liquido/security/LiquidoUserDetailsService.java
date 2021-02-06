@@ -106,9 +106,9 @@ public class LiquidoUserDetailsService implements UserDetailsService {
   }
 
   /**
-   * Find the team of the currently logged in user
-   * @return
-   * @throws LiquidoException
+   * Find the team of the currently logged in user. Will load team from the db.
+   * @return TeamModel with all members and polls
+   * @throws LiquidoException when no one is logged in
    */
   public TeamModel getTeam() throws LiquidoException {
     UserModel currentUser = getAuthenticatedUser();

@@ -88,7 +88,7 @@ public class TeamsGraphQL {
 		@GraphQLArgument(name = "adminEmail") @GraphQLNonNull String adminEmail
 	) throws LiquidoException {
 		UserModel admin = UserModel.asTeamAdmin(adminEmail, adminName);
-		//TOOD: also register user at twilio. This Needs a mobilephone! userService.registerUser(admin);
+		//TODO: also register user at twilio. This Needs a mobilephone! userService.registerUser(admin);
 		TeamModel newTeam = new TeamModel(teamName, admin);
 		try {
 			newTeam = teamRepo.save(newTeam);
