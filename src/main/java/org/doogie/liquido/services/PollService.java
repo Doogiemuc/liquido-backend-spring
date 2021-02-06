@@ -138,6 +138,7 @@ public class PollService {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Poll.id="+poll.getId()+" already contains proposal.id="+proposal.getId());
 		if (poll.getProposals().stream().anyMatch(prop -> prop.title.equals(proposal.title)))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Poll.id="+poll.getId()+" already contains a proposal with the same title="+proposal.getTitle());
+		//TODO: admin is allowed to add more than one proposal
     if (poll.getProposals().stream().anyMatch(prop -> prop.getCreatedBy().equals(proposal.getCreatedBy())))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, proposal.getCreatedBy().toStringShort() + " already has a proposal in poll(id="+poll.getId()+")");
 

@@ -1,14 +1,13 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.datarepos.BallotRepo;
-import org.doogie.liquido.datarepos.LawRepo;
-import org.doogie.liquido.datarepos.PollRepo;
-import org.doogie.liquido.datarepos.UserRepo;
+import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.jwt.JwtTokenProvider;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
+import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.rest.dto.CreateOrJoinTeamResponse;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.security.LiquidoAuthUser;
 import org.doogie.liquido.services.LiquidoException;
@@ -40,14 +39,14 @@ import java.util.Optional;
 @Slf4j
 @RestController
 @RequestMapping("${spring.data.rest.base-path}")    //TODO: add /dev prefix here!
-//@Profile({"dev", "test"})			// For security reasons this controller should not be available in PROD. But I need it when I want to run tests against prod!
+@Profile({"dev", "test"})
 public class DevRestController {
-
-	@Value(value = "${spring.data.rest.base-path}")
-	String basePath;
 
 	@Autowired
 	UserRepo userRepo;
+
+	@Autowired
+	TeamRepo teamRepo;
 
 	@Autowired
 	LawRepo lawRepo;
@@ -66,6 +65,9 @@ public class DevRestController {
 
 	@Autowired
 	LiquidoProperties prop;
+
+	@Autowired
+	LiquidoAuditorAware liquidoAuditorAware;
 
 	/**
 	 * Get list of users for the quick login at the top right of the UI. Admin is first element (if configured)
@@ -112,28 +114,38 @@ public class DevRestController {
 	 * Receive a Json Web Token for authentication. This for example allows tests to login as <b>any</b> user.
 	 * Then authentication for further requests can then be handled normally in {@link org.doogie.liquido.security.LiquidoUserDetailsService#loadUserByUsername(String)}
 	 *
-	 * 	The client must still provide the valid devLoginToken from application.properties. This is also available in PROD for testing against PROD!
+	 * 	The client must still provide the valid devLoginToken from application.properties.
 	 *
 	 * @param mobile mobilephone of existing user
 	 * @param token  devLoginSmsToken from application.properties
 	 * @return Json Web Token for this user
 	 * @throws LiquidoException when token is invalid or no user with that mobile is phone
 	 */
-	@RequestMapping(path = "/dev/getJWT", produces = MediaType.TEXT_PLAIN_VALUE)
-	public String loginWithSmsToken(
-		@RequestParam("mobile") String mobile,
+	@RequestMapping(path = "/dev/getJWT", produces = MediaType.APPLICATION_JSON_VALUE)
+	public CreateOrJoinTeamResponse devLogin(
+		@RequestParam("mobile") Optional<String> mobile,
+		@RequestParam("email") String email,
+		@RequestParam("teamName") String teamName,
 		@RequestParam("token") String token
 	) throws LiquidoException {
 		if (!token.equals(prop.devLoginToken))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Dev Login failed. Token for mobile="+mobile+" is invalid!");
-		UserModel user = userRepo.findByMobilephone(mobile)
-			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "DevLogin: user for mobile phone " + mobile + " not found."));
+		UserModel user;
+		TeamModel team = null;
+		if (email != null && teamName != null) {
+			user = userRepo.findByEmail(email).orElseThrow(LiquidoException.notFound("DevLogin: User <" + email + "> not found"));
+			team = teamRepo.findByTeamName(teamName).orElseThrow(LiquidoException.notFound("DevLogin: Team <" + teamName + "> not found"));
+		} else {
+			user = userRepo.findByMobilephone(mobile.get())
+				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "DevLogin: user for mobile phone " + mobile + " not found."));
+		}
 		log.info("DEV Login: " + user);
 		user.setLastLogin(LocalDateTime.now());
 		userRepo.save(user);
-		return jwtTokenProvider.generateToken(user.getEmail());
-
+		String jwt = jwtTokenProvider.generateToken(user.getEmail());
+		return new CreateOrJoinTeamResponse(team, user, jwt);
 	}
+
 
 	/**
 	 * Spring Web Security: Make /dev/users endpoint publicly available.  But just this one resource! The other /dev/**
@@ -198,10 +210,7 @@ public class DevRestController {
 			.put("winner", winner);
 	}
 
-	@Autowired
-	LiquidoAuditorAware liquidoAuditorAware;
-
-	/**
+		/**
 	 * Completely delete poll and all casted ballots in this poll. Will NOT delete any proposals
 	 * You <b>must be logged in as ADMIN</b> to delete a poll.
 	 * @param poll an existing poll

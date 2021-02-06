@@ -28,6 +28,8 @@ public interface UserRepo extends CrudRepository<UserModel, Long> {
   //TODO: !!! need findByEmailAndTeam   otherwise result is not unique !!!
   Optional<UserModel> findByEmail(@Param("email") String email);   // This magically creates a query just from the method name!
 
+  //Optional<UserModel> findByEmailAndTeamTeamName(@Param("email") String email, @Param("teamName") String teamName);  // this is deliberately team.teamName !
+
   /** find a user by his mobile phone number */
   Optional<UserModel> findByMobilephone(String mobilephone);
 

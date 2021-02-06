@@ -47,7 +47,7 @@ public class UserModel extends BaseModel {
 	 * is also used as the HTTP Principal in spring-security. So it needs to be lightweight.
 	 * When the team data (with polls, etc) is needed then it must be loaded manually via the teamRepo.
  	 */
-	public Long teamId;
+	public Long teamId;  //TODO: One user may be a member in several teams.  N:M @ManyToMany(mappedby="TEAM_MEMBERS")
 
 	/*  Decided to only reference the teamId.
 	@JsonBackReference
@@ -91,6 +91,7 @@ public class UserModel extends BaseModel {
 		this.mobilephone = mobilephone;
 		this.website = website;
 		this.picture = picture;
+		this.roles.add(LiquidoAuthUser.ROLE_USER);
 	}
 
 	/**

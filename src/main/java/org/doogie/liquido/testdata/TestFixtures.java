@@ -2,6 +2,7 @@ package org.doogie.liquido.testdata;
 
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.util.Lson;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +14,8 @@ import java.util.List;
  */
 public class TestFixtures {
 
-	public static final int NUM_TEAMS = 5;
+	public static final int NUM_TEAMS = 3;
+	public static final int NUM_TEAM_MEMBERS = 5;
 	public static final int NUM_USERS = 20;
 	public static final int NUM_VOTES = 15;			// number of casted votes.  Must be smaller than NUM_USERS!
 	public static final int NUM_AREAS = 10;
@@ -32,6 +34,7 @@ public class TestFixtures {
 
 	public static final String AVATAR_PREFIX = "/static/img/avatars/Avatar";
 	public static final String USER1_NAME = "Donald Duck";										// special name for user1
+
   public static final String USER1_EMAIL = MAIL_PREFIX+"1@liquido.de";      // testuser1 has  ID 1 in the DB !
   public static final String USER2_EMAIL = MAIL_PREFIX+"2@liquido.de";
   public static final String USER3_EMAIL = MAIL_PREFIX+"3@liquido.de";
@@ -51,14 +54,21 @@ public class TestFixtures {
 
 	// Teams and their admins
 	public static final String TEAM_NAME_PREFIX = "TestTeam";
-	public static List<String> TEAM_NAMES = new ArrayList<>();
-	public static final String TEAM_ADMIN_EMAIL_PREFIX = "teamadmin";
-	public static List<String> TEAM_ADMIN_EMAILS = new ArrayList<>();
+	public static final String TEAM_ADMIN_NAME_PREFIX = "Admin";
+	public static final String TEAM_ADMIN_EMAIL_PREFIX = "teamadmin";  // teamadmin4711@TestTeam0.org
+	public static final String TEAM_MEMBER_NAME_PREFIX = "Member";
+	public static final String TEAM_MEMBER_EMAIL_PREFIX = "member";
+	public static List<Lson> teams;
 
 	static {
+		teams = new ArrayList<>();
 		for (int i = 0; i < NUM_TEAMS; i++) {
-			TEAM_NAMES.add(TEAM_NAME_PREFIX + i);
-			TEAM_ADMIN_EMAILS.add(TEAM_ADMIN_EMAIL_PREFIX + i +"@liquido.org");
+			String teamName = TEAM_NAME_PREFIX + i;
+			Lson team = new Lson()
+				.put("teamName", teamName)
+				.put("adminName", TEAM_ADMIN_NAME_PREFIX + " " + TEAM_NAME_PREFIX + i)
+				.put("adminEmail", TEAM_ADMIN_EMAIL_PREFIX + i +"@" + teamName + ".org");
+			teams.add(team);
 		}
 	}
 

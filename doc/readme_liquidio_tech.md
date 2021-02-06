@@ -4,6 +4,20 @@ This is the technical documentation of the LQIUIDO backend. The backend is imple
 
 # Data Model
 
+## User and Account Management
+
+Every `user` is `member` of a `team`. A `user` may be a member in several `teams`. Even with the same email address.
+Every `team` has one `admin`. The `admin` of a `team` is the only one who can create polls. 
+A `Team` holds `polls`. Every `user` can add his `proposal` to a `poll`. Every user is only allowed to have 
+exactly one `proposal` in each `poll`. Only the admin is allowed to add several `porposals` to a `poll` in his `team`.
+
+The `admin` starts the `voting phase` of a `poll`. Then every `member` of the `team` can cast his vote in this poll.
+
+//TODO: Should it be possible to allow other `users` to cast their vote? Only for specifically invited users? Or also for completely public polls?
+//      Hey this is easy. Voting is anonymous anyway: Admin can simply send valid Right2Votes to anyone. Not just registered users.
+//TODO: Need extra page to really cast a vote anonymously. No login required. Only a valid right2Vote token.
+
+
 ## Process Model from an idea to a Law
 
  - At first there is a short rough idea. (NEW_IDEA)
@@ -241,7 +255,7 @@ https://www.draw.io/#LLiquido%20Architecture
 
 # GraphQL
 
-The new team endpoint is implemented qith GraphQL. We use [GraphQL-SPQR](https://github.com/leangen/graphql-spqr) to automatically create the GraphQL schema.
+The new team endpoint is implemented with GraphQL. We use [GraphQL-SPQR](https://github.com/leangen/graphql-spqr) to automatically create the GraphQL schema.
 
 Sample GraphQL PST request payload. 
 (Keep in mind: If you want to send this as an HTTP POST request, you have to wrap this into JSON like so: {"query": "<GraphQL query from below>" }  ! There is no tutorial anywhere that tells you that :-)
