@@ -54,6 +54,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 				String email = jwtTokenProvider.getSubjectFromJWT(jwt);   // jwt subject is user's email
 				UserDetails userDetails = liquidoUserDetailsService.loadUserByUsername(email);
 				//----- if token is valid and user was found, then login that user as principal.
+				//TODO: Create a   class LiquidoAuthenticationToken extends AbstractAuthenticationToken {  }  and put info abuot user and team into it
+
 				UsernamePasswordAuthenticationToken authentication =
 						new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());  // <==== no password. User is authenticated by JWT
 				authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

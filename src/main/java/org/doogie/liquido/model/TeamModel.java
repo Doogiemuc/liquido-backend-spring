@@ -44,9 +44,11 @@ public class TeamModel extends BaseModel {
 	@OneToMany(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)  // when a team is loaded also load its members
   Set<UserModel> members = new HashSet<>();
 
+	/** The polls in this team */
+	//This is the one side of a bidirectional OneToMany relationship. Keep in mind that you then MUST add mappedBy = attribute in PollModel that maps the reverse direction
 	@GraphQLQuery(name = "polls")
-	@OneToMany(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)  // when a team is loaded also load its polls
-	Set<UserModel> polls = new HashSet<>();   //BUGFIX: Changed from List to Set https://stackoverflow.com/questions/4334970/hibernate-throws-multiplebagfetchexception-cannot-simultaneously-fetch-multipl
+	@OneToMany(mappedBy = "team", cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)  // when a team is loaded also load its polls
+	Set<PollModel> polls = new HashSet<>();   //BUGFIX: Changed from List to Set https://stackoverflow.com/questions/4334970/hibernate-throws-multiplebagfetchexception-cannot-simultaneously-fetch-multipl
 
 	/** Create a new Team entity */
 	public TeamModel(String teamName, UserModel admin) {

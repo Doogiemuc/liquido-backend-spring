@@ -1,5 +1,6 @@
 package org.doogie.liquido.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.*;
 import org.doogie.liquido.model.converter.MatrixConverter;
 import org.doogie.liquido.util.Matrix;
@@ -43,6 +44,7 @@ public class PollModel extends BaseModel {
 	AreaModel area;
 
 	@ManyToOne(fetch = FetchType.LAZY)
+	@JsonBackReference
 	TeamModel team;
 
   /**

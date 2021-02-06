@@ -49,7 +49,7 @@ public class GraphQLTests extends HttpBaseTest {
 	 */
 	@Before
 	public void beforeEachTest() {
-		this.loginUserJWT(TestFixtures.TEAM_ADMIN_EMAILS.get(0));
+		this.loginUserJWT((String)TestFixtures.teams.get(0).get("adminEmail"));
 	}
 
 	String GraphQLPath = "/graphql";
@@ -58,15 +58,15 @@ public class GraphQLTests extends HttpBaseTest {
 	@Test
 	public void getOwnTeam() {
 		//GIVEN a query for team of currently logged in user
-		this.loginUserJWT(TestFixtures.TEAM_ADMIN_EMAILS.get(0));
-		String teamName   = TestFixtures.TEAM_NAMES.get(0);
+		this.loginUserJWT((String)TestFixtures.teams.get(0).get("adminEmail"));
+		String expectedTeamName   = (String)TestFixtures.teams.get(0).get("teamName");
 		String graphQL    = "{ team { id teamName } }";
 
 		//WHEN querying for the user's team
 		String actualTeamName = executeGraphQl(graphQL, "$.team.teamName");
 
 		//THEN the correct teamName is returned
-		Assert.assertEquals("Expected teamName="+teamName, teamName, actualTeamName);
+		Assert.assertEquals("Expected teamName="+expectedTeamName, expectedTeamName, actualTeamName);
 	}
 
 

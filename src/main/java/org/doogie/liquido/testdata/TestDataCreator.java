@@ -7,7 +7,9 @@ import org.doogie.liquido.graphql.TeamsGraphQL;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.rest.dto.CastVoteResponse;
+import org.doogie.liquido.rest.dto.CreateOrJoinTeamResponse;
 import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.security.LiquidoAuthUser;
 import org.doogie.liquido.services.*;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -210,16 +212,14 @@ public class TestDataCreator implements CommandLineRunner {
       seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX);
       util.seedAdminUser();
       auditorAware.setMockAuditor(util.user(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
-      seedTeams();
 			seedAreas();
-
-      seedIdeas();
+			seedIdeas();
       seedProposals();
 			seedProxies(TestFixtures.delegations);
+			seedTeams();
 			seedPollInTeam();
 			seedPollInElaborationPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
 			seedPollInVotingPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);						      // seed one poll in voting
-
 			PollModel poll = seedPollInVotingPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
 			seedVotes(poll, TestFixtures.NUM_VOTES);
 			seedPollFinished(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
@@ -334,14 +334,14 @@ public class TestDataCreator implements CommandLineRunner {
 			BufferedWriter writer = new BufferedWriter(new FileWriter(sqlScript));
 			writer.write("-- LIQUIDO  H2 Database initialization script\n");
 			writer.write("-- This script contains the SCHEMA and TEST DATA\n");
-			writer.write("-- BE CAREFULL: This script completely DROPs and RE-CREATES the DB !!!!!\n");
+			writer.write("-- BE CAREFUL: This script completely DROPs and RE-CREATES the DB !!!!!\n");
 			writer.write("DROP ALL OBJECTS;\n");
 			for(String line : lines) {
 				writer.write(line);
 				writer.newLine();		//  + System.getProperty("line.separator")
 			}
 			writer.close();
-			log.trace("removeQuartzSchema from SQL script successfull: "+sqlScript.getAbsolutePath());
+			log.trace("removeQuartzSchema from SQL script successful: "+sqlScript.getAbsolutePath());
 
 		} catch (Exception e) {
 			log.error("Could not remove Quarts statements from Schema: "+e.getMessage());
@@ -349,14 +349,19 @@ public class TestDataCreator implements CommandLineRunner {
 		}
 	}
 
-	/** Seed teams and their admin users. */
+	/** Seed teams and their admin users. And let some users join each team. */
 	public void seedTeams() throws LiquidoException {
-		log.info("Seeding Teams ...");
+		log.info("Seeding Teams with members ...");
 		for (int i = 0; i < TestFixtures.NUM_TEAMS; i++) {
-			String teamName    = TestFixtures.TEAM_NAMES.get(i);
-			String adminName   = "Admin " + teamName;
-			String adminEmail  = TestFixtures.TEAM_ADMIN_EMAILS.get(i);
-			teamService.createNewTeam(teamName, adminName, adminEmail);
+			String teamName    = (String)TestFixtures.teams.get(i).get("teamName");
+			String adminName   = (String)TestFixtures.teams.get(i).get("adminName");
+			String adminEmail  = (String)TestFixtures.teams.get(i).get("adminEmail");
+			CreateOrJoinTeamResponse res = teamService.createNewTeam(teamName, adminName, adminEmail);
+			for (int j = 0; j < TestFixtures.NUM_TEAM_MEMBERS; j++) {
+				String userName    = TestFixtures.TEAM_MEMBER_NAME_PREFIX + j + " " + teamName;
+				String userEmail   = TestFixtures.TEAM_MEMBER_EMAIL_PREFIX + j + "@" + teamName + ".org";
+				teamService.joinNewTeam(res.getTeam().getInviteCode(), userName, userEmail);
+			}
 		}
 	}
 
@@ -392,7 +397,7 @@ public class TestDataCreator implements CommandLineRunner {
 
     // Seed default area
 		this.defaultArea = new AreaModel(liquidoProps.defaultAreaTitle, "Default Area", createdBy);
-		defaultArea = areaRepo.save(defaultArea);
+		this.defaultArea = areaRepo.save(defaultArea);
 
 		// Seed more areas
     for (int i = 0; i < TestFixtures.NUM_AREAS; i++) {
@@ -670,12 +675,21 @@ public class TestDataCreator implements CommandLineRunner {
     }
   }
 
-  public PollModel seedPollInTeam() {
+  public PollModel seedPollInTeam() throws LiquidoException {
   	log.info("Seeding one empty poll in a team");
+  	long now = System.currentTimeMillis() % 1000;
 		TeamModel team = teamRepo.findAll().iterator().next();
-  	String title = "Poll in Team "+team.getTeamName();
+  	String title = "Poll " + now +  " in Team "+team.getTeamName();
   	PollModel poll = pollService.createPoll(title, this.defaultArea, team);
-  	return poll;
+  	UserModel admin = team.getAdmins().stream().findFirst()
+			.orElseThrow(LiquidoException.notFound("need a team admin to seedPollInTeam"));
+  	LawModel proposal = this.createProposal("Proposal " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), this.defaultArea, admin, 2, 1);
+		pollService.addProposalToPoll(proposal, poll);
+		UserModel member = team.getMembers().stream().filter(user -> !user.getRoles().contains(LiquidoAuthUser.ROLE_TEAM_ADMIN)).findFirst()
+			.orElseThrow(LiquidoException.notFound("need a team member to seedPollInTeam"));
+		LawModel proposal2 = this.createProposal("Another prop " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), this.defaultArea, member, 2, 1);
+		poll = pollService.addProposalToPoll(proposal2, poll);
+		return poll;
 	}
 
 	/**
