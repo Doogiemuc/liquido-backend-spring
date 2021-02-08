@@ -2,7 +2,7 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
-import org.doogie.liquido.jwt.JwtTokenProvider;
+import org.doogie.liquido.jwt.JwtTokenUtils;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.*;
@@ -15,6 +15,7 @@ import org.springframework.core.env.Profiles;
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -77,7 +78,7 @@ public class UserRestController {
 	ProjectionFactory factory;
 
   @Autowired
-	JwtTokenProvider jwtTokenProvider;
+	JwtTokenUtils jwtTokenUtils;
 
   @Autowired
 	MailService mailService;
@@ -127,11 +128,12 @@ public class UserRestController {
 	 */
   @RequestMapping(path = "/auth/loginWithToken", produces = MediaType.TEXT_PLAIN_VALUE)
   public String loginWithSmsToken(
-		  @RequestParam("mobile") String mobile,
-  		@RequestParam("token") String token
+			@NonNull @RequestParam("mobile") String mobile,
+			@NonNull @RequestParam("token") String token,
+			@NonNull @RequestParam("teamId") Long teamId
   ) throws LiquidoException {
-	  log.info("Request to login with token="+token);
-		return userService.verifyOneTimePassword(mobile, token);
+	  log.info("Request to login with token="+token+" into teamId="+teamId);
+		return userService.verifyOneTimePassword(mobile, teamId, token);
   }
 
 
@@ -170,7 +172,8 @@ public class UserRestController {
 	}
 
 	/**
-	 * Login via link in email.
+	 * Login via link in email. The link contains a one time token.
+	 * The user and which team is stored together with the OTT.
 	 * @param email user's email that MUST match the email stored together with the token
 	 * @param token must be a valid login token
 	 * @return Json Web Token as plain text
@@ -198,14 +201,15 @@ public class UserRestController {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "This email login token is expired.");
 		}
 
-		//---- delete used one time token
+		//TODO: Do I need to check if user and team still exist?
 		UserModel user = oneTimeToken.getUser();
-		ottRepo.delete(oneTimeToken);
+		TeamModel team = oneTimeToken.getTeam();
 
-		// return JWT token for this email
-		String jwt = jwtTokenProvider.generateToken(user.getEmail());
+		// return JWT token for this user in this team
+		String jwt = jwtTokenUtils.generateToken(user.getId(), team.getId());
 		oneTimeToken.getUser().setLastLogin(LocalDateTime.now());
 		userRepo.save(user);
+		ottRepo.delete(oneTimeToken);				//---- delete used one time token !
 		log.info(user+ "logged in with valid email code.");
 		return jwt;
 	}

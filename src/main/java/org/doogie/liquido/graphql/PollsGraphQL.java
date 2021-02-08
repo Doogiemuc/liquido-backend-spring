@@ -8,8 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.TeamRepo;
+import org.doogie.liquido.jwt.AuthUtil;
 import org.doogie.liquido.model.*;
-import org.doogie.liquido.security.LiquidoUserDetailsService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.testdata.LiquidoProperties;
@@ -17,12 +17,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
-import javax.transaction.Transactional;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.doogie.liquido.security.LiquidoAuthUser.HAS_ROLE_TEAM_ADMIN;
-import static org.doogie.liquido.security.LiquidoAuthUser.HAS_ROLE_USER;
+import static org.doogie.liquido.jwt.AuthUtil.HAS_ROLE_TEAM_ADMIN;
+import static org.doogie.liquido.jwt.AuthUtil.HAS_ROLE_USER;
 
 /**
  * GraphQL queries and mutations for Liquido posts.
@@ -48,8 +47,7 @@ public class PollsGraphQL {
 	LiquidoProperties liquidoProps;
 
 	@Autowired
-	LiquidoUserDetailsService userDetailsService;
-
+	AuthUtil authUtil;
 
 	/**
 	 * Get one poll by its ID
@@ -72,11 +70,8 @@ public class PollsGraphQL {
 	 */
 	@GraphQLQuery(name = "polls")
 	@PreAuthorize(HAS_ROLE_USER)
-	@Transactional
 	public Set<PollModel> getPollsOfTeam() throws LiquidoException {
-		UserModel currentUser = userDetailsService.getAuthenticatedUser();
-		TeamModel team = teamRepo.findById(currentUser.getTeamId())
-			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.UNAUTHORIZED, "Cannot find users team."));
+		TeamModel team = authUtil.getCurrentTeam();
 		Set<PollModel> polls = team.getPolls();
 		return polls;
 	}
@@ -95,7 +90,7 @@ public class PollsGraphQL {
 		AreaModel defaultArea = areaRepo.findByTitle(liquidoProps.getDefaultAreaTitle()).orElseThrow(
 			() -> new LiquidoException(LiquidoException.Errors.INTERNAL_ERROR, "Cannot find default area!")
 		);
-		TeamModel team = userDetailsService.getTeam();
+		TeamModel team = authUtil.getCurrentTeam();
 		return pollService.createPoll(title, defaultArea, team);
 	}
 

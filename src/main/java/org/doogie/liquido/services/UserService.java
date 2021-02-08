@@ -2,7 +2,7 @@ package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.UserRepo;
-import org.doogie.liquido.jwt.JwtTokenProvider;
+import org.doogie.liquido.jwt.JwtTokenUtils;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.TwilioAuthyClient;
 import org.doogie.liquido.testdata.LiquidoProperties;
@@ -28,7 +28,7 @@ public class UserService {
 	LiquidoProperties prop;
 
 	@Autowired
-	JwtTokenProvider jwtTokenProvider;
+	JwtTokenUtils jwtTokenUtils;
 
 	/**
 	 * Create an new user.
@@ -73,40 +73,31 @@ public class UserService {
 	/**
 	 * Verify a timed one time password (TOTP) that the user entered from his AUTHY app from his mobile phone
 	 * @param mobile user's mobile phone number
-	 * @param token the OTP that the user has entered
+	 * @param authyToken the 6-digit OTP that the user has entered
 	 * @return JsonWebToken when OTP was valid
 	 * @throws LiquidoException when no user with that mobile phone is found or OTP was invalid
 	 */
-	public String verifyOneTimePassword(String mobile, String token) throws LiquidoException {
+	public String verifyOneTimePassword(String mobile, Long teamId, String authyToken) throws LiquidoException {
 		if (DoogiesUtil.hasText(mobile)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "Need mobile phone number!");
 		final String cleanMobile = LiquidoRestUtils.cleanMobilephone(mobile);
 		UserModel user = userRepo.findByMobilephone(cleanMobile)
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "No user found with mobile number "+cleanMobile+". You must register first."));
 
 		// The admin, and only the admin is allowed to login with a secret static devLoginToken
-		if (DoogiesUtil.equals(prop.devLoginToken, token) &&
+		if (DoogiesUtil.equals(prop.devLoginToken, authyToken) &&
 				DoogiesUtil.equals(prop.admin.mobilephone, mobile) &&
 				DoogiesUtil.equals(prop.admin.email, user.getEmail()) &&
 				DoogiesUtil.equals(prop.admin.name, user.getName())
 		) {
 			log.info("[DEV] Admin login as "+user);
 		} else {
-
 			//----- verify Authy OTP at twilio.com
-			try {
-				twilio.verifyOneTimePassword(user.getAuthyId(), token);
-			} catch (LiquidoException le) {
-				if (LiquidoException.Errors.UNAUTHORIZED.equals(le.getError())) {
-					log.info("Invalid OTP. Mistyped? No login for "+user);
-				}
-				throw le;
-			}
-			log.info("User logged in with OTP "+user);
-
+			twilio.verifyOneTimePassword(user.getAuthyId(), authyToken);  // may throw LiquidoException
+			log.info("User logged in with OTP: "+user.toStringShort());
 		}
 
 		// return JWT token
-		String jwt = jwtTokenProvider.generateToken(user.getEmail());
+		String jwt = jwtTokenUtils.generateToken(user.getId(), teamId);
 		user.setLastLogin(LocalDateTime.now());
 		userRepo.save(user);
 

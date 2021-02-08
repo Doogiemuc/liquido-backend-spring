@@ -1,7 +1,6 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.security.LiquidoUserDetailsService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.util.Lson;
 import org.springframework.core.Ordered;
@@ -10,7 +9,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;

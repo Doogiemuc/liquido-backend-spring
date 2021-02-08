@@ -339,7 +339,7 @@ public class RestEndpointTests extends HttpBaseTest {
 		String supporterURI = basePath + "/users/" + currentUser.getId();
 		try {
 			//WHEN
-			ResponseEntity<String> res = addSupporterToIdea(supporterURI, idea);
+			ResponseEntity<String> res = addSupporterToIdeaViaRest(supporterURI, idea);
 			fail("addSupporterToIdea should have thrown an Exception");
 		} catch (HttpClientErrorException e) {
 			//THEN
@@ -373,7 +373,7 @@ public class RestEndpointTests extends HttpBaseTest {
       if (!this.users.get(j).getEmail().equals(TestFixtures.USER1_EMAIL)) {   // creator is implicitly already a supporter
 				String supporterURI = basePath + "/users/" + this.users.get(j).getId();
 				loginUserJWT(this.users.get(j).getEmail());
-      	addSupporterToIdea(supporterURI, idea);
+      	addSupporterToIdeaViaRest(supporterURI, idea);
       }
     }
 
@@ -480,7 +480,7 @@ public class RestEndpointTests extends HttpBaseTest {
 	 * @param supporterURI  basePath + "/users/" + supporter.getId();
 	 * @param idea
 	 */
-  private ResponseEntity<String> addSupporterToIdea(String supporterURI, LawModel idea) {
+  private ResponseEntity<String> addSupporterToIdeaViaRest(String supporterURI, LawModel idea) {
 
 		String supportersURL = "/laws/"+idea.getId()+"/like";
 		/*
@@ -636,11 +636,12 @@ public class RestEndpointTests extends HttpBaseTest {
 
 		// AND a new proposal in this area
 		LawModel proposal = postNewIdea("Idea create by test to join poll", this.getDefaultArea());
-		for (int j = 0; j < prop.supportersForProposal; j++) {
+		int numSupporters = Math.max(prop.supportersForProposal, 2);  // add at least two supporters
+		for (int j = 0; j < numSupporters; j++) {
 			//Keep in mind that user 16 must not support his own idea
 			String supporterURI = basePath + "/users/" + this.users.get(j).getId();
 			loginUserJWT(this.users.get(j).getEmail());
-			addSupporterToIdea(supporterURI, proposal);
+			addSupporterToIdeaViaRest(supporterURI, proposal);
 		}
 
 		// WHEN this proposal joins the poll

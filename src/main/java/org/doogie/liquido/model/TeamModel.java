@@ -16,19 +16,22 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * A Team with members
+ * A Team with its admin(s) and members.
  */
 @Data
-@EqualsAndHashCode(of="teamName", callSuper = true)    // Compare teams by their unique team.name  (and ID)
+@EqualsAndHashCode(of="id")    // Compare teams by their unique ID. teamName may change
 @Entity
 @NoArgsConstructor
-@EntityListeners(AuditingEntityListener.class)  		// automatically set UpdatedAt and CreatedAt
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "teams")
+//TODO:  uniqueConstraints= {             // A user may join a team only once, so email must be unique within one team.
+//	@UniqueConstraint(columnNames = {"email", ""})
+//})
 public class TeamModel extends BaseModel {
   /** Name of team. TeamName must be unique over all teams! */
 	@NotNull
   @NonNull
-  @Column(unique = true)
+  @Column(unique = true)      // teamName must be unique throughout all teams in LIQUIDO
 	@GraphQLQuery(name = "teamName")
   String teamName;
 
@@ -36,9 +39,16 @@ public class TeamModel extends BaseModel {
 	@GraphQLQuery(name = "inviteCode")
   String inviteCode = null;
 
+	/**
+	 * The initial creator of a team is the first admin.
+	 * He may then appoint further admin colleages.
+	 */
+	@GraphQLQuery(name = "admins")
+	@OneToMany(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)  // when a team is loaded also load its admins
+	Set<UserModel> admins = new HashSet<>();
+
   /**
 	 * Members of this team.
-	 * A team must have at least one TEAM_ADMIN, but it may have several admins.
 	 */
 	@GraphQLQuery(name = "members")
 	@OneToMany(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)  // when a team is loaded also load its members
@@ -51,35 +61,20 @@ public class TeamModel extends BaseModel {
 	Set<PollModel> polls = new HashSet<>();   //BUGFIX: Changed from List to Set https://stackoverflow.com/questions/4334970/hibernate-throws-multiplebagfetchexception-cannot-simultaneously-fetch-multipl
 
 	/** Create a new Team entity */
-	public TeamModel(String teamName, UserModel admin) {
-		Assert.assertTrue(admin.roles.contains(LiquidoAuthUser.ROLE_TEAM_ADMIN), "Team needs an admin");
+	public TeamModel(@NonNull String teamName, @NonNull UserModel admin) {
 		this.teamName = teamName;
-		this.members.add(admin);
-		//admin.setTeamId(this.id);  //BUGFIX: this needs to be done manually **after** TeamModel has been saved and thus has an ID.
+		this.admins.add(admin);
 		this.inviteCode = DigestUtils.md5Hex(teamName).substring(0,6).toUpperCase();
-	}
-
-	/**
-	 * Get TEAM_ADMIN(s)
-	 * @return the admins of this team
-	 */
-	@GraphQLQuery(name = "admins")
-	public Set<UserModel> getAdmins() {
-		return this.members.stream()
-			.filter(user -> user.roles.contains(LiquidoAuthUser.ROLE_TEAM_ADMIN))
-			.collect(Collectors.toSet());
 	}
 
   @Override
   public String toString() {
   	StringBuffer buf = new StringBuffer();
-  	Iterator adminsIterator = this.getAdmins().iterator();
+  	UserModel firstAdmin = this.getAdmins().iterator().next();
     buf.append("TeamModel[");
 		buf.append("id=" + id);
 		buf.append(", teamName='" + this.teamName + '\'');
-		if (adminsIterator.hasNext()) {
-			buf.append(", firstAdmin='" + adminsIterator.next().toString() + "'");
-		}
+		buf.append(", firstAdmin='" + firstAdmin + "'");
 		buf.append(", numMembers="+this.members.size());
 		buf.append(']');
 		return buf.toString();

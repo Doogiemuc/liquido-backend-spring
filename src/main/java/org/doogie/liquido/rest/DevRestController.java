@@ -2,14 +2,14 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
-import org.doogie.liquido.jwt.JwtTokenProvider;
+import org.doogie.liquido.jwt.AuthUtil;
+import org.doogie.liquido.jwt.JwtTokenUtils;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.CreateOrJoinTeamResponse;
 import org.doogie.liquido.security.LiquidoAuditorAware;
-import org.doogie.liquido.security.LiquidoAuthUser;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.testdata.LiquidoProperties;
@@ -61,7 +61,7 @@ public class DevRestController {
 	PollService pollService;
 
 	@Autowired
-	JwtTokenProvider jwtTokenProvider;
+	JwtTokenUtils jwtTokenUtils;
 
 	@Autowired
 	LiquidoProperties prop;
@@ -112,7 +112,7 @@ public class DevRestController {
 
 	/**
 	 * Receive a Json Web Token for authentication. This for example allows tests to login as <b>any</b> user.
-	 * Then authentication for further requests can then be handled normally in {@link org.doogie.liquido.security.LiquidoUserDetailsService#loadUserByUsername(String)}
+	 * Then authentication for further requests can then be handled normally in {@link org.doogie.liquido.jwt.JwtAuthenticationProvider}
 	 *
 	 * 	The client must still provide the valid devLoginToken from application.properties.
 	 *
@@ -142,7 +142,7 @@ public class DevRestController {
 		log.info("DEV Login: " + user);
 		user.setLastLogin(LocalDateTime.now());
 		userRepo.save(user);
-		String jwt = jwtTokenProvider.generateToken(user.getEmail());
+		String jwt = jwtTokenUtils.generateToken(user.getId(), team.getId());
 		return new CreateOrJoinTeamResponse(team, user, jwt);
 	}
 
@@ -182,7 +182,7 @@ public class DevRestController {
 	 * @throws LiquidoException for example when voting phase cannot be started because of wrong status in poll
 	 */
 	@RequestMapping(value = "/dev/polls/{pollId}/startVotingPhase")
-	@PreAuthorize(LiquidoAuthUser.HAS_ROLE_TEAM_ADMIN)
+	@PreAuthorize(AuthUtil.HAS_ROLE_TEAM_ADMIN)
 	public @ResponseBody Lson devStartVotingPhase(@PathVariable(name="pollId") PollModel poll) throws LiquidoException {
 		if (poll == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Cannot find poll with that id");
@@ -198,7 +198,7 @@ public class DevRestController {
 	 * @throws LiquidoException for example when poll is not in correct status
 	 */
 	@RequestMapping(value = "/dev/polls/{pollId}/finishVotingPhase")
-	@PreAuthorize(LiquidoAuthUser.HAS_ROLE_TEAM_ADMIN)
+	@PreAuthorize(AuthUtil.HAS_ROLE_TEAM_ADMIN)
 	public @ResponseBody Lson devFinishVotingPhase(@PathVariable(name="pollId") PollModel poll) throws LiquidoException {
 		if (poll == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Cannot find poll with that id");
@@ -217,7 +217,7 @@ public class DevRestController {
 	 * @return HTTP 200
 	 */
 	@RequestMapping(value = "/dev/polls/{pollId}", method = RequestMethod.DELETE)
-	@PreAuthorize(LiquidoAuthUser.HAS_ROLE_TEAM_ADMIN)
+	@PreAuthorize(AuthUtil.HAS_ROLE_TEAM_ADMIN)
 	public @ResponseBody Lson deletePoll(
 		@PathVariable(name="pollId") PollModel poll,
 		@RequestParam(name="deleteProposals") boolean deleteProposals

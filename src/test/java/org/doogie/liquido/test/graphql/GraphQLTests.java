@@ -5,12 +5,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.OffsetLimitPageable;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.TeamRepo;
-import org.doogie.liquido.jwt.JwtTokenProvider;
+import org.doogie.liquido.jwt.JwtTokenUtils;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.LawService;
+import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.HttpBaseTest;
+import org.doogie.liquido.test.testUtils.WithMockTeamUser;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.Lson;
 import org.junit.Assert;
@@ -24,6 +26,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import javax.annotation.PostConstruct;
 import java.util.List;
 
 /**
@@ -39,17 +42,30 @@ public class GraphQLTests extends HttpBaseTest {
 	TeamRepo teamRepo;
 
 	@Autowired
-	JwtTokenProvider jwtTokenProvider;
+	JwtTokenUtils jwtTokenUtils;
 
 	@Autowired
 	PollRepo pollRepo;
 
+	TeamModel team;
+	UserModel admin;
+	UserModel member;
+
+	@PostConstruct
+	public void initDefaults() throws LiquidoException {
+		String teamName = (String)TestFixtures.teams.get(0).get("teamName");
+		this.team   = teamRepo.findByTeamName(teamName)
+			.orElseThrow(LiquidoException.notFound("Cannot find time with name "+teamName));
+		this.admin  = team.getAdmins().iterator().next();
+		this.member = team.getMembers().iterator().next();
+	}
+
 	/**
-	 * Always login the admin of team0.
+	 * By default login the admin of TestTeam0.
 	 */
 	@Before
 	public void beforeEachTest() {
-		this.loginUserJWT((String)TestFixtures.teams.get(0).get("adminEmail"));
+		this.loginUserJWT(admin.getId(), team.getId());
 	}
 
 	String GraphQLPath = "/graphql";
@@ -58,7 +74,6 @@ public class GraphQLTests extends HttpBaseTest {
 	@Test
 	public void getOwnTeam() {
 		//GIVEN a query for team of currently logged in user
-		this.loginUserJWT((String)TestFixtures.teams.get(0).get("adminEmail"));
 		String expectedTeamName   = (String)TestFixtures.teams.get(0).get("teamName");
 		String graphQL    = "{ team { id teamName } }";
 
@@ -75,15 +90,24 @@ public class GraphQLTests extends HttpBaseTest {
 	public void testCreateNewTeam() {
 		// GIVEN a graphQL mutation to create a new team
 		long now = System.currentTimeMillis() % 10000;
-		String teamName   = TestFixtures.TEAM_NAME_PREFIX + "_" + now;
-		String adminName  = TestFixtures.USER_NAME_PREFIX + "_" + now;
-		String adminEmail = TestFixtures.MAIL_PREFIX+ "_admin_" + now + "@graphql-test.vote";
-		String adminMobilephone = TestFixtures.MOBILEPHONE_PREFIX+ now;
-		String graphQLMutation = String.format("mutation { createNewTeam(teamName: \"%s\", adminName: \"%s\", adminEmail: \"%s\", adminMobilephone: \"%s\") " +
-			"{ id, teamName, inviteCode, members { id, email } } }", teamName, adminName, adminEmail, adminMobilephone);
+		String teamName    = TestFixtures.TEAM_NAME_PREFIX + "_" + now;
+		String adminName   = TestFixtures.USER_NAME_PREFIX + "_" + now;
+		String adminEmail  = TestFixtures.MAIL_PREFIX+ "_admin_" + now + "@graphql-test.vote";
+		String mobilephone = TestFixtures.MOBILEPHONE_PREFIX+ now;
+		String website     = TestFixtures.DEFAULT_WEBSITE;
+		String picture     = TestFixtures.AVATAR_PREFIX+(now%16)+".png";
+		String graphQLMutation = String.format(
+			"mutation { createNewTeam(teamName: \"%s\", adminName: \"%s\", adminEmail: \"%s\", mobilephone: \"%s\"" +
+				"website: \"%s\", picture: \"%s\") {" +
+				"team { id teamName inviteCode members { id, email, name, website, picture, mobilephone } } " +
+				"user { id email name mobilephone website picture } " +
+				"jwt " +
+			"}}",
+			teamName, adminName, adminEmail, mobilephone, website, picture
+		);
 
 		// WHEN we send this mutation
-		String actualTeamName = executeGraphQl(graphQLMutation, "$.createNewTeam.teamName");
+		String actualTeamName = executeGraphQl(graphQLMutation, "$.createNewTeam.team.teamName");
 
 		// THEN we receive a list of teams
 		Assert.assertEquals("Expected teamName="+teamName, teamName, actualTeamName);
@@ -102,16 +126,25 @@ public class GraphQLTests extends HttpBaseTest {
 		long now = System.currentTimeMillis() % 10000;
 		String userName  = TestFixtures.USER_NAME_PREFIX + "_" + now;
 		String userEmail = TestFixtures.MAIL_PREFIX+ "_" + now + "@graphql-test.vote";
-		String userMobilephone = TestFixtures.MOBILEPHONE_PREFIX+ now;
-		String graphQLMutation = String.format("mutation { joinTeam(inviteCode: \"%s\", userName: \"%s\", userEmail: \"%s\", userMobilephone: \"%s\") " +
-			"{ id, teamName, inviteCode, members { email } } }", inviteCode, userName, userEmail, userMobilephone);
+		String mobilephone = TestFixtures.MOBILEPHONE_PREFIX+ now;
+		String website     = TestFixtures.DEFAULT_WEBSITE;
+		String picture     = TestFixtures.AVATAR_PREFIX+(now%16)+".png";
+		String graphQLMutation = String.format(
+			"mutation { joinTeam(inviteCode: \"%s\", userName: \"%s\", userEmail: \"%s\", mobilephone: \"%s\"" +
+				"website: \"%s\", picture: \"%s\") {" +
+			  "team { id teamName inviteCode members { id, email, name, website, picture, mobilephone } } " +
+			  "user { id email name mobilephone website picture  } " +
+			  "jwt " +
+			"}}",
+			inviteCode, userName, userEmail, mobilephone, website, picture
+		);
 
 		// WHEN we send this mutation
 		Lson entity = new Lson("query", graphQLMutation);
 		ResponseEntity<String> res = this.client.exchange(this.GraphQLPath, HttpMethod.POST, entity.toJsonHttpEntity(), String.class);
 
 		// THEN user's email is part of team.members
-		List<String> members = JsonPath.read(res.getBody(), "$.joinTeam.members..email");
+		List<String> members = JsonPath.read(res.getBody(), "$.joinTeam.team.members..email");
 		Assert.assertTrue("Cannot find userEmail in joinedTeam.members", members.contains(userEmail));
 	}
 
@@ -129,7 +162,6 @@ public class GraphQLTests extends HttpBaseTest {
 		String graphQLMutation = "mutation { createPoll(title: \"" + pollTitle + "\") { id, title } }";
 
 		//WHEN the admin creates a new poll
-		loginUserJWT(admin.getEmail());
 		String actualTitle = executeGraphQl(graphQLMutation, "$.createPoll.title");
 
 		//THEN poll is created

@@ -379,12 +379,13 @@ public class PollServiceTests  extends BaseTest {
 	}
 
 
+	//TODO: test deletion of polls (Shall proposals stay to join other polls? Maybe throw away this use case, now that we have teams.)
 	/**
 	 * Test for {@link PollService#deletePoll(PollModel, boolean)} that a poll can be deleted.
 	 * WHEN a poll is deleted, THEN its casted ballots are also removed, but not the proposals in it.
 	 * @throws LiquidoException when admin user is not available in DB
-	 */
-	//@Test
+
+	@Test
 	public void deletePollTest() throws LiquidoException {
 		// GIVEN a poll with votes in it
 		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA0_TITLE).orElseThrow(() -> new RuntimeException("need Area0 in test"));;
@@ -394,7 +395,7 @@ public class PollServiceTests  extends BaseTest {
 		Long firstProposalId = poll.getProposals().iterator().next().getId();
 
 		// WHEN login as ADMIN
-		this.loginMockUser(prop.admin.email);
+		this.loginMockUser(prop.admin.email, );
 
 		//  AND poll is deleted
 		pollService.deletePoll(poll, false);
@@ -403,5 +404,6 @@ public class PollServiceTests  extends BaseTest {
 		Optional<LawModel> prop = lawRepo.findById(firstProposalId);
 		assertTrue("Proposal from former poll should still exist.", prop.isPresent());
 	}
+	*/
 
 }

@@ -8,6 +8,7 @@ import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.test.testUtils.WithMockTeamUser;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.junit.Assert;
@@ -59,7 +60,7 @@ public class RepoTests extends BaseTest {
   }
 
   @Test
-  @WithUserDetails(TestFixtures.USER2_EMAIL)  // http://docs.spring.io/spring-security/site/docs/4.2.1.RELEASE/reference/htmlsingle/#test-method-withuserdetails
+  @WithMockTeamUser(email = TestFixtures.USER2_EMAIL)  // http://docs.spring.io/spring-security/site/docs/4.2.1.RELEASE/reference/htmlsingle/#test-method-withuserdetails
   public void testCreateIdeaWithMockAuditor() {
     auditorAware.setMockAuditor(null);    // BUGFIX: Must remove any previously set mock auditor
 
@@ -83,6 +84,7 @@ public class RepoTests extends BaseTest {
   }
 
   @Test
+  @WithMockTeamUser(email = TestFixtures.USER1_EMAIL)
   public void testUpdate() {
     long count1 = areaRepo.count();
     Optional<AreaModel> areaOpt = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
@@ -111,11 +113,11 @@ public class RepoTests extends BaseTest {
   }
 
   @Test
-  public void testFindSupportedIdeas() {
+  public void testFindSupportedProposals() {
     UserModel supporter = userRepo.findByEmail(TestFixtures.USER1_EMAIL).get();
-    List<LawModel> supportedLaws = lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.IDEA, supporter);
-    assertTrue("Expected at least 2 ideas that user "+TestFixtures.USER1_EMAIL+" supports", supportedLaws.size() >= 2);
-    log.debug("User "+supporter.getEmail()+" supports "+supportedLaws.size()+" ideas.");
+    List<LawModel> supportedLaws = lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.PROPOSAL, supporter);
+    assertTrue("Expected at least 2 proposals that user "+TestFixtures.USER1_EMAIL+" supports", supportedLaws.size() >= 2);
+    log.debug("User "+supporter.getEmail()+" supports "+supportedLaws.size()+" proposals.");
   }
 
   /*

@@ -8,6 +8,7 @@ import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.LawQuery;
 import org.doogie.liquido.services.LawService;
+import org.doogie.liquido.test.testUtils.WithMockTeamUser;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -143,7 +144,7 @@ public class LawServiceTests extends BaseTest {
 	public void testFindBySupporter() {
 		// GIVEN
 		LawQuery lawQuery = new LawQuery();
-		lawQuery.setStatusList(Arrays.asList(LawModel.LawStatus.IDEA));
+		lawQuery.setStatusList(Arrays.asList(LawModel.LawStatus.PROPOSAL));
 		lawQuery.setSupportedByEMail(TestFixtures.USER1_EMAIL);
 
 		// WHEN
@@ -151,7 +152,7 @@ public class LawServiceTests extends BaseTest {
 		Optional<UserModel> supporter = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
 
 		// THEN
-		log.debug("========== laws supported by "+TestFixtures.USER1_EMAIL);
+		log.debug("========== Ideas supported by "+TestFixtures.USER1_EMAIL);
 		page.get().forEach((law) -> {
 			log.debug(law.toString());
 		});
