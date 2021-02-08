@@ -12,6 +12,7 @@ import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
+import org.doogie.liquido.test.testUtils.WithMockTeamUser;
 import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.testdata.TestDataUtils;
@@ -64,7 +65,7 @@ public class ProxyServiceTests extends BaseTest {
 	 *   AND the proxyMap of V contains P in area A
 	 */
 	@Test
-	@WithUserDetails(USER13_EMAIL)
+	@WithMockTeamUser(email = USER13_EMAIL)
 	public void testAssignProxy() throws LiquidoException {
 		//GIVEN
 		UserModel fromUser = userRepo.findByEmail(USER13_EMAIL).get();   // use other users as in the delegation tests
@@ -95,7 +96,7 @@ public class ProxyServiceTests extends BaseTest {
 	}
 
 	@Test
-	@WithUserDetails(USER1_EMAIL)
+	@WithMockTeamUser(email = USER1_EMAIL)
 	public void testGetNumVotes() throws LiquidoException {
 		log.trace("ENTER: testGetNumVotes");
 		AreaModel area = getDefaultArea();
@@ -124,7 +125,8 @@ public class ProxyServiceTests extends BaseTest {
 	 *  THEN the top most proxy at the end of the delegation chain is returned.
 	 */
 	@Test
-	@WithUserDetails(USER5_EMAIL)
+	//Deprecated: @WithUserDetails(USER5_EMAIL)
+	@WithMockTeamUser(email = USER5_EMAIL)
 	public void findTopProxy() {
 		log.trace("testGetTopmostProxy");
 		// all this data must match TestFixtures.java !!!
@@ -163,7 +165,7 @@ public class ProxyServiceTests extends BaseTest {
 	 * @throws LiquidoException
 	 */
 	@Test
-	@WithUserDetails(USER2_EMAIL)
+	@WithMockTeamUser(email = USER2_EMAIL)
 	public void testCircularDelegationErrorCases() throws LiquidoException {
 		//GIVEN
 		UserModel fromUser = userRepo.findByEmail(USER8_EMAIL).get();
@@ -188,6 +190,7 @@ public class ProxyServiceTests extends BaseTest {
 	}
 
 	@Test
+	@WithMockTeamUser(email = USER14_EMAIL)
 	public void testRemoveProxy() throws LiquidoException {
 		//GIVEN
 		UserModel fromUser = userRepo.findByEmail(USER14_EMAIL).get();

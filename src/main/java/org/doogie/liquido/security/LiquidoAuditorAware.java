@@ -1,6 +1,8 @@
 package org.doogie.liquido.security;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.jwt.AuthUtil;
+import org.doogie.liquido.jwt.LiquidoAuthentication;
 import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.LiquidoException;
@@ -27,6 +29,9 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
 	@Autowired
 	Environment springEnv;
 
+	@Autowired
+  AuthUtil authUtil;
+
   UserModel mockAuditor = null;
 
   /**
@@ -35,13 +40,16 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
    */
   @Override
   public Optional<UserModel> getCurrentAuditor() {
-    //TODO: replace all calls to this with a LiquidoUserDetailsService#getCurrnetUser()  that return the UserModel directly or throws. (No optional)
     if (mockAuditor != null) {
-    	// warn about mock users, but only if we are not in dev or test or int
+    	// warn about mock users, but only if we are not in dev, test or int
 			if (!springEnv.acceptsProfiles(Profiles.of("dev", "test", "int")))
 				log.warn("Returning mock auditor "+mockAuditor.getEmail());
       return Optional.of(mockAuditor);
     }
+    return Optional.ofNullable(authUtil.getCurrentUser());
+
+
+    /*
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication == null || !authentication.isAuthenticated()) {
       log.trace("Cannot getCurrentAuditor. No one is currently authenticated");
@@ -52,13 +60,13 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
       log.trace("Returning anonymous user as current auditor.");
 			return Optional.empty();
     }
-		// principal _IS_ a LiquidoAuthUser, because
+		// principal _IS_ a LiquidoAuthentic
 		// 1. I load one in LiquidoUserDetailsService.java
 		// 2. and JwtAuthenticationFilter puts it into the security context
-    LiquidoAuthUser authUser = (LiquidoAuthUser)authentication.getPrincipal();
-    //log.trace("Returning current auditor " + authUser);
+    LiquidoAuthentication authUser = (LiquidoAuthentication)authentication.getPrincipal();
 
     return Optional.of(authUser.getLiquidoUserModel());
+    */
 
     //BUGFIX:  Must not call userRepo, since this will lead to an endless loop and throw a StackOverflowException
     //https://stackoverflow.com/questions/14223649/how-to-implement-auditoraware-with-spring-data-jpa-and-spring-security

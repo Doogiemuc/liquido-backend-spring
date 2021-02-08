@@ -1,7 +1,8 @@
 package org.doogie.liquido.test;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.jwt.JwtTokenProvider;
+import org.doogie.liquido.jwt.JwtTokenUtils;
+import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.test.testUtils.JwtAuthInterceptor;
 import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +29,7 @@ public class HttpBaseTest extends BaseTest {
 
 	/** This provider can create Json Web Tokens (JWT) */
 	@Autowired
-	JwtTokenProvider jwtTokenProvider;
+	JwtTokenUtils jwtTokenUtils;
 
 	/** HTTP interceptor that adds JWT to request header */
 	JwtAuthInterceptor jwtAuthInterceptor = new JwtAuthInterceptor();
@@ -73,12 +74,17 @@ public class HttpBaseTest extends BaseTest {
 			.build();
 	}
 
+	public void loginUserJWT(String userEmail) {
+		UserModel user = userRepo.findByEmail(userEmail).orElseThrow(() -> new RuntimeException("Cannot loginUserJWT. Cannot find user with email="+userEmail));
+		this.loginUserJWT(user.getId(), null);
+	}
+
 	/**
 	 * little helper to quickly login a specific user
 	 */
-	public void loginUserJWT(String email) {
+	public void loginUserJWT(Long userId, Long teamId) {
 		// Here we see that advantage of a completely stateless server. We simply generate a JWT and that's it. No login state is stored on the server.
-		String jwt = jwtTokenProvider.generateToken(email);
+		String jwt = jwtTokenUtils.generateToken(userId, teamId);
 		jwtAuthInterceptor.setJwtToken(jwt);
 	}
 }

@@ -113,7 +113,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 
   /** Comments and suggestions for improvement for this proposal*/
 	@JsonIgnore  																											// To fetch comments via REST user CommentProjection of CommentModel
-  @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)  	//TODO If you get a "LazyInitializationException, could not initialize proxy - no Session" you might need to pre load comments of a proposal. We should not generally change this to FetchTypoe.EAGER for performance reasons. Check with tests if FetchType.LAZY is enough
+  @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)  	//TODO: We should defenitely change this to FetchTypoe.EAGER for performance reasons. Check with tests if FetchType.LAZY is ok
 	//@Cascade(org.hibernate.annotations.CascadeType.ALL)   					// https://vladmihalcea.com/a-beginners-guide-to-jpa-and-hibernate-cascade-types/
   public Set<CommentModel> comments = new HashSet<>();							// Comments are deliberately a Set and not a List. There are no duplicates.
 

@@ -3,6 +3,7 @@ package org.doogie.liquido.model;
 import lombok.*;
 
 import javax.persistence.Entity;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
@@ -24,6 +25,10 @@ public class OneTimeToken extends BaseModel {
 	@NotNull
 	@OneToOne
 	UserModel user;
+
+	/** Token is valid to login the user into one of his teams */
+	@ManyToOne(optional = true)
+	TeamModel team;
 
 	public enum TOKEN_TYPE {
 		EMAIL,

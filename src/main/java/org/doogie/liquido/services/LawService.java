@@ -228,7 +228,7 @@ public class LawService {
         cb.like(cb.lower(law.get(LAW_TITLE)), pattern),
         cb.like(cb.lower(law.get(LAW_DESCRIPTION)), pattern),
         cb.like(cb.lower(creatorJoin.get(USER_EMAIL)), pattern),
-        cb.like(cb.lower(creatorJoin.get("profile").get("name")), pattern)
+        cb.like(cb.lower(creatorJoin.get(USER_NAME)), pattern)
       );
     };
   }

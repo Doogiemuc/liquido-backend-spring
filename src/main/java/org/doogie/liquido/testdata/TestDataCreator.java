@@ -9,7 +9,6 @@ import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.rest.dto.CastVoteResponse;
 import org.doogie.liquido.rest.dto.CreateOrJoinTeamResponse;
 import org.doogie.liquido.security.LiquidoAuditorAware;
-import org.doogie.liquido.security.LiquidoAuthUser;
 import org.doogie.liquido.services.*;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +17,9 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
-import org.springframework.core.env.*;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.data.domain.Page;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.stereotype.Component;
@@ -207,7 +205,7 @@ public class TestDataCreator implements CommandLineRunner {
             throw e;
         }
 
-        log.debug("Create test data from scratch via spring-data for DB: "+ jdbcTemplate.getDataSource().toString());
+      log.debug("Create test data from scratch via spring-data for DB: "+ jdbcTemplate.getDataSource().toString());
       // The order of these methods is very important here!
       seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX);
       util.seedAdminUser();
@@ -352,15 +350,22 @@ public class TestDataCreator implements CommandLineRunner {
 	/** Seed teams and their admin users. And let some users join each team. */
 	public void seedTeams() throws LiquidoException {
 		log.info("Seeding Teams with members ...");
+		String digits = DoogiesUtil.randomDigits(4);		// create unique mobile phone numbers
 		for (int i = 0; i < TestFixtures.NUM_TEAMS; i++) {
 			String teamName    = (String)TestFixtures.teams.get(i).get("teamName");
 			String adminName   = (String)TestFixtures.teams.get(i).get("adminName");
 			String adminEmail  = (String)TestFixtures.teams.get(i).get("adminEmail");
-			CreateOrJoinTeamResponse res = teamService.createNewTeam(teamName, adminName, adminEmail);
+			String adminMobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits + i;
+			String adminWebsite     = "www.liquido.vote";
+			String adminPicture     = TestFixtures.AVATAR_PREFIX + "0.png";
+			CreateOrJoinTeamResponse res = teamService.createNewTeam(teamName, adminName, adminEmail, adminMobilephone, adminWebsite, adminPicture);
 			for (int j = 0; j < TestFixtures.NUM_TEAM_MEMBERS; j++) {
 				String userName    = TestFixtures.TEAM_MEMBER_NAME_PREFIX + j + " " + teamName;
 				String userEmail   = TestFixtures.TEAM_MEMBER_EMAIL_PREFIX + j + "@" + teamName + ".org";
-				teamService.joinNewTeam(res.getTeam().getInviteCode(), userName, userEmail);
+				String mobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits + i + j;
+				String website     = "www.liquido.vote";
+				String picture     = TestFixtures.AVATAR_PREFIX+ (j%16) + ".png";
+				teamService.joinNewTeam(res.getTeam().getInviteCode(), userName, userEmail, mobilephone, website, picture);
 			}
 		}
 	}
@@ -443,7 +448,11 @@ public class TestDataCreator implements CommandLineRunner {
     utils.printProxyTree(area, topProxy);
   }
 
-  private void seedIdeas() {
+	/**
+	 * Seed some initial ideas.
+	 * If prop.supportersForProposal is <= 0 then these ideas normally immediately would become proposals.
+	 */
+	private void seedIdeas() {
     log.info("Seeding Ideas ...");
     for (int i = 0; i < TestFixtures.NUM_IDEAS; i++) {
       String ideaTitle = "Idea " + i + " that suggest that we definitely need a longer title for ideas";
@@ -479,12 +488,9 @@ public class TestDataCreator implements CommandLineRunner {
     LawModel proposal = new LawModel(title, description, area);
 		lawRepo.save(proposal);
 
-		if (prop.supportersForProposal > 0) {
-			proposal = addSupportersToIdea(proposal, prop.supportersForProposal);
-		} else {
-			//lawService.checkQuorum(proposal);
-			proposal.setStatus(LawStatus.PROPOSAL);   // this is quicker, cause checkQuorum saves
-		}
+		// add enough supporters so that the idea becomes a proposal. (Or add some random supporters.)
+		int numSupporters = prop.supportersForProposal > 0 ? prop.supportersForProposal : rand.nextInt(5)+1;
+		proposal = addSupportersToIdea(proposal, numSupporters);
 
 		LocalDateTime reachQuorumAt = LocalDateTime.now().minusDays(reachedQuorumDaysAgo);
     proposal.setReachedQuorumAt(reachQuorumAt);			// fake reachQuorumAt date to be in the past
@@ -676,7 +682,7 @@ public class TestDataCreator implements CommandLineRunner {
   }
 
   public PollModel seedPollInTeam() throws LiquidoException {
-  	log.info("Seeding one empty poll in a team");
+  	log.info("Seeding a poll with two proposals in a team");
   	long now = System.currentTimeMillis() % 1000;
 		TeamModel team = teamRepo.findAll().iterator().next();
   	String title = "Poll " + now +  " in Team "+team.getTeamName();
@@ -685,7 +691,7 @@ public class TestDataCreator implements CommandLineRunner {
 			.orElseThrow(LiquidoException.notFound("need a team admin to seedPollInTeam"));
   	LawModel proposal = this.createProposal("Proposal " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), this.defaultArea, admin, 2, 1);
 		pollService.addProposalToPoll(proposal, poll);
-		UserModel member = team.getMembers().stream().filter(user -> !user.getRoles().contains(LiquidoAuthUser.ROLE_TEAM_ADMIN)).findFirst()
+		UserModel member = team.getMembers().stream().findFirst()
 			.orElseThrow(LiquidoException.notFound("need a team member to seedPollInTeam"));
 		LawModel proposal2 = this.createProposal("Another prop " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), this.defaultArea, member, 2, 1);
 		poll = pollService.addProposalToPoll(proposal2, poll);

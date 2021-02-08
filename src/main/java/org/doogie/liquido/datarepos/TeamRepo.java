@@ -17,6 +17,8 @@ public interface TeamRepo extends PagingAndSortingRepository<TeamModel, Long> {
 
 	Optional<TeamModel> findByTeamName(String teamName);
 
+	Optional<TeamModel> findByIdAndAdminsIdEquals(Long teamId, Long adminId);
+
 	// Did i already mention that Spring-data-jpa's query creation from interface method names is absolutely evil dark wizardry :-)
 	Optional<TeamModel> findByMembersEmailEquals(String email);
 }

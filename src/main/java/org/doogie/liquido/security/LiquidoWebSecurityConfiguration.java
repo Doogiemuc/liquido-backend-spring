@@ -2,15 +2,14 @@ package org.doogie.liquido.security;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.jwt.JwtAuthenticationFilter;
-import org.doogie.liquido.security.LiquidoUserDetailsService;
+import org.doogie.liquido.jwt.JwtAuthenticationProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -42,6 +41,9 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
   @Autowired
 	JwtAuthenticationFilter jwtAuthenticationFilter;
 
+  @Autowired
+	JwtAuthenticationProvider jwtAuthenticationProvider;
+
   /*
   /*  FOR TESTING: Simplest possible in memory authentication with static default users.
   @Autowired
@@ -60,7 +62,7 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
    */
   @Override
   protected void configure(HttpSecurity http) throws Exception {
-    log.info("Configuring HttpSecurity for "+ basePath);
+    log.info("Configuring HttpWebSecurity for "+ basePath);
 
     //TODO: I need a central place for URL pathes: LiquidoUrlPathes.java
 
@@ -76,6 +78,7 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
 			  .antMatchers(basePath+"/auth/**").permitAll()      			// allow login via one time token
 				.antMatchers(basePath+"/castVote").permitAll()   				// allow anonymous voting
 			  .anyRequest().authenticated()																				// everything else must be authenticated
+			//Remark: There is also .and().oauth2Login(oauth2LoginCustomizer)  for full blown oauth. But that's overkill!
 			//TODO: .and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);   Do I need this?
 			.and()
 			  .csrf().disable();   //TODO: reenable CSRF
@@ -84,14 +87,19 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
 		http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
   }
 
-  /*
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+  	log.info("Configuring HttpWebSecurity with jwtAuthenticationProvider");
+		auth.authenticationProvider(jwtAuthenticationProvider);
+	}
+
+  /*  deprecated replaced by LiquidoAuthenticationProvider
 	//see http://docs.spring.io/spring-security/site/docs/current/reference/htmlsingle/#jc-authentication-userdetailsservice
 	@Bean
 	public LiquidoUserDetailsService liquidoUserDetailsService() {
 		log.debug("creating LiquidoUserDetailsService");
 		return new LiquidoUserDetailsService();
 	}
-
    */
 
 

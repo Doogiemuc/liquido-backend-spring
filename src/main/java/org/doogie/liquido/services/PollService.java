@@ -2,8 +2,8 @@ package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
+import org.doogie.liquido.jwt.AuthUtil;
 import org.doogie.liquido.model.*;
-import org.doogie.liquido.security.LiquidoAuthUser;
 import org.doogie.liquido.services.scheduler.FinishPollJob;
 import org.doogie.liquido.services.voting.RankedPairVoting;
 import org.doogie.liquido.testdata.LiquidoProperties;
@@ -127,7 +127,7 @@ public class PollService {
    */
   public PollModel addProposalToPoll(@NonNull LawModel proposal, @NonNull PollModel poll) throws LiquidoException {
   	if (proposal.getStatus() != LawModel.LawStatus.PROPOSAL)
-      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposalToPoll: poll(id="+poll.getId()+", Proposal(id="+proposal.getId()+") is not in state PROPOSAL.");
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposalToPoll: poll(id="+poll.getId()+"): Proposal(id="+proposal.getId()+") is not in state PROPOSAL.");
     if (poll.getStatus() != PollModel.PollStatus.ELABORATION)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposalToPoll: Poll(id="+poll.getId()+") is not in ELABORATION phase");
     if (poll.getProposals().size() > 0 && !proposal.getArea().equals(poll.getArea()))
@@ -139,7 +139,12 @@ public class PollService {
 		if (poll.getProposals().stream().anyMatch(prop -> prop.title.equals(proposal.title)))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Poll.id="+poll.getId()+" already contains a proposal with the same title="+proposal.getTitle());
 		//TODO: admin is allowed to add more than one proposal
-    if (poll.getProposals().stream().anyMatch(prop -> prop.getCreatedBy().equals(proposal.getCreatedBy())))
+    if (poll.getProposals().stream().anyMatch(prop -> {
+			UserModel u1 = prop.getCreatedBy();
+			UserModel u2 = proposal.getCreatedBy();
+			boolean result = u1.equals(u2);
+			return result;
+		}))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, proposal.getCreatedBy().toStringShort() + " already has a proposal in poll(id="+poll.getId()+")");
 
     log.debug("addProposalToPoll(proposal.id="+proposal.getId()+", poll.id="+poll.getId()+")");
@@ -423,7 +428,7 @@ public class PollService {
 	 * @param poll The poll to delete
 	 * @param deleteProposals wether to delete the porposals in the poll
 	 */
-	@PreAuthorize(LiquidoAuthUser.HAS_ROLE_TEAM_ADMIN)  // only the admin may delete polls.  See application.properties for admin name and email
+	@PreAuthorize(AuthUtil.HAS_ROLE_TEAM_ADMIN)  // only the admin may delete polls.  See application.properties for admin name and email
 	@Transactional
 	public void deletePoll(@NonNull PollModel poll, boolean deleteProposals) {
 		log.info("DELETE "+poll);

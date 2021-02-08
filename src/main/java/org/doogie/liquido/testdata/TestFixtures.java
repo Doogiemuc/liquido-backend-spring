@@ -31,6 +31,7 @@ public class TestFixtures {
 	public static final String USER_NAME_PREFIX = "TestUser";
 	public static final String MAIL_PREFIX = "testuser";
 	public static final String MOBILEPHONE_PREFIX = "+4912345";
+	public static final String DEFAULT_WEBSITE = "www.liquido.me";
 
 	public static final String AVATAR_PREFIX = "/static/img/avatars/Avatar";
 	public static final String USER1_NAME = "Donald Duck";										// special name for user1

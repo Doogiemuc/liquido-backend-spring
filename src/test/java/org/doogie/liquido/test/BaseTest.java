@@ -3,36 +3,28 @@ package org.doogie.liquido.test;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.UserRepo;
-import org.doogie.liquido.jwt.JwtTokenProvider;
+import org.doogie.liquido.jwt.AuthUtil;
+import org.doogie.liquido.jwt.LiquidoAuthentication;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
-import org.doogie.liquido.security.LiquidoAuthUser;
-import org.doogie.liquido.security.LiquidoUserDetailsService;
 import org.doogie.liquido.services.LiquidoException;
-import org.doogie.liquido.test.testUtils.JwtAuthInterceptor;
-import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.doogie.liquido.testdata.LiquidoProperties;
 import org.junit.Rule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureTestEntityManager;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.boot.web.server.LocalServerPort;
-import org.springframework.security.authentication.TestingAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.DefaultUriBuilderFactory;
 
-import java.util.List;
+import java.util.HashSet;
 import java.util.Random;
-import java.util.stream.Collectors;
+import java.util.Set;
+
+import static org.doogie.liquido.jwt.AuthUtil.ROLE_USER;
 
 /**
  * Base for all test classes.
@@ -50,15 +42,15 @@ public class BaseTest {
 	UserRepo userRepo;
 
 	@Autowired
-	LiquidoUserDetailsService liquidoUserDetailsService;
-
-	@Autowired
 	LiquidoProperties props;
 
 	static Random rand = new Random(System.currentTimeMillis());
 
 	@Autowired
 	AreaRepo areaRepo;
+
+	@Autowired
+	AuthUtil authUtil;
 
 	/* default area is lazily initiated in getDefaultArea() */
 	private AreaModel defaultArea = null;
@@ -104,22 +96,17 @@ public class BaseTest {
 	 * @throws UsernameNotFoundException when email is not found in the DB.
 	 * @throws LiquidoException when
 	 */
-	public void loginMockUser(String email) throws LiquidoException {
+	public void loginMockUser(String email, Long teamId) throws LiquidoException {
 		log.debug("TEST loginUser("+email+")");
-		LiquidoAuthUser userDetails;
-		try {
-			userDetails = liquidoUserDetailsService.loadUserByUsername(email);
-		} catch(UsernameNotFoundException e) {
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "Cannot login testuser. email="+email, e);
-		}
-		List<GrantedAuthority> authList = userDetails.getAuthorities().stream().collect(Collectors.toList());
-		Authentication authentication = new TestingAuthenticationToken(userDetails, null, authList);
-		SecurityContextHolder.getContext().setAuthentication(authentication);
 
-		// also log in as mock auditor
-		UserModel admin = userRepo.findByEmail(email)
-			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "Cannot login test user. email="+email));
-		auditor.setMockAuditor(admin);
+		// create a dummy auth token
+		UserModel user = userRepo.findByEmail(email).orElseThrow(
+			LiquidoException.notFound("Cannot find user with email "+email+ " to loginMockUser()")
+		);
+		authUtil.authenticateInSecurityContext(user.getId(), teamId);
+
+		// Also set as mock auditor for createdBy
+		auditor.setMockAuditor(user);
 	}
 
 	private static final String loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, nam urna. Vitae aenean velit, voluptate velit rutrum. Elementum integer rhoncus rutrum morbi aliquam metus, morbi nulla, nec est phasellus dolor eros in libero. Volutpat dui feugiat, non magna, parturient dignissim lacus ipsum in adipiscing ut. Et quis adipiscing perferendis et, id consequat ac, dictum dui fermentum ornare rhoncus lobortis amet. Eveniet nulla sollicitudin, dolore nullam massa tortor ullamcorper mauris. Lectus ipsum lacus.\n" +
