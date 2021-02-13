@@ -18,7 +18,7 @@ import java.util.Date;
 @MappedSuperclass
 @Data
 @EntityListeners(AuditingEntityListener.class)
-@EqualsAndHashCode(of="id")
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)  // BaseModels are only equal when id field is equal!
 //@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public abstract class BaseModel {
   /**
@@ -27,6 +27,7 @@ public abstract class BaseModel {
    */
   @Id
   @GeneratedValue(strategy= GenerationType.AUTO)
+  @EqualsAndHashCode.Include
   public Long id;
 
   @CreatedDate

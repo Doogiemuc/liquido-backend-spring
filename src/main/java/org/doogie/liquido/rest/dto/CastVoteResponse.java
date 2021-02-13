@@ -20,5 +20,5 @@ public class CastVoteResponse {
 	 * then delegationCount.
 	 */
 	@NonNull
-	long voteCount;
+	Long voteCount;
 }

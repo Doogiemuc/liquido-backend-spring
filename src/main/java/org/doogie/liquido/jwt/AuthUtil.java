@@ -60,20 +60,23 @@ public class AuthUtil {
 	}
 
 	/**
-	 * Get the currently logged in user (if any)
-	 * @return UserModel or <b>null</b> if this is an anonymous request
+	 * Get the currently logged in user from the DB.
+	 * This calls the DB!
+	 * @return UserModel or <b>Optional.empty()</b>
+	 *   if this is an anonymous request
+	 *   ie. no authentication info was sent with a JWT
+	 *   or if the user.id couldn't be found in the DB
 	 */
-	public UserModel getCurrentUser()  {
+	public Optional<UserModel> getCurrentUser()  {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		if (auth == null ||
 				auth instanceof AnonymousAuthenticationToken ||
 				(auth.getPrincipal() != null && auth.getPrincipal().equals("anonymousUser")) // see AnonymousConfigurer
 		) {
-			return null;
+			return Optional.empty();
 		}
 		LiquidoAuthentication liquidoAuth = (LiquidoAuthentication) auth;
-		UserModel user = userRepo.findById(liquidoAuth.getUserId()).orElse(null);
-		return user;
+		return userRepo.findById(liquidoAuth.getUserId());   // may return Optional.empty if user.id is not found in DB!
 	}
 
 	/**
@@ -81,16 +84,15 @@ public class AuthUtil {
 	 * One user may be an admin or member in several teams. But he is always logged into one specific team.
 	 * @return TeamModel or <b>null</b> if no one is logged in
 	 */
-	public TeamModel getCurrentTeam() {
+	public Optional<TeamModel> getCurrentTeam() {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		if (auth == null ||
 			auth instanceof AnonymousAuthenticationToken ||
 			(auth.getPrincipal() != null && auth.getPrincipal().equals("anonymousUser")) // see AnonymousConfigurer
 		) {
-			return null;
+			return Optional.empty();
 		}
 		LiquidoAuthentication liquidoAuth = (LiquidoAuthentication) auth;
-		TeamModel team = teamRepo.findById(liquidoAuth.getTeamId()).orElse(null);
-		return team;
+		return teamRepo.findById(liquidoAuth.getTeamId());
 	}
 }

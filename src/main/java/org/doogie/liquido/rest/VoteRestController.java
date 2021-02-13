@@ -2,6 +2,7 @@ package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.BallotRepo;
+import org.doogie.liquido.jwt.AuthUtil;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.rest.dto.CastVoteResponse;
@@ -46,7 +47,7 @@ public class VoteRestController {
 	ProxyService proxyService;
 
 	@Autowired
-	LiquidoAuditorAware liquidoAuditorAware;
+	AuthUtil authUtil;
 
 	@Autowired
 	EntityLinks entityLinks;
@@ -56,6 +57,7 @@ public class VoteRestController {
 	 * We also return delegationCount, because delegationCount can only be fetched when the token is known.
 	 *
 	 * @param area Area for the token
+	 * @param tokenSecret Users own secret that must only be known to him. This way a user can make sure that this is his voterToken.
 	 * @param becomePublicProxy (optional) boolean if user immediately wants to become a public proxy. Can also do so later.
 	 *                          User may already be a public proxy. Even when you pass "false" he then will stay a public proxy.
 	 * @return JSON with voterToken and info about delegations and delegation requests in this area
@@ -68,8 +70,8 @@ public class VoteRestController {
 			@RequestParam(name = "becomePublicProxy", defaultValue = "false", required = false) Boolean becomePublicProxy
 			//  Authentication auth
 	) throws LiquidoException {
-		UserModel voter = liquidoAuditorAware.getCurrentAuditor()
-				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get voterToken!"));			// [SECURITY]  This check is extremely important! Only valid users are allowed to get a voterToken
+		UserModel voter = authUtil.getCurrentUser()
+			.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get voterToken!"));			// [SECURITY]  This check is extremely important! Only valid users are allowed to get a voterToken
 		//UserModel voter = ((LiquidoAuthUser) auth.getPrincipal()).getLiquidoUserModel();   // This also works. But I kinda like getCurrentAuditor(), because it support mock auditor so nicely
 		log.trace("Request voterToken for " + voter.toStringShort() + " in " + area);
 		String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, area, tokenSecret, becomePublicProxy);   // preconditions are checked inside castVoteService
@@ -125,7 +127,7 @@ public class VoteRestController {
   @ResponseStatus(HttpStatus.CREATED)
   public @ResponseBody CastVoteResponse castVote(@RequestBody CastVoteRequest castVoteRequest) throws LiquidoException {
 		log.trace("=> POST /castVote");
-		Optional<UserModel> currentUser = liquidoAuditorAware.getCurrentAuditor();
+		Optional<UserModel> currentUser = authUtil.getCurrentUser();
 		if (currentUser.isPresent())
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast Vote. You should cast your vote anonymously. Do not send a JWT or SESSIONID in cookie.");
 		return castVoteService.castVote(castVoteRequest);            // all validity checks are done inside castVoteService.

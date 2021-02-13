@@ -7,7 +7,6 @@ import org.doogie.liquido.util.Matrix;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
-import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -19,11 +18,12 @@ import java.util.Set;
  * The votes within a poll are stored in anonymous ballots.
  * This is just a domain model class. All the business logic is in {@link org.doogie.liquido.services.PollService}!
  */
-@Entity
 @Data
-@NoArgsConstructor  		// BUGFIX: lombok data includes @RequiredArgsConstructor, but does not include @NoArgsConstructor !
-@RequiredArgsConstructor
-@EqualsAndHashCode(callSuper = true)
+@NoArgsConstructor  		   // BUGFIX: lombok data includes @RequiredArgsConstructor, but does not include @NoArgsConstructor !
+@RequiredArgsConstructor   // BUGFIX2: And lombok does not create the @RequiredArgsConstructor if there is already any other constructzor, even a NonArgsConstructor
+                           // https://github.com/rzwitserloot/lombok/issues/1269
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)   // only use ID for equals, because any other attribute of a Poll may be changed by the user
+@Entity
 @EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
 @Table(name = "polls", uniqueConstraints= {
 	@UniqueConstraint(columnNames = {"title", "team_id"})  // Poll title must be unique within team
@@ -34,12 +34,14 @@ public class PollModel extends BaseModel {
 	 * The title of a poll must be unique within the team.
 	 * It can be edited by anyone who has a proposal in this poll.
 	 */
-	@NonNull
-	@NotNull
+	@javax.validation.constraints.NotNull
+	@org.springframework.lang.NonNull
+	@lombok.NonNull
 	String title;
 
-	@NonNull
-	@NotNull
+	@javax.validation.constraints.NotNull
+	@org.springframework.lang.NonNull
+	@lombok.NonNull
 	@OneToOne
 	AreaModel area;
 

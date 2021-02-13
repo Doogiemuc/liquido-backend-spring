@@ -76,8 +76,6 @@ public class LiquidoException extends Exception {
     	this.httpResponseStatus = httpResponseStatus;
     }
 
-
-
 	}
 
 	/**
@@ -101,6 +99,10 @@ public class LiquidoException extends Exception {
 	 */
   public static Supplier<LiquidoException> notFound(String msg) {
 		return () -> new LiquidoException(Errors.CANNOT_FIND_ENTITY, msg);
+	}
+
+	public static Supplier<LiquidoException> unauthorized(String msg)  {
+		return () -> new LiquidoException(Errors.UNAUTHORIZED, msg);
 	}
 
 	public static Supplier<LiquidoException> supply(Errors error, String msg) {

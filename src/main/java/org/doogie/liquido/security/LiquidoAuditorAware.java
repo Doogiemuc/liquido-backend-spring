@@ -2,17 +2,11 @@ package org.doogie.liquido.security;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.jwt.AuthUtil;
-import org.doogie.liquido.jwt.LiquidoAuthentication;
-import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
-import org.doogie.liquido.services.LiquidoException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.data.domain.AuditorAware;
-import org.springframework.lang.Nullable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -35,7 +29,8 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
   UserModel mockAuditor = null;
 
   /**
-   * Get the currently logged in user.
+   * Get the auditor that will be set as createdBy for newly created JPA entities.
+	 * @see AuthUtil#getCurrentUser()
    * @return (An Java optional that resolves to) the currently logged in user as a liquido UserModel
    */
   @Override
@@ -46,7 +41,7 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
 				log.warn("Returning mock auditor "+mockAuditor.getEmail());
       return Optional.of(mockAuditor);
     }
-    return Optional.ofNullable(authUtil.getCurrentUser());
+    return authUtil.getCurrentUser();
 
 
     /*
@@ -75,7 +70,7 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
 
   }
 
-  public void setMockAuditor(@Nullable UserModel mockAuditor) {
+  public void setMockAuditor(UserModel mockAuditor) {
     if (springEnv.acceptsProfiles(Profiles.of("dev", "test"))) {
       log.debug("Setting mockauditor to "+mockAuditor);  // mockauditor may be null!!!
     }

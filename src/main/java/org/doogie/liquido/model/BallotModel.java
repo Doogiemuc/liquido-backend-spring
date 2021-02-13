@@ -57,7 +57,7 @@ public class BallotModel {
 	 */
   @NotNull
   @NonNull
-  @ManyToOne
+  @ManyToOne(fetch = FetchType.LAZY)
 	@JsonProperty("_links")   											// JSON will contain "_links.poll.href"
 	@JsonSerialize(using = PollAsLinkJsonSerializer.class)
   public PollModel poll;
