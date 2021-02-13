@@ -4,6 +4,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.graphql.TeamsGraphQL;
+import org.doogie.liquido.jwt.AuthUtil;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.rest.dto.CastVoteResponse;
@@ -147,6 +148,9 @@ public class TestDataCreator implements CommandLineRunner {
 	TestDataUtils util;
 
   @Autowired
+	AuthUtil authUtil;
+
+  @Autowired
   JdbcTemplate jdbcTemplate;
 
   @Autowired
@@ -206,7 +210,8 @@ public class TestDataCreator implements CommandLineRunner {
         }
 
       log.debug("Create test data from scratch via spring-data for DB: "+ jdbcTemplate.getDataSource().toString());
-      // The order of these methods is very important here!
+
+      // ======== The order of these seed*() methods is very important! =====
       seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX);
       util.seedAdminUser();
       auditorAware.setMockAuditor(util.user(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
@@ -214,8 +219,10 @@ public class TestDataCreator implements CommandLineRunner {
 			seedIdeas();
       seedProposals();
 			seedProxies(TestFixtures.delegations);
-			seedTeams();
-			seedPollInTeam();
+			TeamModel team = seedTeams();
+			seedPollInElaborationInTeam(team);
+			seedPollInVotingInTeam(team);
+
 			seedPollInElaborationPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
 			seedPollInVotingPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);						      // seed one poll in voting
 			PollModel poll = seedPollInVotingPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
@@ -347,10 +354,12 @@ public class TestDataCreator implements CommandLineRunner {
 		}
 	}
 
-	/** Seed teams and their admin users. And let some users join each team. */
-	public void seedTeams() throws LiquidoException {
+	/** Seed teams and their admin users. And let some users join each team.
+	 * @return*/
+	public TeamModel seedTeams() throws LiquidoException {
 		log.info("Seeding Teams with members ...");
 		String digits = DoogiesUtil.randomDigits(4);		// create unique mobile phone numbers
+		TeamModel firstTeam = null;
 		for (int i = 0; i < TestFixtures.NUM_TEAMS; i++) {
 			String teamName    = (String)TestFixtures.teams.get(i).get("teamName");
 			String adminName   = (String)TestFixtures.teams.get(i).get("adminName");
@@ -359,15 +368,57 @@ public class TestDataCreator implements CommandLineRunner {
 			String adminWebsite     = "www.liquido.vote";
 			String adminPicture     = TestFixtures.AVATAR_PREFIX + "0.png";
 			CreateOrJoinTeamResponse res = teamService.createNewTeam(teamName, adminName, adminEmail, adminMobilephone, adminWebsite, adminPicture);
+			CreateOrJoinTeamResponse joinTeamRes = null;
 			for (int j = 0; j < TestFixtures.NUM_TEAM_MEMBERS; j++) {
 				String userName    = TestFixtures.TEAM_MEMBER_NAME_PREFIX + j + " " + teamName;
 				String userEmail   = TestFixtures.TEAM_MEMBER_EMAIL_PREFIX + j + "@" + teamName + ".org";
 				String mobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits + i + j;
 				String website     = "www.liquido.vote";
 				String picture     = TestFixtures.AVATAR_PREFIX+ (j%16) + ".png";
-				teamService.joinNewTeam(res.getTeam().getInviteCode(), userName, userEmail, mobilephone, website, picture);
+				joinTeamRes = teamService.joinNewTeam(res.getTeam().getInviteCode(), userName, userEmail, mobilephone, website, picture);
 			}
+			if (firstTeam == null) firstTeam = joinTeamRes.getTeam();  // most up to date firstTeam entity, with all members, is from last joinNewTeam response
 		}
+		return firstTeam;
+	}
+
+	/**
+	 * Create on poll in the team with two proposals
+	 * @param team
+	 * @return the poll in status ELABORATION
+	 * @throws LiquidoException
+	 */
+	public PollModel seedPollInElaborationInTeam(@NonNull TeamModel team) throws LiquidoException {
+		log.info("Seeding a poll with two proposals in a team");
+		long now = System.currentTimeMillis() % 1000;
+		UserModel admin = team.getAdmins().stream().findFirst()
+			.orElseThrow(LiquidoException.notFound("need a team admin to seedPollInTeam"));
+		authUtil.authenticateInSecurityContext(admin.getId(), team.getId());  // fake login admin
+		String title = "Poll " + now +  " in Team "+team.getTeamName();
+		PollModel poll = pollService.createPoll(title, this.defaultArea, team);
+		LawModel proposal = this.createProposal("Proposal " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), this.defaultArea, admin, 2, 1);
+		pollService.addProposalToPoll(proposal, poll);
+		UserModel member = team.getMembers().stream().findFirst()
+			.orElseThrow(LiquidoException.notFound("need a team member to seedPollInTeam"));
+		authUtil.authenticateInSecurityContext(member.getId(), team.getId());  // fake login member
+		LawModel proposal2 = this.createProposal("Another prop " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), this.defaultArea, member, 2, 1);
+		poll = pollService.addProposalToPoll(proposal2, poll);
+		return poll;
+	}
+
+	/**
+	 * Create a poll in elaboration in team and start its voting phase
+	 * @param team
+	 * @return the poll in status VORING
+	 * @throws LiquidoException
+	 */
+	public PollModel seedPollInVotingInTeam(@NonNull TeamModel team) throws LiquidoException {
+		PollModel poll = this.seedPollInElaborationInTeam(team);
+		UserModel admin = team.getAdmins().stream().findFirst()
+			.orElseThrow(LiquidoException.notFound("Need a team admin to seedPollInVotingInTeam"));
+		authUtil.authenticateInSecurityContext(admin.getId(), team.getId());  // fake login admin
+		poll = pollService.startVotingPhase(poll);
+		return poll;
 	}
 
 	/**
@@ -681,24 +732,7 @@ public class TestDataCreator implements CommandLineRunner {
     }
   }
 
-  public PollModel seedPollInTeam() throws LiquidoException {
-  	log.info("Seeding a poll with two proposals in a team");
-  	long now = System.currentTimeMillis() % 1000;
-		TeamModel team = teamRepo.findAll().iterator().next();
-  	String title = "Poll " + now +  " in Team "+team.getTeamName();
-  	PollModel poll = pollService.createPoll(title, this.defaultArea, team);
-  	UserModel admin = team.getAdmins().stream().findFirst()
-			.orElseThrow(LiquidoException.notFound("need a team admin to seedPollInTeam"));
-  	LawModel proposal = this.createProposal("Proposal " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), this.defaultArea, admin, 2, 1);
-		pollService.addProposalToPoll(proposal, poll);
-		UserModel member = team.getMembers().stream().findFirst()
-			.orElseThrow(LiquidoException.notFound("need a team member to seedPollInTeam"));
-		LawModel proposal2 = this.createProposal("Another prop " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), this.defaultArea, member, 2, 1);
-		poll = pollService.addProposalToPoll(proposal2, poll);
-		return poll;
-	}
-
-	/**
+  /**
 	 * Seed one poll where the voting phase is already finished and we have a winner.
 	 * This WILL also seedVotes, so that we can finish the poll and calculate the winner via the normal service call.
 	 * @param area any area

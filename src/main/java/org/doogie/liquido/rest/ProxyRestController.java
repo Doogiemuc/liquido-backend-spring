@@ -1,6 +1,7 @@
 package org.doogie.liquido.rest;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.jwt.AuthUtil;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.RightToVoteModel;
@@ -38,7 +39,7 @@ public class ProxyRestController {
 	ProxyService proxyService;
 
 	@Autowired
-	LiquidoAuditorAware liquidoAuditorAware;
+	AuthUtil authUtil;
 
 	/**
 	 * Get own user information as HATEOAS
@@ -50,7 +51,7 @@ public class ProxyRestController {
 	PersistentEntityResource getMyUser(PersistentEntityResourceAssembler resourceAssembler) throws LiquidoException {
 		// This method MUST be implemented in a @RepositoryRestController when we want to return the user as a HATEOAS resource! Therefore it isi in ProxyRestController and not in UserRestController
 		log.trace("GET /my/user");
-		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
+		UserModel currentUser = authUtil.getCurrentUser()
 			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your own user info."));
 		log.trace("GET /my/user returns "+currentUser);
 		return resourceAssembler.toFullResource(currentUser);
@@ -68,7 +69,7 @@ public class ProxyRestController {
 	 */
 	@RequestMapping(value = "/my/proxy/{areaId}", method = RequestMethod.GET)
 	public @ResponseBody Lson getProxyInfo(@PathVariable("areaId") AreaModel area) throws LiquidoException {
-		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
+		UserModel proxy = authUtil.getCurrentUser()
 				.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "You must be logged in to get your proxy map!"));
 
 		Optional<DelegationModel> directProxy = proxyService.getDelegationToDirectProxy(area, proxy);
@@ -112,7 +113,7 @@ public class ProxyRestController {
 	@ResponseStatus(value = HttpStatus.CREATED)
 	public ResponseEntity assignProxy(@PathVariable("areaId") AreaModel area,	@RequestBody AssignProxyRequest assignProxyRequest) throws LiquidoException {
 		log.info("assignProxy " + assignProxyRequest + " in area(id=" + area.getId() + ")");
-		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
+		UserModel currentUser = authUtil.getCurrentUser()
 				.orElseThrow(()-> new  LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Cannot save Proxy. Need an authenticated user."));
 		DelegationModel delegation = proxyService.assignProxy(area, currentUser, assignProxyRequest.getToProxy(), assignProxyRequest.getVoterToken());
 		if (delegation.isDelegationRequest()) {
@@ -132,7 +133,7 @@ public class ProxyRestController {
 	@RequestMapping(value = "/my/proxy/{areaId}", method = DELETE)
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void deleteProxy(@PathVariable("areaId") AreaModel area,	@RequestParam("voterToken") String voterToken) throws LiquidoException {
-		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor()
+		UserModel currentUser = authUtil.getCurrentUser()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to delete proxy!"));
 		log.info("deleteProxy(voter="+currentUser+", area="+area+")");
 		proxyService.removeProxy(area, currentUser, voterToken);
@@ -147,7 +148,7 @@ public class ProxyRestController {
 	 */
 	@RequestMapping(value = "/my/delegations/{areaId}", method = GET)
 	public @ResponseBody Lson getDelegations(@PathVariable("areaId") AreaModel area, @RequestParam("voterToken") String voterToken) throws LiquidoException {
-		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
+		UserModel proxy = authUtil.getCurrentUser()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get delegation requests"));
 		List<DelegationModel> acceptedDelegations = proxyService.findAcceptedDirectDelegations(area, proxy);
 		List<DelegationModel> delegationRequests = proxyService.findDelegationRequests(area, proxy);
@@ -162,7 +163,7 @@ public class ProxyRestController {
 
 	@RequestMapping(value = "/my/delegations/{areaId}/accept", method = PUT)
 	public @ResponseBody Lson acceptDelegationRequests(@PathVariable("areaId") AreaModel area, @RequestBody Map bodyMap) throws LiquidoException {
-		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
+		UserModel proxy = authUtil.getCurrentUser()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to accept delegation requests."));
 		String voterToken = (String)(bodyMap.get("voterToken"));    // We must pass JSON as body because of RepositoryRestController annotaion
 		if (voterToken == null) throw new IllegalArgumentException("Need voter token to acceptDelegationRequests");
@@ -180,7 +181,7 @@ public class ProxyRestController {
 	 */
 	@RequestMapping(value = "/my/delegations/{areaId}/becomePublicProxy", method = PUT)   // PUT is idempotent, so if you PUT an object twice, it has no additional effect. And that is what we need here.
 	public ResponseEntity becomePublicProxy(@PathVariable("areaId") AreaModel area, @RequestBody Map bodyMap) throws LiquidoException {
-		UserModel proxy = liquidoAuditorAware.getCurrentAuditor()
+		UserModel proxy = authUtil.getCurrentUser()
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to become a public proxy."));
 		String voterToken = (String)(bodyMap.get("voterToken"));
 		if (voterToken == null) throw new IllegalArgumentException("Need voter token to become a public proxy");

@@ -236,7 +236,7 @@ public class CastVoteService {
 	 *      ELSE update the existing ballot's level and vote order
 	 *
 	 *  3) FOR EACH directly delegated RightToVote
-	 *              build a childBallot and recursively store this childBallot.
+	 *              build a childBallot and recursively cast this childBallot.
 	 *
 	 *  Remark: The child ballot might not be stored when there already is one with a smaller level. This is
 	 *          our recursion limit.

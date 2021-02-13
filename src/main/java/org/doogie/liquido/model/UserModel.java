@@ -4,15 +4,13 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.doogie.liquido.security.LiquidoAuthUser;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import org.springframework.lang.Nullable;
 
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.EntityListeners;
+import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * One user / voter / citizen / member of a team
@@ -21,7 +19,7 @@ import java.util.Set;
  */
 @Entity
 @Data
-@EqualsAndHashCode
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)  		    // Let spring automatically set UpdatedAt and CreatedAt
 @Table(name = "users")
@@ -44,15 +42,9 @@ public class UserModel extends BaseModel {
 	 */
 	public long authyId;
 
-	/* @Deprecated:  See TeamModel.admins and .members
-	 * Every user implicitly has {@link LiquidoAuthUser#ROLE_USER}. (This does not need to be stored in the DB. Its added by default.)
-	 * Admins will also have {@link LiquidoAuthUser#ROLE_TEAM_ADMIN} here.
-	 * (More roles by be added in future versions of LIQUIDO.)
 
-	@ElementCollection(fetch = FetchType.EAGER)
-	@CollectionTable(name="USER_ROLES")
-	public Set<String> roles = new HashSet<>();
-	*/
+	//Implementation note: A UserModel does not contain a reference to a team. Only the TeamModel has members and admins. (Helps a lot with preventing JsonBackReferences)
+
 
 	/** Username, Nickname */
 	@NotNull
@@ -60,11 +52,9 @@ public class UserModel extends BaseModel {
 	String name;
 
 	/** (optional) User's website or bio or social media profile link */
-	@Nullable
 	String website = null;
 
 	/** Avatar picture URL */
-	@Nullable
 	String picture = null;
 
 

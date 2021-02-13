@@ -1,5 +1,6 @@
 package org.doogie.liquido.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import graphql.Assert;
 import io.leangen.graphql.annotations.GraphQLQuery;
 import lombok.Data;
@@ -19,7 +20,7 @@ import java.util.stream.Collectors;
  * A Team with its admin(s) and members.
  */
 @Data
-@EqualsAndHashCode(of="id")    // Compare teams by their unique ID. teamName may change
+@EqualsAndHashCode(callSuper = true)    // Compare teams by their unique ID. teamName may change
 @Entity
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
@@ -55,9 +56,11 @@ public class TeamModel extends BaseModel {
   Set<UserModel> members = new HashSet<>();
 
 	/** The polls in this team */
-	//This is the one side of a bidirectional OneToMany relationship. Keep in mind that you then MUST add mappedBy = attribute in PollModel that maps the reverse direction
+	//This is the one side of a bidirectional OneToMany relationship. Keep in mind that you then MUST add mappedBy to map the reverse direction.
+	//And dont forget the @JsonBackReference on the other side to prevent StackOverflows when serializing a TeamModel
 	@GraphQLQuery(name = "polls")
-	@OneToMany(mappedBy = "team", cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)  // when a team is loaded also load its polls
+	@OneToMany(mappedBy = "team", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)  // when a team is loaded, then do not immediately also load all polls
+	//@JsonManagedReference
 	Set<PollModel> polls = new HashSet<>();   //BUGFIX: Changed from List to Set https://stackoverflow.com/questions/4334970/hibernate-throws-multiplebagfetchexception-cannot-simultaneously-fetch-multipl
 
 	/** Create a new Team entity */

@@ -1,6 +1,7 @@
 package org.doogie.liquido.datarepos;
 
 import lombok.extern.slf4j.Slf4j;
+import org.doogie.liquido.jwt.AuthUtil;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
@@ -22,7 +23,7 @@ public class LawEventHandler {
   LawService lawService;
 
   @Autowired
-  LiquidoAuditorAware liquidoAuditorAware;
+  AuthUtil authUtil;
 
   //BUGFIX:  All of this is only called for REST operations.   SOLUTION: Also added same logic directly into LawService.addSupporter()
   //BUGFIX 2: https://jira.spring.io/browse/DATAREST-1241
@@ -39,7 +40,8 @@ public class LawEventHandler {
    */
   @HandleBeforeLinkSave
   public void handleLawLinkSave(LawModel idea, Set<UserModel> supporters) throws LiquidoException {
-    UserModel currentUser = liquidoAuditorAware.getCurrentAuditor().orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "MUST be logged in to add a supporter"));
+    UserModel currentUser = authUtil.getCurrentUser()
+      .orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "MUST be logged in to add a supporter"));
     if (supporters.contains(idea.getCreatedBy())) {
       log.debug(idea.getCreatedBy().toStringShort()+" must not support his own proposal! "+idea);
       throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_SUPPORTER, "You cannot support your own idea or proposal!");

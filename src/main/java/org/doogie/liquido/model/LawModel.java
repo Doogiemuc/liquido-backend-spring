@@ -2,10 +2,7 @@ package org.doogie.liquido.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.*;
-import org.doogie.liquido.rest.converters.PollAsLinkJsonSerializer;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.data.rest.core.annotation.RestResource;
@@ -14,7 +11,6 @@ import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 /**
@@ -29,9 +25,8 @@ import java.util.Set;
  *
  * The title of every idea must be globally unique!
  */
-@Getter
-@Setter
-@EqualsAndHashCode(of = {"title"}, callSuper = true)
+@Data
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @RequiredArgsConstructor
 @Entity
@@ -39,8 +34,11 @@ import java.util.Set;
 @Table(name = "laws")
 public class LawModel extends BaseModel implements Comparable<LawModel> {
 
-	/* Title of an idea/proposal. Must (really!) :-) not be null. */
-	@javax.validation.constraints.NotNull
+	/**
+	 * Title of an idea/proposal.
+	 * Title must be unique throughout all proposals!
+	 */
+	@javax.validation.constraints.NotNull   // title must really not be null :-)
 	@org.springframework.lang.NonNull
 	@lombok.NonNull
 	@Column(unique = true)
@@ -103,7 +101,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
    * https://vladmihalcea.com/2017/03/29/the-best-way-to-map-a-onetomany-association-with-jpa-and-hibernate/
    *
    */
-  @ManyToOne(optional = true)
+  @ManyToOne
   //@JoinColumn(name="poll_id")  this column name is already the default
   @JsonBackReference  // necessary to prevent endless cycle when (de)serializing to/from JSON: http://stackoverflow.com/questions/20218568/direct-self-reference-leading-to-cycle-exception
 	//TODO: serialize LawModel.poll as HATEOAS link  => this has consequences for the client that in some places needs the information of the proposal's poll, eg. in LawPanel!  Solution: Add poll.numCompeting proposals as @Transient attribute
@@ -155,8 +153,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
   private static int getNumChildComments(CommentModel c) {
   	int count = 0;
   	if (c == null || c.getReplies() == null || c.getReplies().size() == 0) return 0;
-		for (Iterator<CommentModel> it = c.getReplies().iterator(); it.hasNext(); ) {
-			CommentModel reply = it.next();
+		for (CommentModel reply : c.getReplies()) {
 			count += 1 + getNumChildComments(reply);
 		}
 		return count;
@@ -170,8 +167,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 	public int getNumComments() {
   	if (this.comments == null || comments.size() == 0) return 0;
   	int count = 0;
-		for (Iterator<CommentModel> it = comments.iterator(); it.hasNext(); ) {
-			CommentModel c = it.next();
+		for (CommentModel c : comments) {
 			count += 1 + getNumChildComments(c);
 		}
 		//Optional<Integer> countStream = comments.stream().map(LawModel::getNumChildComments).reduce(Integer::sum);

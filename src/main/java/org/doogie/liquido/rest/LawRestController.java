@@ -5,6 +5,7 @@ import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
 import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.OffsetLimitPageable;
+import org.doogie.liquido.jwt.AuthUtil;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.LawProjection;
 import org.doogie.liquido.model.UserModel;
@@ -21,6 +22,7 @@ import org.springframework.hateoas.IanaLinkRelations;
 import org.springframework.hateoas.Link;
 import org.springframework.hateoas.LinkRelation;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -40,7 +42,7 @@ public class LawRestController {
 	LawService lawService;
 
 	@Autowired
-	LiquidoAuditorAware liquidoAuditorAware;
+	AuthUtil authUtil;
 
 	@Autowired
 	LawRepo lawRepo;
@@ -62,8 +64,10 @@ public class LawRestController {
 	 * @throws LiquidoException When current user is the creator of that idea
 	 */
 	@RequestMapping(value = "/laws/{ideaId}/like", method = RequestMethod.POST)
+	@PreAuthorize(AuthUtil.HAS_ROLE_USER)
 	public @ResponseBody ResponseEntity<?> addSupporter(@PathVariable(name="ideaId") LawModel idea) throws LiquidoException {
-		UserModel currentUser = liquidoAuditorAware.getCurrentAuditor().orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "MUST be logged in to add a supporter"));
+		UserModel currentUser = authUtil.getCurrentUser()
+			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "MUST be logged in to add a supporter"));
 		lawService.addSupporter(currentUser, idea);
 		return ResponseEntity.ok("Thank you for supporting this idea.");
 	}

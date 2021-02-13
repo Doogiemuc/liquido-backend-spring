@@ -67,7 +67,7 @@ public class DevRestController {
 	LiquidoProperties prop;
 
 	@Autowired
-	LiquidoAuditorAware liquidoAuditorAware;
+	AuthUtil authUtil;
 
 	/**
 	 * Get list of users for the quick login at the top right of the UI. Admin is first element (if configured)
@@ -141,7 +141,7 @@ public class DevRestController {
 		}
 		log.info("DEV Login: " + user);
 		user.setLastLogin(LocalDateTime.now());
-		userRepo.save(user);
+		user = userRepo.save(user);
 		String jwt = jwtTokenUtils.generateToken(user.getId(), team.getId());
 		return new CreateOrJoinTeamResponse(team, user, jwt);
 	}
@@ -222,9 +222,9 @@ public class DevRestController {
 		@PathVariable(name="pollId") PollModel poll,
 		@RequestParam(name="deleteProposals") boolean deleteProposals
 	) throws LiquidoException {
-		UserModel currentAuditor = liquidoAuditorAware.getCurrentAuditor()
-			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Admin must be logged in to delete a poll."));
-		log.info("DELETE " + poll + (deleteProposals ? " and all its proposals" : "") + " by "+currentAuditor.toStringShort());
+		UserModel currentUser = authUtil.getCurrentUser()
+			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.UNAUTHORIZED, "Cannot delete poll. Admin must be logged in to delete a poll!"));
+		log.info("DELETE " + poll.toString() + (deleteProposals ? " and all its proposals" : "") + " by "+currentUser.toStringShort());
 		pollService.deletePoll(poll, deleteProposals);
 		return new Lson()
 			.put("ok", "Poll(id="+poll.id+") has been DELETED")

@@ -33,7 +33,7 @@ public class TestFixtures {
 	public static final String MOBILEPHONE_PREFIX = "+4912345";
 	public static final String DEFAULT_WEBSITE = "www.liquido.me";
 
-	public static final String AVATAR_PREFIX = "/static/img/avatars/Avatar";
+	public static final String AVATAR_PREFIX = "/img/avatars/Avatar";
 	public static final String USER1_NAME = "Donald Duck";										// special name for user1
 
   public static final String USER1_EMAIL = MAIL_PREFIX+"1@liquido.de";      // testuser1 has  ID 1 in the DB !
@@ -152,8 +152,8 @@ DEBUG .(CastVoteService.java:88).createVoterTokenAndStoreRightToVote()       | c
 	public static final long USER4_DELEGATIONS = 4;   		// testuser4@liquido.de  has 4 delegations from below him
 	public static final long USER1_VOTE_COUNT_WHEN_USER4_VOTED = 3;   // When top proxy user1 votes while user4 has already voted, then his ballot counts 3 times.
 	static {
-		// fromUser, toProxy, transitive?
-		delegations.add(new String[]{TestFixtures.USER2_EMAIL, TestFixtures.USER1_EMAIL, });   // testuser2 delegates to proxy testuser1
+		// Delegations  fromUser -> toProxy
+		delegations.add(new String[]{TestFixtures.USER2_EMAIL, TestFixtures.USER1_EMAIL, });  // testuser2 delegates to proxy testuser1
 		delegations.add(new String[]{TestFixtures.USER3_EMAIL, TestFixtures.USER1_EMAIL, });
 		delegations.add(new String[]{TestFixtures.USER4_EMAIL, TestFixtures.USER1_EMAIL, });
 		delegations.add(new String[]{TestFixtures.USER5_EMAIL, TestFixtures.USER2_EMAIL, });  // 5 -> 2 requested, because user2 is not a public proxy

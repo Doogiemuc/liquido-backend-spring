@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 import org.doogie.liquido.model.LawModel;
 import org.springframework.data.domain.Sort;
-import org.springframework.lang.Nullable;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -36,7 +35,7 @@ public class LawQuery {
 	Sort.Direction direction = Sort.DEFAULT_DIRECTION;
 	List<String> sortByProperties = new ArrayList<>();
 
-	public void setStatusList(@Nullable List<LawModel.LawStatus> statusList) {
+	public void setStatusList(List<LawModel.LawStatus> statusList) {
 		this.statusList = Optional.of(statusList);
 	}
 

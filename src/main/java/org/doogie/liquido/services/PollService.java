@@ -86,6 +86,14 @@ public class PollService {
 		return savedPoll;
 	}
 
+	/**
+	 * Create a new poll inside a team. Only the admin is allowed to create a poll in a team
+	 * @param title Title of the new poll
+	 * @param area Area of the poll. All proposals will also need to be in this area.
+	 * @param team The admin's team.
+	 * @return the new poll
+	 */
+	@PreAuthorize(AuthUtil.HAS_ROLE_TEAM_ADMIN)
 	public PollModel createPoll(@NonNull String title, AreaModel area, TeamModel team) {
 		PollModel poll = this.createPoll(title, area);
 		poll.setTeam(team);
@@ -157,10 +165,11 @@ public class PollService {
   /**
    * Start the voting phase of the given poll.
    * Poll must be in elaboration phase and must have at least two proposals
-   * @param poll a poll in elaboration phase with at least two proposals
-   */
+	 * @param poll a poll in elaboration phase with at least two proposals
+	 * @return
+	 */
   @Transactional
-  public void startVotingPhase(@NonNull PollModel poll) throws LiquidoException {
+  public PollModel startVotingPhase(@NonNull PollModel poll) throws LiquidoException {
     log.info("startVotingPhase of "+poll.toString());
     if (poll.getStatus() != PollModel.PollStatus.ELABORATION)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Poll(id=\"+poll.id+\") must be in status ELABORATION");
@@ -185,6 +194,8 @@ public class PollService {
 		  log.error(msg, e);
 		  throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, msg, e);
 	  }
+
+	  return poll;
   }
 
   /** An auto-configured spring bean that gives us access to the Quartz scheduler */

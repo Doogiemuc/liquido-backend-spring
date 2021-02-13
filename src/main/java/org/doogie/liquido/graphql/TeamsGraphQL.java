@@ -14,12 +14,15 @@ import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.CreateOrJoinTeamResponse;
 import org.doogie.liquido.services.LiquidoException;
+import org.doogie.liquido.services.LiquidoException.Errors;
 import org.doogie.liquido.services.UserService;
+import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
 
 import javax.transaction.Transactional;
 import java.util.Optional;
@@ -53,8 +56,10 @@ public class TeamsGraphQL {
 	AuthUtil authUtil;
 
 
-
-
+	/**
+	 * Check if backend is available at all
+	 * @return some hello world json if everything is ok
+	 */
 	@GraphQLQuery(name = "ping")
 	public Lson pingApi() {
 		return Lson.builder("api", "LIQUIDO API is available");
@@ -69,10 +74,11 @@ public class TeamsGraphQL {
 	@GraphQLQuery(name = "team")
 	@Transactional
 	public TeamModel getOwnTeam() throws LiquidoException {
-		TeamModel team = authUtil.getCurrentTeam();
-		//TODO: lazy load team polls
-		//BUGFIX: MUST merge currentUser into current hibernate transaction https://stackoverflow.com/questions/65752757/hibernate-lazy-loading-and-springs-userdetails
-		// currentUser = entityManager.merge(currentUser);
+		TeamModel team = authUtil.getCurrentTeam()
+			.orElseThrow(LiquidoException.supply(Errors.UNAUTHORIZED, "Cannot get team. User must be logged into a team!"));
+
+		//TODO:  Do I need to call  team.getPolls() here?   Can I do this depending on what the client requested in his GraphQL query? That would be cool!
+
 		return team;
 	}
 
@@ -104,7 +110,7 @@ public class TeamsGraphQL {
 			log.info("Created new team: "+newTeam.toString());
 		} catch (DataIntegrityViolationException ex) {
 			log.debug(ex.getMessage());
-			throw new LiquidoException(LiquidoException.Errors.TEAM_WITH_SAME_NAME_EXISTS, "Cannot create new team: A team with that name ('"+teamName+"') already exists");
+			throw new LiquidoException(Errors.TEAM_WITH_SAME_NAME_EXISTS, "Cannot create new team: A team with that name ('"+teamName+"') already exists");
 		}
 		String jwt = jwtTokenUtils.generateToken(admin.getId(), newTeam.getId());
 		return new CreateOrJoinTeamResponse(newTeam, admin, jwt);
@@ -114,6 +120,9 @@ public class TeamsGraphQL {
 	/**
 	 * Join an existing team.
 	 * This can be called anonymously.
+	 *
+	 * Will throw an error, when a member tries to join with an emqail of one of the admins!
+	 * Joining more than once is idempotent. Or in simpler words: It is ok to click the invite link more than once :-)
 	 *
 	 * @param inviteCode valid invite code of the team to join
 	 * @param userName new user name
@@ -131,17 +140,23 @@ public class TeamsGraphQL {
 		@GraphQLArgument(name = "picture") String picture
 	) throws LiquidoException {
 		TeamModel team = teamRepo.findByInviteCode(inviteCode).orElseThrow(
-			() -> new LiquidoException(LiquidoException.Errors.CANNOT_JOIN_TEAM, "Invalid inviteCode '"+inviteCode+"'")
+			() -> new LiquidoException(Errors.CANNOT_JOIN_TEAM, "Invalid inviteCode '"+inviteCode+"'")
 		);
-		// If a user with that email is already in the team, then check if he has the same name.
-		Optional<UserModel> existingUser = team.getMembers().stream()
-			.filter(u -> u.email.equals(userEmail))
-			.findFirst();
+		// If an admin with that email already exists, then throw error
+		boolean adminWithSameEmail = team.getAdmins().stream().anyMatch(admin -> userEmail.equals(admin.email));
+		if (adminWithSameEmail) throw new LiquidoException(Errors.CANNOT_JOIN_TEAM, "You must not join the team as a member with this email address!");
+
+		// If a member with that email is already in the team, then check if he has the same attributes. If all match
 		UserModel newUser;
-		if (existingUser.isPresent()) {
-			if (!userName.equals(existingUser.get().getName()))
-				throw new LiquidoException(LiquidoException.Errors.CANNOT_JOIN_TEAM, "A user with that email but a different name is already in the team!");
-			newUser = existingUser.get();
+		UserModel existingMember = team.getMembers().stream()
+			.filter(u -> u.email.equals(userEmail))
+			.findFirst().orElse(null);
+		//Or that way:   Optional<UserModel> existingMember = DoogiesUtil.doesContain(team.getMembers(), member -> userEmail.equals(member.email));
+
+		if (existingMember != null) {
+			if (!ObjectUtils.nullSafeEquals(userName, existingMember.getName()) || !ObjectUtils.nullSafeEquals(mobilephone, existingMember.getMobilephone()))
+				throw new LiquidoException(Errors.CANNOT_JOIN_TEAM, "A user with that email but a different name is already in the team!");
+			newUser = existingMember;
 			log.info("User <" + userEmail + "> already is in team: " + team.toString());
 		} else {
 			// Otherwise add a new user to the team
@@ -152,7 +167,7 @@ public class TeamsGraphQL {
 				team = teamRepo.save(team);
 				log.info("User <" + userEmail + "> joined team: " + team.toString());
 			} catch (Exception e) {
-				throw new LiquidoException(LiquidoException.Errors.CANNOT_JOIN_TEAM, "Error: Cannot join team.", e);
+				throw new LiquidoException(Errors.CANNOT_JOIN_TEAM, "Error: Cannot join team.", e);
 			}
 		}
 		String jwt = jwtTokenUtils.generateToken(newUser.getId(), team.getId());
