@@ -120,13 +120,14 @@ public class TestDataUtils {
 	}
 
 	/** create a random vote Order with at least one proposal */
-	public static List<LawModel> randVoteOrder(PollModel poll) {
+	public static List<Long> randVoteOrderIds(PollModel poll) {
 		Random rand = new Random(System.currentTimeMillis());
-		List<LawModel> voteOrder = poll.getProposals().stream()
+		List<Long> voteOrder = poll.getProposals().stream()
 			.filter(p -> rand.nextInt(10) > 0)					// keep 90% of the candidates
 			.sorted((p1, p2) -> rand.nextInt(2)*2 - 1)  // compare randomly  -1 or +1
+			.map(prop -> prop.getId())
 			.collect(Collectors.toList());
-		if (voteOrder.size() == 0) voteOrder.add(poll.getProposals().iterator().next());
+		if (voteOrder.size() == 0) voteOrder.add(poll.getProposals().iterator().next().getId());
 		return voteOrder;
 	}
 

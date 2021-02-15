@@ -1,20 +1,17 @@
 package org.doogie.liquido.model;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import graphql.Assert;
 import io.leangen.graphql.annotations.GraphQLQuery;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.doogie.liquido.security.LiquidoAuthUser;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * A Team with its admin(s) and members.

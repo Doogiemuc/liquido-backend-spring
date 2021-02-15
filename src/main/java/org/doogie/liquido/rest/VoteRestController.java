@@ -6,7 +6,6 @@ import org.doogie.liquido.jwt.AuthUtil;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.rest.dto.CastVoteResponse;
-import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
@@ -130,7 +129,7 @@ public class VoteRestController {
 		Optional<UserModel> currentUser = authUtil.getCurrentUser();
 		if (currentUser.isPresent())
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast Vote. You should cast your vote anonymously. Do not send a JWT or SESSIONID in cookie.");
-		return castVoteService.castVote(castVoteRequest);            // all validity checks are done inside castVoteService.
+		return castVoteService.castVote(castVoteRequest.getVoterToken(), castVoteRequest.getPoll(), castVoteRequest.getVoteOrderIds());            // all validity checks are done inside castVoteService.
 	}
 
 

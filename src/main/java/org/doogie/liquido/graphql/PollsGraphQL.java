@@ -4,8 +4,10 @@ import io.leangen.graphql.annotations.GraphQLArgument;
 import io.leangen.graphql.annotations.GraphQLMutation;
 import io.leangen.graphql.annotations.GraphQLNonNull;
 import io.leangen.graphql.annotations.GraphQLQuery;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
+import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.TeamRepo;
 import org.doogie.liquido.jwt.AuthUtil;
@@ -21,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -44,6 +47,9 @@ public class PollsGraphQL {
 
 	@Autowired
 	TeamRepo teamRepo;
+
+	@Autowired
+	LawRepo lawRepo;
 
 	@Autowired
 	PollService pollService;
@@ -150,7 +156,7 @@ public class PollsGraphQL {
 
 	/**
 	 * Get a valid voter Token
-	 * @param area optional area otherwise default area will be used
+	 * @param areaId optional area otherwise default area will be used
 	 * @param tokenSecret secret that only the user must know!
 	 * @param becomePublicProxy if user's automatically wants to become a public proxy
 	 * @return { "voterToken": "$2ADDgg33gva...." }
@@ -158,15 +164,17 @@ public class PollsGraphQL {
 	 */
 	@GraphQLQuery(name = "voterToken")
 	@PreAuthorize(HAS_ROLE_USER)
-	public Lson getVoterToken(
-		@GraphQLArgument(name = "area") AreaModel area,
+	public String getVoterToken(
+		@GraphQLArgument(name = "areaId") Long areaId,
 		@GraphQLNonNull @GraphQLArgument(name = "tokenSecret") String tokenSecret,
 		@GraphQLArgument(name = "becomePublicProxy", defaultValue = "false") Boolean becomePublicProxy
 	) throws LiquidoException {
+		AreaModel area = getAreaOrDefault(areaId);
 		UserModel voter = authUtil.getCurrentUser()
 			.orElseThrow(LiquidoException.unauthorized("Must be logged in to getVoterToken!"));
 		String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, area, tokenSecret, becomePublicProxy);
-		return new Lson("voterToken", voterToken);
+		return voterToken;
+		//return new Lson("voterToken", voterToken);
 	}
 
 	/**
@@ -175,7 +183,7 @@ public class PollsGraphQL {
 	 * This request can be sent anonymously!
 	 *
 	 * @param pollId poll id that must exist
-	 * @param voteOrder list of proposals as sorted by the voter in his ballot
+	 * @param voteOrderIds list of proposals IDs as sorted by the voter in his ballot
 	 * @param voterToken a valid voter token
 	 * @return CastVoteResponse
 	 * @throws LiquidoException when poll.id ist not found, voterToken is invalid or voterOrder is empty.
@@ -183,22 +191,21 @@ public class PollsGraphQL {
 	@GraphQLMutation(name = "castVote", description = "Cast a vote in a poll with ballot")
 	public CastVoteResponse castVote_GraphQL(
 		@GraphQLNonNull @GraphQLArgument(name = "pollId") long pollId,
-		@GraphQLNonNull @GraphQLArgument(name = "voteOrder") List<LawModel> voteOrder,
+		@GraphQLNonNull @GraphQLArgument(name = "voteOrder") List<Long> voteOrderIds,
 		@GraphQLNonNull @GraphQLArgument(name = "voterToken") String voterToken
 	) throws LiquidoException {
 		PollModel poll = pollRepo.findById(pollId)
 			.orElseThrow(LiquidoException.notFound("Cannot cast vote. Poll(id="+pollId+") not found!"));
-		CastVoteRequest req = new CastVoteRequest(poll, voteOrder, voterToken);
-		return castVoteService.castVote(req);
+		return castVoteService.castVote(voterToken, poll, voteOrderIds);
 	}
 
 
 
 
 	/**
-	 * If areaId is null the return default area.
+	 * If areaId is null the return (lazily fetched) default area.
 	 * If areaId is given (not null) then return that area.
-	 * Default area will be lazily fetched and then cached locally
+	 *
  	 * @param areaId id of an existing area or null to fetch default area
 	 * @return the area
 	 * @throws LiquidoException when default area is not found or an area with the passed id does not exist
@@ -213,7 +220,7 @@ public class PollsGraphQL {
 
 	private AreaModel getDefaultArea() throws LiquidoException {
 		if (this.defaultArea == null) {
-			this.defaultArea = areaRepo.findByTitle(liquidoProps.getDefaultAreaTitle())
+			this.defaultArea = areaRepo.findByTitle(liquidoProps.defaultAreaTitle)
 				.orElseThrow(LiquidoException.supply(LiquidoException.Errors.INTERNAL_ERROR, "Cannot find default area!"));
 		}
 		return this.defaultArea;
