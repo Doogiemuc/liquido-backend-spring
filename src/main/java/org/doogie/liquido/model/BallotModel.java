@@ -8,6 +8,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.doogie.liquido.rest.converters.PollAsLinkJsonSerializer;
+import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.testdata.LiquidoProperties;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 
@@ -33,6 +34,9 @@ import java.util.stream.Collectors;
  *
  * Only the voter knows his own voterToken. So only he can check that this actually is his ballot.
  * This way a voter can even update his ballot as long as the voting phase is still open.
+ *
+ * There are a lot of constraints around a Ballot. As always these are not checked here in the
+ * model class but in the service class: {@link org.doogie.liquido.services.CastVoteService#castVote(String, PollModel, List)}
  *
  * BallotRepo is not exposed as REST resource. BallotModel is serialized to JSON manually. See {@link PollAsLinkJsonSerializer}
  */

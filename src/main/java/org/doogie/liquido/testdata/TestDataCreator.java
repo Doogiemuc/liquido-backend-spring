@@ -835,9 +835,8 @@ public class TestDataCreator implements CommandLineRunner {
 				auditorAware.setMockAuditor(voter);
 				String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, pollInVoting.getArea(), TestFixtures.USER_TOKEN_SECRET, TestFixtures.shouldBePublicProxy(pollInVoting.getArea(), voter));
 				auditorAware.setMockAuditor(null); // MUST cast vote anonymously!
-				List<LawModel> voteOrder = TestDataUtils.randVoteOrder(pollInVoting);
-				CastVoteRequest castVoteRequest = new CastVoteRequest(pollInVoting, voteOrder, voterToken);
-				CastVoteResponse castVoteResponse = castVoteService.castVote(castVoteRequest);
+				List<Long> voteOrderIds = TestDataUtils.randVoteOrderIds(pollInVoting);
+				CastVoteResponse castVoteResponse = castVoteService.castVote(voterToken, pollInVoting, voteOrderIds);
 				log.trace("Vote casted "+castVoteResponse);
 			} catch (LiquidoException e) {
 				log.error("Cannot seed a vote: " + e);

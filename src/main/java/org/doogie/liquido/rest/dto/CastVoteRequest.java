@@ -5,13 +5,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.PollModel;
-import org.doogie.liquido.rest.deserializer.LawModelDeserializer;
 import org.doogie.liquido.rest.deserializer.PollModelDeserializer;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Data Transfer Object (DTO) that can hold the payload for a vote that a user wants to cast.
@@ -26,10 +23,10 @@ public class CastVoteRequest {
 	@JsonDeserialize(using = PollModelDeserializer.class)
 	PollModel poll;
 
-	/** Ordered list of URIs, one for each proposal in VOTING. */
+	/** Ordered list of IDs, one for each proposal in VOTING. */
 	@NonNull
-	@JsonDeserialize(contentUsing = LawModelDeserializer.class)   		// deserialize list elements with this class
-	List<LawModel> voteOrder;
+	//@JsonDeserialize(contentUsing = LawModelDeserializer.class)   		// deserialize list elements with this class
+	List<Long> voteOrderIds;
 
 	/**
 	 * The voter's own voterToken that MUST hash to a valid checksumModel. */
@@ -38,7 +35,8 @@ public class CastVoteRequest {
 
 	@Override
 	public String toString() {
-		String proposalIds = voteOrder.stream().map(law->law.getId().toString()).collect(Collectors.joining(","));   // I love java :-) <sarcasm>   In PERL this would just simply be     $buf = join(",", @arr);
+		String proposalIds = String.join(",", voteOrderIds.toString());
+		//String proposalIds = voteOrder.stream().collect(Collectors.joining(","));   // I love java :-) <sarcasm>   In PERL this would just simply be     $buf = join(",", @arr);
 		StringBuilder buf = new StringBuilder();
 		buf.append("CastVoteRequest[");
 		buf.append("poll="+poll);

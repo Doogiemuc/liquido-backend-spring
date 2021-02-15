@@ -314,7 +314,7 @@ public class PollServiceTests  extends BaseTest {
 		String voterToken;
 		CastVoteRequest castVoteRequest;
 		UserModel voter;
-		List<LawModel> voteOrder;
+		List<Long> voteOrderIds;
 		Optional<UserModel> effectiveProxy;
 		UserModel expectedProxy;
 
@@ -326,16 +326,15 @@ public class PollServiceTests  extends BaseTest {
 		// WHEN USER1_EMAIL casts his vote with a dummy voteOrder (the topProxy)
 		voter = util.user(TestFixtures.USER1_EMAIL);
 		voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
-		voteOrder = TestDataUtils.randVoteOrder(poll);
-		castVoteRequest = new CastVoteRequest(poll, voteOrder, voterToken);
-		castVoteService.castVote(castVoteRequest);
+		voteOrderIds = TestDataUtils.randVoteOrderIds(poll);
+		castVoteService.castVote(voterToken, poll, voteOrderIds);
 
 		//  AND a USER4_EMAIL casts his vote with a dummy voteOrder (a proxy in the middle)
 		voter = util.user(TestFixtures.USER4_EMAIL);
 		voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
-		voteOrder = TestDataUtils.randVoteOrder(poll);
-		castVoteRequest = new CastVoteRequest(poll, voteOrder, voterToken);
-		castVoteService.castVote(castVoteRequest);
+		voteOrderIds = TestDataUtils.randVoteOrderIds(poll);
+		castVoteRequest = new CastVoteRequest(poll, voteOrderIds, voterToken);
+		castVoteService.castVote(voterToken, poll, voteOrderIds);
 
 		// THEN the effective proxy of USER10_EMAIL should be USER4_EMAIL (this proxy in the middle)
 		voter = util.user(TestFixtures.USER10_EMAIL);
@@ -349,9 +348,9 @@ public class PollServiceTests  extends BaseTest {
 		// WHEN VOTER7_EMAIL casts his vote with a dummy voteOrder
 		voter = util.user(TestFixtures.USER7_EMAIL);
 		voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, area, TestFixtures.USER_TOKEN_SECRET, false);
-		voteOrder = TestDataUtils.randVoteOrder(poll);
-		castVoteRequest = new CastVoteRequest(poll, voteOrder, voterToken);
-		castVoteService.castVote(castVoteRequest);
+		voteOrderIds = TestDataUtils.randVoteOrderIds(poll);
+		castVoteRequest = new CastVoteRequest(poll, voteOrderIds, voterToken);
+		castVoteService.castVote(voterToken, poll, voteOrderIds);
 
 		// THEN the effective proxy of USER12_EMAIL should be USER7_EMAIL (his non-transitive direct proxy)
 		voter = util.user(TestFixtures.USER12_EMAIL);

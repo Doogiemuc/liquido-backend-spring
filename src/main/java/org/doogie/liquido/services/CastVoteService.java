@@ -14,10 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * This service contains all the voting logic for casting a vote.
@@ -49,7 +47,7 @@ public class CastVoteService {
 	LiquidoRestUtils restUtils;
 
 	@Autowired
-	LiquidoProperties prop;
+	LiquidoProperties liquidoProps;
 
   // Some more resources around secure authentication with tokens:
 	//TODO: create really secure voterTokens like this: U2F  https://blog.trezor.io/why-you-should-never-use-google-authenticator-again-e166d09d4324
@@ -151,7 +149,7 @@ public class CastVoteService {
 	 * @param rightToVote
 	 */
 	public void refreshRightToVote(RightToVoteModel rightToVote) {
-		rightToVote.setExpiresAt(LocalDateTime.now().plusHours(prop.rightToVoteExpirationHours));
+		rightToVote.setExpiresAt(LocalDateTime.now().plusHours(liquidoProps.rightToVoteExpirationHours));
 		rightToVoteRepo.save(rightToVote);
 	}
 
@@ -195,26 +193,54 @@ public class CastVoteService {
 	/**
 	 * User casts own vote. Keep in mind, that this method is called anonymously. No UserModel involved.
 	 * If that user is a proxy for other voters, then their ballots will also be added automatically.
-	 * @param castVoteRequest which contains the poll that we want to vote for and
-	 *                        the anonymous voterToken and the preferred voteOrder
+	 * @param voterToken anonymous voterToken. Voter must have fetched a valid token via getVoterToken before casting this vote.
+	 * @param poll the poll to cast the vote in.
+	 * @param voteOrderIds list of IDs as sorted by the user. IDs must of course come from poll.proposals. No ID may appear more than once!
 	 * @return CastVoteResponse with ballot and the voteCount how often the vote was actually counted for this proxy. (Some voters might already have voted on their own.)
 	 * @throws LiquidoException when voterToken is invalid or there is <b>anything</b> suspicious with the ballot
 	 */
 	@Transactional
-	public CastVoteResponse castVote(CastVoteRequest castVoteRequest) throws LiquidoException {
-		log.info("castVote: "+ castVoteRequest);
-		if (castVoteRequest.getPoll() == null || castVoteRequest.getPoll().getId() == null)
+	public CastVoteResponse castVote(String voterToken, PollModel poll, List<Long> voteOrderIds) throws LiquidoException {
+		log.info("castVote(poll="+poll+", voteOrderIds="+voteOrderIds+")");
+
+		// CastVoteRequest must contain a poll
+		if (poll == null || poll.getId() == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Need poll to cast vote");
-		if (DoogiesUtil.hasText(castVoteRequest.getVoterToken()))
+
+		// Poll must be in status voting
+		if (!PollModel.PollStatus.VOTING.equals(poll.getStatus()))
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Poll must be in status VOTING");
+
+		// Sanity check voterToken (computational expensive thorough check will be done below)
+		if (DoogiesUtil.hasText(voterToken))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Need voterToken to cast vote");
-		if (castVoteRequest.getVoteOrder() == null || castVoteRequest.getVoteOrder().size() == 0)
+
+		// voterOrder must contain at least one element
+		if (voteOrderIds == null || voteOrderIds.size() == 0)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Need voteOrder to cast vote");
 
+		// Convert voteOrderIds to list of actual LawModels from poll.
+		// Therefore voteOrderIds must only contain proposal.ids from this poll and it must not not contain any ID more than once!
+		List<LawModel> voteOrder = new ArrayList<>();
+		Map<Long, LawModel> pollProposals = new HashMap<>();
+		for (LawModel prop : poll.getProposals()) {
+			pollProposals.put(prop.getId(), prop);
+		}
+
+		for (Long propId : voteOrderIds) {
+			LawModel prop = pollProposals.get(propId);
+			if (prop == null)
+				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "All proposal you want to vote for must be from poll(id="+poll.id+"). Proposal(id="+propId+") isn't");
+			if (voteOrder.contains(prop))
+				throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Your voteOrder must not contain any proposal twice! Proposal(id="+ propId+") appears twice.");
+			voteOrder.add(prop);
+		}
+
 		// Validate voterToken against stored RightToVotes
-		RightToVoteModel rightToVoteModel = isVoterTokenValid(castVoteRequest.getVoterToken());
+		RightToVoteModel rightToVoteModel = isVoterTokenValid(voterToken);
 
 		// Create new ballot for the voter himself at level 0
-		BallotModel newBallot = new BallotModel(castVoteRequest.getPoll(), 0, castVoteRequest.getVoteOrder(), rightToVoteModel);
+		BallotModel newBallot = new BallotModel(poll, 0, voteOrder, rightToVoteModel);
 
 		// check this ballot and recursive cast ballots for delegated rightToVotes
 		CastVoteResponse castVoteResponse = castVoteRec(newBallot);
@@ -285,7 +311,7 @@ public class CastVoteService {
 			if (childRes != null) voteCount += 1 + childRes.getVoteCount();
 		}
 
-		// voteCount does not include the proxies own ballot
+		// voteCount does not include the voters (or proxies) own ballot
 		return new CastVoteResponse(savedBallot, voteCount);
 	}
 
@@ -350,7 +376,7 @@ public class CastVoteService {
 	 * @return the BCrypt hashed voterToken.
 	 */
 	private String calcVoterToken(Long userId, String userTokenSecret, Long areaId) {
-		return BCrypt.hashpw(userId + userTokenSecret + areaId + prop.bcrypt.secret, prop.bcrypt.salt);
+		return BCrypt.hashpw(userId + userTokenSecret + areaId + liquidoProps.bcrypt.secret, liquidoProps.bcrypt.salt);
 	}
 
 	/**
@@ -362,7 +388,7 @@ public class CastVoteService {
 	 * @return hashedVoterToken = BCrypt.hashpw(voterToken + serverSecret, bcryptSalt)
 	 */
 	private String calcHashedVoterToken(String voterToken) {
-		return BCrypt.hashpw(voterToken + prop.bcrypt.secret, prop.bcrypt.salt);
+		return BCrypt.hashpw(voterToken + liquidoProps.bcrypt.secret, liquidoProps.bcrypt.salt);
 	}
 
 }
