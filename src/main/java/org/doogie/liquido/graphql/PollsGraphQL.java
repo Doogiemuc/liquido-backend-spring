@@ -191,7 +191,7 @@ public class PollsGraphQL {
 	@GraphQLMutation(name = "castVote", description = "Cast a vote in a poll with ballot")
 	public CastVoteResponse castVote_GraphQL(
 		@GraphQLNonNull @GraphQLArgument(name = "pollId") long pollId,
-		@GraphQLNonNull @GraphQLArgument(name = "voteOrder") List<Long> voteOrderIds,
+		@GraphQLNonNull @GraphQLArgument(name = "voteOrderIds") List<Long> voteOrderIds,
 		@GraphQLNonNull @GraphQLArgument(name = "voterToken") String voterToken
 	) throws LiquidoException {
 		PollModel poll = pollRepo.findById(pollId)
