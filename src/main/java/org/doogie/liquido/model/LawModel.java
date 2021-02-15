@@ -30,9 +30,12 @@ import java.util.Set;
 @NoArgsConstructor
 @RequiredArgsConstructor
 @Entity
-@EntityListeners(AuditingEntityListener.class)  // this is necessary so that UpdatedAt and CreatedAt are handled.
+@EntityListeners(AuditingEntityListener.class)  // Spring can automatically set UpdatedAt and CreatedAt
 @Table(name = "laws")
 public class LawModel extends BaseModel implements Comparable<LawModel> {
+
+	//MAYBE: Rename LawModel to ProposalModel
+	//TODO: Add a Proposal.UUID   Clients shouldn't use our DB internal ID in castVoteRequests
 
 	/**
 	 * Title of an idea/proposal.
