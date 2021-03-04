@@ -25,11 +25,11 @@ import java.util.Set;
  *
  * The title of every idea must be globally unique!
  */
-@Data
-@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
-@NoArgsConstructor
-@RequiredArgsConstructor
-@Entity
+@Data		                     // Lombok is so cool. This automatically creates getters, setters, equals() and hashCode().
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)  // tune creation of equals(): only compare by database "ID" (in BaseModel)
+@NoArgsConstructor           // spring needs a no ArgConstructor
+@RequiredArgsConstructor     // But then @Data does not create the RequiredArgsConstructor anymore. So we need to ad this explicitly.
+@Entity                      // This is a spring JPA entity
 @EntityListeners(AuditingEntityListener.class)  // Spring can automatically set UpdatedAt and CreatedAt
 @Table(name = "laws")
 public class LawModel extends BaseModel implements Comparable<LawModel> {

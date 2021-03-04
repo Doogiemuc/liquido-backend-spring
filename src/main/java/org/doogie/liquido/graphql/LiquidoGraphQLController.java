@@ -9,6 +9,7 @@ import graphql.schema.GraphQLSchema;
 import io.leangen.graphql.GraphQLSchemaGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.services.LiquidoException;
+import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.validation.constraints.NotNull;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -77,8 +78,8 @@ public class LiquidoGraphQLController {
 	 * But most GraphQL query resolver will need an authenticated user (via JWT)
 	 * @param body request body with GraphQL {query: "..."}
 	 * @param request the raw HttpServletRequest (POST)
-	 * @return
-	 * @throws LiquidoException
+	 * @return The result of the GraphQL query
+	 * @throws LiquidoException for GraphQL Syntax error, unauthorized or any other exception
 	 */
 	@PostMapping(value = "/graphql")
 	public Map<String,Object> execute(@RequestBody Map<String, String> body, HttpServletRequest request) throws LiquidoException {
@@ -97,7 +98,10 @@ public class LiquidoGraphQLController {
 					throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, msg, ex);
 				}
 			}
-			throw new LiquidoException(LiquidoException.Errors.GRAPHQL_ERROR, msg, ex);
+			// In a graphQL world the request URL is always the same.
+			// But our awesome LiquidoException can add the request body to the error response.
+			// So the caller knows which of his GraphQL queries or mutations resulted in this error.
+			throw new LiquidoException(LiquidoException.Errors.GRAPHQL_ERROR, msg, null, body);
 		}
 
 		return result.getData();
