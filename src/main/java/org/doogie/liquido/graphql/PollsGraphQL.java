@@ -4,7 +4,6 @@ import io.leangen.graphql.annotations.GraphQLArgument;
 import io.leangen.graphql.annotations.GraphQLMutation;
 import io.leangen.graphql.annotations.GraphQLNonNull;
 import io.leangen.graphql.annotations.GraphQLQuery;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.LawRepo;
@@ -12,18 +11,15 @@ import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.TeamRepo;
 import org.doogie.liquido.jwt.AuthUtil;
 import org.doogie.liquido.model.*;
-import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.rest.dto.CastVoteResponse;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.testdata.LiquidoProperties;
-import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -162,7 +158,7 @@ public class PollsGraphQL {
 	 * @return { "voterToken": "$2ADDgg33gva...." }
 	 * @throws LiquidoException when user is not logged into a team
 	 */
-	@GraphQLQuery(name = "voterToken")
+	@GraphQLQuery(name = "voterToken", description = "Get voter's the secret voterToken")
 	@PreAuthorize(HAS_ROLE_USER)
 	public String getVoterToken(
 		@GraphQLArgument(name = "areaId") Long areaId,
@@ -199,7 +195,58 @@ public class PollsGraphQL {
 		return castVoteService.castVote(voterToken, poll, voteOrderIds);
 	}
 
+	/**
+	 * Start the voting Phase of a poll
+	 * @param pollId poll.id
+	 * @return the poll in VOTING
+	 * @throws LiquidoException when voting phase cannot yet be started
+	 */
+	@GraphQLMutation(name = "startVotingPhase", description = "Start voting phase of a poll")
+	@PreAuthorize(HAS_ROLE_TEAM_ADMIN)
+	public PollModel startVotingPhase_GraphQL(
+		@GraphQLArgument(name = "pollId") @GraphQLNonNull long pollId
+	) throws LiquidoException {
+		PollModel poll = pollRepo.findById(pollId)
+			.orElseThrow(LiquidoException.notFound("Cannot start voting phase. Poll(id="+pollId+") not found!"));
+		return pollService.startVotingPhase(poll);
+	}
 
+	/**
+	 * Finish the voting phase of a poll
+	 * @param pollId poll.id
+	 * @return the winning law
+	 * @throws LiquidoException when poll is not in status voting
+	 */
+	@GraphQLMutation(name = "finishVotingPhase", description = "Finish voting phase of a poll")
+	@PreAuthorize(HAS_ROLE_TEAM_ADMIN)
+	public LawModel finishVotingPhase_GraphQL(
+		@GraphQLArgument(name = "pollId") @GraphQLNonNull long pollId
+	) throws LiquidoException {
+		PollModel poll = pollRepo.findById(pollId)
+			.orElseThrow(LiquidoException.notFound("Cannot start voting phase. Poll(id="+pollId+") not found!"));
+		return pollService.finishVotingPhase(poll);
+	}
+
+	/**
+	 * Get the ballot of a voter in a poll, if the voter has already casted one.
+	 * @param voterToken voter's secret voterToken
+	 * @param pollId poll.id
+	 * @return the voter's ballot if there is one
+	 * @throws LiquidoException when voterToken is invalid
+	 */
+	@GraphQLQuery(name = "ballot", description = "Get the ballot of a voter in a poll, if the voter has already casted one.")
+	@PreAuthorize(HAS_ROLE_USER)
+	public Optional<BallotModel> getBallot(
+		@GraphQLArgument(name = "voterToken") String voterToken,
+		@GraphQLArgument(name = "pollId") @GraphQLNonNull long pollId
+	) throws LiquidoException {
+		PollModel poll = pollRepo.findById(pollId)
+			.orElseThrow(LiquidoException.notFound("Cannot start voting phase. Poll(id="+pollId+") not found!"));
+		return pollService.getBallotForVoterToken(poll, voterToken);
+	}
+
+
+	// ============= Utility methods ========
 
 
 	/**

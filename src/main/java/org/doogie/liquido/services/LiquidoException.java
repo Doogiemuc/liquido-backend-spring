@@ -4,6 +4,7 @@ import com.mysql.cj.x.protobuf.MysqlxDatatypes;
 import org.doogie.liquido.util.Lson;
 import org.springframework.http.HttpStatus;
 
+import java.util.Map;
 import java.util.function.Supplier;
 
 /**
@@ -14,7 +15,15 @@ import java.util.function.Supplier;
  */
 public class LiquidoException extends Exception {
 
+	/** LIQUIDO error code */
   Errors error;
+
+  /**
+	 * Additional key/value payload that can be added to the exception.
+	 * Do not add sensitive data to this!!!
+	 * This data will be serialized to the resulting JSON at will be returned to the client.
+	 */
+  Map payload;
 
 	/**
 	 * These codes are pretty fine grained. The idea here is that the client can show
@@ -91,6 +100,12 @@ public class LiquidoException extends Exception {
 	  this.error = errCode;
   }
 
+	public LiquidoException(Errors errCode, String msg, Throwable childException, Map payload) {
+		this(errCode, msg, childException);
+		this.payload = payload;
+	}
+
+
 	/**
 	 * This can be used like this
 	 * <pre>Optional.orElseThrow(LiquidoException.notFound("not found"))</pre>
@@ -134,8 +149,8 @@ public class LiquidoException extends Exception {
 			.put("httpStatus", this.getHttpResponseStatus().value())
 		  .put("httpStatusName", this.getHttpResponseStatus().getReasonPhrase());
 
-		if (this.getCause() != null)
-			lson.put("cause", this.getCause().toString());
+		if (this.getCause() != null) lson.put("cause", this.getCause().toString());
+		if (this.payload != null && payload.size() > 0) lson.put("liquidoErrorPayload", this.payload);
 
 		return lson;
 	}
