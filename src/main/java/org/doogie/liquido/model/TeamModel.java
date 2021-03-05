@@ -54,7 +54,7 @@ public class TeamModel extends BaseModel {
 
 	/** The polls in this team */
 	//This is the one side of a bidirectional OneToMany relationship. Keep in mind that you then MUST add mappedBy to map the reverse direction.
-	//And dont forget the @JsonBackReference on the other side to prevent StackOverflows when serializing a TeamModel
+	//And don't forget the @JsonBackReference on the many-side of the relation (in PollModel) to prevent StackOverflowException when serializing a TeamModel
 	@GraphQLQuery(name = "polls")
 	@OneToMany(mappedBy = "team", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)  // when a team is loaded, then do not immediately also load all polls
 	//@JsonManagedReference

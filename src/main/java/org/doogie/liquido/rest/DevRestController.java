@@ -27,11 +27,13 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * This controller is only available for development and testing
@@ -122,23 +124,50 @@ public class DevRestController {
 	 * @throws LiquidoException when token is invalid or no user with that mobile is phone
 	 */
 	@RequestMapping(path = "/dev/getJWT", produces = MediaType.APPLICATION_JSON_VALUE)
+	@Transactional
 	public CreateOrJoinTeamResponse devLogin(
 		@RequestParam("mobile") Optional<String> mobile,
-		@RequestParam("email") String email,
-		@RequestParam("teamName") String teamName,
+		@RequestParam("email") Optional<String> emailOpt,
+		@RequestParam("teamName") Optional<String> teamName,
+		@RequestParam("teamId") Optional<String> teamId,
 		@RequestParam("token") String token
 	) throws LiquidoException {
 		if (!token.equals(prop.devLoginToken))
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Dev Login failed. Token for mobile="+mobile+" is invalid!");
-		UserModel user;
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Dev Login failed. Token is invalid!");
+
+		UserModel user = null;
 		TeamModel team = null;
-		if (email != null && teamName != null) {
-			user = userRepo.findByEmail(email).orElseThrow(LiquidoException.notFound("DevLogin: User <" + email + "> not found"));
-			team = teamRepo.findByTeamName(teamName).orElseThrow(LiquidoException.notFound("DevLogin: Team <" + teamName + "> not found"));
-		} else {
-			user = userRepo.findByMobilephone(mobile.get())
-				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "DevLogin: user for mobile phone " + mobile + " not found."));
+
+		if (teamName.isPresent()) {
+			team = teamRepo.findByTeamName(teamName.get())
+				.orElseThrow(LiquidoException.notFound("DevLogin: Cannot find team.name="+teamName.get()));
 		}
+		if (teamId.isPresent()) {
+			team = teamRepo.findById(Long.valueOf(teamId.get()))
+				.orElseThrow(LiquidoException.notFound("DevLogin: Cannot find team.id="+teamId.get()));
+		}
+		if (emailOpt.isPresent()) {
+			if (team != null) {
+				user = Stream.concat(team.getAdmins().stream(), team.getMembers().stream()).filter(u -> u.email.equals(emailOpt.get())).findFirst()
+					.orElseThrow(LiquidoException.notFound("Cannot find an admin or member with email="+emailOpt+" in team "+team.getTeamName()));
+			} else {
+				user = userRepo.findByEmail(emailOpt.get())
+					.orElseThrow(LiquidoException.notFound("Cannot find a user with email="+emailOpt.get()));
+			}
+		}
+		if (mobile.isPresent()) {
+			user = userRepo.findByMobilephone(mobile.get())
+				.orElseThrow(LiquidoException.notFound("Cannot find a user with mobile="+mobile.get()));
+		}
+
+		// If nothing is given, then simply login the first member of any team.
+		if (user == null) {
+			log.debug("DevLogin: Just any user in any team");
+			team = teamRepo.findAll(new OffsetLimitPageable(0,1)).get().findFirst()
+				.orElseThrow(LiquidoException.notFound("Cannot find ANY team!"));
+			user = team.getMembers().iterator().next();
+		}
+
 		log.info("DEV Login: " + user);
 		user.setLastLogin(LocalDateTime.now());
 		user = userRepo.save(user);

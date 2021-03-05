@@ -105,6 +105,7 @@ public class PollModel extends BaseModel {
 	Matrix duelMatrix = null;
 
 	//Implementation note: A poll does not contain a link to its BallotModels. We do not want to expose the ballots while the voting phase is still running.
+	// But clients can get the number of already casted ballots.
 
   /** return the number of competing proposals */
   public int getNumCompetingProposals() {

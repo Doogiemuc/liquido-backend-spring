@@ -6,7 +6,6 @@ import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.graphql.TeamsGraphQL;
 import org.doogie.liquido.jwt.AuthUtil;
 import org.doogie.liquido.model.*;
-import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.rest.dto.CastVoteResponse;
 import org.doogie.liquido.rest.dto.CreateOrJoinTeamResponse;
 import org.doogie.liquido.security.LiquidoAuditorAware;
@@ -219,14 +218,20 @@ public class TestDataCreator implements CommandLineRunner {
 			seedIdeas();
       seedProposals();
 			seedProxies(TestFixtures.delegations);
-			TeamModel team = seedTeams();
-			seedPollInElaborationInTeam(team);
-			seedPollInVotingInTeam(team);
+
+			// Users, Proposals and Polls in Teams for Mobile app
+			TeamModel team1 = seedTeam(TestFixtures.TEAM1_NAME);
+			for (int i = 1; i < TestFixtures.NUM_TEAMS; i++) {
+				seedTeam(TestFixtures.TEAM_NAME_PREFIX + i);
+			}
+			seedPollInElaborationInTeam(team1);
+			PollModel pollInTeam = seedPollInVotingInTeam(team1);
+			seedVotes(pollInTeam, team1.getMembers(), TestFixtures.NUM_TEAM_MEMBERS);
 
 			seedPollInElaborationPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
 			seedPollInVotingPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);						      // seed one poll in voting
 			PollModel poll = seedPollInVotingPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
-			seedVotes(poll, TestFixtures.NUM_VOTES);
+			seedVotes(poll, util.usersMap.values(), TestFixtures.NUM_VOTES);
 			seedPollFinished(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
       seedLaws();
       auditorAware.setMockAuditor(null);
@@ -356,30 +361,26 @@ public class TestDataCreator implements CommandLineRunner {
 
 	/** Seed teams and their admin users. And let some users join each team.
 	 * @return*/
-	public TeamModel seedTeams() throws LiquidoException {
-		log.info("Seeding Teams with members ...");
-		String digits = DoogiesUtil.randomDigits(4);		// create unique mobile phone numbers
-		TeamModel firstTeam = null;
-		for (int i = 0; i < TestFixtures.NUM_TEAMS; i++) {
-			String teamName    = (String)TestFixtures.teams.get(i).get("teamName");
-			String adminName   = (String)TestFixtures.teams.get(i).get("adminName");
-			String adminEmail  = (String)TestFixtures.teams.get(i).get("adminEmail");
-			String adminMobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits + i;
-			String adminWebsite     = "www.liquido.vote";
-			String adminPicture     = TestFixtures.AVATAR_PREFIX + "0.png";
-			CreateOrJoinTeamResponse res = teamService.createNewTeam(teamName, adminName, adminEmail, adminMobilephone, adminWebsite, adminPicture);
-			CreateOrJoinTeamResponse joinTeamRes = null;
-			for (int j = 0; j < TestFixtures.NUM_TEAM_MEMBERS; j++) {
-				String userName    = TestFixtures.TEAM_MEMBER_NAME_PREFIX + j + " " + teamName;
-				String userEmail   = TestFixtures.TEAM_MEMBER_EMAIL_PREFIX + j + "@" + teamName + ".org";
-				String mobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits + i + j;
-				String website     = "www.liquido.vote";
-				String picture     = TestFixtures.AVATAR_PREFIX+ (j%16) + ".png";
-				joinTeamRes = teamService.joinNewTeam(res.getTeam().getInviteCode(), userName, userEmail, mobilephone, website, picture);
-			}
-			if (firstTeam == null) firstTeam = joinTeamRes.getTeam();  // most up to date firstTeam entity, with all members, is from last joinNewTeam response
+	public TeamModel seedTeam(String teamName) throws LiquidoException {
+		log.info("Seeding a Team with members ...");
+		String digits = DoogiesUtil.randomDigits(5);
+		String adminName        = TestFixtures.TEAM_ADMIN_NAME_PREFIX + " of " + teamName;
+		String adminEmail       = TestFixtures.TEAM_ADMIN_EMAIL_PREFIX + "@" + teamName + ".org";
+		String adminMobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits; // create unique mobile phone numbers!
+		String adminWebsite     = "www.liquido.vote";
+		String adminPicture     = TestFixtures.AVATAR_PREFIX + "0.png";
+		CreateOrJoinTeamResponse res = teamService.createNewTeam(teamName, adminName, adminEmail, adminMobilephone, adminWebsite, adminPicture);
+		CreateOrJoinTeamResponse joinTeamRes = null;
+		for (int j = 0; j < TestFixtures.NUM_TEAM_MEMBERS; j++) {
+			String userName    = TestFixtures.TEAM_MEMBER_NAME_PREFIX + j + " " + teamName;
+			String userEmail   = TestFixtures.TEAM_MEMBER_EMAIL_PREFIX + j + "@" + teamName + ".org";
+			String mobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits + j;
+			String website     = "www.liquido.vote";
+			String picture     = TestFixtures.AVATAR_PREFIX+ (j%16) + ".png";
+			joinTeamRes = teamService.joinNewTeam(res.getTeam().getInviteCode(), userName, userEmail, mobilephone, website, picture);
 		}
-		return firstTeam;
+
+		return joinTeamRes.getTeam(); // most up to date firstTeam entity, with all members, is from last joinNewTeam response
 	}
 
 	/**
@@ -758,7 +759,7 @@ public class TestDataCreator implements CommandLineRunner {
 			util.fakeUpdatedAt(poll, 1);
 
 			//----- seed Votes
-			seedVotes(poll, TestFixtures.NUM_VOTES);
+			seedVotes(poll, util.usersMap.values(), TestFixtures.NUM_VOTES);
 
 			//----- end voting Phase
 			LawModel winner = pollService.finishVotingPhase(poll);
@@ -820,16 +821,16 @@ public class TestDataCreator implements CommandLineRunner {
 	 * @param pollInVoting
 	 * @param numVotes
 	 */
-  public void seedVotes(PollModel pollInVoting, int numVotes) {
+  public void seedVotes(PollModel pollInVoting, Collection<UserModel> voters, int numVotes) {
     log.info("Seeding votes for "+pollInVoting);
-    if (TestFixtures.NUM_USERS < numVotes)
+    if (voters.size() < numVotes)
     	throw new RuntimeException("Cannot seed "+numVotes+" votes, because there are only "+TestFixtures.NUM_USERS+" test usersMap.");
     if (!PollModel.PollStatus.VOTING.equals(pollInVoting.getStatus()))
 			throw new RuntimeException("Cannot seed votes. Poll must be in status "+ PollModel.PollStatus.VOTING);
   	if (pollInVoting.getNumCompetingProposals() < 2) throw new RuntimeException("Cannot seed votes. Poll in voting must have at least two proposals.");
 
-  	// for the first n users
-		util.usersMap.values().stream().limit(numVotes).forEach(voter -> {
+  	// for the first n voters
+		voters.stream().limit(numVotes).forEach(voter -> {
 			// we use CastVoteService to get a voterToken and cast our vote with a random voteOrder
 			try {
 				auditorAware.setMockAuditor(voter);

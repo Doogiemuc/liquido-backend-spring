@@ -74,6 +74,7 @@ public class HttpBaseTest extends BaseTest {
 			.build();
 	}
 
+	/** old way of logging in a user without a team. Used in web only. */
 	public void loginUserJWT(String userEmail) {
 		UserModel user = userRepo.findByEmail(userEmail).orElseThrow(() -> new RuntimeException("Cannot loginUserJWT. Cannot find user with email="+userEmail));
 		this.loginUserJWT(user.getId(), null);

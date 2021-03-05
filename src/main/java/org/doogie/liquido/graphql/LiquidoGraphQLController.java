@@ -6,11 +6,17 @@ import graphql.GraphQL;
 import graphql.GraphQLError;
 import graphql.execution.AsyncExecutionStrategy;
 import graphql.schema.GraphQLSchema;
+import io.leangen.graphql.ExtendedGeneratorConfiguration;
+import io.leangen.graphql.ExtensionProvider;
 import io.leangen.graphql.GraphQLSchemaGenerator;
+import io.leangen.graphql.metadata.InputField;
+import io.leangen.graphql.metadata.strategy.value.InputFieldBuilder;
+import io.leangen.graphql.metadata.strategy.value.InputFieldBuilderParams;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,8 +24,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
+import java.lang.reflect.AnnotatedType;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * GraphQL controller that handles POST requests to GraphQL endpoint.
@@ -43,6 +51,7 @@ public class LiquidoGraphQLController {
 			.withBasePackages("org.doogie.liquido") 			//not mandatory but strongly recommended to set your "root" packages
 			.withOperationsFromSingleton(teamsGraphQL, TeamsGraphQL.class)
 			.withOperationsFromSingleton(pollsGraphQL, PollsGraphQL.class)
+			.withOutputConverters()
 			.generate();
 
 		this.graphQL = new GraphQL.Builder(schema)
@@ -71,7 +80,6 @@ public class LiquidoGraphQLController {
 
 		 */
 	}
-
 
 	/**
 	 * HTTP endpoint for graphQL queries. The /graphql endpoint itself is public.

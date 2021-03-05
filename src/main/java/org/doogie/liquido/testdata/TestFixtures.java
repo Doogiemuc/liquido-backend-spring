@@ -34,7 +34,7 @@ public class TestFixtures {
 	public static final String DEFAULT_WEBSITE = "www.liquido.me";
 
 	public static final String AVATAR_PREFIX = "/img/avatars/Avatar";
-	public static final String USER1_NAME = "Donald Duck";										// special name for user1
+	public static final String USER1_NAME = "Donald Duck";										// Special name for user1
 
   public static final String USER1_EMAIL = MAIL_PREFIX+"1@liquido.de";      // testuser1 has  ID 1 in the DB !
   public static final String USER2_EMAIL = MAIL_PREFIX+"2@liquido.de";
@@ -54,25 +54,12 @@ public class TestFixtures {
 	public static final String USER16_EMAIL = MAIL_PREFIX+"16@liquido.de";
 
 	// Teams and their admins
+	public static final String TEAM1_NAME = "TeamOne";         // First Team has a fixed name that is used in tests
 	public static final String TEAM_NAME_PREFIX = "TestTeam";
 	public static final String TEAM_ADMIN_NAME_PREFIX = "Admin";
-	public static final String TEAM_ADMIN_EMAIL_PREFIX = "teamadmin";  // teamadmin4711@TestTeam0.org
+	public static final String TEAM_ADMIN_EMAIL_PREFIX = "admin";  // e.g. admin4711@TestTeam0.org
 	public static final String TEAM_MEMBER_NAME_PREFIX = "Member";
 	public static final String TEAM_MEMBER_EMAIL_PREFIX = "member";
-	public static List<Lson> teams;
-
-	static {
-		teams = new ArrayList<>();
-		for (int i = 0; i < NUM_TEAMS; i++) {
-			String teamName = TEAM_NAME_PREFIX + i;
-			Lson team = new Lson()
-				.put("teamName", teamName)
-				.put("adminName", TEAM_ADMIN_NAME_PREFIX + " " + TEAM_NAME_PREFIX + i)
-				.put("adminEmail", TEAM_ADMIN_EMAIL_PREFIX + i +"@" + teamName + ".org");
-			teams.add(team);
-		}
-	}
-
 
 	// Ideas
 	public static final String IDEA_0_TITLE = "Idea 0 title from TestFixtures";

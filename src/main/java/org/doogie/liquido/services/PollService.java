@@ -322,6 +322,15 @@ public class PollService {
 	}
 
 	/**
+	 * Get the number of already casted ballots of a currently running poll in VOTING.
+	 * @param poll a poll in VOTING
+	 * @return the number of casted ballots.
+	 */
+	public long getNumCastedBallots(PollModel poll) {
+		return ballotRepo.countByPoll(poll);
+	}
+
+	/**
 	 * Find the ballot that a user has casted in a poll. Since every ballot is anonymous, we need the user's voterToken to find the ballot.
 	 * The voterToken will be verified.
 	 *
