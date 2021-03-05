@@ -10,13 +10,10 @@ import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.LawService;
-import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.HttpBaseTest;
-import org.doogie.liquido.test.testUtils.WithMockTeamUser;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.Lson;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,34 +44,31 @@ public class GraphQLTests extends HttpBaseTest {
 	@Autowired
 	PollRepo pollRepo;
 
+	/** all test cases will run against this team */
 	TeamModel team;
-	UserModel admin;
-	UserModel member;
+
+	private final String GraphQLPath = "/graphql";
+
 
 	@PostConstruct
-	public void initDefaults() throws LiquidoException {
-		String teamName = (String)TestFixtures.teams.get(0).get("teamName");
-		this.team   = teamRepo.findByTeamName(teamName)
-			.orElseThrow(LiquidoException.notFound("Cannot find time with name "+teamName));
-		this.admin  = team.getAdmins().iterator().next();
-		this.member = team.getMembers().iterator().next();
+	public void loadTeamTestee() {
+		this.team = teamRepo.findAll(new OffsetLimitPageable(0, 1)).iterator().next();
 	}
 
-	/**
-	 * By default login the admin of TestTeam0.
-	 */
-	@Before
-	public void beforeEachTest() {
-		this.loginUserJWT(admin.getId(), team.getId());
+	public void loginTeamAdmin() {
+		this.loginUserJWT(team.getAdmins().iterator().next().getId(), team.getId());
 	}
 
-	String GraphQLPath = "/graphql";
+	public void loginTeamMember() {
+		this.loginUserJWT(team.getMembers().iterator().next().getId(), team.getId());
+	}
 
 	/** Load information about team of currently logged in user */
 	@Test
 	public void getOwnTeam() {
 		//GIVEN a query for team of currently logged in user
-		String expectedTeamName   = (String)TestFixtures.teams.get(0).get("teamName");
+		this.loginTeamMember();
+		String expectedTeamName   = team.getTeamName();
 		String graphQL    = "{ team { id teamName } }";
 
 		//WHEN querying for the user's team
@@ -151,11 +145,8 @@ public class GraphQLTests extends HttpBaseTest {
 	/** Admin creates a new poll in his team. */
 	@Test
 	public void testAdminCreatesNewPoll() {
-		//GIVEN a team with an admin
-		Page<TeamModel> teams = teamRepo.findAll(new OffsetLimitPageable(0, 1));
-		TeamModel team = teams.iterator().next();
-		Assert.assertNotNull("Need at least one team to testAdminCreatesNewPoll!", team);
-		UserModel admin = team.getAdmins().stream().findFirst().get();
+		//GIVEN a team with a logged in admin
+		this.loginTeamAdmin();
 
 		// AND a graphQL mutation to createPoll
 		String pollTitle = "Poll from test " + System.currentTimeMillis() * 10000;
@@ -181,7 +172,6 @@ public class GraphQLTests extends HttpBaseTest {
 		String description = getLoremIpsum(0, 200);
 
 		// AND a graphQL mutation to add a proposal to this poll
-		String pollTitle = "Poll from test " + System.currentTimeMillis() * 10000;
 		String graphQL = String.format(
 			"mutation { addProposal(pollId: \"%s\", title: \"%s\", description: \"%s\") { id, title, proposals { id, title, description } } }",
 			poll.getId(), title, description

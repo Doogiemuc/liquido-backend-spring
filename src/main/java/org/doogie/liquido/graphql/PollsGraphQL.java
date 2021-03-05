@@ -1,9 +1,6 @@
 package org.doogie.liquido.graphql;
 
-import io.leangen.graphql.annotations.GraphQLArgument;
-import io.leangen.graphql.annotations.GraphQLMutation;
-import io.leangen.graphql.annotations.GraphQLNonNull;
-import io.leangen.graphql.annotations.GraphQLQuery;
+import io.leangen.graphql.annotations.*;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.LawRepo;
@@ -28,8 +25,8 @@ import static org.doogie.liquido.jwt.AuthUtil.HAS_ROLE_TEAM_ADMIN;
 import static org.doogie.liquido.jwt.AuthUtil.HAS_ROLE_USER;
 
 /**
- * GraphQL queries and mutations for Liquido posts.
- * These are used by the mobile app.
+ * GraphQL queries and mutations for LIQUIDO polls.
+ * This endpoint is used by the LIQUIDO mobile app.
  */
 @Slf4j
 @Service
@@ -70,10 +67,21 @@ public class PollsGraphQL {
 	@GraphQLQuery(name = "poll")
 	@PreAuthorize(HAS_ROLE_USER)
 	public PollModel getPollById(@GraphQLNonNull @GraphQLArgument(name = "pollId") Long pollId) throws LiquidoException {
-		Optional<PollModel> pollOpt = pollRepo.findById(pollId);
-		if (!pollOpt.isPresent())
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_FIND_ENTITY, "Poll.id=" + pollId + " not found.");
-		return pollOpt.get();
+		PollModel poll = pollRepo.findById(pollId)
+			.orElseThrow(LiquidoException.notFound("Poll.id=" + pollId + " not found."));
+		return poll;
+	}
+
+	/**
+	 * GraphQL client can request the number of already casted ballots for a poll in voting.
+	 * This is not an attribute in PollModel, but a calculated attribute "numBallots" that can then be
+	 * returned to the GraphQL query.
+	 * @param poll the poll of the current GraphQL context
+	 * @return number of already casted ballots in this poll
+	 */
+	@GraphQLQuery(name = "numBallots")
+	public Long getNumBallots(@GraphQLContext PollModel poll) {
+		return pollService.getNumCastedBallots(poll);
 	}
 
 	/**
@@ -146,7 +154,7 @@ public class PollsGraphQL {
 			log.warn("Directly adding a proposal via GraphQL to poll(id="+poll.id+"). But needed supportersForProposal is actually configured to be "+liquidoProps.supportersForProposal);
 
 		proposal.setStatus(LawModel.LawStatus.PROPOSAL);
-		pollService.addProposalToPoll(proposal, poll);
+		poll = pollService.addProposalToPoll(proposal, poll);
 		return poll;
 	}
 
