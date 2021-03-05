@@ -1,7 +1,7 @@
 
 .idea/
 target/
-build/buildNumber.properties
+build/
 release.properties
 /application.properties
 /application.yml
