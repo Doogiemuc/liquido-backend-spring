@@ -32,6 +32,8 @@ public class DoogiesUtil {
 	public static final String eMailRegEx = "\\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,64}\\b";
   public static final Pattern p = Pattern.compile(eMailRegEx);
 
+  //for null safe equals see ObjectUtils.nullSafeEquals(o1, o2)
+
 	/**
 	 * Check if s looks like an email adress.
 	 * The official specification for the format of an email adress
@@ -53,6 +55,10 @@ public class DoogiesUtil {
 	 * fulfills a given Predicate. If so, then the <b>first</b> matching element is returned.
 	 * What this method returns if predicate is null or iterable contains null element(s)
 	 * solely depends on predicate.
+	 *
+	 * <h4>Example:</h4>
+	 * <pre>Optional&lt;UserModel&gt; firstMatchingUser = doesContain(userList, u -> u.name = "Hans")</pre>
+	 *
 	 * @param it an Iterable, e.g. a Colletion, List or Set
 	 * @param predicate A function that takes an element as input and returns true
 	 *                  if this element fullfills the predicate.

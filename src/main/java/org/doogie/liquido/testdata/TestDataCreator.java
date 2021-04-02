@@ -126,7 +126,7 @@ public class TestDataCreator implements CommandLineRunner {
 	RightToVoteRepo rightToVoteRepo;
 
   @Autowired
-	TeamsGraphQL teamService;
+	TeamsGraphQL teamServiceGQL;
 
   @Autowired
   PollService pollService;
@@ -224,6 +224,7 @@ public class TestDataCreator implements CommandLineRunner {
 			for (int i = 1; i < TestFixtures.NUM_TEAMS; i++) {
 				seedTeam(TestFixtures.TEAM_NAME_PREFIX + i);
 			}
+			seedMemberInTwoTeams(TestFixtures.TWO_TEAM_USER_EMAIL, TestFixtures.TEAM1_NAME, TestFixtures.TEAM_NAME_PREFIX+"1");
 			seedPollInElaborationInTeam(team1);
 			PollModel pollInTeam = seedPollInVotingInTeam(team1);
 			seedVotes(pollInTeam, team1.getMembers(), TestFixtures.NUM_TEAM_MEMBERS);
@@ -369,7 +370,7 @@ public class TestDataCreator implements CommandLineRunner {
 		String adminMobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits; // create unique mobile phone numbers!
 		String adminWebsite     = "www.liquido.vote";
 		String adminPicture     = TestFixtures.AVATAR_PREFIX + "0.png";
-		CreateOrJoinTeamResponse res = teamService.createNewTeam(teamName, adminName, adminEmail, adminMobilephone, adminWebsite, adminPicture);
+		CreateOrJoinTeamResponse res = teamServiceGQL.createNewTeam(teamName, adminName, adminEmail, adminMobilephone, adminWebsite, adminPicture);
 		CreateOrJoinTeamResponse joinTeamRes = null;
 		for (int j = 0; j < TestFixtures.NUM_TEAM_MEMBERS; j++) {
 			String userName    = TestFixtures.TEAM_MEMBER_NAME_PREFIX + j + " " + teamName;
@@ -377,10 +378,34 @@ public class TestDataCreator implements CommandLineRunner {
 			String mobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits + j;
 			String website     = "www.liquido.vote";
 			String picture     = TestFixtures.AVATAR_PREFIX+ (j%16) + ".png";
-			joinTeamRes = teamService.joinNewTeam(res.getTeam().getInviteCode(), userName, userEmail, mobilephone, website, picture);
+			joinTeamRes = teamServiceGQL.joinTeam(res.getTeam().getInviteCode(), userName, userEmail, mobilephone, website, picture);
 		}
 
 		return joinTeamRes.getTeam(); // most up to date firstTeam entity, with all members, is from last joinNewTeam response
+	}
+
+	/**
+	 * Seed a user that is member of two teams
+	 * @param memberEmail user's email
+	 * @param teamName1 team1 to join
+	 * @param teamName2 team2 to join
+	 * @return the CreateOrJoinTeam response from the <b>second</b> team
+	 * @throws LiquidoException when team1 or team2 cannot by found.
+	 */
+	public UserModel seedMemberInTwoTeams(String memberEmail, String teamName1, String teamName2) throws LiquidoException {
+	 	log.info("Seeding user that is member in two teams");
+	 	TeamModel team1 = teamRepo.findByTeamName(teamName1).orElseThrow(LiquidoException.notFound("Cannot find team.teamName="+teamName1));
+		TeamModel team2 = teamRepo.findByTeamName(teamName2).orElseThrow(LiquidoException.notFound("Cannot find team.teamName="+teamName2));
+		String digits = DoogiesUtil.randomDigits(5);
+		String userName    = TestFixtures.TEAM_MEMBER_NAME_PREFIX + digits + "_2teams";
+		String mobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits;
+		String website     = "www.liquido.vote";
+		String picture     = TestFixtures.AVATAR_PREFIX + "1.png";
+		CreateOrJoinTeamResponse res = teamServiceGQL.joinTeam(team1.getInviteCode(), userName, memberEmail, mobilephone, website, picture);
+		// Must authenticate for the second join team call!
+		authUtil.authenticateInSecurityContext(res.getUser().getId(), res.getTeam().getId(), res.getJwt());
+		res = teamServiceGQL.joinTeam(team2.getInviteCode(), userName, memberEmail, mobilephone, website, picture);
+		return res.getUser();
 	}
 
 	/**
@@ -394,14 +419,14 @@ public class TestDataCreator implements CommandLineRunner {
 		long now = System.currentTimeMillis() % 1000;
 		UserModel admin = team.getAdmins().stream().findFirst()
 			.orElseThrow(LiquidoException.notFound("need a team admin to seedPollInTeam"));
-		authUtil.authenticateInSecurityContext(admin.getId(), team.getId());  // fake login admin
+		authUtil.authenticateInSecurityContext(admin.getId(), team.getId(), null);  // fake login admin
 		String title = "Poll " + now +  " in Team "+team.getTeamName();
 		PollModel poll = pollService.createPoll(title, this.defaultArea, team);
 		LawModel proposal = this.createProposal("Proposal " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), this.defaultArea, admin, 2, 1);
 		pollService.addProposalToPoll(proposal, poll);
 		UserModel member = team.getMembers().stream().findFirst()
 			.orElseThrow(LiquidoException.notFound("need a team member to seedPollInTeam"));
-		authUtil.authenticateInSecurityContext(member.getId(), team.getId());  // fake login member
+		authUtil.authenticateInSecurityContext(member.getId(), team.getId(), null);  // fake login member
 		LawModel proposal2 = this.createProposal("Another prop " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), this.defaultArea, member, 2, 1);
 		poll = pollService.addProposalToPoll(proposal2, poll);
 		return poll;
@@ -417,7 +442,7 @@ public class TestDataCreator implements CommandLineRunner {
 		PollModel poll = this.seedPollInElaborationInTeam(team);
 		UserModel admin = team.getAdmins().stream().findFirst()
 			.orElseThrow(LiquidoException.notFound("Need a team admin to seedPollInVotingInTeam"));
-		authUtil.authenticateInSecurityContext(admin.getId(), team.getId());  // fake login admin
+		authUtil.authenticateInSecurityContext(admin.getId(), team.getId(), null);  // fake login admin
 		poll = pollService.startVotingPhase(poll);
 		return poll;
 	}

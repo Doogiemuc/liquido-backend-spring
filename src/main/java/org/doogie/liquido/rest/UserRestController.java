@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
+import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -129,11 +130,12 @@ public class UserRestController {
   @RequestMapping(path = "/auth/loginWithToken", produces = MediaType.TEXT_PLAIN_VALUE)
   public String loginWithSmsToken(
 			@NonNull @RequestParam("mobile") String mobile,
-			@NonNull @RequestParam("token") String token,
-			@NonNull @RequestParam("teamId") Long teamId
+			@NonNull @RequestParam("token") String token
   ) throws LiquidoException {
-	  log.info("Request to login with token="+token+" into teamId="+teamId);
-		return userService.verifyOneTimePassword(mobile, teamId, token);
+	  log.info("Request to login with token="+token);
+		UserModel user = userService.verifyOneTimePassword(mobile, token);
+		// return JWT token
+		return jwtTokenUtils.generateToken(user.getId(), null);
   }
 
 
@@ -154,7 +156,7 @@ public class UserRestController {
 		// Create new email login link with a token time token in it.
 		UUID emailToken = UUID.randomUUID();
 		LocalDateTime validUntil = LocalDateTime.now().plusHours(1);  // login token via SMS is valid for one hour. That should be enough!
-		OneTimeToken oneTimeToken = new OneTimeToken(emailToken.toString(), user, OneTimeToken.TOKEN_TYPE.EMAIL, validUntil);
+		OneTimeToken oneTimeToken = new OneTimeToken(emailToken.toString(), user, validUntil);
 		ottRepo.save(oneTimeToken);
 		log.info("User "+user.getEmail()+" may login. Sending code via EMail.");
 
@@ -180,6 +182,7 @@ public class UserRestController {
 	 * @throws LiquidoException when token is invalid or expired
 	 */
 	@RequestMapping(path = "/auth/loginWithEmailToken", produces = MediaType.TEXT_PLAIN_VALUE)
+	//TODO: @Transactional  I think loginWithEmailToken should be transactional. => TEST!
 	public String loginWithEmailToken(
 		@RequestParam("email") String email,
 		@RequestParam("token") String token
@@ -188,14 +191,10 @@ public class UserRestController {
 		if (DoogiesUtil.hasText(email)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_EMAIL_NOT_FOUND, "Need email to login!");
 		if (DoogiesUtil.hasText(token)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Need login token!");
 
-		OneTimeToken oneTimeToken = ottRepo.findByToken(token);
-		if (oneTimeToken == null || email == null ||
-			!email.equals(oneTimeToken.getUser().getEmail()) ||
-			!OneTimeToken.TOKEN_TYPE.EMAIL.equals(oneTimeToken.getTokenType())  )
-		{
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Invalid email login token.");
-		}
-
+		OneTimeToken oneTimeToken = ottRepo.findByToken(token)
+			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Invalid email login token."));
+		if (!email.equals(oneTimeToken.getUser().getEmail()))
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Email does not match token.");
 		if (LocalDateTime.now().isAfter(oneTimeToken.getValidUntil())) {
 			ottRepo.delete(oneTimeToken);
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "This email login token is expired.");
@@ -203,10 +202,9 @@ public class UserRestController {
 
 		//TODO: Do I need to check if user and team still exist?
 		UserModel user = oneTimeToken.getUser();
-		TeamModel team = oneTimeToken.getTeam();
 
-		// return JWT token for this user in this team
-		String jwt = jwtTokenUtils.generateToken(user.getId(), team.getId());
+		// return JWT token for this user
+		String jwt = jwtTokenUtils.generateToken(user.getId(), null);
 		oneTimeToken.getUser().setLastLogin(LocalDateTime.now());
 		userRepo.save(user);
 		ottRepo.delete(oneTimeToken);				//---- delete used one time token !

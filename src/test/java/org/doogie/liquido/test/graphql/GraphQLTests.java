@@ -65,7 +65,7 @@ public class GraphQLTests extends HttpBaseTest {
 
 	/** Load information about team of currently logged in user */
 	@Test
-	public void getOwnTeam() {
+	public void testGetOwnTeam() {
 		//GIVEN a query for team of currently logged in user
 		this.loginTeamMember();
 		String expectedTeamName   = team.getTeamName();
@@ -161,28 +161,31 @@ public class GraphQLTests extends HttpBaseTest {
 
 	@Test
 	public void testAddProposalToPoll() {
-		//GIVEN a poll in ELABORATION
+		//GIVEN a logged in Admin
+		this.loginTeamAdmin();
+
+		//  AND a poll in ELABORATION
 		List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.ELABORATION);
 		Assert.assertTrue("Need at least one poll in elaboration to testAddProposalToPoll", polls.size() > 0);
 		PollModel poll = polls.get(0);
 
 		// AND data for a new proposal
 		Long now = System.currentTimeMillis() % 10000;
-		String title = "Proposal added from Test "+now;
+		String proposalTitle = "Proposal added from Test "+now;
 		String description = getLoremIpsum(0, 200);
 
 		// AND a graphQL mutation to add a proposal to this poll
-		String graphQL = String.format(
+		String addProposalGraphQL = String.format(
 			"mutation { addProposal(pollId: \"%s\", title: \"%s\", description: \"%s\") { id, title, proposals { id, title, description } } }",
-			poll.getId(), title, description
+			poll.getId(), proposalTitle, description
 		);
 
 		//WHEN this proposal is added to the poll
-		Lson entity = new Lson("query", graphQL);
+		Lson entity = new Lson("query", addProposalGraphQL);
 		ResponseEntity<String> res = this.client.exchange(this.GraphQLPath, HttpMethod.POST, entity.toJsonHttpEntity(), String.class);
 
 		//THEN poll is created
-		Assert.assertTrue("Proposal with that title should have been added", res.getBody().contains(title));
+		Assert.assertTrue("Proposal with that title should have been added", res.getBody().contains(proposalTitle));
 	}
 
 

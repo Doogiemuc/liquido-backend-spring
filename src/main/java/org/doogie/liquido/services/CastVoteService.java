@@ -103,7 +103,7 @@ public class CastVoteService {
 		//  AND we must invalidate (delete) the old rightToVote.
 		 //  AND we must delete all delegations.
 		Optional<RightToVoteModel> rightToVoteOpt = rightToVoteRepo.findByHashedVoterToken(hashedVoterToken);
-		Optional<RightToVoteModel> rightToVoteOfPublicProxyOpt = rightToVoteRepo.findByAreaAndPublicProxy(area, voter);
+		Optional<RightToVoteModel> rightToVoteOfPublicProxyOpt  = rightToVoteRepo.findByAreaAndPublicProxy(area, voter);
 		if (rightToVoteOfPublicProxyOpt.isPresent() &&
 				!rightToVoteOfPublicProxyOpt.equals(rightToVoteOpt)) {
 			log.trace("Voter changed his voterTokenSecret. Replacing old rightToVote of former public proxy with new one.");

@@ -25,7 +25,6 @@ public interface UserRepo extends CrudRepository<UserModel, Long> {
    * @param email users email
    * @return one UserModel or null if no user with that email was found.
    */
-  //TODO: !!! need findByEmailAndTeam   otherwise result is not unique !!!
   Optional<UserModel> findByEmail(@Param("email") String email);   // This magically creates a query just from the method name!
 
   //Optional<UserModel> findByEmailAndTeamTeamName(@Param("email") String email, @Param("teamName") String teamName);  // this is deliberately team.teamName !

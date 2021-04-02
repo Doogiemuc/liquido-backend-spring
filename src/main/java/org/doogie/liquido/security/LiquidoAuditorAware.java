@@ -35,40 +35,14 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
    */
   @Override
   public Optional<UserModel> getCurrentAuditor() {
-    if (mockAuditor != null) {
-    	// warn about mock users, but only if we are not in dev, test or int
+		if (mockAuditor != null) {
+			// warn about mock users, but only if we are not in dev, test or int
 			if (!springEnv.acceptsProfiles(Profiles.of("dev", "test", "int")))
-				log.warn("Returning mock auditor "+mockAuditor.getEmail());
-      return Optional.of(mockAuditor);
-    }
-    return authUtil.getCurrentUser();
-
-
-    /*
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    if (authentication == null || !authentication.isAuthenticated()) {
-      log.trace("Cannot getCurrentAuditor. No one is currently authenticated");
-      return Optional.empty();
-    }
-
-    if (authentication.getPrincipal() != null && authentication.getPrincipal().equals("anonymousUser")) {
-      log.trace("Returning anonymous user as current auditor.");
-			return Optional.empty();
-    }
-		// principal _IS_ a LiquidoAuthentic
-		// 1. I load one in LiquidoUserDetailsService.java
-		// 2. and JwtAuthenticationFilter puts it into the security context
-    LiquidoAuthentication authUser = (LiquidoAuthentication)authentication.getPrincipal();
-
-    return Optional.of(authUser.getLiquidoUserModel());
-    */
-
-    //BUGFIX:  Must not call userRepo, since this will lead to an endless loop and throw a StackOverflowException
-    //https://stackoverflow.com/questions/14223649/how-to-implement-auditoraware-with-spring-data-jpa-and-spring-security
-    //http://stackoverflow.com/questions/42315960/stackoverflowexception-in-spring-data-jpa-app-with-spring-security-auditoraware
-    //UserModel currentlyLoggedInUser = userRepo.findByEmail(principal.getUsername()) ;
-
-  }
+				log.warn("Returning mock auditor " + mockAuditor.getEmail());
+			return Optional.of(mockAuditor);
+		}
+		return authUtil.getCurrentUser();
+	}
 
   public void setMockAuditor(UserModel mockAuditor) {
     if (springEnv.acceptsProfiles(Profiles.of("dev", "test"))) {

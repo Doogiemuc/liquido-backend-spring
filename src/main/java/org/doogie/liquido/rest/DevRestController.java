@@ -148,7 +148,7 @@ public class DevRestController {
 		}
 		if (emailOpt.isPresent()) {
 			if (team != null) {
-				user = Stream.concat(team.getAdmins().stream(), team.getMembers().stream()).filter(u -> u.email.equals(emailOpt.get())).findFirst()
+				user = team.getAdminOrMemberByEmail(emailOpt.get())
 					.orElseThrow(LiquidoException.notFound("Cannot find an admin or member with email="+emailOpt+" in team "+team.getTeamName()));
 			} else {
 				user = userRepo.findByEmail(emailOpt.get())

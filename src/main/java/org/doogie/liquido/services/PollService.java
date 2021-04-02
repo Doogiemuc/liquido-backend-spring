@@ -172,7 +172,7 @@ public class PollService {
   public PollModel startVotingPhase(@NonNull PollModel poll) throws LiquidoException {
     log.info("startVotingPhase of "+poll.toString());
     if (poll.getStatus() != PollModel.PollStatus.ELABORATION)
-      throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Poll(id=\"+poll.id+\") must be in status ELABORATION");
+      throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Poll(id="+poll.id+") must be in status ELABORATION");
     if (poll.getProposals().size() < 2)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Poll(id="+poll.id+") must have at least two alternative proposals");
 

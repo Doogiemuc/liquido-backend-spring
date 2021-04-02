@@ -31,15 +31,17 @@ public class LiquidoException extends Exception {
 	 */
 	public enum Errors {
 		//Create New Team
-		TEAM_WITH_SAME_NAME_EXISTS(1, HttpStatus.BAD_REQUEST),
+		TEAM_WITH_SAME_NAME_EXISTS(1, HttpStatus.CONFLICT),
 
 		//Join Team errors
 		CANNOT_JOIN_TEAM(10, HttpStatus.BAD_REQUEST),
-	  CANNOT_REGISTER_NEED_EMAIL(11, HttpStatus.BAD_REQUEST),
-		CANNOT_REGISTER_NEED_MOBILEPHONE(12, HttpStatus.BAD_REQUEST),
-		CANNOT_CREATE_TWILIO_USER(13, HttpStatus.INTERNAL_SERVER_ERROR),
-		USER_EMAIL_EXISTS(14, HttpStatus.CONFLICT),										// user with that email  already exists
-		USER_MOBILEPHONE_EXISTS(15, HttpStatus.CONFLICT),							// user with that mobilephone already exists
+		CANNOT_JOIN_TEAM_ALREADY_MEMBER(11, HttpStatus.CONFLICT),						// there already is a member (or admin) with the same email
+		CANNOT_JOIN_TEAM_ALREADY_ADMIN(12, HttpStatus.CONFLICT),
+	  CANNOT_REGISTER_NEED_EMAIL(13, HttpStatus.BAD_REQUEST),
+		CANNOT_REGISTER_NEED_MOBILEPHONE(14, HttpStatus.BAD_REQUEST),
+		CANNOT_CREATE_TWILIO_USER(15, HttpStatus.INTERNAL_SERVER_ERROR),
+		USER_EMAIL_EXISTS(16, HttpStatus.CONFLICT),                          // user with that email  already exists
+		USER_MOBILEPHONE_EXISTS(17, HttpStatus.CONFLICT),                    // user with that mobilephone already exists
 
 		//Login Errors
 		CANNOT_LOGIN_MOBILE_NOT_FOUND(20, HttpStatus.UNAUTHORIZED),					// when requesting an SMS login token and mobile number is not known

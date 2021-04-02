@@ -8,4 +8,4 @@ release.properties
 /application-int.yml
 /application-prod.yml
 /application-test.yml
-/application-dev.yml
+/src/test/resources/application-dev.yml

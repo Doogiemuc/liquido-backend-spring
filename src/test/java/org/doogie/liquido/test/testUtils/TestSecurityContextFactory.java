@@ -2,9 +2,12 @@ package org.doogie.liquido.test.testUtils;
 
 import org.doogie.liquido.datarepos.TeamRepo;
 import org.doogie.liquido.datarepos.UserRepo;
+import org.doogie.liquido.jwt.AuthUtil;
+import org.doogie.liquido.jwt.JwtTokenUtils;
 import org.doogie.liquido.jwt.LiquidoAuthentication;
 import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -31,30 +34,32 @@ public class TestSecurityContextFactory implements WithSecurityContextFactory<Wi
 	@Autowired
 	TeamRepo teamRepo;
 
+	@Autowired
+	AuthUtil authUtil;
+
+	@Autowired
+	JwtTokenUtils jwtTokenUtils;
+
+	/**
+	 * Create an authenticated mock user in SecurityContext.
+	 *
+	 * @param mockUserAnnotation the {@link WithMockTeamUser} annotation
+	 * @return the SecurityContext
+	 */
 	@Override
-	public SecurityContext createSecurityContext(WithMockTeamUser withMockTeamUser) {
-		//Compare to: authUtil.authenticateInSecurityContext(withMockTeamUser.userId(), withMockTeamUser.teamId());
-		SecurityContext context = SecurityContextHolder.createEmptyContext();
-
-
-		Long userId;
-		if (withMockTeamUser.email() != "") {
-			UserModel userModel = userRepo.findByEmail(withMockTeamUser.email())
-				.orElseThrow(() -> new RuntimeException("Cannot create mock user. No user with email=" + withMockTeamUser.email()));
-			userId = userModel.getId();
-		} else {
-			userId = withMockTeamUser.userId();
+	public SecurityContext createSecurityContext(WithMockTeamUser mockUserAnnotation) {
+		Long userId = mockUserAnnotation.userId();
+		if (userId == -1) {
+			if ("".equals(mockUserAnnotation.email())) {
+				throw new RuntimeException("Need either userId or email to authenticate a mock user");
+			} else {
+				userId = userRepo.findByEmail(mockUserAnnotation.email())
+					.orElseThrow(() -> new RuntimeException("Cannot create mock user. No user with email=" + mockUserAnnotation.email()))
+					.getId();
+			}
 		}
-		Long teamId = withMockTeamUser.teamId();
-		Set<GrantedAuthority> authorities = new HashSet<>();
-		authorities.add(new SimpleGrantedAuthority(ROLE_USER));
-		Optional<TeamModel> teamOpt = teamRepo.findByIdAndAdminsIdEquals(teamId, userId);
-		if (teamOpt.isPresent()) {
-			authorities.add(new SimpleGrantedAuthority(ROLE_TEAM_ADMIN));
-		}
-		LiquidoAuthentication liquidoAuth = new LiquidoAuthentication(userId, teamId, authorities);
-		context.setAuthentication(liquidoAuth);
-		return context;
+		String jwt = jwtTokenUtils.generateToken(userId, mockUserAnnotation.teamId());
+		return authUtil.authenticateInSecurityContext(userId, mockUserAnnotation.teamId(), jwt);
 	}
 
 }

@@ -53,8 +53,9 @@ public class TestFixtures {
 	public static final String USER15_EMAIL = MAIL_PREFIX+"15@liquido.de";
 	public static final String USER16_EMAIL = MAIL_PREFIX+"16@liquido.de";
 
-	// Teams and their admins
+	// Teams and members and admins
 	public static final String TEAM1_NAME = "TeamOne";         // First Team has a fixed name that is used in tests
+	public static final String TWO_TEAM_USER_EMAIL = "twoTeamMember@liquido.org";   // This user is member in two teams;
 	public static final String TEAM_NAME_PREFIX = "TestTeam";
 	public static final String TEAM_ADMIN_NAME_PREFIX = "Admin";
 	public static final String TEAM_ADMIN_EMAIL_PREFIX = "admin";  // e.g. admin4711@TestTeam0.org
@@ -77,7 +78,9 @@ public class TestFixtures {
 
 	/** dynamic method as TestFixture.  Mmhh nice! */
 	public static boolean shouldBePublicProxy(AreaModel area, UserModel voter) {
-		return !USER2_EMAIL.equals(voter.getEmail());  // everyone except user2 is a public proxy
+		return !USER2_EMAIL.equals(voter.getEmail()) &&					// every normal user except user2 is a public proxy
+			  !voter.getEmail().startsWith(TEAM_ADMIN_EMAIL_PREFIX) &&  // admins and membes of teasm are no public proxies
+				!voter.getEmail().startsWith(TEAM_MEMBER_EMAIL_PREFIX);
 	}
 
 

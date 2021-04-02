@@ -187,8 +187,8 @@ public class TwilioAuthyClient {
 	 *
 	 * @param userAuthyId authy user
 	 * @param otp the one time password entered by the user from the authy app
-	 * @return JSON response if authentication is successfull with device information.
-	 * @throws LiquidoException if authentication was deneid
+	 * @return JSON response if authentication is successful with device information.
+	 * @throws LiquidoException if authentication was denied
 	 */
 	public String verifyOneTimePassword(long userAuthyId, String otp) throws LiquidoException {
 		log.debug("OTP authentication request for userAuthyId="+userAuthyId);
