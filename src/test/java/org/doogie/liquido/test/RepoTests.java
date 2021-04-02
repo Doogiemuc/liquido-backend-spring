@@ -64,22 +64,19 @@ public class RepoTests extends BaseTest {
   public void testCreateIdeaWithMockAuditor() {
     auditorAware.setMockAuditor(null);    // BUGFIX: Must remove any previously set mock auditor
 
-    UserModel user2 = userRepo.findByEmail(TestFixtures.USER2_EMAIL).get();
-    Optional<AreaModel> area1 = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-    assertTrue("Need Area1", area1.isPresent());
-
     Optional<UserModel> currentAuditor = auditorAware.getCurrentAuditor();
     assertTrue(currentAuditor.isPresent());
-    assertEquals(user2, currentAuditor.get());
+    UserModel user = currentAuditor.get();
+    assertEquals(TestFixtures.USER2_EMAIL, user.getEmail());
 
-    LawModel newIdea = new LawModel("Idea from test"+System.currentTimeMillis(), "Very nice description from test", area1.get());
+    LawModel newIdea = new LawModel("Idea from test"+System.currentTimeMillis(), "Very nice description from test", getDefaultArea());
 
     //auditorAware.setMockAuditor(user1);     //not necessary anymore. Replaced by @WithUserDetails annotation.     // have to mock the currently logged in user for the @CreatedBy annotation in LawModel to work
     LawModel insertedIdea = lawRepo.save(newIdea);
     //auditorAware.setMockAuditor(null);
     log.trace("saved Idea "+insertedIdea);
 
-    Assert.assertEquals("Expected idea to be created by "+user2, user2, insertedIdea.getCreatedBy());
+    Assert.assertEquals("Expected idea to be created by "+user, user, insertedIdea.getCreatedBy());
     log.trace("TEST CreateIdeaWithMockAuditor SUCCESSFULL");
   }
 

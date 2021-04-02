@@ -29,7 +29,7 @@ public class JwtTokenUtils {
 
 	/**
 	 * This generates a new JWT. This needs jwtSecret as input, so that only the server can
-	 * generate JWTs.
+	 * generate JWTs. The userId becomes the JWT.subject and teamId is set as additional claim.
 	 */
 	public String generateToken(@NonNull String userId, String teamId) {
 		Instant expiryDate = Instant.now().plusMillis(jwtExpirationInMs);
@@ -37,7 +37,7 @@ public class JwtTokenUtils {
 		return Jwts.builder()
 				.setSubject(userId)
 				.claim(TEAM_ID_CLAIM, teamId)
-				//.setClaims(claims)   //BUGFIX: This overwrites all other claims!!!
+				//.setClaims(claims)   //BUGFIX: This overwrites all other claims!!!  use addClaims
 				.setIssuedAt(Date.from(Instant.now()))
 				.setExpiration(Date.from(expiryDate))
 				.signWith(SignatureAlgorithm.HS512, jwtSecret)

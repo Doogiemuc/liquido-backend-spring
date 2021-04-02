@@ -95,16 +95,18 @@ public class BallotModel {
 	*/
 
   /**
-   * One vote puts some proposals of this poll into his personally preferred order.
-   * One voter may putArray some or all proposals of the poll into his (ordered) ballot. But of course he may only vote at maximum once for every proposal.
+   * A voter sorts some proposals of this poll into his personally preferred order.
+   * A voter may put some or all proposals of the poll into his (ordered) ballot.
+	 * But of course every proposal may appear only once in his voteOrder!
    * And one proposal may be voted for by several voters => ManyToMany relationship
    */
   //BE CAREFULL: Lists are not easy to handle in hibernate: https://vladmihalcea.com/hibernate-facts-favoring-sets-vs-bags/
   @NonNull
   @NotNull
-  @ManyToMany(fetch = FetchType.EAGER)   //(cascade = CascadeType.MERGE, orphanRemoval = false)
-  @OrderColumn(name="LawModel_Order")  // keep order in DB
-  public List<LawModel> voteOrder;   		//proposals in voteOrder must not be duplicate! This is checked in VoteRestController.
+  @ManyToMany(fetch = FetchType.EAGER)   // (cascade = CascadeType.MERGE, orphanRemoval = false)
+  @OrderColumn(name="LawModel_Order")    // keep order in DB
+	//TODO: do I need a uniqueConstraint so that lawModel.id can only appear once in voteOrder?
+  public List<LawModel> voteOrder;       // proposals in voteOrder must not be duplicate! This is checked in VoteRestController.
 
 	public void setVoteOrder(List<LawModel> voteOrder) {
 		if (voteOrder == null || voteOrder.size() == 0)
@@ -127,7 +129,7 @@ public class BallotModel {
 
 	/**
 	 * The MD5 checksum of a ballot uniquely identifies this ballot.
-	 * The checksum is calculated from the voteOrder, poll.id and rightToVote.hashedVoterToken.
+	 * The checksum is calculated from the voteOrder, poll.hashCode and rightToVote.hashedVoterToken.
 	 * It deliberately does not depend on level or rightToVote.delegatedTo !
 	 */
 	public String checksum;

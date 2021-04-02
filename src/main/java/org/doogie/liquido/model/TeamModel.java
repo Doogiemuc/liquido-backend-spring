@@ -11,7 +11,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * A Team with its admin(s) and members.
@@ -37,19 +39,24 @@ public class TeamModel extends BaseModel {
 	@GraphQLQuery(name = "inviteCode")
   String inviteCode = null;
 
+	// Each team has members and admins.
+	// Each user may also be a member (or admin) of other teams.
+	// So this is a @ManyToMany relationship
+	// But each user may only be member (or admin) once in this team!
+
 	/**
 	 * The initial creator of a team is the first admin.
-	 * He may then appoint further admin colleages.
+	 * He may then appoint further admin colleagues.
 	 */
 	@GraphQLQuery(name = "admins")
-	@OneToMany(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)  // when a team is loaded also load its admins
+	@ManyToMany(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)  // when a team is loaded also load its admins
 	Set<UserModel> admins = new HashSet<>();
 
   /**
 	 * Members of this team.
 	 */
 	@GraphQLQuery(name = "members")
-	@OneToMany(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)  // when a team is loaded also load its members
+	@ManyToMany(cascade = CascadeType.PERSIST, fetch = FetchType.EAGER)  // when a team is loaded also load its members
   Set<UserModel> members = new HashSet<>();
 
 	/** The polls in this team */
@@ -67,6 +74,29 @@ public class TeamModel extends BaseModel {
 		this.inviteCode = DigestUtils.md5Hex(teamName).substring(0,6).toUpperCase();
 	}
 
+	public boolean isAdmin(UserModel admin) {
+		return this.admins.contains(admin);
+	}
+	public boolean isAdmin(String email) {
+		return this.admins.stream().anyMatch(admin -> admin.email.equals(email));
+	}
+
+	public boolean isMember(UserModel member) {
+		return this.members.contains(member);
+	}
+	public boolean isMember(String email) {
+		return this.members.stream().anyMatch(member -> member.email.equals(email));
+	}
+
+	/**
+	 * Check if a user or admin with that email exists and return it
+	 * @param email email of a user or admin in this team
+	 * @return the user or admin if it is part of this team
+	 */
+	public Optional<UserModel> getAdminOrMemberByEmail(String email) {
+		return Stream.concat(this.getAdmins().stream(), this.getMembers().stream()).filter(u -> u.email.equals(email)).findFirst();
+	}
+
   @Override
   public String toString() {
   	StringBuffer buf = new StringBuffer();
@@ -79,5 +109,6 @@ public class TeamModel extends BaseModel {
 		buf.append(']');
 		return buf.toString();
   }
+
 
 }

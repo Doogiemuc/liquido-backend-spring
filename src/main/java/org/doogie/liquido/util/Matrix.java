@@ -1,5 +1,7 @@
 package org.doogie.liquido.util;
 
+import io.leangen.graphql.annotations.GraphQLQuery;
+
 import java.util.Arrays;
 import java.util.function.Function;
 
@@ -9,11 +11,11 @@ import java.util.function.Function;
  * It can also be stored to a DB with @{@link org.doogie.liquido.model.converter.MatrixConverter}
  */
 public class Matrix {
-  // Implementation note: Be carefull not to accidentically invert the matrix.
-	// All methods with two parameters in here think of the order "row" and then "col"
+  // Implementation note: Be careful that you do not accidentally invert the matrix!
+	// All methods with two parameters have "row" and then "col".
 	// This different than "x" and then "y" axis!  But that may only be of importance to completely fanatic geeks :-)
 
-	private long[][] data;
+	public long[][] data;
 
 	/** empty constructor is needed, e.g. for Jackson */
 	public Matrix() {

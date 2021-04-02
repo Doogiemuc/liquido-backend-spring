@@ -43,7 +43,9 @@ public class UserModel extends BaseModel {
 	public long authyId;
 
 
-	//Implementation note: A UserModel does not contain a reference to a team. Only the TeamModel has members and admins. (Helps a lot with preventing JsonBackReferences)
+	// Implementation note:
+	// A UserModel does not contain a reference to a team. Only the TeamModel has members and admins. (Helps a lot with preventing JsonBackReferences)
+	// One user may be admin or member of several teams!
 
 
 	/** Username, Nickname */

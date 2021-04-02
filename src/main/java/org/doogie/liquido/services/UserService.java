@@ -77,7 +77,7 @@ public class UserService {
 	 * @return JsonWebToken when OTP was valid
 	 * @throws LiquidoException when no user with that mobile phone is found or OTP was invalid
 	 */
-	public String verifyOneTimePassword(String mobile, Long teamId, String authyToken) throws LiquidoException {
+	public UserModel verifyOneTimePassword(String mobile, String authyToken) throws LiquidoException {
 		if (DoogiesUtil.hasText(mobile)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "Need mobile phone number!");
 		final String cleanMobile = LiquidoRestUtils.cleanMobilephone(mobile);
 		UserModel user = userRepo.findByMobilephone(cleanMobile)
@@ -96,11 +96,8 @@ public class UserService {
 			log.info("User logged in with OTP: "+user.toStringShort());
 		}
 
-		// return JWT token
-		String jwt = jwtTokenUtils.generateToken(user.getId(), teamId);
 		user.setLastLogin(LocalDateTime.now());
 		userRepo.save(user);
-
-		return jwt;
+		return user;
 	}
 }

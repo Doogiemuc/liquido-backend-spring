@@ -10,16 +10,20 @@ import java.util.Collection;
  * This token identifies a logged in user.
  * It is created from the passed JWT in {@link JwtAuthenticationFilter}
  * and then later checked in {@link JwtAuthenticationProvider}
+ * LiquidoAuthentication token must be simple and lightweight. It only contains
+ * teamId and userId. See methods in {@link AuthUtil} if you need the TeamModel or UserModel.
  */
 public class LiquidoAuthentication extends AbstractAuthenticationToken {
 
 	Long userId;
 	Long teamId;
+	String jwt;
 
-	public LiquidoAuthentication(@NonNull Long userId, Long teamId, Collection<? extends GrantedAuthority> authorities) {
+	public LiquidoAuthentication(@NonNull Long userId, Long teamId, String jwt, Collection<? extends GrantedAuthority> authorities) {
 		super(authorities);
 		this.userId = userId;
 		this.teamId = teamId;
+		this.jwt = jwt;
 	}
 
 	@Override
@@ -39,4 +43,6 @@ public class LiquidoAuthentication extends AbstractAuthenticationToken {
 	public Long getUserId() { return this.userId; }
 
 	public Long getTeamId() { return teamId; }
+
+	public String getJwt() { return jwt; }
 }

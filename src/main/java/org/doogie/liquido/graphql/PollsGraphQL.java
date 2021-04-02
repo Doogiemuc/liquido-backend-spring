@@ -67,9 +67,8 @@ public class PollsGraphQL {
 	@GraphQLQuery(name = "poll")
 	@PreAuthorize(HAS_ROLE_USER)
 	public PollModel getPollById(@GraphQLNonNull @GraphQLArgument(name = "pollId") Long pollId) throws LiquidoException {
-		PollModel poll = pollRepo.findById(pollId)
+		return pollRepo.findById(pollId)
 			.orElseThrow(LiquidoException.notFound("Poll.id=" + pollId + " not found."));
-		return poll;
 	}
 
 	/**
@@ -94,8 +93,7 @@ public class PollsGraphQL {
 	public Set<PollModel> getPollsOfTeam() throws LiquidoException {
 		TeamModel team = authUtil.getCurrentTeam()
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.UNAUTHORIZED, "Cannot get polls of team: Must be logged into a team!"));
-		Set<PollModel> polls = team.getPolls();
-		return polls;
+		return team.getPolls();
 	}
 
 	/**
@@ -176,9 +174,7 @@ public class PollsGraphQL {
 		AreaModel area = getAreaOrDefault(areaId);
 		UserModel voter = authUtil.getCurrentUser()
 			.orElseThrow(LiquidoException.unauthorized("Must be logged in to getVoterToken!"));
-		String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(voter, area, tokenSecret, becomePublicProxy);
-		return voterToken;
-		//return new Lson("voterToken", voterToken);
+		return castVoteService.createVoterTokenAndStoreRightToVote(voter, area, tokenSecret, becomePublicProxy);
 	}
 
 	/**
@@ -253,6 +249,24 @@ public class PollsGraphQL {
 		return pollService.getBallotForVoterToken(poll, voterToken);
 	}
 
+	/**
+	 * Verify a voter's ballot with its checksum. When the checksum is valid, the
+	 * ballot with the correct voteOrder will be returned.
+	 * @param pollId a poll
+	 * @param checksum checksum of a ballot in that poll
+	 * @return the voter's ballot if it matches the checksum.
+	 * @throws LiquidoException when poll cannot be found
+	 */
+	@GraphQLQuery(name= "verifyBallot", description = "Verify a ballot with its checksum.")
+	@PreAuthorize(HAS_ROLE_USER)
+	public Optional<BallotModel> verifyBallot(
+		@GraphQLArgument(name = "pollId") @GraphQLNonNull long pollId,
+		@GraphQLNonNull @GraphQLArgument(name = "checksum") String checksum
+	) throws LiquidoException {
+		PollModel poll = pollRepo.findById(pollId)
+			.orElseThrow(LiquidoException.notFound("Cannot verify checksum! Poll(id="+pollId+") not found!"));
+		return pollService.getBallotForChecksum(poll, checksum);
+	}
 
 	// ============= Utility methods ========
 

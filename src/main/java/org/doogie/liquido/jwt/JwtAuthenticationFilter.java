@@ -4,9 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -16,10 +13,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
-
-import static org.doogie.liquido.jwt.AuthUtil.ROLE_USER;
 
 /**
  * This filter can authenticate requests from the passed JWT in the HTTP header "Authentication: Bearer [jwt]".
@@ -29,10 +22,6 @@ import static org.doogie.liquido.jwt.AuthUtil.ROLE_USER;
 @Slf4j
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-
-	private final String tokenRequestHeader = "Authorization";
-
-	private final String tokenRequestHeaderPrefix = "Bearer ";   // with trailing space! and e before a !!! :-)
 
 	@Autowired
 	JwtTokenUtils jwtTokenUtils;
@@ -47,11 +36,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
 																	FilterChain filterChain) throws ServletException, IOException {
 		try {
-			String jwt = getJwtFromRequest(request);
+			String jwt = authUtil.getJwtFromRequest(request);
 			if (StringUtils.hasText(jwt) && jwtTokenUtils.validateToken(jwt)) {
 				Long userId = jwtTokenUtils.getUserIdFromJWT(jwt);
 				Long teamId = jwtTokenUtils.getTeamIdFromJWT(jwt);
-				authUtil.authenticateInSecurityContext(userId, teamId);   // this will fire a DB request for user's roles
+				authUtil.authenticateInSecurityContext(userId, teamId, jwt);   // this will fire a DB request for user's roles
 			}
 
 			filterChain.doFilter(request, response);		// IMPORTANT: MUST always continue chain of filters
@@ -69,17 +58,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		}
 	}
 
-	/**
-	 * Extract the token from the Authorization request header (if there is any)
-	 * @return the JWT or null if there was no "Authorization: Bearer ..." in the request header
-	 */
-	private String getJwtFromRequest(HttpServletRequest request) {
-		//FUN FACT: in the Micronaut framework, this same logic is implemented in five classes :-)
-		String bearerToken = request.getHeader(tokenRequestHeader);
-		if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(tokenRequestHeaderPrefix)) {
-			//log.info("Extracted Token: " + bearerToken);
-			return bearerToken.replace(tokenRequestHeaderPrefix, "");
-		}
-		return null;
-	}
 }

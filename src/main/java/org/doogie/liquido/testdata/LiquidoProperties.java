@@ -27,6 +27,9 @@ public class LiquidoProperties {
 	public Integer rightToVoteExpirationHours;
 	public String  defaultAreaTitle;
 	public String  frontendUrl;
+
+	public Integer loginLinkExpirationHours;
+
 	@ToString.Exclude
 	public String  devLoginToken;
 

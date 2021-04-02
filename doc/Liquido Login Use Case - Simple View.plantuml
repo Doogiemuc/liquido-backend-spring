@@ -1,0 +1,21 @@
+@startuml
+start
+:/login;
+split
+  #lightblue:login via email]
+  :backend sends email and\nstores OTT for this user;
+  :User clicks on\nlogin link in email;
+  :Backend verifies OTT;
+split again
+  #lightblue:mobilephone login]
+  :sendSmsOrPushNotification;
+  :user sees token\non his mobile;
+  :user manually enters\ntoken in LIQUIDO;
+end split
+if (member in how many teams) then (one team)
+else (several teams)
+  :team-chooser;
+endif
+:team-home;
+end
+@enduml

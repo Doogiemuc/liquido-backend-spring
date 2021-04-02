@@ -3,13 +3,15 @@ package org.doogie.liquido.model;
 import lombok.*;
 
 import javax.persistence.Entity;
-import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 /**
- * One time token that is used for login via SMS or EMail.
+ * One time token that is used for login without a password.
+ * A OTT allows a <b>user</b> to login once with this token. After that
+ * the token is deleted. Each OTT has a limited time to live (TTL).
+ * If a user is member of multiple teams, then he can choose into which team to login.
  */
 @Entity
 @Data
@@ -25,18 +27,6 @@ public class OneTimeToken extends BaseModel {
 	@NotNull
 	@OneToOne
 	UserModel user;
-
-	/** Token is valid to login the user into one of his teams */
-	@ManyToOne(optional = true)
-	TeamModel team;
-
-	public enum TOKEN_TYPE {
-		EMAIL,
-		SMS
-	}
-	@NonNull
-	@NotNull
-	TOKEN_TYPE tokenType;
 
 	@NonNull
 	@NotNull
