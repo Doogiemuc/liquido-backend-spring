@@ -44,6 +44,7 @@ public class LiquidoGraphQLController {
 	public LiquidoGraphQLController(
 		TeamsGraphQL teamsGraphQL,
 		PollsGraphQL pollsGraphQL,
+		UserGraphQL userGraphQL,
 		LiquidoGraphQLExceptionHandler exceptionHandler
 	) {
 		// Automatically create GraphQL Schema from graphql-spqr annotations
@@ -51,6 +52,7 @@ public class LiquidoGraphQLController {
 			.withBasePackages("org.doogie.liquido") 			//not mandatory but strongly recommended to set your "root" packages
 			.withOperationsFromSingleton(teamsGraphQL, TeamsGraphQL.class)
 			.withOperationsFromSingleton(pollsGraphQL, PollsGraphQL.class)
+			.withOperationsFromSingleton(userGraphQL, UserGraphQL.class)
 			.withOutputConverters()
 			.generate();
 

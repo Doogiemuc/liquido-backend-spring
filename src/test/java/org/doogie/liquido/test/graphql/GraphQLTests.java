@@ -12,6 +12,7 @@ import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.LawService;
 import org.doogie.liquido.test.HttpBaseTest;
 import org.doogie.liquido.testdata.TestFixtures;
+import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.Lson;
 import org.junit.Assert;
 import org.junit.Test;
@@ -20,11 +21,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import javax.annotation.PostConstruct;
 import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for {@link LawService}
@@ -62,6 +67,48 @@ public class GraphQLTests extends HttpBaseTest {
 	public void loginTeamMember() {
 		this.loginUserJWT(team.getMembers().iterator().next().getId(), team.getId());
 	}
+
+
+	/**
+	 * Test register and login flow via GraphQL.
+	 */
+	public void testAuthyLogin() {
+		// GIVEN a user with mobilephone
+		UserModel user = this.team.getMembers().iterator().next();
+		assertTrue("User needs mobilephone", DoogiesUtil.isEmpty(user.getMobilephone()));
+
+		//WHEN requesting an authy token
+		String graphQL    = String.format("{ authyToken(mobilephone: \"%s\") }", user.getMobilephone());
+		Lson entity = new Lson("query", graphQL);
+		ResponseEntity<String> res = this.client.postForEntity(this.GraphQLPath, entity.toJsonHttpEntity(), String.class);
+		assertEquals(HttpStatus.ACCEPTED, res.getStatusCode());
+		log.info("Successfully requested a one time token");
+
+		/* login with received token
+
+
+
+		res = anonymousClient.getForEntity("/auth/loginWithToken?mobile={mobile}&token={smsToken}", String.class, mobile, smsToken);
+		String jwt = res.getBody();
+		log.debug("received JWT: "+jwt);
+		assertTrue("Invalid JWT: "+jwt, jwt != null && jwt.length() > 20);
+		log.debug("Logged in successfully. Received JWT: "+jwt);
+
+		// verify that user is logged in
+		this.jwtAuthInterceptor.setJwtToken(jwt);
+		String userJson = client.getForObject("/my/user", String.class);
+		log.debug("Logged in as : "+userJson);
+		String receivedMobile = JsonPath.read(userJson, "$.profile.mobilephone");
+		assertEquals("Logged in user should have the phone number that we registered with", mobile, receivedMobile);
+		*/
+
+	}
+
+
+
+
+
+
 
 	/** Load information about team of currently logged in user */
 	@Test
@@ -139,7 +186,7 @@ public class GraphQLTests extends HttpBaseTest {
 
 		// THEN user's email is part of team.members
 		List<String> members = JsonPath.read(res.getBody(), "$.joinTeam.team.members..email");
-		Assert.assertTrue("Cannot find userEmail in joinedTeam.members", members.contains(userEmail));
+		assertTrue("Cannot find userEmail in joinedTeam.members", members.contains(userEmail));
 	}
 
 	/** Admin creates a new poll in his team. */
@@ -166,7 +213,7 @@ public class GraphQLTests extends HttpBaseTest {
 
 		//  AND a poll in ELABORATION
 		List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.ELABORATION);
-		Assert.assertTrue("Need at least one poll in elaboration to testAddProposalToPoll", polls.size() > 0);
+		assertTrue("Need at least one poll in elaboration to testAddProposalToPoll", polls.size() > 0);
 		PollModel poll = polls.get(0);
 
 		// AND data for a new proposal
@@ -185,7 +232,7 @@ public class GraphQLTests extends HttpBaseTest {
 		ResponseEntity<String> res = this.client.exchange(this.GraphQLPath, HttpMethod.POST, entity.toJsonHttpEntity(), String.class);
 
 		//THEN poll is created
-		Assert.assertTrue("Proposal with that title should have been added", res.getBody().contains(proposalTitle));
+		assertTrue("Proposal with that title should have been added", res.getBody().contains(proposalTitle));
 	}
 
 

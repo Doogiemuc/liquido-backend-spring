@@ -42,6 +42,9 @@ public class UserModel extends BaseModel {
 	 */
 	public long authyId;
 
+	/** Last team the user was logged in. This is used when user is member of multiple teams. */
+	public long lastTeamId = -1;
+
 
 	// Implementation note:
 	// A UserModel does not contain a reference to a team. Only the TeamModel has members and admins. (Helps a lot with preventing JsonBackReferences)
