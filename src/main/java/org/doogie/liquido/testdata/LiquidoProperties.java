@@ -27,8 +27,8 @@ public class LiquidoProperties {
 	public Integer rightToVoteExpirationHours;
 	public String  defaultAreaTitle;
 	public String  frontendUrl;
-
 	public Integer loginLinkExpirationHours;
+	public Integer liquidoTokenLength;
 
 	@ToString.Exclude
 	public String  devLoginToken;
@@ -81,6 +81,19 @@ public class LiquidoProperties {
 		public String apiUrl;
 		@ToString.Exclude
 		public String apiKey;
+	}
+
+	@ToString.Exclude
+	public Twilio twilio = new Twilio();
+	@Data
+	public static class Twilio {
+		public String verifyUrl;
+		@ToString.Exclude
+		public String accountSID;
+		@ToString.Exclude
+		public String serviceSID;
+		@ToString.Exclude
+		public String authToken;
 	}
 
 

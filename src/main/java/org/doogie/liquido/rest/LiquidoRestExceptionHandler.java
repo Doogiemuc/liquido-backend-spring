@@ -111,8 +111,8 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 			bodyOfResponse.put("httpMethod", ((ServletWebRequest) request).getHttpMethod());
 			String requestURL  = ((ServletWebRequest)request).getRequest().getRequestURL().toString();
 			String queryString = ((ServletWebRequest)request).getRequest().getQueryString();
-			if (!DoogiesUtil.hasText(queryString)) requestURL += "?" + queryString;
-			if (!DoogiesUtil.hasText(requestURL)) bodyOfResponse.put("requestURL", requestURL);
+			if (!DoogiesUtil.isEmpty(queryString)) requestURL += "?" + queryString;
+			if (!DoogiesUtil.isEmpty(requestURL)) bodyOfResponse.put("requestURL", requestURL);
 			bodyOfResponse.put("remoteUser", request.getRemoteUser());
 		} catch (Throwable ignore) { }
 

@@ -25,7 +25,7 @@ public class DoogiesUtil {
 	 * Check if s is null or empty or only contains spaces
 	 * @return true when s is null, empty or contains only spaces
 	 */
-  public static boolean hasText(String s) {
+  public static boolean isEmpty(String s) {
     return s == null || s.trim().length() == 0;
   }
 

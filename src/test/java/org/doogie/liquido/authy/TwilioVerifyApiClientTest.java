@@ -1,7 +1,7 @@
 package org.doogie.liquido.authy;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.security.TwilioAuthyClient;
+import org.doogie.liquido.security.TwilioVerifyApiClient;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.BaseTest;
 import org.doogie.liquido.testdata.LiquidoProperties;
@@ -10,27 +10,20 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.web.client.RestClientException;
 
 /**
- * Happy Flow test for authy API client
+ * Happy Flow test for new Twilio Verify 2.0 API client
  */
 @SpringBootTest
 @RunWith(SpringRunner.class)
 @Slf4j
-public class TwilioAuthyClientTest extends BaseTest {
+public class TwilioVerifyApiClientTest extends BaseTest {
 
 	@Autowired
-	TwilioAuthyClient client;
+	TwilioVerifyApiClient verifyApiClient;
 
 	@Autowired
 	LiquidoProperties props;
-
-	@Test
-	public void testGetAppDetails() {
-		log.info("Running Twilio Tests against "+props.authy.apiUrl);
-		log.info(client.getAppDetails());
-	}
 
 	/**
 	 * Register a new user, send an authentication request to him.
@@ -40,10 +33,11 @@ public class TwilioAuthyClientTest extends BaseTest {
 	@Test
 	public void testTwilioAuthentication() throws LiquidoException {
 		String email = null;
-		String mobilephone;
+		String mobilephone = props.admin.mobilephone;
 		long userAuthyId;
 
 		//----- create new user
+		/*
 		try {
 			long rand5digits = System.currentTimeMillis() & 10000;
 			email = "userFromTest" + rand5digits + "@liquido.vote";
@@ -55,22 +49,15 @@ public class TwilioAuthyClientTest extends BaseTest {
 			log.error("Cannot create twilio user "+email, e.toString());
 			throw e;
 		}
+		*/
+
 
 		//----- send authentication request (via push or SMS)
-		try {
-			log.debug("Send SMS or push notification to mobilephone="+mobilephone);
-			String res = client.sendSmsOrPushNotification(userAuthyId);
-			log.debug(" => "+res);
-			if (res.contains("ignored")) {
-				log.info("Sent push authentication request to userAuthyId=" + userAuthyId + "   Response:\n" + res);
-			} else {
-				log.info("Sent Sms to userAuthyId=" + userAuthyId + "   Response:\n" + res);
-			}
-		} catch (LiquidoException e) {
-			log.error("Cannot send SMS to twilio userAuthIy="+userAuthyId, e);
-			throw e;
-		}
+		log.debug("Send SMS or push notification to mobilephone="+mobilephone);
+		String res = verifyApiClient.requestVerificationToken("sms", mobilephone);
+		log.debug(" => "+res);
 
+		/*
 		//----- validate user's token (this cannot be automated.)
 		//String otp = <otp that user entered from his mobile phone> ;
 		//client.verifyOneTimePassword(userAuthyId, otp);
@@ -83,19 +70,21 @@ public class TwilioAuthyClientTest extends BaseTest {
 			log.error("Cannot remove userAuthIy="+userAuthyId, e);
 			throw e;
 		}
+		*/
+
 	}
 
 
-	/**
+	/*
 	 * This test cannot be run automatically. But still we provide it. You must manually enter the otp.
 	 * @throws LiquidoException
-	 */
+
 	//@Test
 	public void verifyOneTimePassword() throws LiquidoException {
 		long userAuthyId = 118906633;
 		String otp = "2079048";
 		try {
-			String res = client.verifyOneTimePassword(userAuthyId, otp);
+			String res = verifyApiClient.verifyOneTimePassword(userAuthyId, otp);
 			log.info(" => "+res);
 			log.info("Authy OneTimePassword verified SUCCESSFULLY. User "+userAuthyId+" is authentic.");
 		} catch (LiquidoException e) {
@@ -103,5 +92,6 @@ public class TwilioAuthyClientTest extends BaseTest {
 			throw e;
 		}
 	}
+	*/
 
 }

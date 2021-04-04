@@ -5,7 +5,6 @@ import org.doogie.liquido.rest.dto.CastVoteResponse;
 import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
-import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * This service contains all the voting logic for casting a vote.
@@ -85,11 +83,11 @@ public class CastVoteService {
 	@Transactional
 	public String createVoterTokenAndStoreRightToVote(UserModel voter, AreaModel area, String voterTokenSecret, boolean becomePublicProxy) throws LiquidoException {
 		log.debug("createVoterTokenAndStoreRightToVote: for "+voter.toStringShort()+" in "+area + ", becomePublicProxy="+becomePublicProxy);
- 		if (voter == null || DoogiesUtil.hasText(voter.getEmail()))
+ 		if (voter == null || DoogiesUtil.isEmpty(voter.getEmail()))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need voter to build a voterToken!");
 		if (area == null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Cannot build a voterToken. Could not find area.");
-		if (DoogiesUtil.hasText(voterTokenSecret))
+		if (DoogiesUtil.isEmpty(voterTokenSecret))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_GET_TOKEN, "Need your tokenSecret to build a voterToken!");
 
 		// Create a new voterToken for this user in that area with the BCRYPT hashing algorithm
@@ -212,7 +210,7 @@ public class CastVoteService {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Poll must be in status VOTING");
 
 		// Sanity check voterToken (computational expensive thorough check will be done below)
-		if (DoogiesUtil.hasText(voterToken))
+		if (DoogiesUtil.isEmpty(voterToken))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Need voterToken to cast vote");
 
 		// voterOrder must contain at least one element

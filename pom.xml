@@ -279,10 +279,18 @@
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<version>${spring-boot.version}</version>
 			</plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>9</source>
+                    <target>9</target>
+                </configuration>
+            </plugin>
 
-			<!-- Auto increment a numerical build number. Stored in buildNumber.properties file.
-			     mvn buildnumber:create
-			-->
+            <!-- Auto increment a numerical build number. Stored in buildNumber.properties file.
+                 mvn buildnumber:create
+            -->
 			<!-- plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>buildnumber-maven-plugin</artifactId>

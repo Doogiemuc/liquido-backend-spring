@@ -28,7 +28,8 @@ public interface TeamRepo extends PagingAndSortingRepository<TeamModel, Long> {
 	@Query("FROM TeamModel t WHERE :user member t.members OR :user member t.admins")
 	List<TeamModel> teamsOfUser(UserModel user);
 
-	/**
+	/*
+	 * @Deprecated.  See methods directly in TeamModel
 	 * Check if a given user is member <b>or</b> admin of a team
 	 * @param teamId a team
 	 * @param memberId member or admin

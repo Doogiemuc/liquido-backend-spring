@@ -1,7 +1,5 @@
 @startuml
 
-autonumber
-
 actor User
 participant LiquidoApp
 participant "Liquido Backend" as BE
@@ -12,51 +10,59 @@ note over AuthyAPI: ""https://api.authy.com/protected/json""
 
 == Register ==
 
-User -> LiquidoApp: register
+User -> LiquidoApp: "/welcome"
 activate LiquidoApp
-
-LiquidoApp -> BE: ""POST /auth/register\n {email, profile.mobilephone}""
-
+LiquidoApp -> BE: ""POST /auth/register""\n""{email, profile.mobilephone}""
+rnote over BE #lightblue: ""UserService.registerUser()""
 BE -> AuthyAPI: ""POST /users/new""
-
 AuthyAPI --> BE: HTTP 200 OK
-
 BE --> LiquidoApp: HTTP 200 OK
-
 LiquidoApp --> User: registered successfully
 deactivate LiquidoApp
 
 == Login ==
 
-User -> LiquidoApp: Open LiquidoApp
+User -> LiquidoApp: ""/login""
 activate LiquidoApp
-
-LiquidoApp -> BE: Request\nOne-Time-Token\n(OTT)
-
+LiquidoApp -> BE: ""/auth/requestToken""
+rnote over BE #lightblue: ""UserService.sendSmsOrPushNotification()""
 BE -> AuthyAPI: ""GET /sms/{AUTHY_ID}""
 AuthyAPI -> AuthyApp: push notification
 deactivate LiquidoApp
+
 activate AuthyApp
-
-
 note left of AuthyApp: AuthyApp pops up and\nshows a One Time Token (OTT) to user\n2FA: User switches back to LiquidoApp
-
-AuthyApp -[#blue]->o User: One time token (OTT). 2FA: This is not a technical callback! This is human interaction.
+AuthyApp -[#blue]->o User: User sees Authy one time token (OTT). 2FA: This is not a technical callback! This is human interaction.
 deactivate AuthyApp
+
+|||
 
 User -> LiquidoApp: user manually enters OTT\nin LiquidoApp
 activate LiquidoApp
-
-LiquidoApp -> BE: login with OTT
+LiquidoApp -> BE: ""/auth/loginWithToken""
+rnote over BE #lightblue: ""UserService.verifyOneTimePassword()""
 BE -> AuthyAPI: ""GET verify/{TOKEN}/{AUTHY_ID}""
 AuthyAPI --> BE: HTTP 200 OK
-
+note over BE: If user is member of more than one team\nthen log him into his last used team.
 BE --> LiquidoApp: JsonWebToken (JWT)
-LiquidoApp -> LiquidoApp: cache JWT
+LiquidoApp -> LiquidoApp: cache JWT in localStorage
 LiquidoApp --> User: login successful
 deactivate LiquidoApp
 
-== Authenticated ==
+|||
+== Switch Team ==
+
+User -> LiquidoApp: ""/team""
+activate LiquidoApp
+LiquidoApp -> BE: ""/auth/switchTeam""\n(authenticated call with JWT)
+rnote over BE #lightblue: ""UserService.switchTeam()""
+' should I require authentication via authy here again?
+BE --> LiquidoApp: new JWT
+LiquidoApp -> User: Team Home of new team
+deactivate LiquidoApp
+
+|||
+== Authenticated Calls ==
 
 LiquidoApp -> BE: authenticated requests\nwith JWT in header
 BE --> LiquidoApp: HTTP 200 OK
