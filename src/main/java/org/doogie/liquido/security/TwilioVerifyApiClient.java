@@ -43,7 +43,7 @@ public class TwilioVerifyApiClient {
 
 
 		if (DoogiesUtil.isEmpty(props.twilio.accountSID) || DoogiesUtil.isEmpty(props.twilio.authToken) || DoogiesUtil.isEmpty(props.twilio.verifyUrl))
-			throw new RuntimeException("Need config for Twilio! Must set liquido.twilio.accountSID, .authToken and .verifyUrl in application.yml");
+			throw new RuntimeException("Need config for Twilio! Must set liquido.twilio.accountSID, .authToken and .verifyUrl in application-dev.yml");
 
 		this.client = new RestTemplateBuilder()
 			//.additionalInterceptors(new LogClientRequestInterceptor())

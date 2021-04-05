@@ -16,7 +16,7 @@ import static org.junit.Assert.*;
 @SpringBootTest
 @Slf4j
 @Ignore  // currently disabled
-//@ActiveProfiles("test")   // Needed to manually set test profile for tests, so that application-test.properties is loaded ???
+//@ActiveProfiles("test")   // Needed to manually set test profile for tests, so that application-test.yml is loaded ???
 public class MailServiceTest extends BaseTest {
 
 	@Autowired

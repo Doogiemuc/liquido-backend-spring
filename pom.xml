@@ -4,7 +4,7 @@
 
 	<groupId>org.doogie.liquido</groupId>
 	<artifactId>liquido-backend-spring</artifactId>
-	<version>3.0.1</version>
+	<version>4.0.0</version>
 	<packaging>jar</packaging>
 
 	<name>liquido-backend-spring</name>
@@ -143,13 +143,13 @@
 		</dependency>
 		-->
 
-
-		<!-- Spring Developer Tools https://docs.spring.io/spring-boot/docs/current/reference/html/using-boot-devtools.html  provide /h2-console for H2 DB  -->
+		<!-- Spring Developer Tools https://docs.spring.io/spring-boot/docs/current/reference/html/using-boot-devtools.html
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
 			<optional>true</optional>
 		</dependency>
+		-->
 
 		<!-- H2 Database that is automatically embedded in memory when the server starts. -->
 		<dependency>

@@ -11,12 +11,13 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Optional;
+import java.util.Arrays;
 
 /**
  * Main entry class for Liquido Backend
@@ -30,8 +31,14 @@ public class LiquidoBackendSpringApplication {
 	private String serverPort;
 
 	/** path prefix for REST API from application.properties */
-	@Value(value = "${spring.data.rest.base-path}")
-	String basePath;
+	@Value("${spring.data.rest.base-path}")
+	String restBasePath;
+
+	@Value("${graphiql.endpoint}")
+	String graphiQlEndpoint;
+
+	@Autowired
+	Environment env;
 
 	@Autowired
 	LiquidoProperties liquidoProps;
@@ -44,7 +51,7 @@ public class LiquidoBackendSpringApplication {
 
   /**
    * Main entry point for Liquido Spring backend.
-   * @param args command line arguments (none currently used)
+   * @param args command line arguments
    */
   public static void main(String[] args) throws SchedulerException {
   	//BUGFIX: The code in here may be executed twice: https://stackoverflow.com/questions/49527862/spring-boot-application-start-twice
@@ -64,10 +71,6 @@ public class LiquidoBackendSpringApplication {
 		System.out.println("=====================================================");
 		System.out.println();
 
-		log.info("=====================================================");
-		log.info(" LIQUIDO backend API is up and running.");
-		log.info(" Running some sanity checks ...");
-
 		/*
 		try {
 			Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
@@ -78,6 +81,7 @@ public class LiquidoBackendSpringApplication {
 		}
 		*/
 
+		log.info(" Running some sanity checks ...");
 		try {
 			Class.forName("org.h2.Driver");
 		} catch (ClassNotFoundException e) {
@@ -98,19 +102,14 @@ public class LiquidoBackendSpringApplication {
 			throw new Exception(errMsg);
 		}
 
-		log.info(" ... sanity checks: successful.");
-
-		log.info(" BackendBasePath: http://localhost:"+this.serverPort+this.basePath);
+		log.info("=====================================================");
+		log.info(" LIQUIDO backend API is up and running in " + Arrays.toString(env.getActiveProfiles()));
+		log.info(" ServerPort: " + this.serverPort);
+		log.info(" RestBasePath: " + this.restBasePath);
+		log.info(" GraphiQlEndpoint: "+ this.graphiQlEndpoint);
 		log.info(" DB: "+dbUrl);
-		try {
-			ResultSet resultSet = jdbcTemplate.getDataSource().getConnection().getMetaData().getTables(null, null, "AREAS", null);
-			if (resultSet.next()) {
-				log.info(" Liquido table AREAS exists.");
-			}
-		} catch (Exception e) {
-			// ignore
-		}
-		log.info(" "+ liquidoProps.toString());
+		log.info(" LiquidoProperties: ");
+		System.out.println(liquidoProps.toString());
 		log.info("=======================================================");
 	}
 

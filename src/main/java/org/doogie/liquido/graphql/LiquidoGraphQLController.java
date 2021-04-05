@@ -111,7 +111,7 @@ public class LiquidoGraphQLController {
 			// In a graphQL world the request URL is always the same.
 			// But our awesome LiquidoException can add the request body to the error response.
 			// So the caller knows which of his GraphQL queries or mutations resulted in this error.
-			throw new LiquidoException(LiquidoException.Errors.GRAPHQL_ERROR, msg, null, body);
+			throw new LiquidoException(LiquidoException.Errors.GRAPHQL_ERROR, msg, ex, body);
 		}
 
 		return result.getData();

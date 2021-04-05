@@ -735,13 +735,13 @@ public class RestEndpointTests extends HttpBaseTest {
 		}
 
 		// --------------------------------------------------------
-		// GIVEN a user that has already casted his vote
+		// GIVEN a user that has already casted his vote (user4)
 		//  WHEN a proxy above him casts a vote
 		// THEN the ballot of this user, who casted his own vote, did not change
 		ResponseEntity<BallotModel> verifiedBallotOfUser4 = client.getForEntity("/polls/" + poll.getId() + "/verify?checksum=" + user4Checksum, BallotModel.class);
 		assertEquals("ballot of user4 can still be verified via his checksum", HttpStatus.OK, verifiedBallotOfUser4.getStatusCode());
 		assertEquals("level of the ballot of user4 is still 0", 0, (long)verifiedBallotOfUser4.getBody().getLevel());
-		for (int i = 0; i < user1VoteOrderIds.size(); i++) {
+		for (int i = 0; i < user4VoteOrderIds.size(); i++) {
 			assertEquals("Ballot of user4 should still have its original voteOrder, even after a proxy above him voted", user4VoteOrderIds.get(i), verifiedBallotOfUser4.getBody().getVoteOrder().get(i).getId());
 		}
 

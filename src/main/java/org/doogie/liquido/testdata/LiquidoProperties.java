@@ -32,7 +32,6 @@ public class LiquidoProperties {
 
 	@ToString.Exclude
 	public String  devLoginToken;
-
 	public Backend backend = new Backend();
 
 	@Data
@@ -61,6 +60,14 @@ public class LiquidoProperties {
 		public String username;
 		@ToString.Exclude
 		public String pass;
+	}
+
+	public Test test = new Test();
+	@Data
+	public static class Test {
+		public Boolean recreateTestData =false;
+		public Boolean loadTestData = false;
+		public String sampleDbFile = "liquido-sampleDB-H2.sql";
 	}
 
 	@ToString.Exclude
