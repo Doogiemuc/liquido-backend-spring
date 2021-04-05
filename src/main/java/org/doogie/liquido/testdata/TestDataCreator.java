@@ -18,6 +18,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -91,13 +92,7 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
 @Order(100)   		                      // seed DB first, then run the other CommandLineRunners
 public class TestDataCreator implements CommandLineRunner {
 
-  static final String RECREATE_TEST_DATA     	= "recreateTestData";
-  static final String LOAD_TEST_DATA         	= "loadTestData";
-	static final String TEST_DATA_FILENAME   		= "sampleDB-H2.sql";
-	static final String TEST_DATA_PATH       		= "src/main/resources/";
-
 	// TestDataCreator pretty much depends on any Model, Repo and Service that we have. Which proves that we have a nice code coverage :-)
-
   @Autowired
   UserRepo userRepo;
 
@@ -141,7 +136,7 @@ public class TestDataCreator implements CommandLineRunner {
 	ProxyService proxyService;
 
   @Autowired
-	LiquidoProperties prop;
+	LiquidoProperties props;
 
   @Autowired
 	TestDataUtils util;
@@ -194,18 +189,14 @@ public class TestDataCreator implements CommandLineRunner {
    * @param args command line args
    */
   public void run(String... args) throws LiquidoException {
-		boolean seedDB = "true".equalsIgnoreCase(springEnv.getProperty(RECREATE_TEST_DATA));
-    for(String arg : args) {
-      if (("--"+ RECREATE_TEST_DATA).equalsIgnoreCase(arg)) { seedDB = true; }
-    }
-    if (seedDB) {
+   if (props.test.recreateTestData) {
         log.info("===== START TestDataCreator");
         // Sanity check: Is there a schema with tables?
         try {
-            List<UserModel> users = jdbcTemplate.queryForList("SELECT * FROM USERS LIMIT 10", UserModel.class);
+        	List<UserModel> users = jdbcTemplate.queryForList("SELECT * FROM USERS LIMIT 10", UserModel.class);
         } catch (Exception e) {
-            log.error("Cannot find table USERS! Did you create a DB schema at all?");
-            throw e;
+          log.error("Cannot find table USERS! Did you create a DB schema at all?");
+          throw e;
         }
 
       log.debug("Create test data from scratch via spring-data for DB: "+ jdbcTemplate.getDataSource().toString());
@@ -237,17 +228,16 @@ public class TestDataCreator implements CommandLineRunner {
       seedLaws();
       auditorAware.setMockAuditor(null);
 
-			log.info("===== TestDataCreator: Store sample data in file: "+ TEST_DATA_PATH + TEST_DATA_FILENAME);
-			jdbcTemplate.execute("SCRIPT TO '"+ TEST_DATA_PATH + TEST_DATA_FILENAME +"'");				//TODO: export schema only with  SCRIPT NODATA TO ...   and export MySQL compatible script!!!
+			log.info("===== TestDataCreator: Store sample data in file: "+ props.test.sampleDbFile);
+			jdbcTemplate.execute("SCRIPT TO '" + props.test.sampleDbFile +"'");				//TODO: export schema only with  SCRIPT NODATA TO ...   and export MySQL compatible script!!!
 			adjustDbInitializationScript();
-			log.info("===== TestDataCreator: Sample data stored successfully in file: "+ TEST_DATA_PATH + TEST_DATA_FILENAME);
+			log.info("===== TestDataCreator: Sample data stored successfully in file: " + props.test.sampleDbFile);
     }
 
-    boolean loadSampleDataFromSqlScript = Boolean.parseBoolean(springEnv.getProperty(LOAD_TEST_DATA));
-    if (loadSampleDataFromSqlScript) {
+    if (props.test.loadTestData) {
 			try {
-				log.info("===== TestDataCreator: Loading schema and sample data from "+ TEST_DATA_FILENAME);
-				Resource resource = appContext.getResource(ResourceLoader.CLASSPATH_URL_PREFIX + TEST_DATA_FILENAME);
+				log.info("===== TestDataCreator: Loading schema and sample data from " + props.test.sampleDbFile);
+				Resource resource = new ClassPathResource(props.test.sampleDbFile);
 				ScriptUtils.executeSqlScript(jdbcTemplate.getDataSource().getConnection(), resource);
 
 				// Fill userMap as cache
@@ -261,16 +251,16 @@ public class TestDataCreator implements CommandLineRunner {
 				log.info("Loaded {} checksums", rightToVoteRepo.count());
 				log.info("Loaded {} comments", commentRepo.count());
 
-				log.info("===== TestDataCreator: Successfully loaded schema and sample data from "+ TEST_DATA_FILENAME +" => DONE");
+				log.info("===== TestDataCreator: Successfully loaded schema and sample data from "+ props.test.sampleDbFile +" => DONE");
 			} catch (SQLException e) {
-				String errMsg = "ERROR: Cannot load schema and sample data from "+ TEST_DATA_FILENAME;
+				String errMsg = "ERROR: Cannot load schema and sample data from "+ props.test.sampleDbFile;
 				log.error(errMsg);
 				throw new RuntimeException(errMsg, e);
 			}
 		}
 
     // log proxy structure in default area if tracing is enabled
-    if ((seedDB || loadSampleDataFromSqlScript) && log.isTraceEnabled()) {
+    if (log.isTraceEnabled()) {
 			AreaModel area = this.defaultArea;
 			Optional<UserModel> topProxyOpt = userRepo.findByEmail(TestFixtures.USER1_EMAIL);      // user1 is the topmost proxy in TestFixtures.java
 			if (topProxyOpt.isPresent()) {
@@ -315,7 +305,7 @@ public class TestDataCreator implements CommandLineRunner {
 	private void adjustDbInitializationScript() {
 		log.trace("removeQartzSchema from SQL script: start");
 		try {
-			File sqlScript = new File(TEST_DATA_PATH + TEST_DATA_FILENAME);
+			File sqlScript = new File(props.test.sampleDbFile);
 			BufferedReader reader = new BufferedReader(new FileReader(sqlScript));
 			List<String> lines = new ArrayList<>();
 			String currentLine;
@@ -546,8 +536,8 @@ public class TestDataCreator implements CommandLineRunner {
       lawRepo.save(newIdea);
 
 	    // add some supporters, but not enough to become a proposal
-      if (prop.supportersForProposal > 0) {
-				int numSupporters = rand.nextInt(prop.supportersForProposal - 1);
+      if (props.supportersForProposal > 0) {
+				int numSupporters = rand.nextInt(props.supportersForProposal - 1);
 				//log.debug("adding "+numSupporters+" supporters to idea "+newIdea);
 				addSupportersToIdea(newIdea, numSupporters);
 			}
@@ -566,7 +556,7 @@ public class TestDataCreator implements CommandLineRunner {
 		lawRepo.save(proposal);
 
 		// add enough supporters so that the idea becomes a proposal. (Or add some random supporters.)
-		int numSupporters = prop.supportersForProposal > 0 ? prop.supportersForProposal : rand.nextInt(5)+1;
+		int numSupporters = props.supportersForProposal > 0 ? props.supportersForProposal : rand.nextInt(5)+1;
 		proposal = addSupportersToIdea(proposal, numSupporters);
 
 		LocalDateTime reachQuorumAt = LocalDateTime.now().minusDays(reachedQuorumDaysAgo);
@@ -714,8 +704,8 @@ public class TestDataCreator implements CommandLineRunner {
         newPoll = pollService.addProposalToPoll(altProp, newPoll);
       }
 
-      util.fakeCreateAt(newPoll, prop.daysUntilVotingStarts/2);
-      util.fakeUpdatedAt(newPoll, prop.daysUntilVotingStarts/2);
+      util.fakeCreateAt(newPoll, props.daysUntilVotingStarts/2);
+      util.fakeUpdatedAt(newPoll, props.daysUntilVotingStarts/2);
       log.trace("Created poll in elaboration phase: "+newPoll);
       return newPoll;
     } catch (Exception e) {
@@ -740,14 +730,14 @@ public class TestDataCreator implements CommandLineRunner {
         i++;
       }
       PollModel savedPoll = pollRepo.save(poll);
-      util.fakeCreateAt(savedPoll, prop.daysUntilVotingStarts+1);
-      util.fakeUpdatedAt(savedPoll, prop.daysUntilVotingStarts/2);
+      util.fakeCreateAt(savedPoll, props.daysUntilVotingStarts+1);
+      util.fakeUpdatedAt(savedPoll, props.daysUntilVotingStarts/2);
 
       //===== Start the voting phase of this poll
       pollService.startVotingPhase(savedPoll);
       LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
       savedPoll.setVotingStartAt(yesterday);
-			savedPoll.setVotingEndAt(yesterday.truncatedTo(ChronoUnit.DAYS).plusDays(prop.durationOfVotingPhase));     //voting ends in n days at midnight
+			savedPoll.setVotingEndAt(yesterday.truncatedTo(ChronoUnit.DAYS).plusDays(props.durationOfVotingPhase));     //voting ends in n days at midnight
 			savedPoll.setTitle("Poll in voting phase "+System.currentTimeMillis()%10000);
       savedPoll = pollRepo.save(savedPoll);
 
@@ -771,8 +761,8 @@ public class TestDataCreator implements CommandLineRunner {
 
 			//---- fake some dates to be in the past
 			int daysFinished = 5;  // poll was finished 5 days ago
-			int daysVotingStarts = prop.daysUntilVotingStarts;
-			int durationVotingPhase = prop.durationOfVotingPhase;
+			int daysVotingStarts = props.daysUntilVotingStarts;
+			int durationVotingPhase = props.durationOfVotingPhase;
 			LocalDateTime votingStartAt = LocalDateTime.now().minusDays(durationVotingPhase+daysFinished);
 			poll.setVotingStartAt(votingStartAt);
 			LocalDateTime votingEndAt = LocalDateTime.now().minusDays(daysFinished).truncatedTo(ChronoUnit.DAYS);  // voting ends at midnight
@@ -811,7 +801,7 @@ public class TestDataCreator implements CommandLineRunner {
     for (int i = 0; i < TestFixtures.NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
       LawModel realLaw = createProposal(lawTitle, util.getLoremIpsum(100,400), this.defaultArea, createdBy, 12, 10);
-			realLaw = addSupportersToIdea(realLaw, prop.supportersForProposal+2);
+			realLaw = addSupportersToIdea(realLaw, props.supportersForProposal+2);
 			//realLaw.setPoll(poll);
 			LocalDateTime reachQuorumAt = LocalDateTime.now().minusDays(10);
       realLaw.setReachedQuorumAt(reachQuorumAt);

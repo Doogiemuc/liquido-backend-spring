@@ -1,8 +1,11 @@
 # Liquido-backend-spring
 
-RESTfull backend for my Liquid Democracy application
-written in JAVA with Spring Boot and Spring-Data-REST HATEOAS
+Since more than 4 years this is now my personal hobby project.
+It has grown larger than I could have ever imagined. Countless 
+coding nights have been invested into this project.
+Completely beeing "in the FLOW" is an unforgettable state of
+mind that only real coders know. HAVE PHUN!
 
-This project is my playground for learning Spring. :-) 
+http://www.liquido.vote
 
-Looc into the /docs directory for more detailed information.
+Look into the /docs directory for more detailed information.

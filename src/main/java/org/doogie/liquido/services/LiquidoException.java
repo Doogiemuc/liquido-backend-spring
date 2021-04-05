@@ -34,7 +34,7 @@ public class LiquidoException extends Exception {
 		TEAM_WITH_SAME_NAME_EXISTS(1, HttpStatus.CONFLICT),
 
 		//Join Team errors
-		CANNOT_JOIN_TEAM(10, HttpStatus.BAD_REQUEST),
+		CANNOT_JOIN_TEAM_INVITE_CODE_INVALID(10, HttpStatus.BAD_REQUEST),
 		CANNOT_JOIN_TEAM_ALREADY_MEMBER(11, HttpStatus.CONFLICT),						// there already is a member (or admin) with the same email
 		CANNOT_JOIN_TEAM_ALREADY_ADMIN(12, HttpStatus.CONFLICT),
 	  CANNOT_REGISTER_NEED_EMAIL(13, HttpStatus.BAD_REQUEST),

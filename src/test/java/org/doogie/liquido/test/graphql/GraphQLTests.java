@@ -134,12 +134,12 @@ public class GraphQLTests extends HttpBaseTest {
 		String teamName    = TestFixtures.TEAM_NAME_PREFIX + "_" + now;
 		String adminName   = TestFixtures.USER_NAME_PREFIX + "_" + now;
 		String adminEmail  = TestFixtures.MAIL_PREFIX+ "_admin_" + now + "@graphql-test.vote";
-		String mobilephone = TestFixtures.MOBILEPHONE_PREFIX+ now;
+		String mobilephone = TestFixtures.MOBILEPHONE_PREFIX + now;
 		String website     = TestFixtures.DEFAULT_WEBSITE;
 		String picture     = TestFixtures.AVATAR_PREFIX+(now%16)+".png";
 		String graphQLMutation = String.format(
-			"mutation { createNewTeam(teamName: \"%s\", adminName: \"%s\", adminEmail: \"%s\", mobilephone: \"%s\"" +
-				"website: \"%s\", picture: \"%s\") {" +
+			"mutation { createNewTeam(teamName: \"%s\", adminName: \"%s\", adminEmail: \"%s\", adminMobilephone: \"%s\", " +
+				"website: \"%s\", picture: \"%s\") { " +
 				"team { id teamName inviteCode members { id, email, name, website, picture, mobilephone } } " +
 				"user { id email name mobilephone website picture } " +
 				"jwt " +
@@ -150,7 +150,7 @@ public class GraphQLTests extends HttpBaseTest {
 		// WHEN we send this mutation
 		String actualTeamName = executeGraphQl(graphQLMutation, "$.createNewTeam.team.teamName");
 
-		// THEN we receive a list of teams
+		// THEN we receive info about the new team
 		Assert.assertEquals("Expected teamName="+teamName, teamName, actualTeamName);
 	}
 

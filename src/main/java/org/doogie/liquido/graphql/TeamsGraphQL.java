@@ -151,7 +151,7 @@ public class TeamsGraphQL {
 		@GraphQLArgument(name = "picture") String picture
 	) throws LiquidoException {
 		TeamModel team = teamRepo.findByInviteCode(inviteCode).orElseThrow(
-			() -> new LiquidoException(Errors.CANNOT_JOIN_TEAM, "Invalid inviteCode '"+inviteCode+"'")
+			() -> new LiquidoException(Errors.CANNOT_JOIN_TEAM_INVITE_CODE_INVALID, "Invalid inviteCode '"+inviteCode+"'")
 		);
 
 		Optional<LiquidoAuthentication> auth = authUtil.getLiquidoAuthentication();
@@ -190,7 +190,7 @@ public class TeamsGraphQL {
 			String jwt = jwtTokenUtils.generateToken(newUser.getId(), team.getId());
 			return new CreateOrJoinTeamResponse(team, newUser, jwt);
 		} catch (Exception e) {
-			throw new LiquidoException(Errors.CANNOT_JOIN_TEAM, "Error: Cannot join team.", e);
+			throw new LiquidoException(Errors.INTERNAL_ERROR, "Error: Cannot join team.", e);
 		}
 	}
 

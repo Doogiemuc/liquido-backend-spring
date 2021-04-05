@@ -1,0 +1,186 @@
+# ===================================================================
+# LIQUIDO - Spring Boot Application Properties
+#
+# This file contains the default settings. These can be used on your
+# development environment.
+# ===================================================================
+
+server:
+  port: 8080
+
+graphiql:
+  #mapping: /graphiql
+  endpoint: /liquido/v2/graphql
+
+
+spring:
+
+
+  # ===================================================================
+  # DATABASE SETTINGS
+  # ===================================================================
+  # These are all already the default settings in spring in DEV environment
+  datasource:
+    #url: jdbc:h2:mem:testdb
+    #driverClassName: org.h2.Driver
+    #username: sa
+    #password:
+
+  data:
+    rest:
+      base-path: /liquido/v2
+
+  jpa:
+    # Should spring automatically generate the database schema?  DO NOT TURN THIS ON IN PROD!!!
+    # https://docs.spring.io/spring-boot/docs/1.0.x/reference/html/howto-database-initialization.html
+    generate-ddl: false
+    hibernate:
+      ddl-auto: none   # none, validate, update, create-drop
+
+    #database-platform: org.hibernate.dialect.H2Dialect
+
+    #TODO: Our backend has no view :-) So also no transactions that ... SHOULD .... span the view.  :-) But still needs work
+    # https://vladmihalcea.com/the-open-session-in-view-anti-pattern/
+    #open-in-view: false
+
+    # Uncomment these two to show Hibernate Schema creation https://docs.spring.io/spring-boot/docs/current/reference/html/howto-database-initialization.html#howto-initialize-a-database-using-hibernate
+    #show-sql: true
+    properties:
+      hibernate:
+        #type: TRACE
+
+      # Also create a schema.sql script for initializing a database later in other environments
+      # https://stackoverflow.com/questions/37648395/how-to-see-the-schema-sql-ddl-in-spring-boot
+      # https://thoughts-on-java.org/standardized-schema-generation-data-loading-jpa-2-1/
+
+      javax:
+        persistence:
+          schema-generation:
+            scripts:
+              action: create
+              create-target: build/liquido-db-schema.sql
+            database:
+              action: create # still also create the schema in the DB.
+
+
+# ===================================================================
+# Quartz Job scheduler  (By default an in memory job store is used.)
+# https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-quartz.html
+# ===================================================================
+#spring.quartz.job-store-type=jdbc
+#spring.quartz.jdbc.initialize-schema=EMBEDDED
+
+# ===================================================================
+#         L O G G I N G
+# Since 10 years and dozens of logging frameworks I am always re-learning,
+# how to configure my favorite logging format. It gives you clickable links in your IDE.
+# ===================================================================
+
+# Uncomment this for a lot of fancy and helpful debug messages.  (Watch your disk space!)
+# https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-logging-console-output
+# debug: true
+
+logging:
+  pattern:
+    console: "%highlight(%-5level) %cyan(%-70.70(.\\(%file:%line\\).%method\\(\\))) | %message%n"
+  level:
+    root: INFO
+
+
+# ===================================================================
+#
+# LIQUIDO configuration
+#
+# See LiquidoProperties.java
+# ===================================================================
+
+
+liquido:
+  # Title of the default area (used for web users)
+  defaultAreaTitle: Default_Area
+
+  # How many supports does an idea need before it becomes a proposal. (-1 to disable the concept of "ideas")
+  supportersForProposal: -1
+
+  # How many days does a poll in elaboration run until voting starts automatically (-1 to disable)
+  daysUntilVotingStarts: 14
+
+  # For how many days does the voting phase run before it is automatically ended (-1 to disable)
+  durationOfVotingPhase: 14
+
+  # How long is a right2vote token valid? (hours)
+  rightToVoteExpirationHours: 24
+
+  # inject <version> from pom.xml
+  backend:
+    version: @version@
+
+  # What is the HTTP URL of our mobile PWA frontend?
+  frontendUrl: http://localhost:3000
+
+
+  ###                                    ###
+  ##### NOW COMES CONFIDENTIAL STUFF #######
+  ###                                    ###
+
+  # Length in characters of liquido one time login tokens
+  liquidoTokenLength: 6
+
+  # This is a secret token that can be used to login for tests (spring env must be "test"!)
+  devLoginToken: 998877
+
+  # How long is a magic link that has been sent vie email valid? (hours)
+  loginLinkExpirationHours: 12
+
+  # JSON Web Token secrets
+  jwt:
+    secret: liquidoJwtSecret
+    expiration: 3600000   # milliseconds
+
+  # Secretes for generation BCRYPT hash values
+  bcrypt:
+    # A secret only known to the server. This ensures that only this server is able to create valid voterTokens and checksums
+    secret: bcryptSecret
+    # SECURITY: Salt for creating checksums of voterTokens. This must be a valid BCrypt salt ie. begin with $2a$10$
+    salt: $2a$10$1X562rR7N2Wp3U7QI.JIzu
+
+  # Email SMTP sever for sending out emails.
+  smtp:
+    host: smtp.server.com
+    port: 587
+    from: donotreply@domain.tld
+    fromname: LIQUIDO
+    username: user@server.com
+    pass: XXXXXXX
+
+  # SuperAdmin user (will automatically be upserted)
+  admin:
+    email: admin@liquido.de
+    name: Liquido Admin
+    mobilephone: "+491511234567"
+    picture: /static/img/avatars/Avatar16.png
+
+  # AUTHY API secrets
+  authy:
+    apiUrl: http://api.authy.com
+    apiKey: QX80mpT6wIXXXXXXXXXXXXXXXX
+
+  twilio:
+    verifyUrl: https://verify.twilio.com/v2/
+    accountSID: AC.....XXXXXXX.....
+    serviceSID: VA.....XXXXXXX.....
+    authToken: 627a69XXXXXXXXXXXXXXXXXXXXX
+
+  # LIQUIDO can log response body payloads.
+  debug:
+    log:
+      includeResponsePayload: true
+
+
+# If you are behind a proxy
+
+PROXY_ACTIVE: false
+PROXY_HOST: proxy-host.internal
+PROXY_PORT: 8080
+PROXY_USER: proxyUser
+PROXY_PASS: XXXXX
