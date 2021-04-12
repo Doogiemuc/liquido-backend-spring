@@ -31,21 +31,17 @@ public class JwtTokenUtils {
 	 * This generates a new JWT. This needs jwtSecret as input, so that only the server can
 	 * generate JWTs. The userId becomes the JWT.subject and teamId is set as additional claim.
 	 */
-	public String generateToken(@NonNull String userId, String teamId) {
+	public String generateToken(@NonNull Long userId, Long teamId) {
 		Instant expiryDate = Instant.now().plusMillis(jwtExpirationInMs);
 		//TODO: for now teamId may be null for users that are not part of a team (for web client)
 		return Jwts.builder()
-				.setSubject(userId)
+				.setSubject(userId.toString())
 				.claim(TEAM_ID_CLAIM, teamId)
 				//.setClaims(claims)   //BUGFIX: This overwrites all other claims!!!  use addClaims
 				.setIssuedAt(Date.from(Instant.now()))
 				.setExpiration(Date.from(expiryDate))
 				.signWith(SignatureAlgorithm.HS512, jwtSecret)
 				.compact();
-	}
-
-	public String generateToken(@NonNull Long userId, Long teamId) {
-		return this.generateToken(userId.toString(), teamId != null ? teamId.toString() : null);
 	}
 
 	/**
@@ -62,16 +58,21 @@ public class JwtTokenUtils {
 	/**
 	 * Get the team id from the given token
 	 * @param token a JWT
-	 * @return teamID that is encoded in the token
+	 * @return teamID that is encoded in the token as Long
 	 */
 	public Long getTeamIdFromJWT(String token) {
 		Claims claims = Jwts.parser()
 			.setSigningKey(jwtSecret)
 			.parseClaimsJws(token)
 			.getBody();
-		String teamId = (String) claims.get(TEAM_ID_CLAIM);
-		if (teamId == null) return null;   //TODO: make teamId required
-		return Long.valueOf(teamId);
+		Object teamId = claims.get(TEAM_ID_CLAIM);
+		if (teamId instanceof Integer) {
+			return Long.valueOf((Integer) teamId);
+		} else if (teamId instanceof String) {
+			return Long.valueOf((String) teamId);
+		} else {
+			return (Long) teamId;
+		}
 	}
 
 	/**

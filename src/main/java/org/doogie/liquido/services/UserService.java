@@ -84,7 +84,7 @@ public class UserService {
 				.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND,  "No user found with mobile number "+cleanMobile+". You must register first."));
 
 		// The admin, and only the admin is allowed to login with a secret static devLoginToken
-		if (DoogiesUtil.equals(prop.devLoginToken, authyToken) &&
+		if (DoogiesUtil.equals(prop.test.devLoginToken, authyToken) &&
 				DoogiesUtil.equals(prop.admin.mobilephone, mobile) &&
 				DoogiesUtil.equals(prop.admin.email, user.getEmail()) &&
 				DoogiesUtil.equals(prop.admin.name, user.getName())

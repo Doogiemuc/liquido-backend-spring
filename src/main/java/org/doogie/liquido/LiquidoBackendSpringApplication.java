@@ -11,13 +11,14 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.env.Environment;
+import org.springframework.core.env.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.stream.StreamSupport;
 
 /**
  * Main entry class for Liquido Backend
@@ -59,6 +60,11 @@ public class LiquidoBackendSpringApplication {
 		SpringApplication.run(LiquidoBackendSpringApplication.class, args);
 	}
 
+	/**
+	 * When application started successfully, then perform some sanity checks
+	 * and log the most important security configuration.
+	 * @throws Exception
+	 */
 	@EventListener(ApplicationReadyEvent.class)
 	public void applicationReady() throws Exception {
 		System.out.println();
@@ -81,7 +87,6 @@ public class LiquidoBackendSpringApplication {
 		}
 		*/
 
-		log.info(" Running some sanity checks ...");
 		try {
 			Class.forName("org.h2.Driver");
 		} catch (ClassNotFoundException e) {
@@ -108,9 +113,26 @@ public class LiquidoBackendSpringApplication {
 		log.info(" RestBasePath: " + this.restBasePath);
 		log.info(" GraphiQlEndpoint: "+ this.graphiQlEndpoint);
 		log.info(" DB: "+dbUrl);
-		log.info(" LiquidoProperties: ");
-		System.out.println(liquidoProps.toString());
+		if (log.isDebugEnabled()) {
+			log.debug(" LiquidoProperties: ");
+			System.out.println(liquidoProps.toYaml());
+		}
 		log.info("=======================================================");
+
+
+		/* This way you could log ALL effective environment properties. But this reveals all passwords!!!
+		// https://stackoverflow.com/questions/23506471/spring-access-all-environment-properties-as-a-map-or-properties-object
+		MutablePropertySources propSources = ((AbstractEnvironment) env).getPropertySources();
+		StreamSupport.stream(propSources.spliterator(), false).forEach(propSrc -> {
+			log.debug("=== property source: " + propSrc.getName() + " ===");
+			if (propSrc instanceof MapPropertySource) {
+				((MapPropertySource)propSrc).getSource().forEach((key, val) -> {
+					log.debug(key + "=" + val);
+				});
+			}
+		});
+		*/
+
 	}
 
 }

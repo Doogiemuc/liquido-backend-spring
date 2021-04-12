@@ -160,7 +160,7 @@ public class UserRestController {
 		log.info("User "+user.getEmail()+" may login. Sending code via EMail.");
 
 		try {
-			mailService.sendEMail(email, oneTimeToken.getToken());
+			mailService.sendEMail(email, oneTimeToken.getNonce());
 		} catch (Exception e) {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_INTERNAL_ERROR, "Internal server error: Cannot send Email "+e.toString(), e);
 		}
@@ -190,7 +190,7 @@ public class UserRestController {
 		if (DoogiesUtil.isEmpty(email)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_EMAIL_NOT_FOUND, "Need email to login!");
 		if (DoogiesUtil.isEmpty(token)) throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Need login token!");
 
-		OneTimeToken oneTimeToken = ottRepo.findByToken(token)
+		OneTimeToken oneTimeToken = ottRepo.findByNonce(token)
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Invalid email login token."));
 		if (!email.equals(oneTimeToken.getUser().getEmail()))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Email does not match token.");

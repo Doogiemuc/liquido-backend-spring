@@ -18,6 +18,11 @@ import java.io.IOException;
  * This filter can authenticate requests from the passed JWT in the HTTP header "Authentication: Bearer [jwt]".
  * It is added before the default spring UsernamePasswordAuthenticationFilter.class
  * The JWT contains the userId as jwt "subject" and also the teamId as a JWT "claim".
+ *
+ * When the request does not have any JWT in its header, then we forward to the next filter
+ * If the JWT is expired then we throw a LiquidoException with errorCode JWT_TOKEN_EXPIRED.
+ * If the JWT is valid, then we extract the userId and TeamId from it and authenticate that user
+ * in spring's SecurityContext.
  */
 @Slf4j
 @Component
@@ -30,7 +35,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	AuthUtil authUtil;
 
 	/**
-	 * Filter the incoming request for a valid token in the request header
+	 * Filter the incoming request for a valid token in the request header.
+	 * <b>This method is called for every request, so this needs to be quick!</b>
 	 */
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,

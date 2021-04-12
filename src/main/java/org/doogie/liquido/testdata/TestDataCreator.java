@@ -19,10 +19,12 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -206,20 +208,21 @@ public class TestDataCreator implements CommandLineRunner {
       util.seedAdminUser();
       auditorAware.setMockAuditor(util.user(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
 			seedAreas();
-			seedIdeas();
-      seedProposals();
-			seedProxies(TestFixtures.delegations);
 
-			// Users, Proposals and Polls in Teams for Mobile app
-			TeamModel team1 = seedTeam(TestFixtures.TEAM1_NAME);
+			// See some teams for mobile app. With an admin, users, proposals and polls.
+			TeamModel team1 = seedTeam(TestFixtures.TEAM1_NAME, TestFixtures.TEAM1_ADMIN_EMAIL, TestFixtures.TEAM1_ADMIN_MOBILEPHONE);
 			for (int i = 1; i < TestFixtures.NUM_TEAMS; i++) {
-				seedTeam(TestFixtures.TEAM_NAME_PREFIX + i);
+				seedTeam(TestFixtures.TEAM_NAME_PREFIX + i, null);
 			}
-			seedMemberInTwoTeams(TestFixtures.TWO_TEAM_USER_EMAIL, TestFixtures.TEAM1_NAME, TestFixtures.TEAM_NAME_PREFIX+"1");
+			seedMemberInTwoTeams(TestFixtures.TWO_TEAM_USER_EMAIL, TestFixtures.TWO_TEAM_USER_MOBILEPHONE, TestFixtures.TEAM1_NAME, TestFixtures.TEAM_NAME_PREFIX+"1");
 			seedPollInElaborationInTeam(team1);
 			PollModel pollInTeam = seedPollInVotingInTeam(team1);
 			seedVotes(pollInTeam, team1.getMembers(), TestFixtures.NUM_TEAM_MEMBERS);
 
+			// Further Test Data for web app
+			seedIdeas();
+			seedProposals();
+			seedProxies(TestFixtures.delegations);
 			seedPollInElaborationPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
 			seedPollInVotingPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);						      // seed one poll in voting
 			PollModel poll = seedPollInVotingPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
@@ -231,13 +234,18 @@ public class TestDataCreator implements CommandLineRunner {
 			log.info("===== TestDataCreator: Store sample data in file: "+ props.test.sampleDbFile);
 			jdbcTemplate.execute("SCRIPT TO '" + props.test.sampleDbFile +"'");				//TODO: export schema only with  SCRIPT NODATA TO ...   and export MySQL compatible script!!!
 			adjustDbInitializationScript();
-			log.info("===== TestDataCreator: Sample data stored successfully in file: " + props.test.sampleDbFile);
+			log.debug("Sample data stored successfully in file: " + props.test.sampleDbFile);
     }
 
     if (props.test.loadTestData) {
 			try {
-				log.info("===== TestDataCreator: Loading schema and sample data from " + props.test.sampleDbFile);
-				Resource resource = new ClassPathResource(props.test.sampleDbFile);
+				log.info("===== TestDataCreator: Loading schema and sample data from file: " + props.test.sampleDbFile);
+
+				Resource fileResource = appContext.getResource(props.test.sampleDbFile);
+
+				FileInputStream fis = new FileInputStream(props.test.sampleDbFile);
+				InputStreamResource resource = new InputStreamResource(fis);
+				//Resource resource = new ClassPathResource(props.test.sampleDbFile);
 				ScriptUtils.executeSqlScript(jdbcTemplate.getDataSource().getConnection(), resource);
 
 				// Fill userMap as cache
@@ -252,7 +260,7 @@ public class TestDataCreator implements CommandLineRunner {
 				log.info("Loaded {} comments", commentRepo.count());
 
 				log.info("===== TestDataCreator: Successfully loaded schema and sample data from "+ props.test.sampleDbFile +" => DONE");
-			} catch (SQLException e) {
+			} catch (Exception e) {
 				String errMsg = "ERROR: Cannot load schema and sample data from "+ props.test.sampleDbFile;
 				log.error(errMsg);
 				throw new RuntimeException(errMsg, e);
@@ -350,14 +358,27 @@ public class TestDataCreator implements CommandLineRunner {
 		}
 	}
 
-	/** Seed teams and their admin users. And let some users join each team.
-	 * @return*/
-	public TeamModel seedTeam(String teamName) throws LiquidoException {
+	/**
+	 * Seed a new team with defaults
+	 * @param teamName name of team
+	 * @param adminEmail email of teams admin (mobilephone will be created randomly)
+	 * @return JoinTeamResponse for last member in team (not the one from the admin!)
+	 * @throws LiquidoException
+	 */
+	public TeamModel seedTeam(String teamName, String adminEmail) throws LiquidoException {
+		return seedTeam(teamName, adminEmail, null);
+	}
+
+	/**
+	 * Seed teams and their admin users. And let some users join each team.
+	 * @return JoinTeamResponse for last member in team
+	 */
+	public TeamModel seedTeam(String teamName, String adminEmail, @Nullable String adminMobilephone) throws LiquidoException {
 		log.info("Seeding a Team with members ...");
 		String digits = DoogiesUtil.randomDigits(5);
 		String adminName        = TestFixtures.TEAM_ADMIN_NAME_PREFIX + " of " + teamName;
-		String adminEmail       = TestFixtures.TEAM_ADMIN_EMAIL_PREFIX + "@" + teamName + ".org";
-		String adminMobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits; // create unique mobile phone numbers!
+		if (adminEmail == null) adminEmail = TestFixtures.TEAM_ADMIN_EMAIL_PREFIX + "@" + teamName + ".org";
+		if (adminMobilephone == null) adminMobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits;               // MUST create unique mobile phone numbers!
 		String adminWebsite     = "www.liquido.vote";
 		String adminPicture     = TestFixtures.AVATAR_PREFIX + "0.png";
 		CreateOrJoinTeamResponse res = teamServiceGQL.createNewTeam(teamName, adminName, adminEmail, adminMobilephone, adminWebsite, adminPicture);
@@ -370,7 +391,6 @@ public class TestDataCreator implements CommandLineRunner {
 			String picture     = TestFixtures.AVATAR_PREFIX+ (j%16) + ".png";
 			joinTeamRes = teamServiceGQL.joinTeam(res.getTeam().getInviteCode(), userName, userEmail, mobilephone, website, picture);
 		}
-
 		return joinTeamRes.getTeam(); // most up to date firstTeam entity, with all members, is from last joinNewTeam response
 	}
 
@@ -382,13 +402,12 @@ public class TestDataCreator implements CommandLineRunner {
 	 * @return the CreateOrJoinTeam response from the <b>second</b> team
 	 * @throws LiquidoException when team1 or team2 cannot by found.
 	 */
-	public UserModel seedMemberInTwoTeams(String memberEmail, String teamName1, String teamName2) throws LiquidoException {
+	public UserModel seedMemberInTwoTeams(String memberEmail, String mobilephone, String teamName1, String teamName2) throws LiquidoException {
 	 	log.info("Seeding user that is member in two teams");
 	 	TeamModel team1 = teamRepo.findByTeamName(teamName1).orElseThrow(LiquidoException.notFound("Cannot find team.teamName="+teamName1));
 		TeamModel team2 = teamRepo.findByTeamName(teamName2).orElseThrow(LiquidoException.notFound("Cannot find team.teamName="+teamName2));
 		String digits = DoogiesUtil.randomDigits(5);
 		String userName    = TestFixtures.TEAM_MEMBER_NAME_PREFIX + digits + "_2teams";
-		String mobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits;
 		String website     = "www.liquido.vote";
 		String picture     = TestFixtures.AVATAR_PREFIX + "1.png";
 		CreateOrJoinTeamResponse res = teamServiceGQL.joinTeam(team1.getInviteCode(), userName, memberEmail, mobilephone, website, picture);
