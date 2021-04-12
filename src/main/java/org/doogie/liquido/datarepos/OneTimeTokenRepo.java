@@ -8,7 +8,7 @@ import java.util.Optional;
 
 // not exposed via REST !
 public interface OneTimeTokenRepo extends CrudRepository<OneTimeToken, Long> {
-	Optional<OneTimeToken> findByToken(String token);
+	Optional<OneTimeToken> findByNonce(String token);
 
 	List<OneTimeToken> findByUserEmail(String email);
 }

@@ -13,13 +13,13 @@
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-# In DEV we load the prepared test data from a file and inject it into the local in-memory DB
+
 liquido:
+
   test:
     #recreateTestData: true
-    loadTestData: true
-    sampleDbPath: /src/main/resources/
-    sampleDbFile: sampleDB-H2.sql
+    #loadTestData: true
+    #sampleDbFile: sampleDB-H2.sql
 
 # In DEV we let spring JPA automatically generate a database schema.
 spring:
@@ -30,14 +30,13 @@ spring:
     #hibernate:
     #  ddl-auto: none   # none, validate, update, create-drop (NEVER SET create-drop IN PROD!!! You will loose all your data!!!)
 
-# ===================================================================
-# In DEV spring-boot automatically starts an embedded in memory DB (H2-DB)
-# Enable the H2 Web console for the embedded H2 DB. JDBC URL is   jdbc:h2:mem:testdb    username: sa   no password
-# ===================================================================
-h2:
-  console:
-    enabled: true
-    path: /h2-console
+  # In DEV spring-boot automatically starts an embedded in memory DB (H2-DB)
+  # Enable the H2 Web console for the embedded H2 DB. JDBC URL is   jdbc:h2:mem:testdb    username: sa   no password
+  h2:
+    console:
+      enabled: true
+      #path: /h2-console   # default: /h2-console
+
 
 logging:
   level:
@@ -57,7 +56,7 @@ logging:
       # This significantly slows down the app and creates A LOT of debugging output. Watch your disk space!
       # (It took me days to find BasicBinder class :-)
       hibernate:
-        SQL: DEBUG
+        #SQL: DEBUG
         type:
           descriptor:
             sql:

@@ -1,5 +1,9 @@
 package org.doogie.liquido.testdata;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.Data;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -30,8 +34,6 @@ public class LiquidoProperties {
 	public Integer loginLinkExpirationHours;
 	public Integer liquidoTokenLength;
 
-	@ToString.Exclude
-	public String  devLoginToken;
 	public Backend backend = new Backend();
 
 	@Data
@@ -40,12 +42,15 @@ public class LiquidoProperties {
 	}
 
 	@ToString.Exclude
+	@JsonIgnore
 	public Bcrypt bcrypt = new Bcrypt();
 	@Data
 	public static class Bcrypt {
 		@ToString.Exclude
+		@JsonIgnore
 		public String salt;
 		@ToString.Exclude
+		@JsonIgnore
 		public String secret;
 	}
 
@@ -57,8 +62,10 @@ public class LiquidoProperties {
 		public String from;
 		public String fromName;
 		@ToString.Exclude
+		@JsonIgnore
 		public String username;
 		@ToString.Exclude
+		@JsonIgnore
 		public String pass;
 	}
 
@@ -68,6 +75,9 @@ public class LiquidoProperties {
 		public Boolean recreateTestData =false;
 		public Boolean loadTestData = false;
 		public String sampleDbFile = "liquido-sampleDB-H2.sql";
+		@ToString.Exclude
+		@JsonIgnore
+		public String devLoginToken;
 	}
 
 	@ToString.Exclude
@@ -80,29 +90,31 @@ public class LiquidoProperties {
 		public String picture;
 	}
 
-	@ToString.Exclude
 	public Authy authy = new Authy();
 	@Data
 	public static class Authy {
-		@ToString.Exclude
 		public String apiUrl;
 		@ToString.Exclude
+		@JsonIgnore
 		public String apiKey;
 	}
 
-	@ToString.Exclude
 	public Twilio twilio = new Twilio();
 	@Data
 	public static class Twilio {
 		public String verifyUrl;
-		@ToString.Exclude
 		public String accountSID;
-		@ToString.Exclude
 		public String serviceSID;
 		@ToString.Exclude
+		@JsonIgnore
 		public String authToken;
 	}
 
+	public static final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+
+	public String toYaml() throws JsonProcessingException {
+		return mapper.writeValueAsString(this);
+	}
 
 
 	/*

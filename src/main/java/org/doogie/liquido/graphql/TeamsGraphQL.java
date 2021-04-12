@@ -144,6 +144,7 @@ public class TeamsGraphQL {
 	@GraphQLMutation(name = "joinTeam", description = "Join an existing team")
 	public CreateOrJoinTeamResponse joinTeam(
 		@GraphQLArgument(name = "inviteCode") @GraphQLNonNull String inviteCode,
+		//TODO: group this into one argument of type UserModel: https://graphql-rules.com/rules/input-grouping
 		@GraphQLArgument(name = "userName") @GraphQLNonNull String userName,
 		@GraphQLArgument(name = "userEmail") @GraphQLNonNull String userEmail,
 		@GraphQLArgument(name = "mobilephone") String mobilephone,

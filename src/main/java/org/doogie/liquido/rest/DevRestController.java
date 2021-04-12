@@ -85,7 +85,7 @@ public class DevRestController {
 		HttpServletRequest request
 	) throws LiquidoException {
 		log.debug("GET /dev/users");
-		if (!token.equals(prop.devLoginToken))
+		if (!token.equals(prop.test.devLoginToken))
 			throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Invalid token for GET /dev/users");
 		List<UserModel> users = new ArrayList<UserModel>();
 		Optional<UserModel> adminOpt = userRepo.findByEmail(prop.admin.email);
@@ -132,7 +132,7 @@ public class DevRestController {
 		@RequestParam("teamId") Optional<String> teamId,
 		@RequestParam("token") String token
 	) throws LiquidoException {
-		if (!token.equals(prop.devLoginToken))
+		if (!token.equals(prop.test.devLoginToken))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Dev Login failed. Token is invalid!");
 
 		UserModel user = null;
