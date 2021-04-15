@@ -43,7 +43,7 @@ public class TwilioAuthyClient {
 	@Autowired
 	LiquidoProperties prop;
 
-	/** Do we need to connect through a proxy. You can configure this in your local application-dev.yml. (Default is "false") */
+	/** Do we need to connect through a proxy. You can configure this in your local application-local.yml. (Default is "false") */
 	@Value("${PROXY_ACTIVE:false}")
 	private boolean proxyActive;
 
@@ -68,7 +68,7 @@ public class TwilioAuthyClient {
 		log.debug("Creating new RestClient for " + prop.authy.apiUrl + (proxyActive ? " with proxy "+PROXY_USER + "@" + PROXY_HOST+":"+PROXY_PORT : ""));
 
 		if (prop.authy.apiKey == null || prop.authy.apiKey.length() < 3)
-			throw new RuntimeException("Need prop.authy.apiKey in application-dev.yml !");
+			throw new RuntimeException("Need prop.authy.apiKey in application-local.yml !");
 
 		List<Header> headers = new ArrayList<>();
 		headers.add(new BasicHeader("X-Authy-API-Key", prop.authy.apiKey));

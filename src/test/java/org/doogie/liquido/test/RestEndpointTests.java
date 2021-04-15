@@ -50,7 +50,7 @@ import static org.springframework.http.HttpMethod.*;
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)  // This automatically sets up everything and starts the server.
 //@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)       // Theoretically we could run tests against an already running server, e.g. PROD   But that's a lot of work. Instead our Cypress E2E tests can do this much better.
-// @Sql(scripts="/sampleDB-H2.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)   //TODO: test if I can inject my SQL data this way
+//@Sql(scripts="/sampleDB-H2.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)   //TODO: test if I can inject my SQL data this way
 public class RestEndpointTests extends HttpBaseTest {
 
    // My spring-data-jpa repositories for loading test data directly
@@ -533,7 +533,7 @@ public class RestEndpointTests extends HttpBaseTest {
 
 		String delegationsJSON = client.getForObject("/my/delegations/{areaId}?voterToken={voterToken}", String.class, area.getId(), voterToken);
 		int delegationCount = JsonPath.read(delegationsJSON, "$.delegationCount");
-		assertEquals(TestFixtures.USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegated votes "+this.getDefaultArea().toString(), TestFixtures.USER1_DELEGATIONS, delegationCount);
+		assertEquals(TestFixtures.USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegated votes in "+this.getDefaultArea(), TestFixtures.USER1_DELEGATIONS, delegationCount);
 		assertEquals("DelegationCount from GET /my/voterToken must equal the returned delegation count from GET /my/delegations/{areaId}", delegationCountFromVoterToken, delegationCount);
 	}
 
@@ -655,6 +655,9 @@ public class RestEndpointTests extends HttpBaseTest {
 		log.trace("Joined Poll successfully\n"+res.getBody().toString());
 	}
 
+	@Autowired
+	TestDataUtils utils;
+
 
 	/**
 	 * Cast a vote via real REST requests.
@@ -665,6 +668,13 @@ public class RestEndpointTests extends HttpBaseTest {
 	 */
   @Test
   public void testCastVote() throws Exception {
+		UserModel topProxy = userRepo.findByEmail(TestFixtures.USER1_EMAIL)
+			.orElseThrow(() -> new Exception("Cannot find top proxy"));
+		log.debug("=================== <delegationTree> ===========================");
+		utils.printDelegationTree(getDefaultArea(), topProxy);
+		log.debug("================== </delegationTree> ===========================");
+
+
 		// GIVEN a poll that is in voting (user has not voted in this poll yet)
 		List<PollModel> pollsInVoting = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
 		assertNotNull("Need at least one poll in voting!", pollsInVoting.size() > 0);

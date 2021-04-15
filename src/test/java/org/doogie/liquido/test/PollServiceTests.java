@@ -91,8 +91,7 @@ public class PollServiceTests  extends BaseTest {
 		log.info("=========== testSchulzeMethode");
 
 		// We need 45 voters
-		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE).orElseThrow(() -> new RuntimeException("need Area1 in test"));;
-		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 5);
+		PollModel poll = testDataCreator.seedPollInVotingPhase(5);
 
 		// These numbers are from the example on wikipedia https://de.wikipedia.org/wiki/Schulze-Methode
 		// The last proposal (ID = 4) will win the election as the sole winner.
@@ -226,8 +225,7 @@ public class PollServiceTests  extends BaseTest {
 	@Test
 	public void testRankedPairs() throws LiquidoException {
 		String[] cities = new String[] {"Memphis", "Nashville", "Knoxville", "Chattanooga"};
-		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE).orElseThrow(() -> new RuntimeException("need Area1 in test"));;
-		PollModel poll = testDataCreator.seedPollInVotingPhase(area, cities.length);
+		PollModel poll = testDataCreator.seedPollInVotingPhase(cities.length);
 
 		int ll = 0;
 		Map<Integer, Long> mapIndexToId = new HashMap();
@@ -290,8 +288,7 @@ public class PollServiceTests  extends BaseTest {
 	 */
 	@Test
 	public void testRankedPairsNoVotes() throws LiquidoException {
-		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA1_TITLE).orElseThrow(() -> new RuntimeException("need Area1 in test"));;
-		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 2);
+		PollModel poll = testDataCreator.seedPollInVotingPhase(2);
 		// no seeded votes in this test!
 		pollService.finishVotingPhase(poll);
 
@@ -319,8 +316,8 @@ public class PollServiceTests  extends BaseTest {
 		UserModel expectedProxy;
 
 		// GIVEN a poll in voting
-		AreaModel area = areaRepo.findByTitle(prop.defaultAreaTitle).orElseThrow(() -> new LiquidoException(LiquidoException.Errors.INTERNAL_ERROR, "Cannot find default area"));
-		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 3);
+		AreaModel area = this.getDefaultArea();
+		PollModel poll = testDataCreator.seedPollInVotingPhase(3);
 		String pollURI = basePath + "/polls/" + poll.getId();
 
 		// WHEN USER1_EMAIL casts his vote with a dummy voteOrder (the topProxy)
@@ -367,8 +364,7 @@ public class PollServiceTests  extends BaseTest {
 	@Test
 	public void testFinishVotingPhaseWithoutVotes() throws LiquidoException {
 		// GIVEN a poll in voting phase
-		AreaModel area = areaRepo.findByTitle(TestFixtures.AREA0_TITLE).orElseThrow(() -> new RuntimeException("need Area0 in test"));;
-		PollModel poll = testDataCreator.seedPollInVotingPhase(area, 2);
+		PollModel poll = testDataCreator.seedPollInVotingPhase(2);
 
 		// WHEN we finish the voting phase of this poll
 		LawModel winner = pollService.finishVotingPhase(poll);

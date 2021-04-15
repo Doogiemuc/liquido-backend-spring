@@ -119,13 +119,10 @@ public class PollModel extends BaseModel {
 			.append("PollModel[")
 			.append("id=").append(id)
 			.append(", status=").append(status)
-			.append(", title='").append(title).append("'") 
-			.append(", area.id=");
-  	if (proposals != null) {		// be carefull and clean in toString()   :-)
-    	if (proposals.size() > 0) sb.append(", area.id=").append(getArea().id);
-    	sb.append(", numProposals="+this.proposals.size());
-		}
-  	sb.append(']');
+			.append(", title='").append(title).append("'")
+			.append(", area.id=").append(area != null ? area.id : "<null>")
+  		.append(", numProposals=").append(proposals != null ? proposals.size() : "0")
+  		.append(']');
   	return sb.toString();
   }
 }

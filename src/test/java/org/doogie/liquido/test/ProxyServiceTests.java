@@ -68,7 +68,7 @@ public class ProxyServiceTests extends BaseTest {
 	@WithMockTeamUser(email = USER13_EMAIL)
 	public void testAssignProxy() throws LiquidoException {
 		//GIVEN
-		UserModel fromUser = userRepo.findByEmail(USER13_EMAIL).get();   // use other users as in the delegation tests
+		UserModel fromUser = userRepo.findByEmail(USER13_EMAIL).get();   // use other users as in the delegation tests !!!
 		UserModel toProxy  = userRepo.findByEmail(USER14_EMAIL).get();
 		AreaModel area = getDefaultArea();
 
@@ -102,16 +102,22 @@ public class ProxyServiceTests extends BaseTest {
 		AreaModel area = getDefaultArea();
 
 		UserModel proxy = userRepo.findByEmail(USER1_EMAIL).get();
-		String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(proxy, area, USER_TOKEN_SECRET, true);
+		String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(proxy, area, USER_TOKEN_SECRET, false);
 		RightToVoteModel proxyChecksum = castVoteService.isVoterTokenValid(voterToken);
+		log.info("Right2Vote tree to proxy "+proxy.toStringShort());
 		utils.printRightToVoteTree(proxyChecksum);
+		log.info("Delegation tree up to proxy "+proxy.toStringShort());
+		utils.printDelegationTree(getDefaultArea(), proxy);
 		long delegationCount = proxyService.getRecursiveDelegationCount(voterToken);
 		assertEquals(USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegations", TestFixtures.USER1_DELEGATIONS, delegationCount);
 
 		proxy = userRepo.findByEmail(USER4_EMAIL).get();
-		voterToken = castVoteService.createVoterTokenAndStoreRightToVote(proxy, area, USER_TOKEN_SECRET, true);
+		voterToken = castVoteService.createVoterTokenAndStoreRightToVote(proxy, area, USER_TOKEN_SECRET, false);
 		proxyChecksum = castVoteService.isVoterTokenValid(voterToken);
+		log.info("Right2Vote tree to proxy "+proxy.toStringShort());
 		utils.printRightToVoteTree(proxyChecksum);
+		log.info("Delegation tree up to proxy "+proxy.toStringShort());
+		utils.printDelegationTree(getDefaultArea(), proxy);
 		delegationCount = proxyService.getRecursiveDelegationCount(voterToken);
 		assertEquals(USER4_EMAIL+" should have "+TestFixtures.USER4_DELEGATIONS +" delegations", TestFixtures.USER4_DELEGATIONS, delegationCount);
 
@@ -127,7 +133,7 @@ public class ProxyServiceTests extends BaseTest {
 	@Test
 	//Deprecated: @WithUserDetails(USER5_EMAIL)
 	@WithMockTeamUser(email = USER5_EMAIL)
-	public void findTopProxy() {
+	public void testFindTopProxy() {
 		log.trace("testGetTopmostProxy");
 		// all this data must match TestFixtures.java !!!
 		AreaModel area = getDefaultArea();
@@ -165,16 +171,16 @@ public class ProxyServiceTests extends BaseTest {
 	 * @throws LiquidoException
 	 */
 	@Test
-	@WithMockTeamUser(email = USER2_EMAIL)
+	//@WithMockTeamUser(email = USER2_EMAIL)
 	public void testCircularDelegationErrorCases() throws LiquidoException {
 		//GIVEN
-		UserModel fromUser = userRepo.findByEmail(USER8_EMAIL).get();
-		UserModel toProxy  = userRepo.findByEmail(USER9_EMAIL).get();
+		UserModel fromUser = userRepo.findByEmail(USER15_EMAIL).get();  //BUGFIX: Do not use users1-10 that are used in other tests!
+		UserModel toProxy  = userRepo.findByEmail(USER16_EMAIL).get();
 		AreaModel area     = getDefaultArea();
 		//String proxyVoterToken = castVoteService.createVoterTokenAndStoreChecksum(toProxy, area, toProxy.getPasswordHash(), true);
 
 		//WHEN
-		String userVoterToken = castVoteService.createVoterTokenAndStoreRightToVote(fromUser, area, USER_TOKEN_SECRET, true);
+		String userVoterToken = castVoteService.createVoterTokenAndStoreRightToVote(fromUser, area, USER_TOKEN_SECRET, false);
 		proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);
 
 		//THEN

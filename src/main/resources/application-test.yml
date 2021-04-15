@@ -1,0 +1,38 @@
+# ===================================================================
+# LIQUIDO - Spring Boot Application Properties
+#
+# Settings for TEST
+# These overwrite the settings from default application.yml
+# ===================================================================
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# DO NOT USE THESE SETTINGS IN PROD!  YOU MIGHT LOSE ALL YOUR DATA!
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+graphiql:
+  #mapping: /graphiql
+  endpoint: /liquido/v2/graphql_TEST_____YML
+
+# In DEV we let spring JPA automatically generate a database schema.
+spring:
+  jpa:
+    # Do not let hibernate automatically generate a DB schema in TEST. Schema and static test data ("fixtures") will be loaded from sampleDB-H2.sql for tests
+    generate-ddl: false
+    hibernate:
+      ddl-auto: none   # none, validate, update, create-drop (NEVER SET create-drop IN PROD!!! You will loose all your data!!!)
+
+# More logging while tests are running
+logging:
+  level:
+    root: INFO
+    org:
+      doogie:
+        liquido: DEBUG
+
+
+liquido:
+  # Load prepared testdata for TEST. SQL FILE MUST HAVE BEEN CREATED BEFORE!
+  test:
+    recreateTestData: false
+    loadTestData: true
+    sampleDbFile: sampleDB-H2.sql

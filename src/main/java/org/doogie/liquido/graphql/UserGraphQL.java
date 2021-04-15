@@ -21,6 +21,7 @@ import org.doogie.liquido.services.UserService;
 import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
+import org.doogie.liquido.util.LiquidoRestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
@@ -164,6 +165,7 @@ public class UserGraphQL {
 	public String requestAuthToken(
 		@GraphQLNonNull @GraphQLArgument(name="mobilephone") String mobilephone
 	) throws LiquidoException {
+		mobilephone = LiquidoRestUtils.cleanMobilephone(mobilephone);
 		UserModel user = userRepo.findByMobilephone(mobilephone)
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "Cannot request auth token. There is no liquido user with that mobilephone!"));
 
@@ -186,6 +188,7 @@ public class UserGraphQL {
 		@GraphQLNonNull @GraphQLArgument(name="mobilephone") String mobilephone,
 		@GraphQLNonNull @GraphQLArgument(name="authToken") String authToken
 	) throws LiquidoException {
+		mobilephone = LiquidoRestUtils.cleanMobilephone(mobilephone);
 		UserModel user = userRepo.findByMobilephone(mobilephone)
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "Cannot login with auth token. There is no liquido user with that mobilephone!"));
 		if (DoogiesUtil.isEqual(props.test.devLoginToken, authToken)) {

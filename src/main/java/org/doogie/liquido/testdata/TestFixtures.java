@@ -139,8 +139,8 @@ DEBUG .(CastVoteService.java:88).createVoterTokenAndStoreRightToVote()       | c
   // This test data must match RestEndpointTests.testGetProxyMap()  and ProxyServiceTests.testGetNumVotes !!!
   public static List<String[]> delegations = new ArrayList<>();
 	public static final String TOP_PROXY_EMAIL = USER1_EMAIL;
-	// Number of delegations.  (without the voter's own one. This would be votecCount)
-	public static final long USER1_DELEGATIONS = 8;   		// testuser1@liquido.de  has 7 delegations to him (5 -> 2 is still only requested)
+	// Number of delegations.  (without the voter's own one. This would be voteCount)
+	public static final long USER1_DELEGATIONS = 8;   		// testuser1@liquido.de  has 8 delegations to him (5 -> 2 is still only requested)
 	public static final long USER2_DELEGATIONS = 0;				// testuser2@liquido.de  has a requested delegation. He has no accepted delegations yet.
 	public static final long USER4_DELEGATIONS = 4;   		// testuser4@liquido.de  has 4 delegations from below him
 	public static final long USER1_VOTE_COUNT_WHEN_USER4_VOTED = 3;   // When top proxy user1 votes while user4 has already voted, then his ballot counts 3 times.
@@ -149,7 +149,7 @@ DEBUG .(CastVoteService.java:88).createVoterTokenAndStoreRightToVote()       | c
 		delegations.add(new String[]{TestFixtures.USER2_EMAIL, TestFixtures.USER1_EMAIL, });  // testuser2 delegates to proxy testuser1
 		delegations.add(new String[]{TestFixtures.USER3_EMAIL, TestFixtures.USER1_EMAIL, });
 		delegations.add(new String[]{TestFixtures.USER4_EMAIL, TestFixtures.USER1_EMAIL, });
-		delegations.add(new String[]{TestFixtures.USER5_EMAIL, TestFixtures.USER2_EMAIL, });  // 5 -> 2 requested, because user2 is not a public proxy
+		delegations.add(new String[]{TestFixtures.USER5_EMAIL, TestFixtures.USER2_EMAIL, });  // 5 -> 2 requested, because user2 is NOT a public proxy
 		delegations.add(new String[]{TestFixtures.USER6_EMAIL, TestFixtures.USER3_EMAIL, });
 		delegations.add(new String[]{TestFixtures.USER7_EMAIL, TestFixtures.USER4_EMAIL, });
 		delegations.add(new String[]{TestFixtures.USER10_EMAIL, TestFixtures.USER7_EMAIL, });

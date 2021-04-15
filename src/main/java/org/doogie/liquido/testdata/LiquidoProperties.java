@@ -74,7 +74,7 @@ public class LiquidoProperties {
 	public static class Test {
 		public Boolean recreateTestData =false;
 		public Boolean loadTestData = false;
-		public String sampleDbFile = "liquido-sampleDB-H2.sql";
+		public String sampleDbFile = "sampleDB-H2.sql";
 		@ToString.Exclude
 		@JsonIgnore
 		public String devLoginToken;

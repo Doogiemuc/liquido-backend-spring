@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.env.*;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -29,14 +30,7 @@ import java.util.stream.StreamSupport;
 public class LiquidoBackendSpringApplication {
 
 	@Value("${server.port}")
-	private String serverPort;
-
-	/** path prefix for REST API from application.properties */
-	@Value("${spring.data.rest.base-path}")
-	String restBasePath;
-
-	@Value("${graphiql.endpoint}")
-	String graphiQlEndpoint;
+	String serverPort;
 
 	@Autowired
 	Environment env;
@@ -55,7 +49,7 @@ public class LiquidoBackendSpringApplication {
    * @param args command line arguments
    */
   public static void main(String[] args) throws SchedulerException {
-  	//BUGFIX: The code in here may be executed twice: https://stackoverflow.com/questions/49527862/spring-boot-application-start-twice
+  	//This code may be executed twice: https://stackoverflow.com/questions/49527862/spring-boot-application-start-twice
 		System.out.println("====================== Starting LIQUIDO ==========================");
 		SpringApplication.run(LiquidoBackendSpringApplication.class, args);
 	}
@@ -87,11 +81,15 @@ public class LiquidoBackendSpringApplication {
 		}
 		*/
 
-		try {
-			Class.forName("org.h2.Driver");
-		} catch (ClassNotFoundException e) {
-			log.error("ERROR: Cannot load org.h2.Driver!");
+		if (env.acceptsProfiles(Profiles.of("dev"))) {
+			try {
+				Class.forName("org.h2.Driver");
+			} catch (ClassNotFoundException e) {
+				log.error("ERROR: Cannot load org.h2.Driver!");
+			}
+			log.info("Can load H2 Driver in env=development");
 		}
+
 		String dbUrl = "[unknown]";
 		try {
 			dbUrl = jdbcTemplate.getDataSource().getConnection().getMetaData().getURL();
@@ -110,14 +108,18 @@ public class LiquidoBackendSpringApplication {
 		log.info("=====================================================");
 		log.info(" LIQUIDO backend API is up and running in " + Arrays.toString(env.getActiveProfiles()));
 		log.info(" ServerPort: " + this.serverPort);
-		log.info(" RestBasePath: " + this.restBasePath);
-		log.info(" GraphiQlEndpoint: "+ this.graphiQlEndpoint);
-		log.info(" DB: "+dbUrl);
-		if (log.isDebugEnabled()) {
-			log.debug(" LiquidoProperties: ");
-			System.out.println(liquidoProps.toYaml());
-		}
+		log.info(" Database URL: "+dbUrl);
+		log.info(" spring.data.rest.base-path: " + env.getProperty("spring.data.rest.base-path"));
+		log.info(" graphiql.endpoint: "+ env.getProperty("graphiql.endpoint"));
+		log.info(" spring.jpa.generate-ddl: " + env.getProperty("spring.jpa.generate-ddl"));
+		log.info(" spring.jpa.hibernate.ddl-auto: " + env.getProperty("spring.jpa.hibernate.ddl-auto"));
+		log.info(" javax.javax.persistence.schema-generation: " + env.getProperty("javax.javax.persistence.schema-generation"));
 		log.info("=======================================================");
+		if (log.isDebugEnabled()) {
+			System.out.println("LiquidoProperties:");
+			System.out.println(liquidoProps.toYaml());
+			log.info("=======================================================");
+		}
 
 
 		/* This way you could log ALL effective environment properties. But this reveals all passwords!!!

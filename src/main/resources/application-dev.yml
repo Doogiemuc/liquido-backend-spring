@@ -5,37 +5,47 @@
 # These overwrite the settings from default application.yml
 # ===================================================================
 
-
-
+graphiql:
+  #mapping: /graphiql
+  endpoint: /liquido/v2/graphql_devYML
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # DO NOT USE THESE SETTINGS IN PROD!  YOU WILL LOSE ALL YOUR DATA!
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-
-liquido:
-
-  test:
-    #recreateTestData: true
-    #loadTestData: true
-    #sampleDbFile: sampleDB-H2.sql
-
 # In DEV we let spring JPA automatically generate a database schema.
 spring:
   jpa:
-    # Should spring automatically generate the database schema?
+    # In DEV we let spring automatically generate the database schema
     # https://docs.spring.io/spring-boot/docs/1.0.x/reference/html/howto-database-initialization.html
     generate-ddl: true
+    #show-sql: true
     #hibernate:
     #  ddl-auto: none   # none, validate, update, create-drop (NEVER SET create-drop IN PROD!!! You will loose all your data!!!)
+    properties:
+      hibernate:
+        format_sql: true
 
   # In DEV spring-boot automatically starts an embedded in memory DB (H2-DB)
   # Enable the H2 Web console for the embedded H2 DB. JDBC URL is   jdbc:h2:mem:testdb    username: sa   no password
-  h2:
-    console:
-      enabled: true
-      #path: /h2-console   # default: /h2-console
+  # (These are already the defaults)
+  #h2:
+  #  console:
+  #    enabled: true
+  #    path: /h2-console
+
+# In dev we can create a schema.sql script for initializing a database later in other environments
+# https://stackoverflow.com/questions/37648395/how-to-see-the-schema-sql-ddl-in-spring-boot
+# https://thoughts-on-java.org/standardized-schema-generation-data-loading-jpa-2-1/
+#javax:
+#  persistence:
+#    schema-generation:
+#      scripts:
+#        action: create
+#        create-target: build/liquido-db-schema.sql
+#      database:
+#        action: create    # Must be set if you want hibernate to create the actual schema in the DB in addition to the SQL file dump.
+
 
 
 logging:
@@ -71,3 +81,7 @@ logging:
 #      v2:
 #        path: /liquido/v2/api-docs
 
+
+# ===================================================================
+# Liquido Settings for DEV. You can set them in a local application-dev.yml
+# ===================================================================
