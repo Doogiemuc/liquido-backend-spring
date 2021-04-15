@@ -156,7 +156,7 @@ public class GraphQLTests extends HttpBaseTest {
 
 	/** Join an existing team */
 	@Test
-	public void testJoinTeamTeam() {
+	public void testJoinTeam() {
 		// GIVEN an inviteCode
 		Page<TeamModel> teams = teamRepo.findAll(new OffsetLimitPageable(0, 1));
 		TeamModel team = teams.iterator().next();

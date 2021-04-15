@@ -28,8 +28,6 @@ public class TwilioVerifyApiClient {
 
 	private RestTemplate client;
 
-	private static final String Services = "/Services";
-
 	public static final String CHANNEL_SMS  = "sms";
 	public static final String CHANNEL_MAIL = "mail";
 	public static final String CHANNEL_CALL = "call";
@@ -43,21 +41,22 @@ public class TwilioVerifyApiClient {
 
 
 		if (DoogiesUtil.isEmpty(props.twilio.accountSID) || DoogiesUtil.isEmpty(props.twilio.authToken) || DoogiesUtil.isEmpty(props.twilio.verifyUrl))
-			throw new RuntimeException("Need config for Twilio! Must set liquido.twilio.accountSID, .authToken and .verifyUrl in application-dev.yml");
+			throw new RuntimeException("Need config for Twilio! Must set liquido.twilio.accountSID, .authToken and .verifyUrl in application-local.yml");
 
 		this.client = new RestTemplateBuilder()
 			//.additionalInterceptors(new LogClientRequestInterceptor())
 			.basicAuthentication(props.twilio.accountSID, props.twilio.authToken)
 			//.uriTemplateHandler(uriBuilderFactory)
-			.rootUri(props.twilio.verifyUrl + Services)
+			.rootUri(props.twilio.verifyUrl)
 			.build();
 	}
 
 	/**
 	 * Request a verification code via SMS.
 	 * https://www.twilio.com/docs/verify/api/verification#start-new-verification
-	 *
-	 * @return SID of the verification request. URL where the verification can be checked: https://verify.twilio.com/v2/Services/#VA..ServiceSID....#/Verifications/#VE...verificationSid...#
+	 * @param channel sms, call or email
+	 * @param phoneNumberOrEmail phone number or email address of recipient who wants to authenticate.
+	 * @return verificationSID of the verification request. URL where the verification can be checked is then: https://verify.twilio.com/v2/Services/#VA..ServiceSID....#/Verifications/#VE...verificationSid...#
 	 */
 	public String requestVerificationToken(@NonNull String channel, @NonNull String phoneNumberOrEmail) {
 		if (!Set.of(CHANNEL_SMS, CHANNEL_CALL, CHANNEL_MAIL).contains(channel))
@@ -73,9 +72,9 @@ public class TwilioVerifyApiClient {
 
 	/**
 	 * Check/Verify if a one time token that was previously sent via SMS is valid.
-	 *
 	 * https://www.twilio.com/docs/verify/api/verification-check#check-a-verification
 	 *
+	 * @param
 	 * @return true if authToken is valid (the one sent to this mobilephone)
 	 */
 	public boolean tokenIsValid(@NonNull String mobilephone, @NonNull String authToken) {

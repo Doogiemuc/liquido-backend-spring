@@ -10,23 +10,15 @@ server:
 
 graphiql:
   #mapping: /graphiql
-  endpoint: /liquido/v2/graphql
+  endpoint: /liquido/v2/graphql_appYML
 
 
 spring:
-
-
-  #spring:
-  #  datasource:
-  #    url: jdbc:mysql://ec2-52-208-204-181.eu-west-1.compute.amazonaws.com:3306/liquido_int
-  #    username: liquido
-  #    password: mariaGehtWählen
-
   # ===================================================================
   # DATABASE SETTINGS
   # ===================================================================
   # These are all already the default settings in spring in DEV environment
-  datasource:
+  #datasource:
     #url: jdbc:mysql://your-db-host.com:3306/database_name
     #url: jdbc:h2:mem:testdb   # <= for H2 in memory DB (default in dev)
     #driverClassName: org.h2.Driver
@@ -38,11 +30,13 @@ spring:
       base-path: /liquido/v2
 
   jpa:
-    # Should spring automatically generate the database schema?  DO NOT TURN THIS ON IN PROD!!!
-    # https://docs.spring.io/spring-boot/docs/1.0.x/reference/html/howto-database-initialization.html
+    # By default we do NOT let spring-jpa (hibernate) automatically create a schema in the database.
+    # This is overwritten in environment specific configuration files: application-<env>.yml
+    # https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-external-config
+    # https://docs.spring.io/spring-boot/docs/current/reference/html/howto-database-initialization.html
     generate-ddl: false
     hibernate:
-      ddl-auto: none   # none, validate, update, create-drop
+      ddl-auto: none   # none, validate, update, create-drop (NEVER SET THIS TO "create-drop" IN PROD!!! YOU WILL LOSE ALL YOUR DATA!!!)
 
     #database-platform: org.hibernate.dialect.H2Dialect
 
@@ -56,18 +50,6 @@ spring:
       hibernate:
         #type: TRACE
 
-      # Also create a schema.sql script for initializing a database later in other environments
-      # https://stackoverflow.com/questions/37648395/how-to-see-the-schema-sql-ddl-in-spring-boot
-      # https://thoughts-on-java.org/standardized-schema-generation-data-loading-jpa-2-1/
-
-      javax:
-        persistence:
-          schema-generation:
-            scripts:
-              action: create
-              create-target: build/liquido-db-schema.sql
-            database:
-              action: create # still also create the schema in the DB.
 
 
 # ===================================================================
@@ -177,6 +159,13 @@ liquido:
     accountSID: AC.....XXXXXXX.....
     serviceSID: VA.....XXXXXXX.....
     authToken: 627a69XXXXXXXXXXXXXXXXXXXXX
+
+  # LIQUIDO can create a SQL file with schmea and data
+  # And then quickly load that testdata in future runs. This is fast!
+  test:
+    recreateTestData: false
+    loadTestData: false
+    sampleDbFile: sampleDB-H2.sql
 
   # LIQUIDO can log response body payloads.
   debug:

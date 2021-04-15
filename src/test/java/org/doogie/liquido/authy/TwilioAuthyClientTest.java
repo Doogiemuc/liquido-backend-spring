@@ -5,6 +5,7 @@ import org.doogie.liquido.security.TwilioAuthyClient;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.BaseTest;
 import org.doogie.liquido.testdata.LiquidoProperties;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,7 @@ import org.springframework.web.client.RestClientException;
 @SpringBootTest
 @RunWith(SpringRunner.class)
 @Slf4j
+@Ignore
 public class TwilioAuthyClientTest extends BaseTest {
 
 	@Autowired

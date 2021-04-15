@@ -18,8 +18,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -29,7 +27,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.*;
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -168,9 +165,6 @@ public class TestDataCreator implements CommandLineRunner {
 	@Autowired
 	TestDataUtils utils;
 
-	/* Cache default area. Will be initialized in seedAreas() */
-	private AreaModel defaultArea;
-
 
 	// I thought about this question for a long time:
 	// Should TestDataCreator be completely deterministic. Or is it ok if it creates some random data.
@@ -183,6 +177,18 @@ public class TestDataCreator implements CommandLineRunner {
     this.rand = new Random(System.currentTimeMillis());
   }
 
+  private AreaModel defaultArea = null;
+
+  /** Lazily load default area */
+  public AreaModel getDefaultArea() {
+		if (this.defaultArea == null) {
+			this.defaultArea = areaRepo.findByTitle(props.getDefaultAreaTitle()).orElseThrow(
+				() -> new RuntimeException("ERROR in TestDataCreator: Cannot find default area(title="+props.getDefaultAreaTitle()+")")
+			);
+		}
+		return this.defaultArea;
+	}
+
   /**
    * Seed the DB with some default values, IF
    *  - the currently active spring profiles contain "test"   OR
@@ -191,17 +197,19 @@ public class TestDataCreator implements CommandLineRunner {
    * @param args command line args
    */
   public void run(String... args) throws LiquidoException {
-   if (props.test.recreateTestData) {
-        log.info("===== START TestDataCreator");
-        // Sanity check: Is there a schema with tables?
-        try {
-        	List<UserModel> users = jdbcTemplate.queryForList("SELECT * FROM USERS LIMIT 10", UserModel.class);
-        } catch (Exception e) {
-          log.error("Cannot find table USERS! Did you create a DB schema at all?");
-          throw e;
-        }
+		log.info("===== TestDataCreator START");
+		log.debug(props.test.toString());
+   	if (props.test.recreateTestData) {
 
-      log.debug("Create test data from scratch via spring-data for DB: "+ jdbcTemplate.getDataSource().toString());
+			log.info("[TestDataCreator] Recreate test data from scratch. DB: "+ jdbcTemplate.getDataSource().toString());
+
+			// Sanity check: Is there a schema with tables?
+			try {
+				List<UserModel> users = jdbcTemplate.queryForList("SELECT * FROM USERS LIMIT 10", UserModel.class);
+			} catch (Exception e) {
+				log.error("Cannot find table USERS! Did you create a DB schema at all?");
+				throw e;
+			}
 
       // ======== The order of these seed*() methods is very important! =====
       seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX);
@@ -223,26 +231,23 @@ public class TestDataCreator implements CommandLineRunner {
 			seedIdeas();
 			seedProposals();
 			seedProxies(TestFixtures.delegations);
-			seedPollInElaborationPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
-			seedPollInVotingPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);						      // seed one poll in voting
-			PollModel poll = seedPollInVotingPhase(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
+			seedPollInElaborationPhase(TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
+			seedPollInVotingPhase(TestFixtures.NUM_ALTERNATIVE_PROPOSALS);						      // seed one poll in voting
+			PollModel poll = seedPollInVotingPhase(TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
 			seedVotes(poll, util.usersMap.values(), TestFixtures.NUM_VOTES);
-			seedPollFinished(this.defaultArea, TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
+			seedPollFinished(TestFixtures.NUM_ALTERNATIVE_PROPOSALS);
       seedLaws();
       auditorAware.setMockAuditor(null);
 
-			log.info("===== TestDataCreator: Store sample data in file: "+ props.test.sampleDbFile);
 			jdbcTemplate.execute("SCRIPT TO '" + props.test.sampleDbFile +"'");				//TODO: export schema only with  SCRIPT NODATA TO ...   and export MySQL compatible script!!!
 			adjustDbInitializationScript();
-			log.debug("Sample data stored successfully in file: " + props.test.sampleDbFile);
+			log.info("===== Successfully stored testdata in file: " + props.test.sampleDbFile);
     }
 
     if (props.test.loadTestData) {
-			try {
-				log.info("===== TestDataCreator: Loading schema and sample data from file: " + props.test.sampleDbFile);
-
+			log.info("===== TestDataCreator: Loading schema and sample data from file: " + props.test.sampleDbFile);
+    	try {
 				Resource fileResource = appContext.getResource(props.test.sampleDbFile);
-
 				FileInputStream fis = new FileInputStream(props.test.sampleDbFile);
 				InputStreamResource resource = new InputStreamResource(fis);
 				//Resource resource = new ClassPathResource(props.test.sampleDbFile);
@@ -258,7 +263,6 @@ public class TestDataCreator implements CommandLineRunner {
 				log.info("Loaded {} delegations", delegationRepo.count());
 				log.info("Loaded {} checksums", rightToVoteRepo.count());
 				log.info("Loaded {} comments", commentRepo.count());
-
 				log.info("===== TestDataCreator: Successfully loaded schema and sample data from "+ props.test.sampleDbFile +" => DONE");
 			} catch (Exception e) {
 				String errMsg = "ERROR: Cannot load schema and sample data from "+ props.test.sampleDbFile;
@@ -267,20 +271,19 @@ public class TestDataCreator implements CommandLineRunner {
 			}
 		}
 
-    // log proxy structure in default area if tracing is enabled
-    if (log.isTraceEnabled()) {
-			AreaModel area = this.defaultArea;
+    // log proxy structure in default area if debug logging is enabled
+    if (log.isDebugEnabled()) {
 			Optional<UserModel> topProxyOpt = userRepo.findByEmail(TestFixtures.USER1_EMAIL);      // user1 is the topmost proxy in TestFixtures.java
 			if (topProxyOpt.isPresent()) {
 				UserModel topProxy = topProxyOpt.get();
 				log.debug("====== TestDataCreator: Proxy tree =====");
-				utils.printProxyTree(area, topProxy);
+				utils.printProxyTree(getDefaultArea(), topProxy);
 
 				log.debug("====== TestDataCreator: Tree of delegations =====");
-				utils.printDelegationTree(area, topProxy);
+				utils.printDelegationTree(getDefaultArea(), topProxy);
 
 				try {
-					String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(topProxy, area, TestFixtures.USER_TOKEN_SECRET, false);
+					String voterToken = castVoteService.createVoterTokenAndStoreRightToVote(topProxy, getDefaultArea(), TestFixtures.USER_TOKEN_SECRET, false);
 					RightToVoteModel rightToVote = castVoteService.isVoterTokenValid(voterToken);
 					log.debug("====== TestDataCreator: RightToVotes =====");
 					utils.printRightToVoteTree(rightToVote);
@@ -430,13 +433,13 @@ public class TestDataCreator implements CommandLineRunner {
 			.orElseThrow(LiquidoException.notFound("need a team admin to seedPollInTeam"));
 		authUtil.authenticateInSecurityContext(admin.getId(), team.getId(), null);  // fake login admin
 		String title = "Poll " + now +  " in Team "+team.getTeamName();
-		PollModel poll = pollService.createPoll(title, this.defaultArea, team);
-		LawModel proposal = this.createProposal("Proposal " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), this.defaultArea, admin, 2, 1);
+		PollModel poll = pollService.createPoll(title, getDefaultArea(), team);
+		LawModel proposal = this.createProposal("Proposal " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), getDefaultArea(), admin, 2, 1);
 		pollService.addProposalToPoll(proposal, poll);
 		UserModel member = team.getMembers().stream().findFirst()
 			.orElseThrow(LiquidoException.notFound("need a team member to seedPollInTeam"));
 		authUtil.authenticateInSecurityContext(member.getId(), team.getId(), null);  // fake login member
-		LawModel proposal2 = this.createProposal("Another prop " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), this.defaultArea, member, 2, 1);
+		LawModel proposal2 = this.createProposal("Another prop " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), getDefaultArea(), member, 2, 1);
 		poll = pollService.addProposalToPoll(proposal2, poll);
 		return poll;
 	}
@@ -514,7 +517,7 @@ public class TestDataCreator implements CommandLineRunner {
   private void seedProxies(List<String[]> delegations) {
 		log.info("Seeding Proxies ...");
 
-		AreaModel area = this.defaultArea;
+		AreaModel area = this.getDefaultArea();
     for(String[] delegationData: delegations) {
       UserModel fromUser   = util.user(delegationData[0]);
       UserModel toProxy    = util.user(delegationData[1]);
@@ -550,8 +553,7 @@ public class TestDataCreator implements CommandLineRunner {
 
       UserModel createdBy = util.randUser();
       auditorAware.setMockAuditor(createdBy);
-      AreaModel area = this.defaultArea;
-      LawModel newIdea = new LawModel(ideaTitle, ideaDescr.toString(), area);
+      LawModel newIdea = new LawModel(ideaTitle, ideaDescr.toString(), getDefaultArea());
       lawRepo.save(newIdea);
 
 	    // add some supporters, but not enough to become a proposal
@@ -571,7 +573,7 @@ public class TestDataCreator implements CommandLineRunner {
   private LawModel createProposal(String title, String description, AreaModel area, UserModel createdBy, int ageInDays, int reachedQuorumDaysAgo) {
   	if (ageInDays < reachedQuorumDaysAgo) throw new RuntimeException("Proposal cannot reach its quorum before it was created.");
     auditorAware.setMockAuditor(createdBy);
-    LawModel proposal = new LawModel(title, description, area);
+    LawModel proposal = new LawModel(title, description, getDefaultArea());
 		lawRepo.save(proposal);
 
 		// add enough supporters so that the idea becomes a proposal. (Or add some random supporters.)
@@ -594,10 +596,9 @@ public class TestDataCreator implements CommandLineRunner {
     description.append(" ");
     description.append(util.getLoremIpsum(0,400));
     UserModel createdBy = this.util.randUser();
-    AreaModel area = this.defaultArea;
     int ageInDays = rand.nextInt(10);
     int reachQuorumDaysAgo = (int)(ageInDays*rand.nextFloat());
-    LawModel proposal = createProposal(title, description.toString(), area, createdBy, ageInDays, reachQuorumDaysAgo);
+    LawModel proposal = createProposal(title, description.toString(), getDefaultArea(), createdBy, ageInDays, reachQuorumDaysAgo);
     return proposal;
 
   }
@@ -615,7 +616,7 @@ public class TestDataCreator implements CommandLineRunner {
 			UserModel createdBy = util.user(TestFixtures.USER1_EMAIL);
     	String title = "Proposal " + i + " for user "+createdBy.getEmail();
       String description = util.getLoremIpsum(100,400);
-      AreaModel area = this.defaultArea;
+      AreaModel area = this.getDefaultArea();
       int ageInDays = rand.nextInt(10);
       int reachedQuorumDaysAgo = (int)(ageInDays*rand.nextFloat());
       LawModel proposal = createProposal(title, description, area, createdBy, ageInDays, reachedQuorumDaysAgo);
@@ -694,7 +695,7 @@ public class TestDataCreator implements CommandLineRunner {
    * @return the poll in elaboration as it has been stored into the DB.
    */
   @Transactional
-  private PollModel seedPollInElaborationPhase(AreaModel area, int numProposals) {
+  private PollModel seedPollInElaborationPhase(int numProposals) {
     log.info("Seeding one poll in elaboration phase ...");
     if (numProposals > util.usersMap.size())
     	throw new RuntimeException("Cannot seedPollInElaborationPhase. Need at least "+TestFixtures.NUM_ALTERNATIVE_PROPOSALS+" distinct usersMap");
@@ -707,7 +708,7 @@ public class TestDataCreator implements CommandLineRunner {
       title = "Initial Proposal in a poll that is in elaboration "+System.currentTimeMillis();
       desc = util.getLoremIpsum(100, 400);
       createdBy = util.user(0);
-      LawModel initialProposal = createProposal(title, desc, area, createdBy, 10, 7);
+      LawModel initialProposal = createProposal(title, desc, getDefaultArea(), createdBy, 10, 7);
 			initialProposal = addCommentsToProposal(initialProposal);
 			String pollTitle = "Poll in ELABORATION from TestDataCreator "+System.currentTimeMillis() % 10000;
       PollModel newPoll = pollService.createPollWithProposal(pollTitle, initialProposal);
@@ -718,7 +719,7 @@ public class TestDataCreator implements CommandLineRunner {
         title = "Alternative Proposal" + i + " in a poll that is in elaboration"+System.currentTimeMillis();
         desc = util.getLoremIpsum(100, 400);
         createdBy = util.user(i);
-        LawModel altProp = createProposal(title, desc, area, createdBy, 20, 18);
+        LawModel altProp = createProposal(title, desc, getDefaultArea(), createdBy, 20, 18);
 				altProp = addCommentsToProposal(altProp);
         newPoll = pollService.addProposalToPoll(altProp, newPoll);
       }
@@ -739,10 +740,10 @@ public class TestDataCreator implements CommandLineRunner {
    * Will build upon a seedPollInElaborationPhase and then start the voting phase via pollService.
 	 * This will NOT yet seedVotes(poll, numVotes);
    */ 
-  public PollModel seedPollInVotingPhase(AreaModel area, int numProposals) {
+  public PollModel seedPollInVotingPhase(int numProposals) {
     log.info("Seeding one poll in voting phase ...");
     try {
-      PollModel poll = seedPollInElaborationPhase(area, numProposals);
+      PollModel poll = seedPollInElaborationPhase(numProposals);
       int i = 1;
       for(LawModel proposal: poll.getProposals()) {
         proposal.setTitle("Proposal "+i+" in voting phase "+System.currentTimeMillis());
@@ -770,13 +771,12 @@ public class TestDataCreator implements CommandLineRunner {
   /**
 	 * Seed one poll where the voting phase is already finished and we have a winner.
 	 * This WILL also seedVotes, so that we can finish the poll and calculate the winner via the normal service call.
-	 * @param area any area
 	 * @param numProposals the number of proposals that the poll should have.
 	 */
-  public void seedPollFinished(AreaModel area, int numProposals) {
+  public void seedPollFinished(int numProposals) {
 		log.info("Seeding one finished poll  ...");
 		try {
-			PollModel poll = seedPollInVotingPhase(area, numProposals);
+			PollModel poll = seedPollInVotingPhase(numProposals);
 
 			//---- fake some dates to be in the past
 			int daysFinished = 5;  // poll was finished 5 days ago
@@ -819,7 +819,7 @@ public class TestDataCreator implements CommandLineRunner {
 
     for (int i = 0; i < TestFixtures.NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
-      LawModel realLaw = createProposal(lawTitle, util.getLoremIpsum(100,400), this.defaultArea, createdBy, 12, 10);
+      LawModel realLaw = createProposal(lawTitle, util.getLoremIpsum(100,400), getDefaultArea(), createdBy, 12, 10);
 			realLaw = addSupportersToIdea(realLaw, props.supportersForProposal+2);
 			//realLaw.setPoll(poll);
 			LocalDateTime reachQuorumAt = LocalDateTime.now().minusDays(10);

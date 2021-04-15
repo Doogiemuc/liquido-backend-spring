@@ -274,11 +274,11 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
-				<configuration>
+				<!-- configuration>
 					<systemPropertyVariables>
 						<loadSampleDB>true</loadSampleDB>
 					</systemPropertyVariables>
-				</configuration>
+				</configuration -->
 			</plugin>
 
 			<!-- Sets the main class and creates an runnable fast JAR -->

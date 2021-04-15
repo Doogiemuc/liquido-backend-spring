@@ -18,6 +18,7 @@ import org.doogie.liquido.security.TwilioVerifyApiClient;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.LiquidoException.Errors;
 import org.doogie.liquido.services.UserService;
+import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -104,6 +105,7 @@ public class TeamsGraphQL {
 		@GraphQLArgument(name = "website") String website,
 		@GraphQLArgument(name = "picture") String picture
 	) throws LiquidoException {
+		adminMobilephone = LiquidoRestUtils.cleanMobilephone(adminMobilephone);
 		Optional<LiquidoAuthentication> auth = authUtil.getLiquidoAuthentication();
 		Optional<UserModel> existingUser = userRepo.findByEmail(adminEmail);
 
@@ -154,7 +156,7 @@ public class TeamsGraphQL {
 		TeamModel team = teamRepo.findByInviteCode(inviteCode).orElseThrow(
 			() -> new LiquidoException(Errors.CANNOT_JOIN_TEAM_INVITE_CODE_INVALID, "Invalid inviteCode '"+inviteCode+"'")
 		);
-
+		mobilephone = LiquidoRestUtils.cleanMobilephone(mobilephone);
 		Optional<LiquidoAuthentication> auth = authUtil.getLiquidoAuthentication();
 		Optional<UserModel> existingUser = userRepo.findByEmail(userEmail);
 

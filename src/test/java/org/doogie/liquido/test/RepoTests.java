@@ -10,25 +10,16 @@ import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.test.testUtils.WithMockTeamUser;
 import org.doogie.liquido.testdata.TestFixtures;
-import org.doogie.liquido.util.DoogiesUtil;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.test.context.support.WithUserDetails;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
-import static org.doogie.liquido.test.matchers.UserMatcher.userWithEMail;
-import static org.hamcrest.CoreMatchers.hasItem;
 import static org.junit.Assert.*;
 
 /**
@@ -117,10 +108,4 @@ public class RepoTests extends BaseTest {
     log.debug("User "+supporter.getEmail()+" supports "+supportedLaws.size()+" proposals.");
   }
 
-  /*
-
-  //TODO: public void testLawFindBySpecification() {
-    //lawRepo.findBy
-  }
-  */
 }

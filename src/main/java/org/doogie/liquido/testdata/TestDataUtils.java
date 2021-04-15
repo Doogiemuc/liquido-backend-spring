@@ -106,11 +106,19 @@ public class TestDataUtils {
 
 	public void printDelegationTree(AreaModel area, UserModel proxy) {
 		if (proxy == null) return;
+		System.out.println("Delegations to proxy: "+proxy.toStringShort());
+		List<DelegationModel> delegations = delegationRepo.findByAreaAndToProxy(area, proxy);
+		Function<DelegationModel, List<DelegationModel>> getChildrenFunc = del -> delegationRepo.findByAreaAndToProxy(area, del.getFromUser())
+			.stream().collect(Collectors.toList());
+		for(DelegationModel del: delegations) {
+			DoogiesUtil.printTreeRec(del, getChildrenFunc);
+		}
+		/*
 		UserModel dummyUser = new UserModel("aboveTopProxy@dummy.org", "Dummy User", "123567", "", "");
 		DelegationModel dummyTopProxyDel = new DelegationModel(area, proxy, dummyUser);
-		Function<DelegationModel, List<DelegationModel>> getChildrenFunc = del -> delegationRepo.findByAreaAndToProxy(area, del.getFromUser())
-				.stream().collect(Collectors.toList());
 		DoogiesUtil.printTreeRec(dummyTopProxyDel, getChildrenFunc);
+		*/
+
 	}
 
 	public void printRightToVoteTree(RightToVoteModel rightToVote) {
