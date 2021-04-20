@@ -170,7 +170,7 @@ public class UserGraphQL {
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "Cannot request auth token. There is no liquido user with that mobilephone!"));
 
 		// This is used in testing.
-		//TODO: should I require devLoginToken for requesting an SMS authToken?
+		//TODO: Do require devLoginToken for requesting a test SMS authToken
 		if (TestFixtures.TEAM1_ADMIN_MOBILEPHONE.equals(mobilephone)) return "DummySID";
 
 		return verifyApiClient.requestVerificationToken(TwilioVerifyApiClient.CHANNEL_SMS, mobilephone);

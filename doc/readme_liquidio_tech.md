@@ -286,6 +286,49 @@ See also this tutorial: https://medium.com/@saurabh1226/getting-started-with-gra
 See this really nice spring example: https://github.com/Blacktoviche/springboot-graphql-sqqr-jwt-demo/
 
 
+# Databases, Data and our famous TestDataCreator
+
+
+
+
+## In dev environment   spring.profiles.active=dev
+
+Let Hibernate generate the database schema (from scratch). And also create a .sql script for that. 
+
+`application-dev.yml`
+        
+    spring:
+      jpa:
+        generate-ddl: true
+        hibernate:
+          ddl-auto: validate   # or create-drop
+
+      # In dev we can create a schema.sql script for initializing a database later in other environments
+      # https://stackoverflow.com/questions/37648395/how-to-see-the-schema-sql-ddl-in-spring-boot
+      # https://thoughts-on-java.org/standardized-schema-generation-data-loading-jpa-2-1/
+      properties:
+        javax:
+          persistence:
+            schema-generation:
+              database:
+                action: create    # Must be set if you still want hibernate to create the actual schema in the DB in addition to the SQL file dump.
+              scripts:
+                action: create
+                create-target: build/liquido-db-schema.sql
+
+## In int environment
+
+`application-int.yml`
+
+
+
+
+
+
+
+
+
+
 # Roadmap
 
  * MAYBE package-by-feature  http://www.javapractices.com/topic/TopicAction.do?Id=205  => and then invent microservices :-)

@@ -6,17 +6,17 @@
 # ===================================================================
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# DO NOT USE THESE SETTINGS IN PROD!  YOU MIGHT LOSE ALL YOUR DATA!
+# DO NOT USE THESE SETTINGS IN PROD!  YOU WILL LOSE ALL YOUR DATA!
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 graphiql:
   #mapping: /graphiql
-  endpoint: /liquido/v2/graphql_TEST_____YML
+  #endpoint: /liquido/v2/graphql
 
 # In DEV we let spring JPA automatically generate a database schema.
 spring:
   jpa:
-    # Do not let hibernate automatically generate a DB schema in TEST. Schema and static test data ("fixtures") will be loaded from sampleDB-H2.sql for tests
+    # In TEST We do not let hibernate automatically generate a DB schema. Schema and static test data ("fixtures") will be loaded from sampleDB-H2.sql for tests
     generate-ddl: false
     hibernate:
       ddl-auto: none   # none, validate, update, create-drop (NEVER SET create-drop IN PROD!!! You will loose all your data!!!)

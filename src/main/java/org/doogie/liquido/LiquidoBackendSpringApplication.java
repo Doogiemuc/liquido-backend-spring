@@ -10,16 +10,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.env.*;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.stream.StreamSupport;
+import java.util.Optional;
 
 /**
  * Main entry class for Liquido Backend
@@ -71,6 +69,24 @@ public class LiquidoBackendSpringApplication {
 		System.out.println("=====================================================");
 		System.out.println();
 
+		log.info("=======================================================");
+		log.info(" ServerPort: " + this.serverPort);
+		log.info(" spring.data.rest.base-path: " + env.getProperty("spring.data.rest.base-path"));
+		log.info(" graphiql.endpoint: "+ env.getProperty("graphiql.endpoint"));
+		log.info(" spring.jpa.generate-ddl: " + env.getProperty("spring.jpa.generate-ddl"));
+		log.info(" spring.jpa.hibernate.ddl-auto: " + env.getProperty("spring.jpa.hibernate.ddl-auto"));
+		log.info(" javax.javax.persistence.schema-generation: " + env.getProperty("javax.javax.persistence.schema-generation"));
+		log.info(" Database URL: " + jdbcTemplate.getDataSource().getConnection().getMetaData().getURL());  // may throw SQL Exception
+		log.info("=======================================================");
+		if (log.isDebugEnabled()) {
+			System.out.println();
+			System.out.println("LiquidoProperties:");
+			System.out.println(liquidoProps.toYaml());
+			System.out.println();
+		}
+
+		log.info(" Running some sanity checks ...");
+
 		/*
 		try {
 			Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
@@ -81,44 +97,28 @@ public class LiquidoBackendSpringApplication {
 		}
 		*/
 
+		//BUGFIX: Make sure H2 driver can be loaded. Otherwise things may break later at runtime.
 		if (env.acceptsProfiles(Profiles.of("dev"))) {
 			try {
 				Class.forName("org.h2.Driver");
 			} catch (ClassNotFoundException e) {
 				log.error("ERROR: Cannot load org.h2.Driver!");
 			}
-			log.info("Can load H2 Driver in env=development");
+			log.info(" Can load H2 Driver in dev");
 		}
 
-		String dbUrl = "[unknown]";
 		try {
-			dbUrl = jdbcTemplate.getDataSource().getConnection().getMetaData().getURL();
-		} catch (SQLException e) {
-			log.error("Cannot get dbUrl: "+e.getMessage());
+			Optional<AreaModel> defaultArea = areaRepo.findByTitle(liquidoProps.defaultAreaTitle);
+			if (!defaultArea.isPresent()) {
+				String errMsg = "Cannot find default area with title '"+ liquidoProps.defaultAreaTitle+"'";
+				log.error(errMsg);
+				throw new Exception(errMsg);
+			} else {
+				log.info(" Default area exists.");
+			}
+		} catch (Exception e) {
+			log.error(e.toString());
 			throw e;
-		}
-
-		AreaModel defaultArea = areaRepo.findByTitle(liquidoProps.defaultAreaTitle).orElse(null);
-		if (defaultArea == null) {
-			String errMsg = "Cannot find default area with title '"+ liquidoProps.defaultAreaTitle+"'";
-			log.error(errMsg);
-			throw new Exception(errMsg);
-		}
-
-		log.info("=====================================================");
-		log.info(" LIQUIDO backend API is up and running in " + Arrays.toString(env.getActiveProfiles()));
-		log.info(" ServerPort: " + this.serverPort);
-		log.info(" Database URL: "+dbUrl);
-		log.info(" spring.data.rest.base-path: " + env.getProperty("spring.data.rest.base-path"));
-		log.info(" graphiql.endpoint: "+ env.getProperty("graphiql.endpoint"));
-		log.info(" spring.jpa.generate-ddl: " + env.getProperty("spring.jpa.generate-ddl"));
-		log.info(" spring.jpa.hibernate.ddl-auto: " + env.getProperty("spring.jpa.hibernate.ddl-auto"));
-		log.info(" javax.javax.persistence.schema-generation: " + env.getProperty("javax.javax.persistence.schema-generation"));
-		log.info("=======================================================");
-		if (log.isDebugEnabled()) {
-			System.out.println("LiquidoProperties:");
-			System.out.println(liquidoProps.toYaml());
-			log.info("=======================================================");
 		}
 
 
@@ -134,6 +134,10 @@ public class LiquidoBackendSpringApplication {
 			}
 		});
 		*/
+
+		log.info("=====================================================");
+		log.info("LIQUIDO backend API is up and running in " + Arrays.toString(env.getActiveProfiles()));
+		log.info("=====================================================");
 
 	}
 

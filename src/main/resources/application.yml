@@ -10,7 +10,7 @@ server:
 
 graphiql:
   #mapping: /graphiql
-  endpoint: /liquido/v2/graphql_appYML
+  endpoint: /liquido/v2/graphql
 
 
 spring:
@@ -38,11 +38,12 @@ spring:
     hibernate:
       ddl-auto: none   # none, validate, update, create-drop (NEVER SET THIS TO "create-drop" IN PROD!!! YOU WILL LOSE ALL YOUR DATA!!!)
 
+    # org.hibernate.dialect.H2Dialect (default in DEV) | org.hibernate.dialect.MariaDBDialect
     #database-platform: org.hibernate.dialect.H2Dialect
 
     #TODO: Our backend has no view :-) So also no transactions that ... SHOULD .... span the view.  :-) But still needs work
     # https://vladmihalcea.com/the-open-session-in-view-anti-pattern/
-    #open-in-view: false
+    #open-in-view: true
 
     # Uncomment these two to show Hibernate Schema creation https://docs.spring.io/spring-boot/docs/current/reference/html/howto-database-initialization.html#howto-initialize-a-database-using-hibernate
     #show-sql: true

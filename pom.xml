@@ -4,11 +4,11 @@
 
 	<groupId>org.doogie.liquido</groupId>
 	<artifactId>liquido-backend-spring</artifactId>
-	<version>4.0.0</version>
+	<version>4.1.0</version>
 	<packaging>jar</packaging>
 
 	<name>liquido-backend-spring</name>
-	<description>RESTfull backend for my Liquid Democracy web app "Liquido"</description>
+	<description>Backend for my Liquid Democracy eVoting app "Liquido"</description>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -20,9 +20,9 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<java.version>13</java.version>
-		<maven.compiler.source>13</maven.compiler.source>
-		<maven.compiler.target>13</maven.compiler.target>
+		<java.version>8</java.version>
+		<maven.compiler.source>8</maven.compiler.source>
+		<maven.compiler.target>8</maven.compiler.target>
 		<spring-boot.version>2.2.4.RELEASE</spring-boot.version>
 		<quartz.version>2.3.2</quartz.version>
 		<jjwt.version>0.9.1</jjwt.version>
@@ -115,11 +115,20 @@
 			<version>${spring-boot.version}</version>
 		</dependency>
 
-		<!-- Database connector for MySQL-->
+		<!-- Database connector for MySQL
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
 		</dependency>
+		-->
+
+		<!-- MariaDB - free & open source mysql - used on INT -->
+		<dependency>
+			<groupId>org.mariadb.jdbc</groupId>
+			<artifactId>mariadb-java-client</artifactId>
+			<version>2.7.2</version>
+		</dependency>
+
 
 		<!-- https://mvnrepository.com/artifact/org.postgresql/postgresql
 		<dependency>
@@ -291,8 +300,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>9</source>
-                    <target>9</target>
+                    <source>8</source>
+                    <target>8</target>
                 </configuration>
             </plugin>
 
