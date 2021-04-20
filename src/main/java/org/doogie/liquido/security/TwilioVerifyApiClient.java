@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
-import java.util.Set;
 
 /**
  * Client for the new Twilio/Authy Verify 2.0 API
@@ -59,7 +58,7 @@ public class TwilioVerifyApiClient {
 	 * @return verificationSID of the verification request. URL where the verification can be checked is then: https://verify.twilio.com/v2/Services/#VA..ServiceSID....#/Verifications/#VE...verificationSid...#
 	 */
 	public String requestVerificationToken(@NonNull String channel, @NonNull String phoneNumberOrEmail) {
-		if (!Set.of(CHANNEL_SMS, CHANNEL_CALL, CHANNEL_MAIL).contains(channel))
+		if (!CHANNEL_SMS.equals(channel) &&	!CHANNEL_CALL.equals(channel) && !CHANNEL_MAIL.equals(channel))
 			throw new IllegalArgumentException("Channel must be one of sms|email|call !");
 		Lson entity = Lson.builder()
 			.put("To", phoneNumberOrEmail)

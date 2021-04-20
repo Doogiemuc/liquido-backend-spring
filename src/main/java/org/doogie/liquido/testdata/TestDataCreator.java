@@ -15,7 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.InputStreamResource;
@@ -49,23 +48,22 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  *
  * TestDataCreator can be un in two modes:
  *
- * <h4>Create sample data from scratch with JPA</h4>
+ * <h4>Create sample test data from scratch with JPA</h4>
  *
  * In application.properties  set  spring.jpa.hibernate.ddl-auto=create   to let Spring-JPA init the DB schema.
- * Then run this app with createSampleData=true
+ * Then run this app with liquido.test.recreateTestData=true
  * TestDataCreator will create test data from scratch. It will call plain spring-data-jpa methods
  * and use service methods very useful.   This whole creation takes around 1-2 minutes.
- * The resulting schema and testdata will be exported into an SQL script  sample-DB.sql
+ * The resulting schema and test data will be exported into an SQL script  sample-DB.sql
  *
- * <h4>Load schema and testdata from SQL script</h4>
+ * <h4>Load schema and test data from an SQL script</h4>
  *
  * In application.properties  set  spring.jpa.hibernate.ddl-auto=none (Then a data.sql is not loaded!)
- * And set the environment variable loadSampleDB=true
+ * And set liquido.test.loadTestData=true
  * Then sample-data.sql is loaded. This is quick!
  *
  * You can create a sample-data.sql from the embedded H2 console with the SQL command
  * <pre>SCRIPT TO 'sample-DB.sql'</pre>
- *
  *
  *
  * This is executed right after SpringApplication.run(...)
@@ -80,14 +78,14 @@ import static org.doogie.liquido.model.LawModel.LawStatus;
  * https://docs.spring.io/spring/docs/current/spring-framework-reference/testing.html#testcontext-ctx-management-env-profiles
  * https://stackoverflow.com/questions/8523423/reset-embedded-h2-database-periodically    -- how to drop H2 DB completely
  *
- * I already tried to refoctor this TestDataCreator into its own module. But this is not possible,
+ * I already tried to refactor this TestDataCreator into its own module. But this is not possible,
  * because this class depends so closely on pretty much every liquido service. And this is a good thing.
  * We want to test everything here. => So TestDataCreator will stay an internal part of the LIQUIDO backend project.
  */
 
 @Slf4j
 @Component
-@Profile({"dev", "test"})    						// run test data creator only during development or when running tests!
+//@Profile({"dev", "test", "int"})   			// run test data creator only during development or when running tests!
 @Order(100)   		                      // seed DB first, then run the other CommandLineRunners
 public class TestDataCreator implements CommandLineRunner {
 
@@ -190,10 +188,11 @@ public class TestDataCreator implements CommandLineRunner {
 	}
 
   /**
-   * Seed the DB with some default values, IF
-   *  - the currently active spring profiles contain "test"   OR
-   *  - there is an environment property seedDB==true  OR
-   *  - there is a command line parmaeter "--seedDB"
+   * See
+	 * <pre>
+	 * liquidoProperties.test.createTestData
+	 * liquidoProperties.test.loadTestData
+	 * </pre>
    * @param args command line args
    */
   public void run(String... args) throws LiquidoException {
@@ -205,9 +204,9 @@ public class TestDataCreator implements CommandLineRunner {
 
 			// Sanity check: Is there a schema with tables?
 			try {
-				List<UserModel> users = jdbcTemplate.queryForList("SELECT * FROM USERS LIMIT 10", UserModel.class);
+				List<UserModel> users = jdbcTemplate.queryForList("SELECT * FROM users LIMIT 10", UserModel.class);
 			} catch (Exception e) {
-				log.error("Cannot find table USERS! Did you create a DB schema at all?");
+				log.error("Cannot recreateTestData. There is no 'users' table! Did you create a DB schema at all?");
 				throw e;
 			}
 
@@ -239,9 +238,19 @@ public class TestDataCreator implements CommandLineRunner {
       seedLaws();
       auditorAware.setMockAuditor(null);
 
-			jdbcTemplate.execute("SCRIPT TO '" + props.test.sampleDbFile +"'");				//TODO: export schema only with  SCRIPT NODATA TO ...   and export MySQL compatible script!!!
-			adjustDbInitializationScript();
-			log.info("===== Successfully stored testdata in file: " + props.test.sampleDbFile);
+			/* Try to dump the created data into a .sql file. But this depends on the database driver being used */
+      try {
+				if (jdbcTemplate.getDataSource().getConnection().getMetaData().getURL().contains("H2")) {
+					// The `SCRIPT TO` command only works for H2 in-memory DB
+					jdbcTemplate.execute("SCRIPT TO '" + props.test.sampleDbFile + "'");        //There would also be a "SCRIPT NODATA TO ...", but Hibernate can already export the schema.
+					adjustDbInitializationScript();
+					log.info("===== Successfully stored test data in file: " + props.test.sampleDbFile);
+				}
+			} catch (Exception e) {
+      	String errMsg = "Could not store test data file: " + e.getMessage();
+      	log.error(errMsg);
+      	//throw new LiquidoException(LiquidoException.Errors.INTERNAL_ERROR, errMsg, e);
+			}
     }
 
     if (props.test.loadTestData) {

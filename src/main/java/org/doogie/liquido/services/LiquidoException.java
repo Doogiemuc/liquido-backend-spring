@@ -1,6 +1,5 @@
 package org.doogie.liquido.services;
 
-import com.mysql.cj.x.protobuf.MysqlxDatatypes;
 import org.doogie.liquido.util.Lson;
 import org.springframework.http.HttpStatus;
 

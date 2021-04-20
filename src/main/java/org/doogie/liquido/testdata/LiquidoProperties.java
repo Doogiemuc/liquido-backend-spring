@@ -72,7 +72,7 @@ public class LiquidoProperties {
 	public Test test = new Test();
 	@Data
 	public static class Test {
-		public Boolean recreateTestData =false;
+		public Boolean recreateTestData = false;
 		public Boolean loadTestData = false;
 		public String sampleDbFile = "sampleDB-H2.sql";
 		@ToString.Exclude

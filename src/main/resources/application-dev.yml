@@ -5,49 +5,52 @@
 # These overwrite the settings from default application.yml
 # ===================================================================
 
-graphiql:
-  #mapping: /graphiql
-  endpoint: /liquido/v2/graphql_devYML
-
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # DO NOT USE THESE SETTINGS IN PROD!  YOU WILL LOSE ALL YOUR DATA!
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+graphiql:
+  #mapping: /graphiql
+  #endpoint: /liquido/v2/graphql
+
 # In DEV we let spring JPA automatically generate a database schema.
 spring:
+  # In DEV spring-boot automatically starts an embedded in memory DB (H2-DB)
+  # Here we enable the H2 Web console for the embedded H2 DB. JDBC URL is   jdbc:h2:mem:testdb    username: sa   no password
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
   jpa:
     # In DEV we let spring automatically generate the database schema
-    # https://docs.spring.io/spring-boot/docs/1.0.x/reference/html/howto-database-initialization.html
+    # https://docs.spring.io/spring-boot/docs/current/reference/html/howto.html#howto-database-initialization
     generate-ddl: true
-    #show-sql: true
-    #hibernate:
+    hibernate:
     #  ddl-auto: none   # none, validate, update, create-drop (NEVER SET create-drop IN PROD!!! You will loose all your data!!!)
+
+    # Properties are forwarded to hibernate https://docs.spring.io/spring-boot/docs/current/reference/html/howto.html#howto-configure-jpa-properties
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
 
-  # In DEV spring-boot automatically starts an embedded in memory DB (H2-DB)
-  # Enable the H2 Web console for the embedded H2 DB. JDBC URL is   jdbc:h2:mem:testdb    username: sa   no password
-  # (These are already the defaults)
-  #h2:
-  #  console:
-  #    enabled: true
-  #    path: /h2-console
+      # In dev we can create a schema.sql script for initializing a database later in other environments
+      # https://stackoverflow.com/questions/37648395/how-to-see-the-schema-sql-ddl-in-spring-boot
+      # https://thoughts-on-java.org/standardized-schema-generation-data-loading-jpa-2-1/
+      javax:
+        persistence:
+          schema-generation:
+            database:
+              action: create    # Must be set if you still want hibernate to create the actual schema in the DB in addition to the SQL file dump.
+            scripts:
+              action: create
+              create-target: build/liquido-db-schema.sql
 
-# In dev we can create a schema.sql script for initializing a database later in other environments
-# https://stackoverflow.com/questions/37648395/how-to-see-the-schema-sql-ddl-in-spring-boot
-# https://thoughts-on-java.org/standardized-schema-generation-data-loading-jpa-2-1/
-#javax:
-#  persistence:
-#    schema-generation:
-#      scripts:
-#        action: create
-#        create-target: build/liquido-db-schema.sql
-#      database:
-#        action: create    # Must be set if you want hibernate to create the actual schema in the DB in addition to the SQL file dump.
+    # show SQL commands. (To see actual parameter values see logging for BasicBinder below.)
+    #show-sql: true
 
 
-
+# More logging in DEV
 logging:
   level:
     root: INFO
@@ -71,6 +74,15 @@ logging:
           descriptor:
             sql:
               #BasicBinder: TRACE
+
+liquido:
+  # You can load prepared testdata from a file. THIS SQL FILE MUST HAVE BEEN CREATED BEFORE!
+  test:
+    #recreateTestData: false
+    #loadTestData: true
+    #sampleDbFile: sampleDB-H2.sql
+
+
 
 # ===================================================================
 # Generate Swagger API docs
