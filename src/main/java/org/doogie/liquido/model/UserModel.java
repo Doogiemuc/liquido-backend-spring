@@ -32,7 +32,10 @@ public class UserModel extends BaseModel {
   @NonNull
   public String email;
 
-	/** User's mobile phone number. Needed for login via SMS code */
+	/**
+	 * User's mobile phone number. Needed for login via SMS code.
+	 * Mobilephone numbers in the DB are cleaned first: See cleanMobilePhone()
+	 */
 	//@Column(unique = true)  Are you really sure that every user have their own mobile phone? Or do some people share their mobilephone? Think worldwide!
 	String mobilephone;
 

@@ -2,7 +2,7 @@
 # LIQUIDO - Spring Boot Application Properties
 #
 # Settings for development in "dev" environment.
-# These overwrite the settings from default application.yml
+# These overwrite the settings from default application-local.yml
 # ===================================================================
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -11,7 +11,7 @@
 
 graphiql:
   #mapping: /graphiql
-  #endpoint: /liquido/v2/graphql
+  #endpoint: /liquido-api/v3/graphql
 
 # In DEV we let spring JPA automatically generate a database schema.
 spring:

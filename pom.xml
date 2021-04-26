@@ -189,7 +189,7 @@
 			<version>2.9.2</version>
 		</dependency>
 
-		 Springfox support for autogenerating /v2/api-docs from spring-data-rest java sources (still in incubation
+		 Springfox support for auto generating /v2/api-docs from spring-data-rest java sources (still in incubation
 		<dependency>
 		  <groupId>io.springfox</groupId>
 		  <artifactId>springfox-data-rest</artifactId>
@@ -327,7 +327,7 @@
 					  <item>buildNumber</item>
 					</items>
 					<buildNumberPropertiesFileLocation>${basedir}/build/buildNumber.properties</buildNumberPropertiesFileLocation>
-					<!- buildnumber-maven-plugin by default checks for local changes, ie. not yet commited files ->
+					<!- buildnumber-maven-plugin by default checks for local changes, ie. not yet committed files ->
 					<doCheck>false</doCheck>
 					<doUpdate>false</doUpdate>
 				</configuration>

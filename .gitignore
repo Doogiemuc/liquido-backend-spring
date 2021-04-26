@@ -4,7 +4,7 @@ target/
 build/
 release.properties
 /application*.properties
-/application*.yml
+/application-local.yml
 /application-local.yml
 /application-local.yml
 /application-int.yml

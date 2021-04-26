@@ -1,9 +1,6 @@
 package org.doogie.liquido.graphql;
 
-import io.leangen.graphql.annotations.GraphQLArgument;
-import io.leangen.graphql.annotations.GraphQLMutation;
-import io.leangen.graphql.annotations.GraphQLNonNull;
-import io.leangen.graphql.annotations.GraphQLQuery;
+import io.leangen.graphql.annotations.*;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.TeamRepo;
@@ -90,8 +87,7 @@ public class TeamsGraphQL {
 	 * This can be called anonymously.
 	 *
 	 * @param teamName Name of new team. Must be unique.
-	 * @param adminName Admin's name
-	 * @param adminEmail email of admin. (Must not be unique. One email MAY be the admin of several teams.)
+	 * @param admin Admin of new team
 	 * @return The newly created team, incl. ID, inviteCode  and a JsonWebToken
 	 * @throws LiquidoException when teamName is not unique.
 	 */
@@ -102,8 +98,8 @@ public class TeamsGraphQL {
 		@GraphQLArgument(name = "adminName") @GraphQLNonNull String adminName,
 		@GraphQLArgument(name = "adminEmail") @GraphQLNonNull String adminEmail,
 		@GraphQLArgument(name = "adminMobilephone") @GraphQLNonNull String adminMobilephone,
-		@GraphQLArgument(name = "website") String website,
-		@GraphQLArgument(name = "picture") String picture
+		@GraphQLArgument(name = "adminWebsite") String adminWebsite,
+		@GraphQLArgument(name = "adminPicture") String adminPicture
 	) throws LiquidoException {
 		adminMobilephone = LiquidoRestUtils.cleanMobilephone(adminMobilephone);
 		Optional<LiquidoAuthentication> auth = authUtil.getLiquidoAuthentication();
@@ -116,12 +112,12 @@ public class TeamsGraphQL {
 		if (teamRepo.findByTeamName(teamName).isPresent())
 			throw new LiquidoException(Errors.TEAM_WITH_SAME_NAME_EXISTS, "Cannot create new team: A team with that name ('"+teamName+"') already exists");
 
-		UserModel admin = existingUser.orElse(new UserModel(adminEmail, adminName, adminMobilephone, website, picture));
+		UserModel admin = existingUser.orElse(new UserModel(adminEmail, adminName, adminMobilephone, adminWebsite, adminPicture));
 		TeamModel newTeam = new TeamModel(teamName, admin);
 		newTeam = teamRepo.save(newTeam);
 		userRepo.save(admin);
 
-		log.info("Created new team: "+newTeam.toString());
+		log.info("Created new team: "+newTeam);
 		String jwt = jwtTokenUtils.generateToken(admin.getId(), newTeam.getId());
 		return new CreateOrJoinTeamResponse(newTeam, admin, jwt);
 	}

@@ -78,7 +78,6 @@ public class DevRestController {
 	 * @param token dev login sms token
 	 * @return UserModel HATEOAS resource with 10 users. Admin is first element.
 	 */
-	@Profile({"dev", "test"})
 	@RequestMapping(value = "/dev/users")
 	public @ResponseBody Lson devGetAllUsers(
 		@RequestParam("token") String token,
@@ -116,7 +115,11 @@ public class DevRestController {
 	 * Receive a Json Web Token for authentication. This for example allows tests to login as <b>any</b> user.
 	 * Then authentication for further requests can then be handled normally in {@link org.doogie.liquido.jwt.JwtAuthenticationProvider}
 	 *
-	 * 	The client must still provide the valid devLoginToken from application.properties.
+	 * If a team is given, then login user into that team. (Team must exist. And user must be member or admin of that team.)
+	 * Either mobile or email must be given and user must exist.
+	 *
+	 *
+	 * The client must still provide the valid devLoginToken from application.properties.
 	 *
 	 * @param mobile mobilephone of existing user
 	 * @param token  devLoginSmsToken from application.properties
@@ -149,23 +152,20 @@ public class DevRestController {
 		if (emailOpt.isPresent()) {
 			if (team != null) {
 				user = team.getAdminOrMemberByEmail(emailOpt.get())
-					.orElseThrow(LiquidoException.notFound("Cannot find an admin or member with email="+emailOpt+" in team "+team.getTeamName()));
+					.orElseThrow(LiquidoException.notFound("DevLogin: Cannot find an admin or member with email="+emailOpt.get()+" in team "+team.getTeamName()));
 			} else {
 				user = userRepo.findByEmail(emailOpt.get())
-					.orElseThrow(LiquidoException.notFound("Cannot find a user with email="+emailOpt.get()));
+					.orElseThrow(LiquidoException.notFound("DevLogin: Cannot find a user with email="+emailOpt.get()));
 			}
 		}
 		if (mobile.isPresent()) {
 			user = userRepo.findByMobilephone(mobile.get())
-				.orElseThrow(LiquidoException.notFound("Cannot find a user with mobile="+mobile.get()));
+				.orElseThrow(LiquidoException.notFound("DevLogin: Cannot find a user with mobile="+mobile.get()));
 		}
 
-		// If nothing is given, then simply login the first member of any team.
+		// If nothing is given, then throw exception
 		if (user == null) {
-			log.debug("DevLogin: Just any user in any team");
-			team = teamRepo.findAll(new OffsetLimitPageable(0,1)).get().findFirst()
-				.orElseThrow(LiquidoException.notFound("Cannot find ANY team!"));
-			user = team.getMembers().iterator().next();
+			throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "DevLogin: Need at least a user for devLogin");
 		}
 
 		log.info("DEV Login: " + user);

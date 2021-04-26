@@ -15,7 +15,7 @@ fi
 [ -z "$BACKEND_SOURCE" ] && BACKEND_SOURCE=/c/CodingSSD/liquido/liquido-backend-spring
 BACKEND_USER=ec2-user
 BACKEND_HOST=ec2-52-208-204-181.eu-west-1.compute.amazonaws.com
-BACKEND_API=http://${BACKEND_HOST}:80/liquido/v2
+BACKEND_API=http://${BACKEND_HOST}:80/liquido-api/v3
 BACKEND_DEST_DIR=/home/ec2-user/liquido/liquido-int
 BACKEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:${BACKEND_DEST_DIR}
 
@@ -144,7 +144,7 @@ echo
 
 RESTART_CMD="(cd ${BACKEND_DEST_DIR};./restartLiquido.sh ${JAR_NAME})"
 
-read -p "Restart backend? [yes|NO] " yn
+read -p "Restart remote backend? [yes|NO] " yn
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
   echo "Restarting liquido backend:"
   echo "${RESTART_CMD}"
@@ -178,17 +178,17 @@ echo "===== Deploy Web Frontend ====="
 echo
 echo "from: $FRONTEND_SOURCE/dist"
 echo "to:   $FRONTEND_DEST"
-if [ "$FRONTEND_BUILT_SUCCESSFULLY"=false ] ; then
+if [ "$FRONTEND_BUILT_SUCCESSFULLY" = false ] ; then
   echo "WARN: You did not build the frontend. This would deploy the last built version!"
 fi
-read -p "Deploy WebApp? [yes|NO] " yn
+read -p "Deploy Web Frontend? [yes|NO] " yn
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
   echo "scp -i $SSH_KEY -r $FRONTEND_SOURCE/dist/* $FRONTEND_DEST"
   scp -i $SSH_KEY -r $FRONTEND_SOURCE/dist/* $FRONTEND_DEST
   [ $? -ne 0 ] && exit 1
-  echo -e "Webapp deployed to $FRONTEND_DEST ${GREEN_OK}"
+  echo -e "Web Frontend deployed to $FRONTEND_DEST ${GREEN_OK}"
 else
-  echo "WebApp will NOT be deployed."
+  echo "Web Frontend will NOT be deployed."
 fi
 
 
@@ -199,10 +199,13 @@ echo "===== Build Mobile PWA ====="
 echo
 echo "in $PWA_SOURCE"
 read -p "Build Mobile PWA? [yes|NO] " yn
+PWA_BUILT_SUCCESSFULLY=false
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
   cd $PWA_SOURCE
   $NPM run build
   [ $? -ne 0 ] && exit 1
+  echo "setting PWA_BUILT_SUCCESSFULLY to true"
+  PWA_BUILT_SUCCESSFULLY=true
   echo -e "Mobile PWA built successfully. ${GREEN_OK}"
 fi
 
@@ -212,9 +215,14 @@ echo "===== Deploy Mobile PWA ====="
 echo
 echo "from: $PWA_SOURCE/dist"
 echo "to:   $PWA_DEST"
-read -p "Deploy PWA? [yes|NO] " yn
+if [ "$PWA_BUILT_SUCCESSFULLY" = false ] ; then
+  echo "WARN: You did not build the mobile PWA. This would redeploy the last built version!"
+fi
+read -p "Redeploy PWA? [yes|NO] " yn
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
-  echo "scp -i $SSH_KEY -r $PWA_SOURCE/dist/* $PWA_DEST"
+  echo "Clean $PWA_DEST/*"
+  ssh -i $SSH_KEY ${BACKEND_USER}@${BACKEND_HOST} rm -rf $PWA_DEST/*
+  echo "Upload PWA: scp -i $SSH_KEY -r $PWA_SOURCE/dist/* $PWA_DEST"
   scp -i $SSH_KEY -r $PWA_SOURCE/dist/* $PWA_DEST
   [ $? -ne 0 ] && exit 1
   echo -e "Mobile PWA deployed to $PWA_DEST ${GREEN_OK}"
@@ -244,7 +252,7 @@ fi
 echo
 echo "===== Sanity checks ====="
 echo
-echo -n "Waiting (max 20 secs) for backend to be alive ..."
+echo -n "Querying backend to be alive at $BACKEND_API ..."
 
 PING_SUCCESS=0
 for i in {1..20}; do
@@ -305,7 +313,7 @@ echo "PWA_URL:     $PWA_URL"
 echo "Backend API: $BACKEND_API"
 echo
 
-CYPRESS_CMD="$PWA_SOURCE/$CYPRESS run --config baseUrl=$PWA_URL --env backendBaseURL=$BACKEND_API --spec ./cypress/integration/happy-case.js"
+CYPRESS_CMD="$PWA_SOURCE/$CYPRESS run --config baseUrl=$PWA_URL --env LIQUIDO_API=$BACKEND_API --spec ./cypress/integration/happy-case.js"
 
 read -p "Run Cypress tests against PWA? [yes|NO] " yn
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then

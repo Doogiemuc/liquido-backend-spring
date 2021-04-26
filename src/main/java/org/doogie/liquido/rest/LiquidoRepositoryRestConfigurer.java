@@ -45,7 +45,7 @@ public class LiquidoRepositoryRestConfigurer implements RepositoryRestConfigurer
 
     // The base path for RepositoryRestResource is configured in application.properties. It's more prominent there
     // Keep in mind that this is only the base path for our HATEOAS endpoints. The base path for normal @RestControllers has to configured individually there.
-    //config.setBasePath("/liquido/v2");
+    //config.setBasePath("/liquido-api/v3");
 
     // Only export data repositories that are annotated with @RepositoryRestResource(...)
     // In future versions this will be configurable in application.properties   spring.data.rest.detection-strategy=visibility   https://github.com/spring-projects/spring-boot/issues/7113

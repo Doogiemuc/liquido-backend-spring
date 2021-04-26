@@ -60,7 +60,7 @@ public class PollModel extends BaseModel {
      Keep in mind that you must not call  poll.proposals.add(prop). Because this circumvents all the restrictions that there are for adding a proposals to a poll!
      Instead use PollService.addProposalToPoll(proposals, poll) !
 	   We deliberately fetch all proposals in this poll EAGERly, so that getNumCompetingProposals can be called on the returned entity.
-	   When creating a new poll via POST /polls/add  , then the first proposal can be passed as URI:   {"title":"Poll created by test 1582701066468","proposals":["http://localhost:8080/liquido/v2/laws/405"]}
+	   When creating a new poll via POST /polls/add  , then the first proposal can be passed as URI:   {"title":"Poll created by test 1582701066468","proposals":["/laws/405"]}
 	   To make that work, the content of the HashSet, ie. the URI will be deserialized with LawModelDeserializer.class
 	*/
   @OneToMany(cascade = CascadeType.MERGE, mappedBy="poll", fetch = FetchType.EAGER) //, orphanRemoval = true/false ?? Should a proposals be removed when the poll is deleted? => NO. Liquido Proposals may join other polls ...

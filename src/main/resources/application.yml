@@ -10,7 +10,7 @@ server:
 
 graphiql:
   #mapping: /graphiql
-  endpoint: /liquido/v2/graphql
+  endpoint: /liquido-api/v3/graphql
 
 
 spring:
@@ -27,7 +27,7 @@ spring:
 
   data:
     rest:
-      base-path: /liquido/v2
+      base-path: /liquido-api/v3
 
   jpa:
     # By default we do NOT let spring-jpa (hibernate) automatically create a schema in the database.
@@ -148,7 +148,7 @@ liquido:
     email: admin@liquido.de
     name: Liquido Admin
     mobilephone: "+491511234567"
-    picture: /static/img/avatars/Avatar16.png
+    picture: Avatar16.png
 
   # AUTHY API secrets
   authy:
@@ -166,7 +166,7 @@ liquido:
   test:
     recreateTestData: false
     loadTestData: false
-    sampleDbFile: sampleDB-H2.sql
+    sampleDbFile: ./example-data/sampleDB-H2.sql
 
   # LIQUIDO can log response body payloads.
   debug:

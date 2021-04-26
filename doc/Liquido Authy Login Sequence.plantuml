@@ -4,7 +4,6 @@ actor User
 participant LiquidoApp
 participant "Liquido Backend" as BE
 participant AuthyAPI
-participant AuthyApp
 
 note over AuthyAPI: ""https://api.authy.com/protected/json""
 
@@ -27,13 +26,10 @@ activate LiquidoApp
 LiquidoApp -> BE: ""/auth/requestToken""
 rnote over BE #lightblue: ""UserService.sendSmsOrPushNotification()""
 BE -> AuthyAPI: ""GET /sms/{AUTHY_ID}""
-AuthyAPI -> AuthyApp: push notification
 deactivate LiquidoApp
 
-activate AuthyApp
-note left of AuthyApp: AuthyApp pops up and\nshows a One Time Token (OTT) to user\n2FA: User switches back to LiquidoApp
-AuthyApp -[#blue]->o User: User sees Authy one time token (OTT). 2FA: This is not a technical callback! This is human interaction.
-deactivate AuthyApp
+note over AuthyAPI: SMS is sent or AuthyApp pops up\nand shows One Time Token (OTT) to user\n2FA: User switches back to LiquidoApp
+AuthyAPI -[#blue]->o User: User sees Authy one time token (OTT). 2FA: This is not a technical callback! This is human interaction.
 
 |||
 
@@ -57,7 +53,7 @@ activate LiquidoApp
 LiquidoApp -> BE: ""/auth/switchTeam""\n(authenticated call with JWT)
 rnote over BE #lightblue: ""UserService.switchTeam()""
 ' should I require authentication via authy here again?
-BE --> LiquidoApp: new JWT
+BE --> LiquidoApp: new JWT for new team
 LiquidoApp -> User: Team Home of new team
 deactivate LiquidoApp
 
@@ -67,5 +63,19 @@ deactivate LiquidoApp
 LiquidoApp -> BE: authenticated requests\nwith JWT in header
 BE --> LiquidoApp: HTTP 200 OK
 
+|||
+== Login during testing ==
+
+User -> LiquidoApp: test simulates user
+activate LiquidoApp
+LiquidoApp -> BE: GraphQL: QUERY\n""authToken(mobilephone, devLoginToken)""
+note over BE: UserGraphQL.requestAuthToken()\ncheck devLoginToken\nUser must exist.\nThen AuthyAPI is **not** called.
+BE --> LiquidoApp: DummySID
+
+LiquidoApp -> BE: REST call:\n""GET /devLogin""\n"" email,teamName,token""
+note over BE: DevRestController.devLogin()
+BE --> LiquidoApp: Login Data\n(user, team, jwt)
+LiquidoApp --> User: user is logged in
+deactivate LiquidoApp
 
 @enduml

@@ -136,7 +136,7 @@ public class GraphQLTests extends HttpBaseTest {
 		String adminEmail  = TestFixtures.MAIL_PREFIX+ "_admin_" + now + "@graphql-test.vote";
 		String mobilephone = TestFixtures.MOBILEPHONE_PREFIX + now;
 		String website     = TestFixtures.DEFAULT_WEBSITE;
-		String picture     = TestFixtures.AVATAR_PREFIX+(now%16)+".png";
+		String picture     = TestFixtures.AVATAR_IMG_PREFIX +(now%16)+".png";
 		String graphQLMutation = String.format(
 			"mutation { createNewTeam(teamName: \"%s\", adminName: \"%s\", adminEmail: \"%s\", adminMobilephone: \"%s\", " +
 				"website: \"%s\", picture: \"%s\") { " +
@@ -169,7 +169,7 @@ public class GraphQLTests extends HttpBaseTest {
 		String userEmail = TestFixtures.MAIL_PREFIX+ "_" + now + "@graphql-test.vote";
 		String mobilephone = TestFixtures.MOBILEPHONE_PREFIX+ now;
 		String website     = TestFixtures.DEFAULT_WEBSITE;
-		String picture     = TestFixtures.AVATAR_PREFIX+(now%16)+".png";
+		String picture     = TestFixtures.AVATAR_IMG_PREFIX +(now%16)+".png";
 		String graphQLMutation = String.format(
 			"mutation { joinTeam(inviteCode: \"%s\", userName: \"%s\", userEmail: \"%s\", mobilephone: \"%s\"" +
 				"website: \"%s\", picture: \"%s\") {" +

@@ -17,23 +17,20 @@ public class TestFixtures {
 	public static final int NUM_TEAMS = 3;
 	public static final int NUM_TEAM_MEMBERS = 5;
 	public static final int NUM_USERS = 20;
-	public static final int NUM_VOTES = 15;			// number of casted votes.  Must be smaller than NUM_USERS!
+	public static final int NUM_VOTES = 15;			// number of casted votes. Must be smaller than NUM_USERS!
 	public static final int NUM_AREAS = 10;
 	public static final int NUM_IDEAS = 111;
 	public static final int NUM_PROPOSALS = 50;
 	public static final int NUM_ALTERNATIVE_PROPOSALS = 5;   // proposals in poll
 
-
-	public static final String AREA0_TITLE = "Area 0";
 	public static final String AREA1_TITLE = "Area 1";
-
 
 	public static final String USER_NAME_PREFIX = "TestUser";
 	public static final String MAIL_PREFIX = "testuser";
-	public static final String MOBILEPHONE_PREFIX = "+4912345";
+	public static final String MOBILEPHONE_PREFIX = "+49151555";
 	public static final String DEFAULT_WEBSITE = "www.liquido.me";
+	public static final String AVATAR_IMG_PREFIX = "Avatar";   // path to avatar images is configured in the client
 
-	public static final String AVATAR_PREFIX = "/img/avatars/Avatar";
 	public static final String USER1_NAME = "Donald Duck";										// Special name for user1
 
   public static final String USER1_EMAIL = MAIL_PREFIX+"1@liquido.de";      // testuser1 has  ID 1 in the DB !
@@ -55,10 +52,10 @@ public class TestFixtures {
 
 	// Teams and members and admins
 	public static final String TEAM1_NAME = "TeamOne";         // First Team has a fixed name that is used in tests
-	public static final String TEAM1_ADMIN_EMAIL = "adminTeamOne@liquido.me";                // This user is member in ONE team
-	public static final String TEAM1_ADMIN_MOBILEPHONE = MOBILEPHONE_PREFIX+"5559911";
+	public static final String TEAM1_ADMIN_EMAIL = "adminTeamOne@liquido.me";            // This user is admin in ONE team
+	public static final String TEAM1_ADMIN_MOBILEPHONE = MOBILEPHONE_PREFIX+"111";
 	public static final String TWO_TEAM_USER_EMAIL = "twoTeamMember@liquido.me";         // This user is member in TWO teams
-	public static final String TWO_TEAM_USER_MOBILEPHONE = MOBILEPHONE_PREFIX+"5559922";
+	public static final String TWO_TEAM_USER_MOBILEPHONE = MOBILEPHONE_PREFIX+"222";
 	public static final String TEAM_NAME_PREFIX = "TestTeam";
 	public static final String TEAM_ADMIN_NAME_PREFIX = "Admin";
 	public static final String TEAM_ADMIN_EMAIL_PREFIX = "admin";  // e.g. admin4711@TestTeam0.org
