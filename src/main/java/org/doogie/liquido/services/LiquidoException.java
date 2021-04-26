@@ -46,11 +46,13 @@ public class LiquidoException extends Exception {
 		CANNOT_LOGIN_MOBILE_NOT_FOUND(20, HttpStatus.UNAUTHORIZED),					// when requesting an SMS login token and mobile number is not known
 		CANNOT_LOGIN_EMAIL_NOT_FOUND(21, HttpStatus.UNAUTHORIZED),   				// when requesting a login email and email is not known
 		CANNOT_LOGIN_TOKEN_INVALID(22, HttpStatus.UNAUTHORIZED),     				// when a email or sms login token is invalid or expired
-		CANNOT_LOGIN_INTERNAL_ERROR(23, HttpStatus.INTERNAL_SERVER_ERROR),		// when sending of email is not possible
+		CANNOT_LOGIN_TEAM_NOT_FOUND(23, HttpStatus.UNAUTHORIZED),            // when changing team
+		CANNOT_LOGIN_USER_NOT_MEMBER_OF_TEAM(24, HttpStatus.UNAUTHORIZED),   // when changing team and user is not member or admin of target team
+		CANNOT_LOGIN_INTERNAL_ERROR(25, HttpStatus.INTERNAL_SERVER_ERROR),		// when sending of email is not possible
 
 		//JWT Erros
-		JWT_TOKEN_INVALID(24, HttpStatus.UNAUTHORIZED),
-		JWT_TOKEN_EXPIRED(25, HttpStatus.UNAUTHORIZED),
+		JWT_TOKEN_INVALID(30, HttpStatus.UNAUTHORIZED),
+		JWT_TOKEN_EXPIRED(31, HttpStatus.UNAUTHORIZED),
 
 		// use case errors
 		INVALID_VOTER_TOKEN(50, HttpStatus.UNAUTHORIZED),

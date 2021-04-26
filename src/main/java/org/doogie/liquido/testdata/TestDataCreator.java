@@ -240,7 +240,7 @@ public class TestDataCreator implements CommandLineRunner {
 
 			/* Try to dump the created data into a .sql file. But this depends on the database driver being used */
       try {
-				if (jdbcTemplate.getDataSource().getConnection().getMetaData().getURL().contains("H2")) {
+				if (jdbcTemplate.getDataSource().getConnection().getMetaData().getURL().contains("h2")) {
 					// The `SCRIPT TO` command only works for H2 in-memory DB
 					jdbcTemplate.execute("SCRIPT TO '" + props.test.sampleDbFile + "'");        //There would also be a "SCRIPT NODATA TO ...", but Hibernate can already export the schema.
 					adjustDbInitializationScript();
@@ -392,15 +392,16 @@ public class TestDataCreator implements CommandLineRunner {
 		if (adminEmail == null) adminEmail = TestFixtures.TEAM_ADMIN_EMAIL_PREFIX + "@" + teamName + ".org";
 		if (adminMobilephone == null) adminMobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits;               // MUST create unique mobile phone numbers!
 		String adminWebsite     = "www.liquido.vote";
-		String adminPicture     = TestFixtures.AVATAR_PREFIX + "0.png";
-		CreateOrJoinTeamResponse res = teamServiceGQL.createNewTeam(teamName, adminName, adminEmail, adminMobilephone, adminWebsite, adminPicture);
+		String adminPicture     = TestFixtures.AVATAR_IMG_PREFIX + "0.png";
+		UserModel admin = new UserModel(adminEmail, adminName, adminMobilephone, adminWebsite, adminPicture);
+		CreateOrJoinTeamResponse res = teamServiceGQL.createNewTeam(teamName, admin.getName(), admin.email, admin.getMobilephone(), admin.getWebsite(), admin.getPicture());
 		CreateOrJoinTeamResponse joinTeamRes = null;
 		for (int j = 0; j < TestFixtures.NUM_TEAM_MEMBERS; j++) {
 			String userName    = TestFixtures.TEAM_MEMBER_NAME_PREFIX + j + " " + teamName;
 			String userEmail   = TestFixtures.TEAM_MEMBER_EMAIL_PREFIX + j + "@" + teamName + ".org";
 			String mobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits + j;
 			String website     = "www.liquido.vote";
-			String picture     = TestFixtures.AVATAR_PREFIX+ (j%16) + ".png";
+			String picture     = TestFixtures.AVATAR_IMG_PREFIX + (j%16) + ".png";
 			joinTeamRes = teamServiceGQL.joinTeam(res.getTeam().getInviteCode(), userName, userEmail, mobilephone, website, picture);
 		}
 		return joinTeamRes.getTeam(); // most up to date firstTeam entity, with all members, is from last joinNewTeam response
@@ -421,7 +422,7 @@ public class TestDataCreator implements CommandLineRunner {
 		String digits = DoogiesUtil.randomDigits(5);
 		String userName    = TestFixtures.TEAM_MEMBER_NAME_PREFIX + digits + "_2teams";
 		String website     = "www.liquido.vote";
-		String picture     = TestFixtures.AVATAR_PREFIX + "1.png";
+		String picture     = TestFixtures.AVATAR_IMG_PREFIX + "1.png";
 		CreateOrJoinTeamResponse res = teamServiceGQL.joinTeam(team1.getInviteCode(), userName, memberEmail, mobilephone, website, picture);
 		// Must authenticate for the second join team call!
 		authUtil.authenticateInSecurityContext(res.getUser().getId(), res.getTeam().getId(), res.getJwt());
@@ -481,7 +482,7 @@ public class TestDataCreator implements CommandLineRunner {
 			String name  			 	= (i == 0) ? "Test User" + (i+1) : TestFixtures.USER1_NAME;           // user1 has a special fixed name.
 			String mobilephone 	= TestFixtures.MOBILEPHONE_PREFIX+(countUsers+i+1);
 			String website     	= "http://www.liquido.de";
-			String picture     	= TestFixtures.AVATAR_PREFIX+((i%16)+1)+".png";
+			String picture     	= TestFixtures.AVATAR_IMG_PREFIX +((i%16)+1)+".png";
       UserModel newUser  	= new UserModel(email, name, mobilephone, website, picture);
       //TODO: newUser.setAuthyId();
 			UserModel savedUser = util.upsert(newUser);

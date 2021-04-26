@@ -125,23 +125,23 @@ public class SchoolExampleData implements CommandLineRunner {
 
 	void seedUsers() {
 		log.debug("seedUsers");
-		UserModel user1 = util.upsert(new UserModel("fritz@liquido.de", "Fritz Cool", "+49 22234501", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "1.png"));
+		UserModel user1 = util.upsert(new UserModel("fritz@liquido.de", "Fritz Cool", "+49 22234501", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "1.png"));
 		auditorAware.setMockAuditor(user1);
-		util.upsert(new UserModel("peter@liido.de", "Peter Newman", "+49 22234502", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "2.png"));
-		util.upsert(new UserModel("sarah@liquido.de", "Sarah Connor", "+49 22234503", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "3.png"));
-		util.upsert(new UserModel("susan@liquido.de", "Susan Johnson", "+49 22234504", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "4.png"));
-		util.upsert(new UserModel("john@liquido.de", "Johan Appleseed", "+49 22234505", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "5.png"));
-		util.upsert(new UserModel("jane@liido.de", "Jane Doe", "+49 22234506", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "6.png"));
-		util.upsert(new UserModel("linda@liquido.de", "Linda Maine", "+49 22234507", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "7.png"));
-		util.upsert(new UserModel("dug@liquido.de", "Dug Branston", "+49 22234508", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "8.png"));
-		util.upsert(new UserModel("charles@liquido.de", "Charles Kirk", "+49 22234509", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "9.png"));
-		util.upsert(new UserModel("laurent@liido.de", "Laurent Marnier", "+49 22234510", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "10.png"));
-		util.upsert(new UserModel("angel@liquido.de", "Angel Strickland", "+49 22234511", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "11.png"));
-		util.upsert(new UserModel("brenda@liquido.de", "Brenda Lee", "+49 22234512", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "12.png"));
-		util.upsert(new UserModel("sharon@liquido.de", "Sharon Jensen", "+49 22234513", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "13.png"));
-		util.upsert(new UserModel("nick@liido.de", "Nick Colodeon", "+49 22234514", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "14.png"));
-		util.upsert(new UserModel("jody@liquido.de", "Jody Hanson", "+49 22234515", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "15.png"));
-		util.upsert(new UserModel("mark@liquido.de", "Mark Hardy", "+49 22234516", "http://www.our-school.edu", TestFixtures.AVATAR_PREFIX + "16.png"));
+		util.upsert(new UserModel("peter@liido.de", "Peter Newman", "+49 22234502", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "2.png"));
+		util.upsert(new UserModel("sarah@liquido.de", "Sarah Connor", "+49 22234503", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "3.png"));
+		util.upsert(new UserModel("susan@liquido.de", "Susan Johnson", "+49 22234504", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "4.png"));
+		util.upsert(new UserModel("john@liquido.de", "Johan Appleseed", "+49 22234505", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "5.png"));
+		util.upsert(new UserModel("jane@liido.de", "Jane Doe", "+49 22234506", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "6.png"));
+		util.upsert(new UserModel("linda@liquido.de", "Linda Maine", "+49 22234507", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "7.png"));
+		util.upsert(new UserModel("dug@liquido.de", "Dug Branston", "+49 22234508", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "8.png"));
+		util.upsert(new UserModel("charles@liquido.de", "Charles Kirk", "+49 22234509", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "9.png"));
+		util.upsert(new UserModel("laurent@liido.de", "Laurent Marnier", "+49 22234510", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "10.png"));
+		util.upsert(new UserModel("angel@liquido.de", "Angel Strickland", "+49 22234511", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "11.png"));
+		util.upsert(new UserModel("brenda@liquido.de", "Brenda Lee", "+49 22234512", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "12.png"));
+		util.upsert(new UserModel("sharon@liquido.de", "Sharon Jensen", "+49 22234513", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "13.png"));
+		util.upsert(new UserModel("nick@liido.de", "Nick Colodeon", "+49 22234514", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "14.png"));
+		util.upsert(new UserModel("jody@liquido.de", "Jody Hanson", "+49 22234515", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "15.png"));
+		util.upsert(new UserModel("mark@liquido.de", "Mark Hardy", "+49 22234516", "http://www.our-school.edu", TestFixtures.AVATAR_IMG_PREFIX + "16.png"));
 
 		util.reloadUsersCache();
 	}

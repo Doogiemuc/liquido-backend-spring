@@ -77,6 +77,7 @@ public class JwtTokenUtils {
 
 	/**
 	 * Validates if a token has the correct unmalformed signature and is not expired or unsupported.
+	 * @return true when token is valid
 	 * @throws LiquidoException when token is invalid.
 	 */
 	public boolean validateToken(String authToken) throws LiquidoException {

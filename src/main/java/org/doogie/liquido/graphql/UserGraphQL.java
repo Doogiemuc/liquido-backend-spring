@@ -19,12 +19,11 @@ import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.MailService;
 import org.doogie.liquido.services.UserService;
 import org.doogie.liquido.testdata.LiquidoProperties;
-import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
+import org.springframework.lang.Nullable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
@@ -32,6 +31,7 @@ import org.springframework.util.ObjectUtils;
 import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.doogie.liquido.jwt.AuthUtil.HAS_ROLE_USER;
@@ -149,7 +149,7 @@ public class UserGraphQL {
 		if (!ObjectUtils.nullSafeEquals(email, ott.getUser().getEmail()))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "This token is not valid for that email!");
 
-		return loginUserIntoTeam(ott.getUser());
+		return loginUserIntoTeam(ott.getUser(), null);
 	}
 
 
@@ -158,22 +158,29 @@ public class UserGraphQL {
 	/**
 	 * Request an auth token for login. Will send token via SMS.
 	 * @param mobilephone user's mobilephone
+	 * @param devLoginToken (optional) token for development login. Used during testing.
 	 * @return Twilio API "SID" of the verification request
-	 * @throws LiquidoException when there is an error from the authentication API
+	 * @throws LiquidoException when user with that mobile is not found. Or if there is a downstream error from the authentication API
 	 */
 	@GraphQLQuery(name="authToken")
 	public String requestAuthToken(
-		@GraphQLNonNull @GraphQLArgument(name="mobilephone") String mobilephone
+		@GraphQLNonNull @GraphQLArgument(name="mobilephone") String mobilephone,
+		@GraphQLArgument(name="devLoginToken") Optional<String> devLoginToken   // This is used for testing the login flow
 	) throws LiquidoException {
 		mobilephone = LiquidoRestUtils.cleanMobilephone(mobilephone);
 		UserModel user = userRepo.findByMobilephone(mobilephone)
-			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "Cannot request auth token. There is no liquido user with that mobilephone!"));
+			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "Cannot request auth token. There is no user with that mobilephone!"));
 
-		// This is used in testing.
-		//TODO: Do require devLoginToken for requesting a test SMS authToken
-		if (TestFixtures.TEAM1_ADMIN_MOBILEPHONE.equals(mobilephone)) return "DummySID";
+		// When user passes correct devLoginToken, then do NOT send and SMS and return dummySID. This is used in testing.
+		if (devLoginToken.isPresent() && DoogiesUtil.isEqual(props.test.devLoginToken, devLoginToken.get()))
+			return "DummySID";
 
-		return verifyApiClient.requestVerificationToken(TwilioVerifyApiClient.CHANNEL_SMS, mobilephone);
+		try {
+			return verifyApiClient.requestVerificationToken(TwilioVerifyApiClient.CHANNEL_SMS, mobilephone);
+		} catch (Throwable t) {
+			log.debug("Cannot request authToken: ", t.toString());
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_INTERNAL_ERROR, t.getMessage());
+		}
 	}
 
 	/**
@@ -194,35 +201,69 @@ public class UserGraphQL {
 		if (DoogiesUtil.isEqual(props.test.devLoginToken, authToken)) {
 			// Allow login with devLoginToken. We do allow this in any environment, so that we can also run automated tests against prod.
 			// (This will skip the Authy verifyAPI call!)
-			return this.loginUserIntoTeam(user);
+			return this.loginUserIntoTeam(user, null);
 		} else if (verifyApiClient.tokenIsValid(mobilephone, authToken)) {
-			return this.loginUserIntoTeam(user);
+			return this.loginUserIntoTeam(user, null);
 		} else {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Cannot login. Auth Token is invalid");
 		}
 	}
 
+	/********************** Change team ************************/
+
+
+	/**
+	 * A user can be member (or admin) in several teams. Here he can switch and login into another team.
+	 * This call must be authenticated with the JWT of the <b>old</b> team. And of course the target team must exist.
+	 * And user must be member or admin in that team.
+	 * @param teamName name of the other team, that he want's to switch to
+	 * @return Login information with new JWT for other team.
+	 * @throws LiquidoException when call is not authenticated, JWT is expired, target team does not exist or user is not member or admin in target team.
+	 */
+	@GraphQLQuery(name="changeTeam")
+	@PreAuthorize(HAS_ROLE_USER)
+	public CreateOrJoinTeamResponse changeTeam(
+		@GraphQLNonNull @GraphQLArgument(name="teamName") String teamName
+	) throws LiquidoException {
+		String jwt = authUtil.getCurrentJwt()
+			.orElseThrow(LiquidoException.unauthorized("Need JWT to switch into new team"));     // this should never throw, because of @PreAuthorize() anotation
+		jwtTokenUtils.validateToken(jwt);  // throws detailed LiquidoException, eg. "token expired"
+
+		UserModel user = authUtil.getCurrentUser()
+			.orElseThrow(LiquidoException.unauthorized("Need to be logged in to change team"));
+		TeamModel team = teamRepo.findByTeamName(teamName)
+			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TEAM_NOT_FOUND, "Cannot change team. Target team not found."));
+		if (!team.isAdmin(user) && !team.isMember(user))
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_USER_NOT_MEMBER_OF_TEAM, "Cannot change team. User is not member or admin of new team");
+
+		return this.loginUserIntoTeam(user, team);
+	}
+
+
+
 	/**
 	 * Login a user into his team.
-	 * If user is member of multiple teams, then he will be logged into the last one he was using,
-	 * or otherwise the first team in the list.
+	 * If team is not given and user is member of multiple teams, then he will be logged into the last one he was using,
+	 * or otherwise the first team in his list.
 	 * @param user a user that want's to log in
 	 * @return CreateOrJoinTeamResponse
 	 * @throws LiquidoException when user has no teams (which should never happen)
 	 */
-	public CreateOrJoinTeamResponse loginUserIntoTeam(@NonNull UserModel user) throws LiquidoException {
-		// find all teams that this user is a member or admin in.
-		List<TeamModel> teams = teamRepo.teamsOfUser(user);
-		if (teams.size() == 0) {
-			throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "User is not member of any team");
-		} else if (teams.size() == 1) {
-			String jwt = jwtTokenUtils.generateToken(user.getId(), teams.get(0).getId());
-			return new CreateOrJoinTeamResponse(teams.get(0), user, jwt);
-		} else {
-			TeamModel team = teamRepo.findById(user.getLastTeamId()).orElse(teams.get(0));
-			String jwt = jwtTokenUtils.generateToken(user.getId(), team.getId());
-			return new CreateOrJoinTeamResponse(team, user, jwt);
+	private CreateOrJoinTeamResponse loginUserIntoTeam(@NonNull UserModel user, @Nullable TeamModel team) throws LiquidoException {
+		if (team == null) {
+			List<TeamModel> teams = teamRepo.teamsOfUser(user);
+			if (teams.size() == 0) {
+				throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "User is not member of any team");
+			} else if (teams.size() == 1) {
+				team = teams.get(0);
+			} else {
+				team = teamRepo.findById(user.getLastTeamId()).orElse(teams.get(0));
+			}
 		}
+
+		log.debug("Login " + user.toStringShort() + " into team '" + team.getTeamName()+"'");
+		String jwt = jwtTokenUtils.generateToken(user.getId(), team.getId());
+		return new CreateOrJoinTeamResponse(team, user, jwt);
 	}
 
 }

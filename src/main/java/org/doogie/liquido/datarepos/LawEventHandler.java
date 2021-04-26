@@ -33,7 +33,7 @@ public class LawEventHandler {
    *
    * POST /laws/{id}/supporters
    * content-type: text/uri-list
-   * body:   /liquido/v2/user/1   *
+   * body:   /liquido-api/v3/user/1   *
    *
    * @param idea a supported has been added to this idea
    * @param supporters the <b>new</b> set of supporters

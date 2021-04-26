@@ -158,7 +158,7 @@ public class RestEndpointTests extends HttpBaseTest {
 				.put("email", "userFromTest" + System.currentTimeMillis()+"@liquido.vote")
 				.put("profile", new Lson()
 						.put("mobilephone", mobile)
-						.put("picture", "/static/img/avatars/Avatar1.png")
+						.put("picture", "Avatar1.png")
 				).toJsonHttpEntity();
 
 		// register

@@ -50,6 +50,7 @@ public class AuthUtil {
 	 * This is called for each and every request from {@link JwtAuthenticationFilter} So keep this method fast !!!
 	 * @param userId user id
 	 * @param teamId team id
+	 * @param jwt already validated JWT (is validated in {@link JwtAuthenticationFilter})
 	 * @return the SecurityContext with the LiquidoAuthentication object in it.
 	 */
 	public SecurityContext authenticateInSecurityContext(@NonNull Long userId, Long teamId, String jwt) {
@@ -93,7 +94,7 @@ public class AuthUtil {
 
 	/**
 	 * Get the currently logged in user from the DB.
-	 * This calls the DB!
+	 * <b>This calls the DB!</b>
 	 * @return UserModel or <b>Optional.empty()</b>
 	 *   if this is an anonymous request
 	 *   ie. no authentication info was sent with a JWT
@@ -108,6 +109,7 @@ public class AuthUtil {
 	/**
 	 * Get detailed info about the team that the user is currently logged in.
 	 * One user may be an admin or member in several teams. But he is always logged into one specific team.
+	 * <b>This calls the DB!</b>
 	 * @return TeamModel or <b>null</b> if no one is logged in
 	 */
 	public Optional<TeamModel> getCurrentTeam() {
@@ -131,7 +133,6 @@ public class AuthUtil {
 		//FUN FACT: in the Micronaut framework, this same logic is implemented in five classes :-)
 		String bearerToken = request.getHeader(tokenRequestHeader);
 		if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(tokenRequestHeaderPrefix)) {
-			//log.info("Extracted Token: " + bearerToken);
 			return bearerToken.replace(tokenRequestHeaderPrefix, "");
 		}
 		return null;
