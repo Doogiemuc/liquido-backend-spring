@@ -7,7 +7,6 @@ import org.doogie.liquido.model.DelegationModel;
 import org.doogie.liquido.model.RightToVoteModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.AssignProxyRequest;
-import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
 import org.doogie.liquido.util.Lson;

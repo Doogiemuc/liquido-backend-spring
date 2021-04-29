@@ -1,7 +1,5 @@
 package org.doogie.liquido.util;
 
-import io.leangen.graphql.annotations.GraphQLQuery;
-
 import java.util.Arrays;
 import java.util.function.Function;
 

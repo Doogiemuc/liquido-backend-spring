@@ -9,7 +9,6 @@ import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.CreateOrJoinTeamResponse;
-import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.testdata.LiquidoProperties;
@@ -33,7 +32,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 /**
  * This controller is only available for development and testing

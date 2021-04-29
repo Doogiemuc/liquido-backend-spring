@@ -1,7 +1,6 @@
 package org.doogie.liquido.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.CommentModel;
@@ -9,10 +8,10 @@ import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.LawQuery;
 import org.doogie.liquido.security.LiquidoAuditorAware;
+import org.doogie.liquido.testdata.LiquidoProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;

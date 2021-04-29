@@ -1,6 +1,5 @@
 package org.doogie.liquido.rest.dto;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.doogie.liquido.model.TeamModel;

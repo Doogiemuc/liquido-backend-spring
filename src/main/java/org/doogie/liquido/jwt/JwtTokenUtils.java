@@ -1,7 +1,6 @@
 package org.doogie.liquido.jwt;
 
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.impl.DefaultClaims;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.services.LiquidoException;

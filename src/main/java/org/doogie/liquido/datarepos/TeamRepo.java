@@ -2,7 +2,6 @@ package org.doogie.liquido.datarepos;
 
 import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.PagingAndSortingRepository;
 

@@ -3,7 +3,6 @@ package org.doogie.liquido.rest.deserializer;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import com.fasterxml.jackson.databind.jsontype.TypeDeserializer;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.springframework.data.repository.CrudRepository;

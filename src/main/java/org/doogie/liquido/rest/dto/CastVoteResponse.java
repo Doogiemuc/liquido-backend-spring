@@ -3,7 +3,6 @@ package org.doogie.liquido.rest.dto;
 import lombok.Data;
 import lombok.NonNull;
 import org.doogie.liquido.model.BallotModel;
-import org.doogie.liquido.model.PollModel;
 
 /**
  * DTO for the response to a castVote request
