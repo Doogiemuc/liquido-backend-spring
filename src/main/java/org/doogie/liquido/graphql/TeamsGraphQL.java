@@ -89,7 +89,7 @@ public class TeamsGraphQL {
 	 * @param teamName Name of new team. Must be unique.
 	 * @param admin Admin of new team
 	 * @return The newly created team, incl. ID, inviteCode  and a JsonWebToken
-	 * @throws LiquidoException when teamName is not unique.
+	 * @throws LiquidoException when teamName is not unique. Or user with same email exists.
 	 */
 	@Transactional
 	@GraphQLMutation(name = "createNewTeam", description = "Create a new team")
@@ -105,12 +105,27 @@ public class TeamsGraphQL {
 		Optional<LiquidoAuthentication> auth = authUtil.getLiquidoAuthentication();
 		Optional<UserModel> existingUser = userRepo.findByEmail(adminEmail);
 
-		if (auth.isPresent()) {
-			if (!existingUser.isPresent() || !ObjectUtils.nullSafeEquals(auth.get().getUserId(), existingUser.get().getId()))
-				throw new LiquidoException(Errors.INTERNAL_ERROR, "Something is wrong.");   // this should never happen
-		}
+		// IF team with same name exist, then throw error
 		if (teamRepo.findByTeamName(teamName).isPresent())
 			throw new LiquidoException(Errors.TEAM_WITH_SAME_NAME_EXISTS, "Cannot create new team: A team with that name ('"+teamName+"') already exists");
+
+		//TODO: write a test for this
+
+		//                | user with same | no other user
+		//                | email exists   | with same e-mail
+		// --------------:|----------------|----------------------------------
+		// not authorized | NO             | OK
+		//     authorized | Ok when match  | Register a 2nd time with new email? Or forward to login?
+
+		if (!auth.isPresent()) {              // Anonymous request
+			if (existingUser.isPresent()) {     // and user with same e-mail exists, THEN throw
+				throw new LiquidoException(Errors.USER_EMAIL_EXISTS, "Another user with that email already exists");
+			}
+		} else {         // authorized but with different ID than existing email, THEN throw
+			if (existingUser.isPresent() && !ObjectUtils.nullSafeEquals(auth.get().getUserId(), existingUser.get().getId())) {
+				throw new LiquidoException(Errors.USER_EMAIL_EXISTS, "Another user with that email already exists");
+			}
+		}
 
 		UserModel admin = existingUser.orElse(new UserModel(adminEmail, adminName, adminMobilephone, adminWebsite, adminPicture));
 		TeamModel newTeam = new TeamModel(teamName, admin);

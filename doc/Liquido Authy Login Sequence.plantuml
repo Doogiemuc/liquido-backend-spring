@@ -15,7 +15,7 @@ LiquidoApp -> BE: ""POST /auth/register""\n""{email, profile.mobilephone}""
 rnote over BE #lightblue: ""UserService.registerUser()""
 BE -> AuthyAPI: ""POST /users/new""
 AuthyAPI --> BE: HTTP 200 OK
-BE --> LiquidoApp: HTTP 200 OK
+BE --> LiquidoApp: Login Data(team, user, jwt)
 LiquidoApp --> User: registered successfully
 deactivate LiquidoApp
 
@@ -64,16 +64,16 @@ LiquidoApp -> BE: authenticated requests\nwith JWT in header
 BE --> LiquidoApp: HTTP 200 OK
 
 |||
-== Login during testing ==
+== Dev Login (can be used in tests) ==
 
-User -> LiquidoApp: test simulates user
+User -> LiquidoApp: Test simulates user.\n""/login""
 activate LiquidoApp
 LiquidoApp -> BE: GraphQL: QUERY\n""authToken(mobilephone, devLoginToken)""
-note over BE: UserGraphQL.requestAuthToken()\ncheck devLoginToken\nUser must exist.\nThen AuthyAPI is **not** called.
+note over BE #lightblue: ""UserGraphQL.requestAuthToken()""\ncheck devLoginToken\nUser must exist.\nThen AuthyAPI is **not** called.
 BE --> LiquidoApp: DummySID
 
 LiquidoApp -> BE: REST call:\n""GET /devLogin""\n"" email,teamName,token""
-note over BE: DevRestController.devLogin()
+note over BE #lightblue: ""DevRestController.devLogin()""
 BE --> LiquidoApp: Login Data\n(user, team, jwt)
 LiquidoApp --> User: user is logged in
 deactivate LiquidoApp

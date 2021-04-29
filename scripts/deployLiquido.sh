@@ -29,6 +29,9 @@ FRONTEND_URL=http://$BACKEND_HOST
 PWA_DEST=${BACKEND_USER}@${BACKEND_HOST}:/var/www/html/liquido-mobile
 PWA_URL=http://$BACKEND_HOST/liquido-mobile
 
+# Cypress configuration for environment
+CYPRESS_CONFIG_FILE=./cypress/cypress.int.json
+
 # Liquido Documentation
 DOC_SOURCE=/d/Coding/liquido/liquido-doc-gulp-pug/_site/
 DOC_DEST=${BACKEND_USER}@${BACKEND_HOST}:/home/ec2-user/liquido/liquido-doc
@@ -233,23 +236,6 @@ fi
 
 
 echo
-echo "===== Update LIQUIDO Documentation on EC2 ====="
-echo
-read -p "Update LIQUIDO documentation? [yes|NO] " yn
-if [[ $yn =~ ^[Yy](es)?$ ]] ; then
-  echo "rsync -avz -e ssh -i $SSH_KEY $DOC_SOURCE $DOC_DEST"
-  BACKUP_CURRENT_DIR=$PWD
-  cd $DOC_SOURCE
-  rsync -avz -e "ssh -i $SSH_KEY" . $DOC_DEST
-  [ $? -ne 0 ] && exit 1
-  cd $BACKUP_CURRENT_DIR
-  echo -e "Documentation updated in $DOC_DEST ${GREEN_OK}"
-else
-  echo "Documentation will NOT be updated."
-fi
-
-
-echo
 echo "===== Sanity checks ====="
 echo
 echo -n "Querying backend to be alive at $BACKEND_API ..."
@@ -270,19 +256,33 @@ if [ $PING_SUCCESS == 0 ] ; then
 	exit 1
 fi
 
+#
+# TODO: make some security checks against PROD
+#
 
-#echo -n "Login with dummy SMS token should NOT be possible in PROD ... "
-#
-#DUMMY_LOGIN=`curl -s -X GET "${BACKEND_API}/auth/loginWithSmsToken?mobile=%2B491234567890&token=998877"`
-#if [[ $DUMMY_LOGIN != *'"httpStatus":401'* ]] ; then
-#	echo -e "$RED_FAIL"
-#	exit 1
-#fi
-#echo -e "$GREEN_OK"
 
-#
-# ===== Upsert School Test Data =====
-#
+
+echo
+echo "===== Mobile PWA: End-2-End Tests ====="
+echo
+echo "PWA_SOURCE:  $PWA_SOURCE"
+echo "PWA_URL:     $PWA_URL"
+echo "Backend API: $BACKEND_API"
+echo
+
+# Cypress command line --config and --env overwrite --config-file
+CYPRESS_CMD="$PWA_SOURCE/$CYPRESS run --config baseUrl=$PWA_URL --env LIQUIDO_API=$BACKEND_API --config-file=$CYPRESS_CONFIG_FILE --spec ./cypress/integration/happy-case.js"
+
+read -p "Run Cypress tests against PWA? [yes|NO] " yn
+if [[ $yn =~ ^[Yy](es)?$ ]] ; then
+	cd $PWA_SOURCE
+	echo $CYPRESS_CMD
+	eval $CYPRESS_CMD
+	[ $? -ne 0 ] && exit 1
+	echo -e "Cypress tests against PWA were successful ${GREEN_OK}"
+fi
+
+
 
 
 echo
@@ -305,30 +305,22 @@ if [[ $yn =~ ^[Yy](es)?$ ]] ; then
 fi
 
 
-echo
-echo "===== Mobile PWA: End-2-End Tests ====="
-echo
-echo "PWA_SOURCE:  $PWA_SOURCE"
-echo "PWA_URL:     $PWA_URL"
-echo "Backend API: $BACKEND_API"
-echo
 
-CYPRESS_CMD="$PWA_SOURCE/$CYPRESS run --config baseUrl=$PWA_URL --env LIQUIDO_API=$BACKEND_API --spec ./cypress/integration/happy-case.js"
-
-read -p "Run Cypress tests against PWA? [yes|NO] " yn
+echo
+echo "===== Update LIQUIDO Documentation on EC2 ====="
+echo
+read -p "Update LIQUIDO documentation? [yes|NO] " yn
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
-	cd $PWA_SOURCE
-	echo $CYPRESS_CMD
-	eval $CYPRESS_CMD
-	[ $? -ne 0 ] && exit 1
-	echo -e "Cypress tests against PWA were successful ${GREEN_OK}"
+  echo "rsync -avz -e ssh -i $SSH_KEY $DOC_SOURCE $DOC_DEST"
+  BACKUP_CURRENT_DIR=$PWD
+  cd $DOC_SOURCE
+  rsync -avz -e "ssh -i $SSH_KEY" . $DOC_DEST
+  [ $? -ne 0 ] && exit 1
+  cd $BACKUP_CURRENT_DIR
+  echo -e "Documentation updated in $DOC_DEST ${GREEN_OK}"
+else
+  echo "Documentation will NOT be updated."
 fi
-
-
-
-
-
-
 
 
 
