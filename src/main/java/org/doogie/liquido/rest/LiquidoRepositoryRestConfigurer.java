@@ -7,7 +7,6 @@ import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.converters.LiquidoUriToEntityConverter;
-import org.doogie.liquido.rest.deserializer.LawModelDeserializer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;

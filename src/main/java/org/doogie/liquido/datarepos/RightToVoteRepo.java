@@ -3,7 +3,6 @@ package org.doogie.liquido.datarepos;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.RightToVoteModel;
 import org.doogie.liquido.model.UserModel;
-import org.doogie.liquido.services.CastVoteService;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.List;

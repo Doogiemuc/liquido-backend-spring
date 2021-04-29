@@ -8,7 +8,6 @@ import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.util.Matrix;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 

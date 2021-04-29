@@ -80,7 +80,7 @@ liquido:
   test:
     #recreateTestData: false
     #loadTestData: true
-    #sampleDbFile: sampleDB-H2.sql
+    #sampleDbFile: ./example-data/sampleDB-H2.sql
 
 
 

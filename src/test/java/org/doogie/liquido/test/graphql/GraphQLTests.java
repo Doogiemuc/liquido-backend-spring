@@ -139,7 +139,7 @@ public class GraphQLTests extends HttpBaseTest {
 		String picture     = TestFixtures.AVATAR_IMG_PREFIX +(now%16)+".png";
 		String graphQLMutation = String.format(
 			"mutation { createNewTeam(teamName: \"%s\", adminName: \"%s\", adminEmail: \"%s\", adminMobilephone: \"%s\", " +
-				"website: \"%s\", picture: \"%s\") { " +
+				"adminWebsite: \"%s\", adminPicture: \"%s\") { " +
 				"team { id teamName inviteCode members { id, email, name, website, picture, mobilephone } } " +
 				"user { id email name mobilephone website picture } " +
 				"jwt " +

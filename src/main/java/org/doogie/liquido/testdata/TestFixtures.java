@@ -2,7 +2,6 @@ package org.doogie.liquido.testdata;
 
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.UserModel;
-import org.doogie.liquido.util.Lson;
 
 import java.util.ArrayList;
 import java.util.List;

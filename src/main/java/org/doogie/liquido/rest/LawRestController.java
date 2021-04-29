@@ -7,10 +7,8 @@ import org.doogie.liquido.datarepos.LawRepo;
 import org.doogie.liquido.datarepos.OffsetLimitPageable;
 import org.doogie.liquido.jwt.AuthUtil;
 import org.doogie.liquido.model.LawModel;
-import org.doogie.liquido.model.LawProjection;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.LawQuery;
-import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LawService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.util.Lson;
@@ -25,13 +23,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-
-import java.util.Date;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @Slf4j
 @RepositoryRestController  // with all spring magic
