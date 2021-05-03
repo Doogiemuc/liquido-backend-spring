@@ -136,8 +136,8 @@ public class GraphQLTests extends HttpBaseTest {
 		String website     = TestFixtures.DEFAULT_WEBSITE;
 		String picture     = TestFixtures.AVATAR_IMG_PREFIX +(now%16)+".png";
 		String graphQLMutation = String.format(
-			"mutation { createNewTeam(teamName: \"%s\", adminName: \"%s\", adminEmail: \"%s\", adminMobilephone: \"%s\", " +
-				"adminWebsite: \"%s\", adminPicture: \"%s\") { " +
+			"mutation { createNewTeam(teamName: \"%s\", admin: { name: \"%s\", email: \"%s\", mobilephone: \"%s\", " +
+				"website: \"%s\", picture: \"%s\" }) { " +
 				"team { id teamName inviteCode members { id, email, name, website, picture, mobilephone } } " +
 				"user { id email name mobilephone website picture } " +
 				"jwt " +
@@ -163,13 +163,13 @@ public class GraphQLTests extends HttpBaseTest {
 		String website     = TestFixtures.DEFAULT_WEBSITE;
 		String picture     = TestFixtures.AVATAR_IMG_PREFIX +(now%16)+".png";
 		String graphQLMutation = String.format(
-				"mutation { createNewTeam(teamName: \"%s\", adminName: \"%s\", adminEmail: \"%s\", adminMobilephone: \"%s\", " +
-						"adminWebsite: \"%s\", adminPicture: \"%s\") { " +
-						"team { id teamName inviteCode members { id, email, name, website, picture, mobilephone } } " +
-						"user { id email name mobilephone website picture } " +
-						"jwt " +
-						"}}",
-				teamName, adminName, adminEmail, mobilephone, website, picture
+			"mutation { createNewTeam(teamName: \"%s\", admin: { name: \"%s\", email: \"%s\", mobilephone: \"%s\", " +
+				"website: \"%s\", picture: \"%s\" }) { " +
+				"team { id teamName inviteCode members { id, email, name, website, picture, mobilephone } } " +
+				"user { id email name mobilephone website picture } " +
+				"jwt " +
+			"}}",
+			teamName, adminName, adminEmail, mobilephone, website, picture
 		);
 
 		// WHEN we send this mutation
@@ -204,8 +204,8 @@ public class GraphQLTests extends HttpBaseTest {
 		String website     = TestFixtures.DEFAULT_WEBSITE;
 		String picture     = TestFixtures.AVATAR_IMG_PREFIX +(now%16)+".png";
 		String graphQLMutation = String.format(
-			"mutation { joinTeam(inviteCode: \"%s\", userName: \"%s\", userEmail: \"%s\", mobilephone: \"%s\"" +
-				"website: \"%s\", picture: \"%s\") {" +
+			"mutation { joinTeam(inviteCode: \"%s\", member: { name: \"%s\", email: \"%s\", mobilephone: \"%s\"" +
+				"website: \"%s\", picture: \"%s\" }) {" +
 			  "team { id teamName inviteCode members { id, email, name, website, picture, mobilephone } } " +
 			  "user { id email name mobilephone website picture  } " +
 			  "jwt " +

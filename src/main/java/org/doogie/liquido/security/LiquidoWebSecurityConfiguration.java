@@ -57,8 +57,8 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
   */
 
   /**
-   * Configure HttpSecurity. This config has the highest priority and comes first.
-	 * Note: There are further WebSecurityConfigurations eg. in {@link org.doogie.liquido.graphql.LiquidoGraphQLController}
+   * Configure HttpSecurity.
+	 * Note: There are further WebSecurityConfigurations eg. in {@link org.doogie.liquido.graphql.LiquidoGraphQLController.GraphQlSecurityConfigurationAdapter}
    * @param http spring http security
    * @throws Exception when request is unauthorized
    */
@@ -73,10 +73,14 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
 			  .antMatchers(basePath+"/auth/**").permitAll()      			// allow login via one time token
 				.antMatchers(basePath+"/castVote").permitAll()   				// allow anonymous voting
 			  .anyRequest().authenticated()																				// everything else must be authenticated
-			//MAYBE: .and().oauth2Login(oauth2LoginCustomizer) for full blown oauth. But currently I am happy with my plain JWT authentication
-			//TODO: .and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);   Do I need this?
 			.and()
-			  .csrf().disable();   //TODO: reenable CSRF
+			  .csrf().disable()       //TODO: Clients must send CSRF token when this is enabled
+				.formLogin().disable()  // from this nice example https://octoperf.com/blog/2018/03/08/securing-rest-api-spring-security/#securityconfig
+				.httpBasic().disable()
+				.logout().disable();
+
+			//TODO: .and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);   Do I need this? I think so :-)
+			//MAYBE: .and().oauth2Login(oauth2LoginCustomizer) for full blown oauth. But currently I am happy with my plain JWT authentication
 
 		log.debug("Adding JwtAuthenticationFilter before UsernamePasswordAuthenticationFilter");
 		http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

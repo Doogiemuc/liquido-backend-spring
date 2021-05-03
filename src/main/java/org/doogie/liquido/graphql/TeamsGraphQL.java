@@ -132,7 +132,6 @@ public class TeamsGraphQL {
 	 *
 	 * Will also throw an error, when email is already admin or member in that team.
 	 *
-	 * TODO: Joining more than once is idempotent. Or in simpler words: It is ok to click the invite link more than once :-)
 	 *
 	 * @param inviteCode valid invite code of the team to join
 	 * @param member new user member, with email and mobilephone
@@ -148,6 +147,8 @@ public class TeamsGraphQL {
 		member.setMobilephone(LiquidoRestUtils.cleanMobilephone(member.mobilephone));
 		TeamModel team = teamRepo.findByInviteCode(inviteCode)
 			.orElseThrow(LiquidoException.supply(Errors.CANNOT_JOIN_TEAM_INVITE_CODE_INVALID, "Invalid inviteCode '"+inviteCode+"'"));
+
+		//TODO: make it configurable so that join team requests must be confirmed by an admin first.
 
 		Optional<UserModel> currentUserOpt = authUtil.getCurrentUser();
 		if (currentUserOpt.isPresent()) {

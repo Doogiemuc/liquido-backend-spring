@@ -177,7 +177,7 @@ public class DevRestController {
 	/**
 	 * Spring Web Security: Make /dev/users endpoint publicly available.  But just this one resource! The other /dev/**
 	 * endpoints need authentication in ROLE_ADMIN
-   */
+	 */
 	@Configuration
 	@Order(20)   // MUST be smaller than 100  to be first!
   public class DevEndpointSecurityConfigurationAdapter extends WebSecurityConfigurerAdapter {
@@ -187,19 +187,14 @@ public class DevRestController {
 		@Autowired
 		Environment springEnv;
 
-		/**
-		 * Allow anonymous access to <pre>/dev/users</pre> in DEV or TEST environment
-     */
 		protected void configure(HttpSecurity http) throws Exception {
 			log.info("Configuring WebSecurity for Development api endpoint " + basePath + "/dev in env=" + Arrays.toString(springEnv.getActiveProfiles()));
-			//nice stackoverflow question about this nasty confusing fluid syntax of HttpSecurity:  https://stackoverflow.com/questions/28907030/spring-security-authorize-request-for-url-method-using-httpsecurity
+			//nice stackoverflow question about this nasty confusingly implemented fluid/DSL syntax of HttpSecurity:  https://stackoverflow.com/questions/28907030/spring-security-authorize-request-for-url-method-using-httpsecurity
 			http.antMatcher(basePath + "/dev/*").authorizeRequests()
 				.antMatchers(basePath + "/dev/users").permitAll()
 				.antMatchers(basePath + "/dev/getJWT").permitAll();
-
 		}
 	}
-
 
 	/**
 	 * Manually start the voting phase of a poll via REST call. Poll MUTS be in ELABORATION phase.

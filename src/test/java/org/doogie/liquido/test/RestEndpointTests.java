@@ -126,14 +126,11 @@ public class RestEndpointTests extends HttpBaseTest {
 
 	@Test
 	public void testProposalsUrlShouldNeedAuth() {
-		RestTemplate anonymousClient = new RestTemplateBuilder()
-				.additionalInterceptors(new LogClientRequestInterceptor())
-				.rootUri(rootUri)
-				.build();
 		try {
 			ResponseEntity<String> res = anonymousClient.exchange("/laws", HttpMethod.GET, null, String.class);
 			fail("Should have thrown an exception with forbidden(403)");
 		} catch (HttpClientErrorException err) {
+			log.debug("Ok, /laws endpoint is secured.");
 			assertEquals("Response should have status forbidden(403)", HttpStatus.FORBIDDEN, err.getStatusCode());
 		}
 	}
