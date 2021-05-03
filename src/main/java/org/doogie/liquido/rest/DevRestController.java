@@ -195,8 +195,8 @@ public class DevRestController {
 			//nice stackoverflow question about this nasty confusing fluid syntax of HttpSecurity:  https://stackoverflow.com/questions/28907030/spring-security-authorize-request-for-url-method-using-httpsecurity
 			http.antMatcher(basePath + "/dev/*").authorizeRequests()
 				.antMatchers(basePath + "/dev/users").permitAll()
-				.antMatchers(basePath + "/dev/getJWT").permitAll()
-				.anyRequest().authenticated();
+				.antMatchers(basePath + "/dev/getJWT").permitAll();
+
 		}
 	}
 

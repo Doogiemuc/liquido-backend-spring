@@ -33,7 +33,7 @@ public class DoogiesUtil {
 	 * null safe equals that also compares array elements.
 	 * @param o1 object may be null
 	 * @param o2 object may be null
-	 * @return true if o1 equals o2
+	 * @return true if o1 equals o2 (also when o1 == o2 == null)
 	 */
   public static boolean isEqual(Object o1, Object o2) {
 		//copy of org.springframework.util.ObjectUtils.nullSafeEquals(o1, o2)
@@ -48,6 +48,10 @@ public class DoogiesUtil {
 		} else {
 			return false;
 		}
+	}
+
+	public static boolean notEqual(Object o1, Object o2) {
+  	return !isEqual(o1, o2);
 	}
 
 	public static boolean arrayEquals(Object o1, Object o2) {

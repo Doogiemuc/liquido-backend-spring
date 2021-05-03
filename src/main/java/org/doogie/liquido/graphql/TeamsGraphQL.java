@@ -5,25 +5,21 @@ import io.leangen.graphql.annotations.GraphQLMutation;
 import io.leangen.graphql.annotations.GraphQLNonNull;
 import io.leangen.graphql.annotations.GraphQLQuery;
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.TeamRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.jwt.AuthUtil;
 import org.doogie.liquido.jwt.JwtTokenUtils;
-import org.doogie.liquido.jwt.LiquidoAuthentication;
 import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.CreateOrJoinTeamResponse;
-import org.doogie.liquido.security.TwilioVerifyApiClient;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.LiquidoException.Errors;
-import org.doogie.liquido.services.UserService;
+import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
-import org.springframework.util.ObjectUtils;
 
 import javax.transaction.Transactional;
 import java.util.Optional;
@@ -45,16 +41,7 @@ public class TeamsGraphQL {
 	UserRepo userRepo;
 
 	@Autowired
-	UserService userService;
-
-	@Autowired
 	JwtTokenUtils jwtTokenUtils;
-
-	@Autowired
-	PollRepo pollRepo;
-
-	@Autowired
-	TwilioVerifyApiClient twilio;
 
 	@Autowired
 	AuthUtil authUtil;
@@ -90,7 +77,7 @@ public class TeamsGraphQL {
 	 * This can be called anonymously.
 	 *
 	 * @param teamName Name of new team. Must be unique.
-	 * @param admin Admin of new team
+	 * @param admin The user that sends the request will become the admin of the new team.
 	 * @return The newly created team, incl. ID, inviteCode  and a JsonWebToken
 	 * @throws LiquidoException when teamName is not unique. Or user with same email exists.
 	 */
@@ -98,114 +85,93 @@ public class TeamsGraphQL {
 	@GraphQLMutation(name = "createNewTeam", description = "Create a new team")
 	public CreateOrJoinTeamResponse createNewTeam(
 		@GraphQLArgument(name = "teamName") @GraphQLNonNull String teamName,
-		@GraphQLArgument(name = "adminName") @GraphQLNonNull String adminName,
-		@GraphQLArgument(name = "adminEmail") @GraphQLNonNull String adminEmail,
-		@GraphQLArgument(name = "adminMobilephone") @GraphQLNonNull String adminMobilephone,
-		@GraphQLArgument(name = "adminWebsite") String adminWebsite,
-		@GraphQLArgument(name = "adminPicture") String adminPicture
+		@GraphQLArgument(name = "admin") @GraphQLNonNull UserModel admin
 	) throws LiquidoException {
-		adminMobilephone = LiquidoRestUtils.cleanMobilephone(adminMobilephone);
-		Optional<LiquidoAuthentication> auth = authUtil.getLiquidoAuthentication();
-		Optional<UserModel> existingUser = userRepo.findByEmail(adminEmail);
+		admin.setMobilephone(LiquidoRestUtils.cleanMobilephone(admin.mobilephone));
 
 		// IF team with same name exist, then throw error
 		if (teamRepo.findByTeamName(teamName).isPresent())
 			throw new LiquidoException(Errors.TEAM_WITH_SAME_NAME_EXISTS, "Cannot create new team: A team with that name ('"+teamName+"') already exists");
 
-		//TODO: write a test for this
-
-		//                | user with same | no other user
-		//                | email exists   | with same e-mail
-		// --------------:|----------------|----------------------------------
-		// not authorized | NO             | OK
-		//     authorized | Ok when match  | Register a 2nd time with new email? Or forward to login?
-
-		if (!auth.isPresent()) {              // Anonymous request
-			if (existingUser.isPresent()) {     // and user with same e-mail exists, THEN throw
-				throw new LiquidoException(Errors.USER_EMAIL_EXISTS, "Another user with that email already exists");
+		/*
+		  IF request is authorized
+		    IF "admin" does NOT exactly have the same attributes as the logged in user THEN throw: not allowed.
+		  ELSE // anonymous request
+		    IF user with same email exists, THEN throw
+		    IF user with same mobilephone exits, THEN throw
+		 */
+		Optional<UserModel> currentUserOpt = authUtil.getCurrentUser();
+		if (currentUserOpt.isPresent()) {
+			// IF user is logged and then he CAN create a new team, but he MUST provide his already registered email and mobilephone.
+			if (!DoogiesUtil.isEqual(currentUserOpt.get().email, admin.email) ||
+					!DoogiesUtil.isEqual(currentUserOpt.get().mobilephone, admin.mobilephone)) {
+				throw new LiquidoException(Errors.USER_EMAIL_EXISTS, "Your are already registered. You must provide your user data for the admin of the new team!");
 			}
-		} else {         // authorized but with different ID than existing email, THEN throw
-			if (existingUser.isPresent() && !ObjectUtils.nullSafeEquals(auth.get().getUserId(), existingUser.get().getId())) {
-				throw new LiquidoException(Errors.USER_EMAIL_EXISTS, "Another user with that email already exists");
-			}
+			admin = currentUserOpt.get();  // with db ID!
+		} else {
+			// Anonymous request. Must provide new email and mobilephone
+			Optional<UserModel> userByMail = userRepo.findByEmail(admin.email);
+			if (userByMail.isPresent()) throw new LiquidoException(Errors.USER_EMAIL_EXISTS, "Sorry, another user with that email already exists.");
+			Optional<UserModel> userByMobilephone = userRepo.findByEmail(admin.getMobilephone());
+			if (userByMobilephone.isPresent()) throw new LiquidoException(Errors.USER_MOBILEPHONE_EXISTS, "Sorry, another user with that mobile phone number already exists.");
 		}
 
-		UserModel admin = existingUser.orElse(new UserModel(adminEmail, adminName, adminMobilephone, adminWebsite, adminPicture));
 		TeamModel newTeam = new TeamModel(teamName, admin);
 		newTeam = teamRepo.save(newTeam);
 		userRepo.save(admin);
-
 		log.info("Created new team: "+newTeam);
 		String jwt = jwtTokenUtils.generateToken(admin.getId(), newTeam.getId());
 		return new CreateOrJoinTeamResponse(newTeam, admin, jwt);
 	}
 
 	/**
-	 * Join an existing team.
+	 * Join an existing team as a member.
 	 *
-	 * When called anonymously, then the email to register must not yet exist in LIQUIDO. User email is globaly unique.
-	 * An existing user can call this, but then the call must be authenticated with his JWT.
+	 * This should be called anonymously. Then the new member <b>must</b> register with a an email and mobilephone that does not exit in LIQUIDO yet.
+	 * When called with JWT, then the already registered user may join this additional team. But he must exactly provide his user data.
 	 *
 	 * Will also throw an error, when email is already admin or member in that team.
 	 *
-	 * Joining more than once is idempotent. Or in simpler words: It is ok to click the invite link more than once :-)
+	 * TODO: Joining more than once is idempotent. Or in simpler words: It is ok to click the invite link more than once :-)
 	 *
 	 * @param inviteCode valid invite code of the team to join
-	 * @param userName new user name
-	 * @param userEmail new user's email
+	 * @param member new user member, with email and mobilephone
 	 * @return Info about the joined team and a JsonWebToken
-	 * @throws LiquidoException when inviteCode is invalid
+	 * @throws LiquidoException when inviteCode is invalid, or when this email is already admin or member in team.
 	 */
 	@Transactional
 	@GraphQLMutation(name = "joinTeam", description = "Join an existing team")
 	public CreateOrJoinTeamResponse joinTeam(
 		@GraphQLArgument(name = "inviteCode") @GraphQLNonNull String inviteCode,
-		//TODO: group this into one argument of type UserModel: https://graphql-rules.com/rules/input-grouping
-		@GraphQLArgument(name = "userName") @GraphQLNonNull String userName,
-		@GraphQLArgument(name = "userEmail") @GraphQLNonNull String userEmail,
-		@GraphQLArgument(name = "mobilephone") String mobilephone,
-		@GraphQLArgument(name = "website") String website,
-		@GraphQLArgument(name = "picture") String picture
+		@GraphQLArgument(name = "member") @GraphQLNonNull UserModel member  //grouped as one argument of type UserModel: https://graphql-rules.com/rules/input-grouping
 	) throws LiquidoException {
-		TeamModel team = teamRepo.findByInviteCode(inviteCode).orElseThrow(
-			() -> new LiquidoException(Errors.CANNOT_JOIN_TEAM_INVITE_CODE_INVALID, "Invalid inviteCode '"+inviteCode+"'")
-		);
-		mobilephone = LiquidoRestUtils.cleanMobilephone(mobilephone);
-		Optional<LiquidoAuthentication> auth = authUtil.getLiquidoAuthentication();
-		Optional<UserModel> existingUser = userRepo.findByEmail(userEmail);
+		member.setMobilephone(LiquidoRestUtils.cleanMobilephone(member.mobilephone));
+		TeamModel team = teamRepo.findByInviteCode(inviteCode)
+			.orElseThrow(LiquidoException.supply(Errors.CANNOT_JOIN_TEAM_INVITE_CODE_INVALID, "Invalid inviteCode '"+inviteCode+"'"));
 
-		// if call is correctly authenticated with a JWT, then be nice.
-		if (auth.isPresent()) {
-			if (!existingUser.isPresent() || !ObjectUtils.nullSafeEquals(auth.get().getUserId(), existingUser.get().getId()))
-				throw new LiquidoException(Errors.INTERNAL_ERROR, "Something is wrong.");   // this should never happen!
-
-			// IF email is already admin/member of the team and the call is correctly authenticated, THEN allow idempotent joinTeam call
-			// Let users use their join team link als login link when they've authenticated before
-			Optional<UserModel> userOpt = team.getAdminOrMemberByEmail(userEmail);
-			if (userOpt.isPresent())
-				return new CreateOrJoinTeamResponse(team, userOpt.get(), auth.get().getJwt());
+		Optional<UserModel> currentUserOpt = authUtil.getCurrentUser();
+		if (currentUserOpt.isPresent()) {
+			// IF user is logged and then he CAN join another team, but he MUST provide his already registered email and mobilephone.
+			if (!DoogiesUtil.isEqual(currentUserOpt.get().email, member.email) ||
+			    !DoogiesUtil.isEqual(currentUserOpt.get().mobilephone, member.mobilephone)) {
+				throw new LiquidoException(Errors.USER_EMAIL_EXISTS, "Your are already registered. You must provide your email and mobilephone to join another team!");
+			}
+			member = currentUserOpt.get();  // with db ID!
 		} else {
-			// If not authenticated, but user with that email already exists, then user must login first, to join another team.
-			if (existingUser.isPresent())
-				throw new LiquidoException(Errors.USER_EMAIL_EXISTS, "There is already a LIQUIDO user with that email address! Please login first to join another team");
+			// Anonymous request. Must provide new email and mobilephone
+			Optional<UserModel> userByMail = userRepo.findByEmail(member.email);
+			if (userByMail.isPresent()) throw new LiquidoException(Errors.USER_EMAIL_EXISTS, "Sorry, another user with that email already exists.");
+			Optional<UserModel> userByMobilephone = userRepo.findByEmail(member.mobilephone);
+			if (userByMobilephone.isPresent()) throw new LiquidoException(Errors.USER_MOBILEPHONE_EXISTS, "Sorry, another user with that mobile phone number already exists.");
 		}
 
-		// If a user with that email is already a member or admin in that team, then throw error.
-		// We cannot upsert the existing user with an anonymous call. This would allow a security attack.
-		if (team.isMember(userEmail))
-			throw new LiquidoException(Errors.CANNOT_JOIN_TEAM_ALREADY_MEMBER, "There is already a member with this email address in the team! Please login.");
-		if (team.isAdmin(userEmail))
-			throw new LiquidoException(Errors.CANNOT_JOIN_TEAM_ALREADY_ADMIN, "You already are admin of this team! Please login.");
-
-		// Upsert user and add to new team
-		UserModel newUser = existingUser.orElse(new UserModel(userEmail, userName, mobilephone, website, picture));
 		try {
-			team.getMembers().add(newUser);
-			userRepo.save(newUser);
+			team.getMembers().add(member);   // Add to java.util.Set. Will never add duplicate.
+			member = userRepo.save(member);
 			team = teamRepo.save(team);
-			log.info("User <" + userEmail + "> joined team: " + team.toString());
-			String jwt = jwtTokenUtils.generateToken(newUser.getId(), team.getId());
-			return new CreateOrJoinTeamResponse(team, newUser, jwt);
+			log.info("User <" + member.email + "> joined team: " + team.toString());
+			String jwt = jwtTokenUtils.generateToken(member.getId(), team.getId());
+			return new CreateOrJoinTeamResponse(team, member, jwt);
 		} catch (Exception e) {
 			throw new LiquidoException(Errors.INTERNAL_ERROR, "Error: Cannot join team.", e);
 		}

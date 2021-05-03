@@ -219,7 +219,11 @@ public class TestDataCreator implements CommandLineRunner {
 			// See some teams for mobile app. With an admin, users, proposals and polls.
 			TeamModel team1 = seedTeam(TestFixtures.TEAM1_NAME, TestFixtures.TEAM1_ADMIN_EMAIL, TestFixtures.TEAM1_ADMIN_MOBILEPHONE);
 			for (int i = 1; i < TestFixtures.NUM_TEAMS; i++) {
-				seedTeam(TestFixtures.TEAM_NAME_PREFIX + i, null);
+				// create unique admin data
+				String teamName   = TestFixtures.TEAM_NAME_PREFIX + i;
+				String adminEmail = TestFixtures.TEAM_ADMIN_EMAIL_PREFIX + "_" + teamName + "@liquido.me";
+				String adminMobilephone = TestFixtures.MOBILEPHONE_PREFIX + i + DoogiesUtil.randomDigits(5);
+				seedTeam(teamName, adminEmail, adminMobilephone);
 			}
 			seedMemberInTwoTeams(TestFixtures.TWO_TEAM_USER_EMAIL, TestFixtures.TWO_TEAM_USER_MOBILEPHONE, TestFixtures.TEAM1_NAME, TestFixtures.TEAM_NAME_PREFIX+"1");
 			seedPollInElaborationInTeam(team1);
@@ -377,32 +381,35 @@ public class TestDataCreator implements CommandLineRunner {
 	 * @return JoinTeamResponse for last member in team (not the one from the admin!)
 	 * @throws LiquidoException
 	 */
-	public TeamModel seedTeam(String teamName, String adminEmail) throws LiquidoException {
-		return seedTeam(teamName, adminEmail, null);
-	}
 
 	/**
-	 * Seed teams and their admin users. And let some users join each team.
+	 * Seed a team with its admin users. And let some users join each team.
+	 * All params must be new and globally unique!
+	 * @param teamName the name of the team.
+	 * @param adminEmail email address of the team's new admin
+	 * @param adminMobilephone mobilephone of admin
 	 * @return JoinTeamResponse for last member in team
 	 */
-	public TeamModel seedTeam(String teamName, String adminEmail, @Nullable String adminMobilephone) throws LiquidoException {
+	public TeamModel seedTeam(@NonNull String teamName, @NonNull String adminEmail, @NonNull String adminMobilephone) throws LiquidoException {
 		log.info("Seeding a Team with members ...");
 		String digits = DoogiesUtil.randomDigits(5);
 		String adminName        = TestFixtures.TEAM_ADMIN_NAME_PREFIX + " of " + teamName;
-		if (adminEmail == null) adminEmail = TestFixtures.TEAM_ADMIN_EMAIL_PREFIX + "@" + teamName + ".org";
-		if (adminMobilephone == null) adminMobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits;               // MUST create unique mobile phone numbers!
+		//if (adminEmail == null) adminEmail = TestFixtures.TEAM_ADMIN_EMAIL_PREFIX + "@" + teamName + ".org";
+		//if (adminMobilephone == null) adminMobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits;               // MUST create unique mobile phone numbers!
 		String adminWebsite     = "www.liquido.vote";
 		String adminPicture     = TestFixtures.AVATAR_IMG_PREFIX + "0.png";
 		UserModel admin = new UserModel(adminEmail, adminName, adminMobilephone, adminWebsite, adminPicture);
-		CreateOrJoinTeamResponse res = teamServiceGQL.createNewTeam(teamName, admin.getName(), admin.email, admin.getMobilephone(), admin.getWebsite(), admin.getPicture());
+		CreateOrJoinTeamResponse res = teamServiceGQL.createNewTeam(teamName, admin);
 		CreateOrJoinTeamResponse joinTeamRes = null;
 		for (int j = 0; j < TestFixtures.NUM_TEAM_MEMBERS; j++) {
-			String userName    = TestFixtures.TEAM_MEMBER_NAME_PREFIX + j + " " + teamName;
-			String userEmail   = TestFixtures.TEAM_MEMBER_EMAIL_PREFIX + j + "@" + teamName + ".org";
-			String mobilephone = TestFixtures.MOBILEPHONE_PREFIX + digits + j;
-			String website     = "www.liquido.vote";
-			String picture     = TestFixtures.AVATAR_IMG_PREFIX + (j%16) + ".png";
-			joinTeamRes = teamServiceGQL.joinTeam(res.getTeam().getInviteCode(), userName, userEmail, mobilephone, website, picture);
+			UserModel member = new UserModel(
+				TestFixtures.TEAM_MEMBER_EMAIL_PREFIX + j + "@" + teamName + ".org",
+				TestFixtures.TEAM_MEMBER_NAME_PREFIX + j + " " + teamName,
+				TestFixtures.MOBILEPHONE_PREFIX + digits + j,
+				"www.liquido.vote",
+				TestFixtures.AVATAR_IMG_PREFIX + (j%16) + ".png"
+			);
+			joinTeamRes = teamServiceGQL.joinTeam(res.getTeam().getInviteCode(), member);
 		}
 		return joinTeamRes.getTeam(); // most up to date firstTeam entity, with all members, is from last joinNewTeam response
 	}
@@ -420,13 +427,17 @@ public class TestDataCreator implements CommandLineRunner {
 	 	TeamModel team1 = teamRepo.findByTeamName(teamName1).orElseThrow(LiquidoException.notFound("Cannot find team.teamName="+teamName1));
 		TeamModel team2 = teamRepo.findByTeamName(teamName2).orElseThrow(LiquidoException.notFound("Cannot find team.teamName="+teamName2));
 		String digits = DoogiesUtil.randomDigits(5);
-		String userName    = TestFixtures.TEAM_MEMBER_NAME_PREFIX + digits + "_2teams";
-		String website     = "www.liquido.vote";
-		String picture     = TestFixtures.AVATAR_IMG_PREFIX + "1.png";
-		CreateOrJoinTeamResponse res = teamServiceGQL.joinTeam(team1.getInviteCode(), userName, memberEmail, mobilephone, website, picture);
-		// Must authenticate for the second join team call!
+		UserModel member = new UserModel(
+			memberEmail,
+			TestFixtures.TEAM_MEMBER_NAME_PREFIX + digits + "_2teams",
+			mobilephone,
+			"www.liquido.vote",
+			TestFixtures.AVATAR_IMG_PREFIX + "1.png"
+		);
+		CreateOrJoinTeamResponse res = teamServiceGQL.joinTeam(team1.getInviteCode(), member);
+		// MUST authenticate for the second join team call!
 		authUtil.authenticateInSecurityContext(res.getUser().getId(), res.getTeam().getId(), res.getJwt());
-		res = teamServiceGQL.joinTeam(team2.getInviteCode(), userName, memberEmail, mobilephone, website, picture);
+		res = teamServiceGQL.joinTeam(team2.getInviteCode(), member);
 		return res.getUser();
 	}
 

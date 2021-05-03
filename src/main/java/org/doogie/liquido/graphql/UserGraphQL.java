@@ -215,7 +215,8 @@ public class UserGraphQL {
 	/**
 	 * A user can be member (or admin) in several teams. Here he can switch and login into another team.
 	 * This call must be authenticated with the JWT of the <b>old</b> team. And of course the target team must exist.
-	 * And user must be member or admin in that team.
+	 * User must of course be a member or admin in the target team.
+	 *
 	 * @param teamName name of the other team, that he want's to switch to
 	 * @return Login information with new JWT for other team.
 	 * @throws LiquidoException when call is not authenticated, JWT is expired, target team does not exist or user is not member or admin in target team.
@@ -226,9 +227,8 @@ public class UserGraphQL {
 		@GraphQLNonNull @GraphQLArgument(name="teamName") String teamName
 	) throws LiquidoException {
 		String jwt = authUtil.getCurrentJwt()
-			.orElseThrow(LiquidoException.unauthorized("Need JWT to switch into new team"));     // this should never throw, because of @PreAuthorize() anotation
+			.orElseThrow(LiquidoException.unauthorized("Need JWT to switch into new team"));     // this should never throw, because of @PreAuthorize() annotation
 		jwtTokenUtils.validateToken(jwt);  // throws detailed LiquidoException, eg. "token expired"
-
 		UserModel user = authUtil.getCurrentUser()
 			.orElseThrow(LiquidoException.unauthorized("Need to be logged in to change team"));
 		TeamModel team = teamRepo.findByTeamName(teamName)

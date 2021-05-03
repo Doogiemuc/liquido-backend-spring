@@ -77,15 +77,21 @@ public class TeamModel extends BaseModel {
 	public boolean isAdmin(UserModel admin) {
 		return this.admins.contains(admin);
 	}
-	public boolean isAdmin(String email) {
-		return this.admins.stream().anyMatch(admin -> admin.email.equals(email));
+	public boolean emailIsAdmin(String email) {
+		return this.admins.stream().anyMatch(admin -> admin.email != null && admin.email.equals(email));
+	}
+	public boolean mobilephoneIsAdmin(String mobilephone) {
+		return this.admins.stream().anyMatch(admin -> admin.mobilephone != null && admin.mobilephone.equals(mobilephone));
 	}
 
 	public boolean isMember(UserModel member) {
 		return this.members.contains(member);
 	}
-	public boolean isMember(String email) {
-		return this.members.stream().anyMatch(member -> member.email.equals(email));
+	public boolean emailIsMember(String email) {
+		return this.members.stream().anyMatch(member -> member.email != null && member.email.equals(email));
+	}
+	public boolean mobilephoneIsMember(String mobilephone) {
+		return this.members.stream().anyMatch(member -> member.mobilephone != null && member.mobilephone.equals(mobilephone));
 	}
 
 	/**
@@ -109,6 +115,7 @@ public class TeamModel extends BaseModel {
 		buf.append(']');
 		return buf.toString();
   }
+
 
 
 }

@@ -3,6 +3,7 @@ package org.doogie.liquido.security;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.jwt.JwtAuthenticationFilter;
 import org.doogie.liquido.jwt.JwtAuthenticationProvider;
+import org.doogie.liquido.rest.LiquidoUrlPaths;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -57,28 +58,22 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
 
   /**
    * Configure HttpSecurity. This config has the highest priority and comes first.
+	 * Note: There are further WebSecurityConfigurations eg. in {@link org.doogie.liquido.graphql.LiquidoGraphQLController}
    * @param http spring http security
    * @throws Exception when request is unauthorized
    */
   @Override
   protected void configure(HttpSecurity http) throws Exception {
     log.info("Configuring HttpWebSecurity for "+ basePath);
-
-    //TODO: I need a central place for URL pathes: LiquidoUrlPathes.java
-
 	  http
 			//.antMatcher(basePath).authenticationProvider(new LiquidoTokenAuthProvider()) // can I add my token auth that way?
 			.authorizeRequests()
-				.antMatchers(basePath+"/graphql").permitAll()
-				.antMatchers("/graphiql/**").permitAll()
-				.antMatchers("/vendor/**").permitAll()
-				.antMatchers("/subscriptions").permitAll()
 			  .antMatchers(basePath+"/_ping").permitAll()        			// allow is alive
 				.antMatchers(basePath+"/globalProperties").permitAll()		// allow fetching properties
 			  .antMatchers(basePath+"/auth/**").permitAll()      			// allow login via one time token
 				.antMatchers(basePath+"/castVote").permitAll()   				// allow anonymous voting
 			  .anyRequest().authenticated()																				// everything else must be authenticated
-			//Remark: There is also .and().oauth2Login(oauth2LoginCustomizer)  for full blown oauth. But that's overkill!
+			//MAYBE: .and().oauth2Login(oauth2LoginCustomizer) for full blown oauth. But currently I am happy with my plain JWT authentication
 			//TODO: .and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);   Do I need this?
 			.and()
 			  .csrf().disable();   //TODO: reenable CSRF

@@ -1,15 +1,16 @@
 package org.doogie.liquido.test.graphql;
 
 import com.jayway.jsonpath.JsonPath;
+import graphql.ExecutionResultImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.OffsetLimitPageable;
 import org.doogie.liquido.datarepos.PollRepo;
 import org.doogie.liquido.datarepos.TeamRepo;
-import org.doogie.liquido.jwt.JwtTokenUtils;
 import org.doogie.liquido.model.PollModel;
 import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.LawService;
+import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.HttpBaseTest;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
@@ -24,12 +25,12 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.web.client.HttpClientErrorException;
 
 import javax.annotation.PostConstruct;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Tests for {@link LawService}
@@ -42,9 +43,6 @@ public class GraphQLTests extends HttpBaseTest {
 
 	@Autowired
 	TeamRepo teamRepo;
-
-	@Autowired
-	JwtTokenUtils jwtTokenUtils;
 
 	@Autowired
 	PollRepo pollRepo;
@@ -73,9 +71,9 @@ public class GraphQLTests extends HttpBaseTest {
 	 * Test register and login flow via GraphQL.
 	 */
 	public void testAuthyLogin() {
-		// GIVEN a user with mobilephone
+		// GIVEN a user with mobile phone
 		UserModel user = this.team.getMembers().iterator().next();
-		assertTrue("User needs mobilephone", DoogiesUtil.isEmpty(user.getMobilephone()));
+		assertTrue("User needs mobile phone", DoogiesUtil.isEmpty(user.getMobilephone()));
 
 		//WHEN requesting an authy token
 		String graphQL    = String.format("{ authyToken(mobilephone: \"%s\") }", user.getMobilephone());
@@ -98,7 +96,7 @@ public class GraphQLTests extends HttpBaseTest {
 		this.jwtAuthInterceptor.setJwtToken(jwt);
 		String userJson = client.getForObject("/my/user", String.class);
 		log.debug("Logged in as : "+userJson);
-		String receivedMobile = JsonPath.read(userJson, "$.profile.mobilephone");
+		String receivedMobile = JsonPath.read(userJson, "$.data.profile.mobilephone");
 		assertEquals("Logged in user should have the phone number that we registered with", mobile, receivedMobile);
 		*/
 
@@ -119,7 +117,7 @@ public class GraphQLTests extends HttpBaseTest {
 		String graphQL    = "{ team { id teamName } }";
 
 		//WHEN querying for the user's team
-		String actualTeamName = executeGraphQl(graphQL, "$.team.teamName");
+		String actualTeamName = executeGraphQl(graphQL, "$.data.team.teamName");
 
 		//THEN the correct teamName is returned
 		Assert.assertEquals("Expected teamName="+expectedTeamName, expectedTeamName, actualTeamName);
@@ -148,10 +146,45 @@ public class GraphQLTests extends HttpBaseTest {
 		);
 
 		// WHEN we send this mutation
-		String actualTeamName = executeGraphQl(graphQLMutation, "$.createNewTeam.team.teamName");
+		String actualTeamName = executeGraphQl(graphQLMutation, "$.data.createNewTeam.team.teamName");
 
 		// THEN we receive info about the new team
 		Assert.assertEquals("Expected teamName="+teamName, teamName, actualTeamName);
+	}
+
+	@Test
+	public void testCreateNewTeamWithExistingTeamName() {
+		// GIVEN a graphQL mutation to create a new team, but with a teamName that already exists. Everything else is random
+		long now = System.currentTimeMillis() % 10000;
+		String teamName    = TestFixtures.TEAM1_NAME;
+		String adminName   = TestFixtures.USER_NAME_PREFIX + "_" + now;
+		String adminEmail  = TestFixtures.MAIL_PREFIX+ "_admin_" + now + "@graphql-test.vote";
+		String mobilephone = TestFixtures.MOBILEPHONE_PREFIX + now;
+		String website     = TestFixtures.DEFAULT_WEBSITE;
+		String picture     = TestFixtures.AVATAR_IMG_PREFIX +(now%16)+".png";
+		String graphQLMutation = String.format(
+				"mutation { createNewTeam(teamName: \"%s\", adminName: \"%s\", adminEmail: \"%s\", adminMobilephone: \"%s\", " +
+						"adminWebsite: \"%s\", adminPicture: \"%s\") { " +
+						"team { id teamName inviteCode members { id, email, name, website, picture, mobilephone } } " +
+						"user { id email name mobilephone website picture } " +
+						"jwt " +
+						"}}",
+				teamName, adminName, adminEmail, mobilephone, website, picture
+		);
+
+		// WHEN we send this mutation
+		try {
+			String createdTeamJson = executeGraphQl(graphQLMutation, "$.data.createNewTeam.team");
+			fail("GraphQL createNewTeam should have thrown an exception!");
+		} catch (HttpClientErrorException httpEx) {
+			// THEN correct Exception type is thrown with correct Liquido Error enum value
+			Assert.assertTrue(
+				"GraphQL createNewTeam should have thrown " + LiquidoException.Errors.TEAM_WITH_SAME_NAME_EXISTS.toString(),
+				httpEx.getResponseBodyAsString().contains(LiquidoException.Errors.TEAM_WITH_SAME_NAME_EXISTS.toString())
+			);
+		} catch (Exception e) {
+			fail("GraphQL createNewTeam should have thrown a LiquidoException, but it threw " + e);
+		}
 	}
 
 	/** Join an existing team */
@@ -185,7 +218,7 @@ public class GraphQLTests extends HttpBaseTest {
 		ResponseEntity<String> res = this.client.exchange(this.GraphQLPath, HttpMethod.POST, entity.toJsonHttpEntity(), String.class);
 
 		// THEN user's email is part of team.members
-		List<String> members = JsonPath.read(res.getBody(), "$.joinTeam.team.members..email");
+		List<String> members = JsonPath.read(res.getBody(), "$.data.joinTeam.team.members..email");
 		assertTrue("Cannot find userEmail in joinedTeam.members", members.contains(userEmail));
 	}
 
@@ -200,7 +233,7 @@ public class GraphQLTests extends HttpBaseTest {
 		String graphQLMutation = "mutation { createPoll(title: \"" + pollTitle + "\") { id, title } }";
 
 		//WHEN the admin creates a new poll
-		String actualTitle = executeGraphQl(graphQLMutation, "$.createPoll.title");
+		String actualTitle = executeGraphQl(graphQLMutation, "$.data.createPoll.title");
 
 		//THEN poll is created
 		Assert.assertEquals("Poll title should be returned", pollTitle, actualTitle);
@@ -217,7 +250,7 @@ public class GraphQLTests extends HttpBaseTest {
 		PollModel poll = polls.get(0);
 
 		// AND data for a new proposal
-		Long now = System.currentTimeMillis() % 10000;
+		long now = System.currentTimeMillis() % 10000;
 		String proposalTitle = "Proposal added from Test "+now;
 		String description = getLoremIpsum(0, 200);
 
@@ -232,7 +265,7 @@ public class GraphQLTests extends HttpBaseTest {
 		ResponseEntity<String> res = this.client.exchange(this.GraphQLPath, HttpMethod.POST, entity.toJsonHttpEntity(), String.class);
 
 		//THEN poll is created
-		assertTrue("Proposal with that title should have been added", res.getBody().contains(proposalTitle));
+		assertTrue("Proposal with that title should have been added", res.getBody() != null && res.getBody().contains(proposalTitle));
 	}
 
 

@@ -50,11 +50,16 @@ spring:
     #show-sql: true
 
 
+# Uncomment this for a lot of fancy and helpful debug messages.  (Watch your disk space!)
+# https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-logging-console-output
+debug: true
+
+
 # More logging in DEV
 logging:
   level:
     root: INFO
-    #web: DEBUG
+    web: DEBUG
     #sql: TRACE
     org:
       doogie:
