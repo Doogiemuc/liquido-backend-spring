@@ -93,12 +93,21 @@
 		</dependency>
 		-->
 
-		<!-- Graphiql - GraphQL Web debug tool -->
+		<!-- GraphQL Playground - much more sophisticated than GraphiQL https://mvnrepository.com/artifact/com.graphql-java-kickstart/playground-spring-boot-starter -->
+		<dependency>
+			<groupId>com.graphql-java-kickstart</groupId>
+			<artifactId>playground-spring-boot-starter</artifactId>
+			<version>5.10.0</version>
+		</dependency>
+
+
+		<!-- Graphiql - GraphQL Web debug tool
 		<dependency>
 			<groupId>com.graphql-java</groupId>
 			<artifactId>graphiql-spring-boot-starter</artifactId>
 			<version>5.0.2</version>
 		</dependency>
+		-->
 
 
 		<!-- GraphQL Spqr - automatically generate GraphQL schema from entities -->

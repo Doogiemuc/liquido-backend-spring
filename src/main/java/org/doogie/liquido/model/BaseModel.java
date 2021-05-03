@@ -1,5 +1,6 @@
 package org.doogie.liquido.model;
 
+import io.leangen.graphql.annotations.GraphQLIgnore;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.data.annotation.CreatedDate;
@@ -19,7 +20,6 @@ import java.util.Date;
 @Data
 @EntityListeners(AuditingEntityListener.class)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)  // BaseModels are only equal when id field is equal!
-//@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public abstract class BaseModel {
   /**
    * Internal ID of this domain object
@@ -33,10 +33,12 @@ public abstract class BaseModel {
   @CreatedDate
   @NotNull
   // MAYBE: Use LocalDateTime   => but then need to watch out for converting correctly everyhwere ...
+  @GraphQLIgnore
   public Date createdAt = new Date();
 
   @LastModifiedDate
   @NotNull
+  @GraphQLIgnore
   public Date updatedAt = new Date();
 
   //I do not need   @LastModifiedBy

@@ -8,9 +8,17 @@
 server:
   port: 8080
 
-graphiql:
-  #mapping: /graphiql
+graphql.playground:
+  mapping: /playground
   endpoint: /liquido-api/v3/graphql
+  subscriptionEndpoint: /liquido-api/v3/subscriptions
+  #staticPath.base: my-playground-resources-folder
+  enabled: true
+  pageTitle: LIQUIDO GraphQL Playground
+  settings:
+    schema:
+      polling:
+        interval: 10000
 
 
 spring:
@@ -25,6 +33,7 @@ spring:
     #username: sa
     #password:
 
+  # Base path for everything: REST & GraphQL API
   data:
     rest:
       base-path: /liquido-api/v3
@@ -65,10 +74,6 @@ spring:
 # Since 10 years and dozens of logging frameworks I am always re-learning,
 # how to configure my favorite logging format. It gives you clickable links in your IDE.
 # ===================================================================
-
-# Uncomment this for a lot of fancy and helpful debug messages.  (Watch your disk space!)
-# https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-logging-console-output
-# debug: true
 
 logging:
   pattern:

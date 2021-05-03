@@ -34,9 +34,9 @@ public class LiquidoException extends Exception {
 
 		//Join Team errors
 		CANNOT_JOIN_TEAM_INVITE_CODE_INVALID(10, HttpStatus.BAD_REQUEST),
-		CANNOT_JOIN_TEAM_ALREADY_MEMBER(11, HttpStatus.CONFLICT),						// there already is a member (or admin) with the same email
+		CANNOT_JOIN_TEAM_ALREADY_MEMBER(11, HttpStatus.CONFLICT),						// there already is a member (or admin) with the same email or mobilephone
 		CANNOT_JOIN_TEAM_ALREADY_ADMIN(12, HttpStatus.CONFLICT),
-	  CANNOT_REGISTER_NEED_EMAIL(13, HttpStatus.BAD_REQUEST),
+		CANNOT_REGISTER_NEED_EMAIL(13, HttpStatus.BAD_REQUEST),
 		CANNOT_REGISTER_NEED_MOBILEPHONE(14, HttpStatus.BAD_REQUEST),
 		CANNOT_CREATE_TWILIO_USER(15, HttpStatus.INTERNAL_SERVER_ERROR),
 		USER_EMAIL_EXISTS(16, HttpStatus.CONFLICT),                          // user with that email  already exists
@@ -56,14 +56,14 @@ public class LiquidoException extends Exception {
 
 		// use case errors
 		INVALID_VOTER_TOKEN(50, HttpStatus.UNAUTHORIZED),
-  	CANNOT_CREATE_POLL(51, HttpStatus.BAD_REQUEST),
+		CANNOT_CREATE_POLL(51, HttpStatus.BAD_REQUEST),
 		CANNOT_JOIN_POLL(52, HttpStatus.BAD_REQUEST),
-    CANNOT_ADD_PROPOSAL(53, HttpStatus.BAD_REQUEST),
-    CANNOT_START_VOTING_PHASE(54, HttpStatus.BAD_REQUEST),
+		CANNOT_ADD_PROPOSAL(53, HttpStatus.BAD_REQUEST),
+		CANNOT_START_VOTING_PHASE(54, HttpStatus.BAD_REQUEST),
 		CANNOT_SAVE_PROXY(55, HttpStatus.BAD_REQUEST),								// assign or remove
 		CANNOT_ASSIGN_CIRCULAR_PROXY(56, HttpStatus.BAD_REQUEST),
 		CANNOT_CAST_VOTE(57, HttpStatus.BAD_REQUEST),
-    CANNOT_GET_TOKEN(58, HttpStatus.BAD_REQUEST),
+		CANNOT_GET_TOKEN(58, HttpStatus.BAD_REQUEST),
 		CANNOT_FINISH_POLL(59, HttpStatus.BAD_REQUEST),
 		NO_DELEGATION(60, HttpStatus.BAD_REQUEST),
 		NO_BALLOT(61, HttpStatus.NO_CONTENT),  												// 204: voter has no ballot yet. This is OK and not an error.
@@ -83,10 +83,10 @@ public class LiquidoException extends Exception {
 		int liquidoErrorCode;
 		HttpStatus httpResponseStatus;
 
-    Errors(int code, HttpStatus httpResponseStatus) {
-    	this.liquidoErrorCode = code;
-    	this.httpResponseStatus = httpResponseStatus;
-    }
+	Errors(int code, HttpStatus httpResponseStatus) {
+		this.liquidoErrorCode = code;
+		this.httpResponseStatus = httpResponseStatus;
+	}
 
 	}
 
@@ -94,12 +94,12 @@ public class LiquidoException extends Exception {
 	 * A Liquido exception must always have an error code and a human readable error message
 	 */
   public LiquidoException(Errors errCode, String msg) {
-    super(msg);
-    this.error = errCode;
+	super(msg);
+	this.error = errCode;
   }
 
   public LiquidoException(Errors errCode, String msg, Throwable childException) {
-  	super(msg, childException);
+	super(msg, childException);
 	  this.error = errCode;
   }
 
@@ -124,19 +124,19 @@ public class LiquidoException extends Exception {
 	}
 
 	public static Supplier<LiquidoException> supply(Errors error, String msg) {
-  	return () -> new LiquidoException(error, msg);
+	return () -> new LiquidoException(error, msg);
 	}
 
   public Errors getError() {
-  	return this.error;
+	return this.error;
 	}
 
   public int getErrorCodeAsInt() {
-    return this.error.liquidoErrorCode;
+	return this.error.liquidoErrorCode;
   }
 
   public String getErrorName() {
-    return this.error.name();
+	return this.error.name();
   }
 
 	public HttpStatus getHttpResponseStatus() {
@@ -159,18 +159,18 @@ public class LiquidoException extends Exception {
 	}
 
   public String toString() {
-  	StringBuilder b = new StringBuilder("LiquidoException[");
-  	b.append("liquidoErrorCode=");
-  	b.append(this.getErrorCodeAsInt());
-  	b.append(", errorName=");
-  	b.append(this.getErrorName());
-  	b.append(", msg=");
-  	b.append(this.getMessage());
-  	if (this.getCause() != null) {
-  		b.append(", cause=");
-  		b.append(this.getCause().toString());
+	StringBuilder b = new StringBuilder("LiquidoException[");
+	b.append("liquidoErrorCode=");
+	b.append(this.getErrorCodeAsInt());
+	b.append(", errorName=");
+	b.append(this.getErrorName());
+	b.append(", msg=");
+	b.append(this.getMessage());
+	if (this.getCause() != null) {
+		b.append(", cause=");
+		b.append(this.getCause().toString());
 		}
-  	b.append("]");
-  	return b.toString();
+	b.append("]");
+	return b.toString();
 	}
 }
