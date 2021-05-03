@@ -54,7 +54,6 @@ spring:
 # https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-logging-console-output
 debug: true
 
-
 # More logging in DEV
 logging:
   level:
@@ -65,6 +64,7 @@ logging:
       doogie:
         liquido: DEBUG
       springframework:
+        security: DEBUG
         web:
           filter:
             # Show HTTP requests

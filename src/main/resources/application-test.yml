@@ -25,13 +25,20 @@ spring:
 logging:
   level:
     root: INFO
+    web: DEBUG
+    #sql: TRACE
     org:
       doogie:
         liquido: DEBUG
+      springframework:
+        web:
+          filter:
+            # Show HTTP requests
+            CommonsRequestLoggingFilter: DEBUG
 
 
 liquido:
-  # Load prepared testdata for TEST. SQL FILE MUST HAVE BEEN CREATED BEFORE!
+  # Load prepared test data for TEST. SQL FILE MUST HAVE BEEN CREATED BEFORE!
   test:
     recreateTestData: false
     loadTestData: true

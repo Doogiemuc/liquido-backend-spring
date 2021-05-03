@@ -16,13 +16,19 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.web.util.matcher.AndRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -130,7 +136,7 @@ public class LiquidoGraphQLController {
 	 * More details here: https://dimitr.im/graphql-spring-security
 	 */
 	@Configuration
-	@Order(2)   // MUST be smaller than 100  to be first!
+	@Order(31)   // MUST be smaller than 100  to be first!
 	public class GraphQlSecurityConfigurationAdapter extends WebSecurityConfigurerAdapter {
 		@Value("${spring.data.rest.base-path}")
 		String basePath;
@@ -139,20 +145,32 @@ public class LiquidoGraphQLController {
 		Environment springEnv;
 
 		/**
-		 * Allow anonymous access to GraphQL API and web resources for GraphQL-playground
-     */
+		 * Make the GraphQL endpoint reachable via anonymous POST, without CSRF.
+		 * And make the resources for GraphQL-playground available.
+		 * @param http HttpSecurity to configure
+		 * @throws Exception
+		 */
 		protected void configure(HttpSecurity http) throws Exception {
 			log.info("Configuring WebSecurity for GraphQL API endpoint " + basePath + LiquidoUrlPaths.GRAPHQL + " in env=" + Arrays.toString(springEnv.getActiveProfiles()));
-			http
+
+			OrRequestMatcher allowedGraphQlRequests = new OrRequestMatcher(
+				new RegexRequestMatcher(basePath + LiquidoUrlPaths.GRAPHQL, HttpMethod.POST.name(), true),
+				new RegexRequestMatcher(basePath + LiquidoUrlPaths.SUBSCRIPTIONS, HttpMethod.GET.name()),
+				new RegexRequestMatcher(basePath + LiquidoUrlPaths.PLAYGROUND, HttpMethod.GET.name()),
+				new RegexRequestMatcher(basePath + LiquidoUrlPaths.VENDOR, HttpMethod.GET.name())
+			);
+
+			http.requestMatcher(allowedGraphQlRequests)  		// MUST limit this  to only these URLs !
 				.authorizeRequests()
-					.antMatchers(HttpMethod.POST, basePath + LiquidoUrlPaths.GRAPHQL).permitAll().and().csrf().disable()
+					.antMatchers(basePath + LiquidoUrlPaths.GRAPHQL).permitAll().and().csrf().disable()
 				.authorizeRequests()
 					.antMatchers(basePath + LiquidoUrlPaths.SUBSCRIPTIONS).permitAll()
 					.antMatchers(basePath + LiquidoUrlPaths.PLAYGROUND).permitAll()
 					.antMatchers(basePath + LiquidoUrlPaths.VENDOR + "/**").permitAll();
-		}
-	}
 
+		}
+
+	}
 
 
 
