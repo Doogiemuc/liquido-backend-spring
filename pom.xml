@@ -80,7 +80,7 @@
 			<version>2.9.8</version>
 		</dependency>
 
-		<!-- Spring Graphql Tooling
+		<!-- Spring Graphql Starter => Just GraphQL is enough
 		<dependency>
 			<groupId>com.graphql-java</groupId>
 			<artifactId>graphql-spring-boot-starter</artifactId>
@@ -114,7 +114,7 @@
 		<dependency>
 			<groupId>io.leangen.graphql</groupId>
 			<artifactId>spqr</artifactId>
-			<version>0.10.0</version>
+			<version>0.11.2</version>
 		</dependency>
 
 		<!-- Spring Security -->

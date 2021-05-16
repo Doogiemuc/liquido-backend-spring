@@ -12,7 +12,7 @@ graphql.playground:
   mapping: /playground
   endpoint: /liquido-api/v3/graphql
   subscriptionEndpoint: /liquido-api/v3/subscriptions
-  #staticPath.base: my-playground-resources-folder
+  #staticPath.base: /vendor
   enabled: true
   pageTitle: LIQUIDO GraphQL Playground
   settings:

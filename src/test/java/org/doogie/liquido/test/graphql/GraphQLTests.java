@@ -135,6 +135,8 @@ public class GraphQLTests extends HttpBaseTest {
 		String mobilephone = TestFixtures.MOBILEPHONE_PREFIX + now;
 		String website     = TestFixtures.DEFAULT_WEBSITE;
 		String picture     = TestFixtures.AVATAR_IMG_PREFIX +(now%16)+".png";
+
+		//TODO: create GraphQL request with variable   "admin: UserModelInput!"
 		String graphQLMutation = String.format(
 			"mutation { createNewTeam(teamName: \"%s\", admin: { name: \"%s\", email: \"%s\", mobilephone: \"%s\", " +
 				"website: \"%s\", picture: \"%s\" }) { " +

@@ -39,6 +39,9 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
   @Value("${spring.data.rest.base-path}")
   String basePath;
 
+  //TODO: do I really need the filter and the auth provider or is one of them enough?
+	//TODO: optimize getUSer DB requests
+
   @Autowired
 	JwtAuthenticationFilter jwtAuthenticationFilter;
 

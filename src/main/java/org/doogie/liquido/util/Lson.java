@@ -1,6 +1,7 @@
 package org.doogie.liquido.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import org.springframework.http.HttpEntity;
@@ -26,10 +27,30 @@ public class Lson extends HashMap<String, Object> implements Map<String, Object>
 	 */
 	public Lson() { }
 
+	/**
+	 * Create a Lson from a java.util.Map
+	 * @param map map from String -> Object
+	 */
 	public Lson(Map<? extends String, ? extends Object> map) {
 		super(map);
 	}
 
+	/**
+	 * Create an Lson from a json string
+	 * @param jsonString must be a valid Json String that can be read by Jackson
+	 * @throws JsonProcessingException when jsonString is invalid
+	 */
+	public Lson(String jsonString) throws JsonProcessingException {
+		// is this a crude hack or a missing feature in Java? Java is not good in handling JSON (from a developer perspective) compared for example to JavaScript
+		this(jsonString != null ? mapper.readValue(jsonString, Map.class) : new HashMap<>());
+	}
+
+	/**
+	 * Create an Lson with one initial value at the given path
+	 * Can be chained like this: new Lson("key1", "value").put("key2", "value2")
+	 * @param path path to value. Can be just the key or a path like "one.two.three"
+	 * @param value the value to put at the given path
+	 */
 	public Lson(String path, Object value) {
 		this();
 		this.put(path, value);

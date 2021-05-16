@@ -261,6 +261,8 @@ public class UserGraphQL {
 			}
 		}
 
+		//TODO: team.getPolls();  // Do I need to lazily fetch polls; Or is graphql-spqr even able to handle this dynamically from the client request. Test the SQL- loot of work
+
 		log.debug("Login " + user.toStringShort() + " into team '" + team.getTeamName()+"'");
 		String jwt = jwtTokenUtils.generateToken(user.getId(), team.getId());
 		return new CreateOrJoinTeamResponse(team, user, jwt);

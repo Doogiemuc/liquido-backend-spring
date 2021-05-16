@@ -4,7 +4,7 @@ import graphql.ExceptionWhileDataFetching;
 import graphql.execution.DataFetcherExceptionHandler;
 import graphql.execution.DataFetcherExceptionHandlerParameters;
 import graphql.execution.DataFetcherExceptionHandlerResult;
-import graphql.execution.ExecutionPath;
+import graphql.execution.ResultPath;
 import graphql.language.SourceLocation;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.util.Lson;
@@ -31,7 +31,7 @@ public class LiquidoGraphQLExceptionHandler implements DataFetcherExceptionHandl
 	public DataFetcherExceptionHandlerResult onException(DataFetcherExceptionHandlerParameters params) {
 		Throwable exception = params.getException();
 		SourceLocation sourceLocation = params.getSourceLocation();
-		ExecutionPath path = params.getPath();
+		ResultPath path = params.getPath();
 		ExceptionWhileDataFetching error = new ExceptionWhileDataFetching(path, exception, sourceLocation);
 
 		//SimpleDataFetcherExceptionHandler logs the whole stacktrace:  log.warn("GraphQL Error"+error.getMessage(), exception); But we can do better

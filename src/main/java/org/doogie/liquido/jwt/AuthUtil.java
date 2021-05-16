@@ -103,6 +103,7 @@ public class AuthUtil {
 	public Optional<UserModel> getCurrentUser()  {
 		Optional<LiquidoAuthentication> liquidoAuth = this.getLiquidoAuthentication();
 		if (!liquidoAuth.isPresent()) return Optional.empty();
+		liquidoAuth.get().getDetails();
 		return userRepo.findById(liquidoAuth.get().getUserId());   // may return Optional.empty if user.id is not found in DB!
 	}
 
