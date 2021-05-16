@@ -1,5 +1,6 @@
 package org.doogie.liquido.graphql;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import graphql.*;
 import graphql.execution.AsyncExecutionStrategy;
 import graphql.schema.GraphQLSchema;
@@ -7,6 +8,7 @@ import io.leangen.graphql.GraphQLSchemaGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.rest.LiquidoUrlPaths;
 import org.doogie.liquido.services.LiquidoException;
+import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -16,20 +18,15 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.web.util.matcher.AndRequestMatcher;
-import org.springframework.security.web.util.matcher.OrRequestMatcher;
-import org.springframework.security.web.util.matcher.RegexRequestMatcher;
-import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.security.web.util.matcher.*;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.thymeleaf.util.MapUtils;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * GraphQL controller that handles POST requests to GraphQL endpoint.
@@ -96,18 +93,20 @@ public class LiquidoGraphQLController {
 	public ExecutionResult execute(@RequestBody Map<String, Object> body, HttpServletRequest request) throws LiquidoException {
 		//BUGFIX: Map<String, Object> instead of Map<String, String>   https://github.com/vuejs/vue-apollo/issues/387
 
-		// The actual graphQL-query is a string(not JSON!). It is wrapped in a "query" field so that the request body is valid JSON.
-		//ExecutionResult result = graphQL.execute((String) body.get("query"));
-
+		// The actual graphQL-query is a string in GraphQL syntax. This is not JSON.
+		// The graphQL query or mutation is wrapped in a "query" field so that the request body is valid JSON.
+		Map<String, Object> variables = body.get("variables") != null ? (Map)body.get("variables") : new HashMap<>();
 		ExecutionResult result = graphQL.execute(ExecutionInput.newExecutionInput()
 			.query((String) body.get("query"))
 			.operationName((String) body.get("operationName"))
-			//.variables(body.get("variables"))
+			.variables(variables)  // must not pass null
 			.context(request)
 			.build());
 
+
 		// graphql-java swallows exceptions. Instead a list of errors is returned in result. But result.getData() would just be <null>.
 		// So we have to unwrap the errors here, because we want to return a meaningful LiquidoException to our client and not just null.
+		//TODO: As specified GraphQL DOES return errors like this. HTTP 200 but with error array.  (I personally don't like it! I preferre HTTP error codes). Let's see if we adapt....
 		for(GraphQLError err : result.getErrors()) {
 			String msg = err.getMessage();
 			Throwable ex = null;
@@ -122,7 +121,7 @@ public class LiquidoGraphQLController {
 			// But our awesome LiquidoException can add the request body to the error response.
 			// So the caller knows which of his GraphQL queries or mutations resulted in this error.
 			// (will be logged in LiquidoGraphQLExceptionHandler.java)
-			throw new LiquidoException(LiquidoException.Errors.GRAPHQL_ERROR, msg, null, body);   // Do not expose inner exception to the client. Msg is enough.
+			throw new LiquidoException(LiquidoException.Errors.GRAPHQL_ERROR, msg, ex, Collections.singletonMap("error-message", err.getMessage()));   // Be careful to not expose secrets the client.
 		}
 
 		return result;  // data: {}, errors: []
@@ -156,17 +155,21 @@ public class LiquidoGraphQLController {
 			OrRequestMatcher allowedGraphQlRequests = new OrRequestMatcher(
 				new RegexRequestMatcher(basePath + LiquidoUrlPaths.GRAPHQL, HttpMethod.POST.name(), true),
 				new RegexRequestMatcher(basePath + LiquidoUrlPaths.SUBSCRIPTIONS, HttpMethod.GET.name()),
-				new RegexRequestMatcher(basePath + LiquidoUrlPaths.PLAYGROUND, HttpMethod.GET.name()),
-				new RegexRequestMatcher(basePath + LiquidoUrlPaths.VENDOR, HttpMethod.GET.name())
+				new AntPathRequestMatcher(LiquidoUrlPaths.PLAYGROUND, HttpMethod.GET.name()),  // no base path
+				new AntPathRequestMatcher(LiquidoUrlPaths.VENDOR+"/**", HttpMethod.GET.name())
 			);
 
 			http.requestMatcher(allowedGraphQlRequests)  		// MUST limit this  to only these URLs !
 				.authorizeRequests()
+					.anyRequest().permitAll().and().csrf().disable().cors().disable();
+			/*
 					.antMatchers(basePath + LiquidoUrlPaths.GRAPHQL).permitAll().and().csrf().disable()
 				.authorizeRequests()
 					.antMatchers(basePath + LiquidoUrlPaths.SUBSCRIPTIONS).permitAll()
-					.antMatchers(basePath + LiquidoUrlPaths.PLAYGROUND).permitAll()
-					.antMatchers(basePath + LiquidoUrlPaths.VENDOR + "/**").permitAll();
+					.antMatchers(LiquidoUrlPaths.PLAYGROUND).permitAll()
+					.antMatchers(LiquidoUrlPaths.VENDOR + "/**").permitAll();
+
+			 */
 
 		}
 

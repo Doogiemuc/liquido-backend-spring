@@ -80,7 +80,6 @@ public class UserModel extends BaseModel {
 	/** Username, Nickname */
 	@NotNull
 	@NonNull
-	@GraphQLInputField
 	public String name;
 
 	/** (optional) User's website or bio or social media profile link */

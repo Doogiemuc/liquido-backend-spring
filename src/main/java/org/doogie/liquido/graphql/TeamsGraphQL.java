@@ -95,7 +95,7 @@ public class TeamsGraphQL {
 
 		/*
 		  IF request is authorized
-		    IF "admin" does NOT exactly have the same attributes as the logged in user THEN throw: not allowed.
+		    IF "admin" does NOT exactly have the same attributes as the logged in user THEN throw: not allowed
 		  ELSE // anonymous request
 		    IF user with same email exists, THEN throw
 		    IF user with same mobilephone exits, THEN throw

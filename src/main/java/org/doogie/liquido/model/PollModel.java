@@ -1,6 +1,7 @@
 package org.doogie.liquido.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import io.leangen.graphql.annotations.GraphQLIgnore;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -50,6 +51,7 @@ public class PollModel extends BaseModel {
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JsonBackReference
+	@GraphQLIgnore
 	TeamModel team;
 
   /**
