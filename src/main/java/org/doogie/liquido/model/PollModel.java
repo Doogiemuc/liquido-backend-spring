@@ -24,7 +24,7 @@ import java.util.Set;
  */
 @Data
 @NoArgsConstructor  		   // BUGFIX: lombok data includes @RequiredArgsConstructor, but does not include @NoArgsConstructor !
-@RequiredArgsConstructor   // BUGFIX2: And lombok does not create the @RequiredArgsConstructor if there is already any other constructzor, even a NonArgsConstructor
+@RequiredArgsConstructor   // BUGFIX2: And lombok does not create the @RequiredArgsConstructor if there is already any other constructor, even a NonArgsConstructor
                            // https://github.com/rzwitserloot/lombok/issues/1269
 @EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)   // only use ID for equals, because any other attribute of a Poll may be changed by the user
 @Entity

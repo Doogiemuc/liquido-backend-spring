@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import graphql.*;
 import graphql.execution.AsyncExecutionStrategy;
 import graphql.schema.GraphQLSchema;
+import graphql.schema.idl.SchemaPrinter;
 import io.leangen.graphql.GraphQLSchemaGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.rest.LiquidoUrlPaths;
@@ -56,29 +57,18 @@ public class LiquidoGraphQLController {
 			.generate();
 
 		this.graphQL = new GraphQL.Builder(schema)
-			//The default SimpleDataFetcherExceptionHandler  swallows exception and logs the full stack trace. So we register our own more sophisticated exception handler:
+			//The default SimpleDataFetcherExceptionHandler swallows exception and logs the full stack trace. So we register our own more sophisticated exception handler here.
 			//See also https://stackoverflow.com/questions/57215323/correct-way-to-return-errors-in-graphql-spqr
 			.queryExecutionStrategy(new AsyncExecutionStrategy(exceptionHandler))
 			//.mutationExecutionStrategy(new AsyncExecutionStrategy(exceptionHandler))
 			.build();
 
 		// Print the graphQL schema that was created by graphql-spqr
-		//String graphQLschema = new SchemaPrinter().print(schema);
-		//log.debug(graphQLschema);
+		if (log.isDebugEnabled()) {
+			String graphQLschema = new SchemaPrinter().print(schema);
+			log.debug(graphQLschema);
+		}
 
-		/*
-		  more complex example from this tutorial https://medium.com/@saurabh1226/getting-started-with-graphql-spqr-with-springboot-bb9d232053ec
-
-		GraphQLSchema schema = new GraphQLSchemaGenerator().withResolverBuilders(
-			// Resolve by annotations
-			new AnnotatedResolverBuilder(),
-			// Resolve public methods inside root package
-			new PublicResolverBuilder("com.graphql.userPoc"))
-			.withOperationsFromSingleton(userResolver, UserResolver.class)
-			.withValueMapperFactory(new JacksonValueMapperFactory()).generate();
-		graphQL = GraphQL.newGraphQL(schema).build();
-
-		 */
 	}
 
 	/**
@@ -106,7 +96,7 @@ public class LiquidoGraphQLController {
 
 		// graphql-java swallows exceptions. Instead a list of errors is returned in result. But result.getData() would just be <null>.
 		// So we have to unwrap the errors here, because we want to return a meaningful LiquidoException to our client and not just null.
-		//TODO: As specified GraphQL DOES return errors like this. HTTP 200 but with error array.  (I personally don't like it! I preferre HTTP error codes). Let's see if we adapt....
+		//TODO: As specified GraphQL DOES return errors like this. HTTP 200 but with error array.  (I personally don't like it! I prefer HTTP error codes). Let's see if we need to adapt....
 		for(GraphQLError err : result.getErrors()) {
 			String msg = err.getMessage();
 			Throwable ex = null;
@@ -158,6 +148,8 @@ public class LiquidoGraphQLController {
 				new AntPathRequestMatcher(LiquidoUrlPaths.PLAYGROUND, HttpMethod.GET.name()),  // no base path
 				new AntPathRequestMatcher(LiquidoUrlPaths.VENDOR+"/**", HttpMethod.GET.name())
 			);
+
+
 
 			http.requestMatcher(allowedGraphQlRequests)  		// MUST limit this  to only these URLs !
 				.authorizeRequests()
