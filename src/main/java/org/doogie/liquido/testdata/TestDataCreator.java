@@ -226,7 +226,10 @@ public class TestDataCreator implements CommandLineRunner {
 				seedTeam(teamName, adminEmail, adminMobilephone);
 			}
 			seedMemberInTwoTeams(TestFixtures.TWO_TEAM_USER_EMAIL, TestFixtures.TWO_TEAM_USER_MOBILEPHONE, TestFixtures.TEAM1_NAME, TestFixtures.TEAM_NAME_PREFIX+"1");
-			seedPollInElaborationInTeam(team1);
+			seedPollInElaborationInTeam(team1, "First poll in " + team1.getTeamName());
+			seedPollInElaborationInTeam(team1, "Second poll in " + team1.getTeamName());
+			seedPollInElaborationInTeam(team1, "And a third very nice poll in " + team1.getTeamName());
+			seedPollInElaborationInTeam(team1, "Fourth important decision in " + team1.getTeamName());
 			PollModel pollInTeam = seedPollInVotingInTeam(team1);
 			seedVotes(pollInTeam, team1.getMembers(), TestFixtures.NUM_TEAM_MEMBERS);
 
@@ -447,13 +450,13 @@ public class TestDataCreator implements CommandLineRunner {
 	 * @return the poll in status ELABORATION
 	 * @throws LiquidoException
 	 */
-	public PollModel seedPollInElaborationInTeam(@NonNull TeamModel team) throws LiquidoException {
+	public PollModel seedPollInElaborationInTeam(@NonNull TeamModel team, @Nullable String pollTitle) throws LiquidoException {
 		log.info("Seeding a poll with two proposals in a team");
 		long now = System.currentTimeMillis() % 1000;
 		UserModel admin = team.getAdmins().stream().findFirst()
 			.orElseThrow(LiquidoException.notFound("need a team admin to seedPollInTeam"));
 		authUtil.authenticateInSecurityContext(admin.getId(), team.getId(), null);  // fake login admin
-		String title = "Poll " + now +  " in Team "+team.getTeamName();
+		String title = pollTitle != null ? pollTitle : "Poll " + now +  " in Team "+team.getTeamName();
 		PollModel poll = pollService.createPoll(title, getDefaultArea(), team);
 		LawModel proposal = this.createProposal("Proposal " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), getDefaultArea(), admin, 2, 1);
 		pollService.addProposalToPoll(proposal, poll);
@@ -472,7 +475,7 @@ public class TestDataCreator implements CommandLineRunner {
 	 * @throws LiquidoException
 	 */
 	public PollModel seedPollInVotingInTeam(@NonNull TeamModel team) throws LiquidoException {
-		PollModel poll = this.seedPollInElaborationInTeam(team);
+		PollModel poll = this.seedPollInElaborationInTeam(team, "Poll in Voting in " + team.getTeamName());
 		UserModel admin = team.getAdmins().stream().findFirst()
 			.orElseThrow(LiquidoException.notFound("Need a team admin to seedPollInVotingInTeam"));
 		authUtil.authenticateInSecurityContext(admin.getId(), team.getId(), null);  // fake login admin

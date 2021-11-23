@@ -7,16 +7,17 @@
 
 package Liquido {
 
-
-
 Delegation --> Area: delegation\nin area
+note right on link: This enables different delegations\nin different areas.
+
 Law --> Area: law\nin area
 Poll ..> Area: poll\nin area\n(calculated)
 Poll "0..1" -> "N" Law: proposals{}\n in poll
-Ballot "N" --> "1" Poll: casted ballots\nin a poll
-Ballot "0..1" --> "N" Law: voteOrder[]: sorted\nproposals in ballot
-Ballot "N" -right-> "1" Right2Vote: casted wihth a\nRight2Vote
+Ballot "N" <-- "1" Poll: casted ballots\nin a poll
+Ballot "1" --> "N" Law: voteOrder[]: sorted\nproposals in ballot
+Ballot "N" -right-> "1" Right2Vote: casted with \nRight2Vote
 Team "1" -up-> "N" User: team members
+Team "1" -up-> "N" User: admins
 Team "1" --> "N" Poll: polls in team
 Right2Vote -up-> Right2Vote: can be\ndelegated to\nproxy
 
@@ -26,9 +27,9 @@ Delegation .[hidden]up. Note1
 Note1 .[hidden]up. Right2Vote
 
 
-' These are just for layout
-Law -[hidden]right-> Delegation
 
+' These links are just for layout
+' ....
 
 
 class Area {
@@ -37,7 +38,7 @@ class Area {
   String description
 }
 
-class Law {
+class "Idea, Proposal, Law" as Law {
   Long ID
   String title
   String description
@@ -65,7 +66,7 @@ class Poll {
   Area getArea()
   int getNumCompetingProposals()
   ==
-  A Poll contains a set of proposals 
+  A Poll contains a set of proposals
   that joined the poll.
   Ballots should not be exposed
   before the poll is FINISHED.
@@ -103,7 +104,6 @@ class Right2Vote {
   Right2Vote delegatedTo
   User publicProxy // may be null
   Date expiresAt
-  --
   boolean isDelegated()
   ==
   Digital representation of a users right to vote.
@@ -123,13 +123,13 @@ class Team {
 
 class User {
   String email
-  String profile.name
-  String profile.mobilephone
-  String profile.website
-  String profile.picture
+  String name
+  String mobilephone
+  String website
+  String picture
   Date lastlogin
   ==
-  Linked to many entities in createdBy
+  Linked to many entities as createdBy
 }
 
 ' end package
