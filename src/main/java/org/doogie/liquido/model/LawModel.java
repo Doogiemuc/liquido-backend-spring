@@ -6,9 +6,11 @@ import lombok.*;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.data.rest.core.annotation.RestResource;
+import org.springframework.lang.Nullable;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -45,6 +47,7 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
 	@org.springframework.lang.NonNull
 	@lombok.NonNull
 	@Column(unique = true)
+	//TODO: @Size(min=24, message = "Proposal title must be at least some characters long.")
   public String title;
 
 	/**
@@ -54,7 +57,12 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
   @NotNull
   @NonNull
   @Column(length = 1000)
+	@Size(min=24, message = "Proposal description must be at least some characters long.")
   public String description;
+
+	/** A nice looking icon. Mobile clients stores fontawesome icon names here. */
+	@Nullable
+	public String icon = null;
 
   /** Area of this idea/proposal/proposal */
   @NotNull

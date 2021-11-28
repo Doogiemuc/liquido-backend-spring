@@ -5,8 +5,6 @@ build/
 release.properties
 /application*.properties
 /application-local.yml
-/application-local.yml
-/application-local.yml
 /application-int.yml
 /application-prod.yml
 /application-test.yml
