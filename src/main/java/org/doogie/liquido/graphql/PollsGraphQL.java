@@ -10,9 +10,11 @@ import org.doogie.liquido.jwt.AuthUtil;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteResponse;
 import org.doogie.liquido.services.CastVoteService;
+import org.doogie.liquido.services.LawService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.testdata.LiquidoProperties;
+import org.doogie.liquido.util.DoogiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -46,6 +48,9 @@ public class PollsGraphQL {
 
 	@Autowired
 	PollService pollService;
+
+	@Autowired
+	LawService lawService;
 
 	@Autowired
 	CastVoteService castVoteService;
@@ -108,9 +113,12 @@ public class PollsGraphQL {
 		@GraphQLNonNull @GraphQLArgument(name="title") String title
 	) throws LiquidoException {
 		AreaModel defaultArea = this.getDefaultArea();
+		UserModel user = authUtil.getCurrentUser().orElseThrow(LiquidoException.unauthorized("Must be logged in to like a proposal!"));
 		TeamModel team = authUtil.getCurrentTeam()
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.UNAUTHORIZED, "Cannot create poll: Must be logged into a team!"));
-		return pollService.createPoll(title, defaultArea, team);
+		PollModel newPoll = pollService.createPoll(title, defaultArea, team);
+		log.info("createPoll: Admin " + user.toStringShort() + " creates new poll '" + newPoll.getTitle() + "' in team "+team.getTeamName());
+		return newPoll;
 	}
 
 	/**
@@ -126,25 +134,23 @@ public class PollsGraphQL {
 	 * @param pollId the poll, MUST exist
 	 * @param title Title of the new proposal. MUST be unique within the poll.
 	 * @param description Longer description of the proposal
-	 * @param areaId (optional) AreaId. DEFAULT_AREA will be used if not set.
 	 * @return The updated poll with the added proposal
 	 * @throws LiquidoException when proposal title already exists in this poll.
 	 */
 	@GraphQLMutation(name = "addProposal", description = "Add new proposal to a poll")
 	@PreAuthorize(HAS_ROLE_USER)
-	public PollModel addProposalToPoll_GraphQL(
+	public PollModel addProposalToPoll(
 		@GraphQLNonNull @GraphQLArgument(name = "pollId") long pollId,
 		@GraphQLNonNull @GraphQLArgument(name = "title") String title,
-		@GraphQLNonNull @GraphQLArgument(name = "description") String description,
-		@GraphQLArgument(name = "areaId") Long areaId
+		@GraphQLNonNull @GraphQLArgument(name = "description") String description
 	) throws LiquidoException {
-		// If areaId is given, then lookup that AreaModel. Otherwise lookup defaultArea;
-		AreaModel area = this.getAreaOrDefault(areaId);
+		UserModel user = authUtil.getCurrentUser().orElseThrow(LiquidoException.unauthorized("Must be logged in to add a proposal!"));
+
 		// Find the poll
 		PollModel poll = pollRepo.findById(pollId)
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposal: There is no poll with id="+pollId));
 		// Create a new proposal and add it to the poll (via PollService)
-		LawModel proposal = new LawModel(title, description, area);
+		LawModel proposal = new LawModel(title, description, poll.getArea());
 
 		// The PWA mobile client has no ideas that need to reach a quorum of supporters before they become a proposal. Mobile client directly creates proposals.
 		// Warn if this is configured incorrectly.
@@ -153,14 +159,48 @@ public class PollsGraphQL {
 
 		proposal.setStatus(LawModel.LawStatus.PROPOSAL);
 		poll = pollService.addProposalToPoll(proposal, poll);
+		//BUGFIX: proposal.getCreatedBy() is not yet filled here
+		log.info("addProposalToPoll: " + user.toStringShort() + " adds proposal '" + proposal.getTitle() + "' to poll.id="+poll.id);
 		return poll;
 	}
 
 	/**
-	 * Get a valid voter Token
+	 * Like a proposal in a poll.
+	 * Poll must be in status ELABORATION
+	 *
+	 * @param pollId a poll
+	 * @param proposalId a proposal of that poll
+	 * @return the poll
+	 * @throws LiquidoException when poll is not in status ELABORATION or when passed proposalId is not part of that poll.
+	 */
+	@GraphQLMutation(name = "likeProposal", description = "Add a like to a proposal in a poll")
+	@PreAuthorize(HAS_ROLE_USER)
+	public PollModel likeProposal(
+		@GraphQLNonNull @GraphQLArgument(name = "pollId") long pollId,
+		@GraphQLNonNull @GraphQLArgument(name = "proposalId") long proposalId
+	) throws LiquidoException {
+		UserModel user = authUtil.getCurrentUser().orElseThrow(LiquidoException.unauthorized("Must be logged in to like a proposal!"));
+
+		// Find the poll and check that poll is in status ELABORATION
+		PollModel poll = pollRepo.findById(pollId)
+			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_ADD_SUPPORTER, "Cannot supportProposal: There is no poll with id=" + pollId));
+		if (!poll.getStatus().equals(PollModel.PollStatus.ELABORATION))
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_SUPPORTER, "Cannot supportProposal: Poll is not in status ELABORATION");
+
+		// Find the proposal in this poll
+		LawModel proposal = DoogiesUtil.find(poll.getProposals(), prop -> prop.getId() == proposalId)
+			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot supportProposal: There is no proposal,id=" + proposalId + " in poll.id=" + pollId));
+
+		lawService.addSupporter(user, proposal);
+		log.info("likeProposal: " + user.toStringShort() + " likes proposal.id=" + proposalId + " in poll.id="+poll.id);
+		return poll;
+	}
+
+	/**
+	 * Get a valid voter Token for casting a ballot.
 	 * @param areaId optional area otherwise default area will be used
 	 * @param tokenSecret secret that only the user must know!
-	 * @param becomePublicProxy if user's automatically wants to become a public proxy
+	 * @param becomePublicProxy if user's automatically wants to become a public proxy (default=false)
 	 * @return { "voterToken": "$2ADDgg33gva...." }
 	 * @throws LiquidoException when user is not logged into a team
 	 */
@@ -176,6 +216,34 @@ public class PollsGraphQL {
 			.orElseThrow(LiquidoException.unauthorized("Must be logged in to getVoterToken!"));
 		return castVoteService.createVoterTokenAndStoreRightToVote(voter, area, tokenSecret, becomePublicProxy);
 	}
+
+	/**
+	 * Is a proposal already liked by the currently logged in user?
+	 *
+	 * @param proposal GraphQL context: the LawModel
+	 * @return true, if currently logged in user is already a supporter of this proposal
+	 */
+	@GraphQLQuery(name = "isLikedByCurrentUser", description = "Is a proposal already liked by the currently logged in user?")
+	@PreAuthorize(HAS_ROLE_USER)
+	public boolean isLikedByCurrentUser(@GraphQLContext LawModel proposal) {
+		// This adds the new boolean field "likedByCurrentUser" to the GraphQL representation of a proposal(LawModel) that can now be queried by the client.  graphql-spqr I like
+		return lawService.isSupportedByCurrentUser(proposal);
+	}
+
+	/**
+	 * Is a proposal created by the currently logged in user
+	 * This of course assumes that there is a currently logged in user. But polls and propos can only be fetched by authenticated users.
+	 *
+	 * @param proposal A proposal in a poll.
+	 * @return true if proposal was created by the currently logged in user.
+	 */
+	@GraphQLQuery(name = "isCreatedByCurrentUser", description = "Is a proposal created by the currently logged in user?")
+	@PreAuthorize(HAS_ROLE_USER)
+	public boolean isCreatedByCurrentUser(@GraphQLContext LawModel proposal) {
+		Optional<UserModel> user = authUtil.getCurrentUser();
+		return proposal != null && user.isPresent() && user.get().equals(proposal.getCreatedBy());
+	}
+
 
 	/**
 	 * Cast a vote in a poll
@@ -196,7 +264,9 @@ public class PollsGraphQL {
 	) throws LiquidoException {
 		PollModel poll = pollRepo.findById(pollId)
 			.orElseThrow(LiquidoException.notFound("Cannot cast vote. Poll(id="+pollId+") not found!"));
-		return castVoteService.castVote(voterToken, poll, voteOrderIds);
+		CastVoteResponse res = castVoteService.castVote(voterToken, poll, voteOrderIds);
+		log.info("castVote: poll.id=" + pollId);		//TODO: log all user actions into seperate file
+		return res;
 	}
 
 	/**

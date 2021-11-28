@@ -53,17 +53,12 @@ public class PollService {
   @Autowired
 	BallotRepo ballotRepo;
 
-  @Autowired
-	RightToVoteRepo rightToVoteRepo;
-
-  @Autowired
-	ProxyService proxyService;
+	@Autowired
+	AuthUtil authUtil;
 
   @Autowired
 	CastVoteService castVoteService;
 
-  //@Autowired
-	//TaskScheduler scheduler;
 
 	/**
 	 * Create a new poll. Then proposals can be added to this poll.
@@ -146,14 +141,15 @@ public class PollService {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Poll.id="+poll.getId()+" already contains proposal.id="+proposal.getId());
 		if (poll.getProposals().stream().anyMatch(prop -> prop.title.equals(proposal.title)))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Poll.id="+poll.getId()+" already contains a proposal with the same title="+proposal.getTitle());
-		//TODO: admin is allowed to add more than one proposal
-    if (poll.getProposals().stream().anyMatch(prop -> {
-			UserModel u1 = prop.getCreatedBy();
-			UserModel u2 = proposal.getCreatedBy();
-			boolean result = u1.equals(u2);
-			return result;
-		}))
+
+		// Current user must not already have a proposal in this poll. Expect the admin may add more proposals.
+		UserModel currentUser = authUtil.getCurrentUser()
+			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.UNAUTHORIZED, "Cannot delete poll. Admin must be logged in to delete a poll!"));
+		boolean isAdmin = authUtil.userIsAdminInTeam(currentUser.id, poll.getTeam().id);
+		if (!isAdmin && poll.getProposals().stream().anyMatch(prop -> currentUser.equals(prop.createdBy)))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, proposal.getCreatedBy().toStringShort() + " already has a proposal in poll(id="+poll.getId()+")");
+		// Admin could also be fetched this way. But who knows how old the passed poll is.  poll.getTeam().isAdmin(currentUser);
+		// Keep in mind that proposal.getCreatedBy() might not be filled yet!
 
     log.debug("addProposalToPoll(proposal.id="+proposal.getId()+", poll.id="+poll.getId()+")");
     proposal.setStatus(LawModel.LawStatus.ELABORATION);

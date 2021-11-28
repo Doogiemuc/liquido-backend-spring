@@ -172,6 +172,8 @@ public class TeamsGraphQL {
 			team = teamRepo.save(team);
 			log.info("User <" + member.email + "> joined team: " + team.toString());
 			String jwt = jwtTokenUtils.generateToken(member.getId(), team.getId());
+			//BUGFIX: Authenticate new user in spring's security context, so that access restricted attributes such as isLikeByCurrentUser can be queried via GraphQL.
+			authUtil.authenticateInSecurityContext(member.id, team.id, jwt);
 			return new CreateOrJoinTeamResponse(team, member, jwt);
 		} catch (Exception e) {
 			throw new LiquidoException(Errors.INTERNAL_ERROR, "Error: Cannot join team.", e);
