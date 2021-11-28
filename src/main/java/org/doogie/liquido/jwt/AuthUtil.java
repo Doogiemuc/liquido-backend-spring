@@ -66,6 +66,15 @@ public class AuthUtil {
 	}
 
 	/**
+	 * This server is stateless. So there is no login or logout functionality.
+	 * But while a request is processed, there is an {@link Authentication} in Spring-Security.
+	 * With this method, that Authentication can be removed. Mainly used by tests.
+	 */
+	public void logoutOfSecurityContext() {
+		SecurityContextHolder.getContext().setAuthentication(null);
+	}
+
+	/**
 	 * Get the LiquidoAuthentication object from the Security Context. Our {@link JwtAuthenticationFilter} has put it in there.
 	 * @return (optional) LiquidoAuthentication if authenticated.
 	 */

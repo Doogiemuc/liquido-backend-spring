@@ -129,9 +129,9 @@ public class TeamsGraphQL {
 	 *
 	 * This should be called anonymously. Then the new member <b>must</b> register with a an email and mobilephone that does not exit in LIQUIDO yet.
 	 * When called with JWT, then the already registered user may join this additional team. But he must exactly provide his user data.
-	 *
 	 * Will also throw an error, when email is already admin or member in that team.
 	 *
+	 * After returning from this method, the user will be logged in.
 	 *
 	 * @param inviteCode valid invite code of the team to join
 	 * @param member new user member, with email and mobilephone
@@ -152,7 +152,7 @@ public class TeamsGraphQL {
 
 		Optional<UserModel> currentUserOpt = authUtil.getCurrentUser();
 		if (currentUserOpt.isPresent()) {
-			// IF user is logged and then he CAN join another team, but he MUST provide his already registered email and mobilephone.
+			// IF user is already logged in, then he CAN join another team, but he MUST provide his already registered email and mobilephone.
 			if (!DoogiesUtil.isEqual(currentUserOpt.get().email, member.email) ||
 			    !DoogiesUtil.isEqual(currentUserOpt.get().mobilephone, member.mobilephone)) {
 				throw new LiquidoException(Errors.USER_EMAIL_EXISTS, "Your are already registered. You must provide your email and mobilephone to join another team!");

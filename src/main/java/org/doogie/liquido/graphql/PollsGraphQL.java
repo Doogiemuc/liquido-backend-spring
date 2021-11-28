@@ -132,8 +132,7 @@ public class PollsGraphQL {
 	 * Creating ideas is currently not supported via the GraphQL endpoints. The workflow for the mobile app is simplified.
 	 *
 	 * @param pollId the poll, MUST exist
-	 * @param title Title of the new proposal. MUST be unique within the poll.
-	 * @param description Longer description of the proposal
+	 * @param proposal with title, description and icon. Optionally area can be set or default area will be used.
 	 * @return The updated poll with the added proposal
 	 * @throws LiquidoException when proposal title already exists in this poll.
 	 */
@@ -141,22 +140,21 @@ public class PollsGraphQL {
 	@PreAuthorize(HAS_ROLE_USER)
 	public PollModel addProposalToPoll(
 		@GraphQLNonNull @GraphQLArgument(name = "pollId") long pollId,
-		@GraphQLNonNull @GraphQLArgument(name = "title") String title,
-		@GraphQLNonNull @GraphQLArgument(name = "description") String description
+		@GraphQLNonNull @GraphQLArgument(name = "proposal") LawModel proposal
 	) throws LiquidoException {
 		UserModel user = authUtil.getCurrentUser().orElseThrow(LiquidoException.unauthorized("Must be logged in to add a proposal!"));
 
 		// Find the poll
 		PollModel poll = pollRepo.findById(pollId)
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposal: There is no poll with id="+pollId));
-		// Create a new proposal and add it to the poll (via PollService)
-		LawModel proposal = new LawModel(title, description, poll.getArea());
 
 		// The PWA mobile client has no ideas that need to reach a quorum of supporters before they become a proposal. Mobile client directly creates proposals.
 		// Warn if this is configured incorrectly.
 		if (liquidoProps.supportersForProposal > 0)
 			log.warn("Directly adding a proposal via GraphQL to poll(id="+poll.id+"). But needed supportersForProposal is actually configured to be "+liquidoProps.supportersForProposal);
 
+		// Create a new proposal and add it to the poll (via PollService)
+		if (proposal.getArea() == null) proposal.setArea(poll.getArea());
 		proposal.setStatus(LawModel.LawStatus.PROPOSAL);
 		poll = pollService.addProposalToPoll(proposal, poll);
 		//BUGFIX: proposal.getCreatedBy() is not yet filled here

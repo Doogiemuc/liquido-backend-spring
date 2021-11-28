@@ -64,7 +64,7 @@ logging:
       doogie:
         liquido: DEBUG
       springframework:
-        security: DEBUG
+#        security: DEBUG
         web:
           filter:
             # Show HTTP requests

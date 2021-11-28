@@ -129,7 +129,8 @@ public class PollService {
    * @throws LiquidoException if area or status of proposal or poll is wrong. And also when user already has a proposal in this poll.
    */
   public PollModel addProposalToPoll(@NonNull LawModel proposal, @NonNull PollModel poll) throws LiquidoException {
-  	if (proposal.getStatus() != LawModel.LawStatus.PROPOSAL)
+		// sanity checks
+		if (proposal.getStatus() != LawModel.LawStatus.PROPOSAL)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposalToPoll: poll(id="+poll.getId()+"): Proposal(id="+proposal.getId()+") is not in state PROPOSAL.");
     if (poll.getStatus() != PollModel.PollStatus.ELABORATION)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposalToPoll: Poll(id="+poll.getId()+") is not in ELABORATION phase");
@@ -143,9 +144,8 @@ public class PollService {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Poll.id="+poll.getId()+" already contains a proposal with the same title="+proposal.getTitle());
 
 		// Current user must not already have a proposal in this poll. Expect the admin may add more proposals.
-		UserModel currentUser = authUtil.getCurrentUser()
-			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.UNAUTHORIZED, "Cannot delete poll. Admin must be logged in to delete a poll!"));
-		boolean isAdmin = authUtil.userIsAdminInTeam(currentUser.id, poll.getTeam().id);
+		UserModel currentUser = authUtil.getCurrentUser().orElseThrow(LiquidoException.supply(LiquidoException.Errors.UNAUTHORIZED, "Cannot add proposal. Must be logged in!"));
+		boolean isAdmin = poll.getTeam() != null && authUtil.userIsAdminInTeam(currentUser.id, poll.getTeam().id);
 		if (!isAdmin && poll.getProposals().stream().anyMatch(prop -> currentUser.equals(prop.createdBy)))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, proposal.getCreatedBy().toStringShort() + " already has a proposal in poll(id="+poll.getId()+")");
 		// Admin could also be fetched this way. But who knows how old the passed poll is.  poll.getTeam().isAdmin(currentUser);
@@ -162,11 +162,11 @@ public class PollService {
    * Start the voting phase of the given poll.
    * Poll must be in elaboration phase and must have at least two proposals
 	 * @param poll a poll in elaboration phase with at least two proposals
-	 * @return
+	 * @return the poll that is now in status VOTING
 	 */
   @Transactional
   public PollModel startVotingPhase(@NonNull PollModel poll) throws LiquidoException {
-    log.info("startVotingPhase of "+poll.toString());
+    log.info("startVotingPhase of " + poll);
     if (poll.getStatus() != PollModel.PollStatus.ELABORATION)
       throw new LiquidoException(LiquidoException.Errors.CANNOT_START_VOTING_PHASE, "Poll(id="+poll.id+") must be in status ELABORATION");
     if (poll.getProposals().size() < 2)

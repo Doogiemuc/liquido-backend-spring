@@ -402,6 +402,7 @@ public class TestDataCreator implements CommandLineRunner {
 		String adminWebsite     = "www.liquido.vote";
 		String adminPicture     = TestFixtures.AVATAR_IMG_PREFIX + "0.png";
 		UserModel admin = new UserModel(adminEmail, adminName, adminMobilephone, adminWebsite, adminPicture);
+		authUtil.logoutOfSecurityContext();		//BUGFIX: make sure user is not logged in as someone else before creating a new team
 		CreateOrJoinTeamResponse res = teamServiceGQL.createNewTeam(teamName, admin);
 		CreateOrJoinTeamResponse joinTeamRes = null;
 		for (int j = 0; j < TestFixtures.NUM_TEAM_MEMBERS; j++) {
@@ -412,6 +413,7 @@ public class TestDataCreator implements CommandLineRunner {
 				"www.liquido.vote",
 				TestFixtures.AVATAR_IMG_PREFIX + (j%16) + ".png"
 			);
+			authUtil.logoutOfSecurityContext();		//BUGFIX: make sure user is not logged in as someone else before joining a new team
 			joinTeamRes = teamServiceGQL.joinTeam(res.getTeam().getInviteCode(), member);
 		}
 		return joinTeamRes.getTeam(); // most up to date firstTeam entity, with all members, is from last joinNewTeam response
@@ -437,9 +439,11 @@ public class TestDataCreator implements CommandLineRunner {
 			"www.liquido.vote",
 			TestFixtures.AVATAR_IMG_PREFIX + "1.png"
 		);
+		authUtil.logoutOfSecurityContext();		//BUGFIX: make sure user is not logged in as someone else before joining a new team
 		CreateOrJoinTeamResponse res = teamServiceGQL.joinTeam(team1.getInviteCode(), member);
-		// MUST authenticate for the second join team call!
-		authUtil.authenticateInSecurityContext(res.getUser().getId(), res.getTeam().getId(), res.getJwt());
+		// User is now authenticated!
+		// Now not necessary any more: MUST authenticate for the second join team call!
+		// authUtil.authenticateInSecurityContext(res.getUser().getId(), res.getTeam().getId(), res.getJwt());
 		res = teamServiceGQL.joinTeam(team2.getInviteCode(), member);
 		return res.getUser();
 	}
@@ -458,12 +462,12 @@ public class TestDataCreator implements CommandLineRunner {
 		authUtil.authenticateInSecurityContext(admin.getId(), team.getId(), null);  // fake login admin
 		String title = pollTitle != null ? pollTitle : "Poll " + now +  " in Team "+team.getTeamName();
 		PollModel poll = pollService.createPoll(title, getDefaultArea(), team);
-		LawModel proposal = this.createProposal("Proposal " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), getDefaultArea(), admin, 2, 1);
+		LawModel proposal = this.createProposal("Proposal " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(100,200), getDefaultArea(), admin, 2, 1);
 		pollService.addProposalToPoll(proposal, poll);
 		UserModel member = team.getMembers().stream().findFirst()
 			.orElseThrow(LiquidoException.notFound("need a team member to seedPollInTeam"));
 		authUtil.authenticateInSecurityContext(member.getId(), team.getId(), null);  // fake login member
-		LawModel proposal2 = this.createProposal("Another prop " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(30,100), getDefaultArea(), member, 2, 1);
+		LawModel proposal2 = this.createProposal("Another prop " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(100,200), getDefaultArea(), member, 2, 1);
 		poll = pollService.addProposalToPoll(proposal2, poll);
 		return poll;
 	}
@@ -573,7 +577,7 @@ public class TestDataCreator implements CommandLineRunner {
       StringBuffer ideaDescr = new StringBuffer();
       ideaDescr.append(DoogiesUtil.randToken(8));    // prepend with some random chars to test sorting
       ideaDescr.append(" ");
-      ideaDescr.append(util.getLoremIpsum(0,400));
+      ideaDescr.append(util.getLoremIpsum(100,400));
 
       UserModel createdBy = util.randUser();
       auditorAware.setMockAuditor(createdBy);
@@ -597,7 +601,7 @@ public class TestDataCreator implements CommandLineRunner {
   private LawModel createProposal(String title, String description, AreaModel area, UserModel createdBy, int ageInDays, int reachedQuorumDaysAgo) {
   	if (ageInDays < reachedQuorumDaysAgo) throw new RuntimeException("Proposal cannot reach its quorum before it was created.");
     auditorAware.setMockAuditor(createdBy);
-    LawModel proposal = new LawModel(title, description, getDefaultArea());
+    LawModel proposal = new LawModel(title, description, area);
 		lawRepo.save(proposal);
 
 		// add enough supporters so that the idea becomes a proposal. (Or add some random supporters.)
@@ -618,7 +622,7 @@ public class TestDataCreator implements CommandLineRunner {
     StringBuffer description = new StringBuffer();
     description.append(DoogiesUtil.randToken(8));    // prepend with some random chars to test sorting
     description.append(" ");
-    description.append(util.getLoremIpsum(0,400));
+    description.append(util.getLoremIpsum(100,400));
     UserModel createdBy = this.util.randUser();
     int ageInDays = rand.nextInt(10);
     int reachQuorumDaysAgo = (int)(ageInDays*rand.nextFloat());
