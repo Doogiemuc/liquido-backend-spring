@@ -76,8 +76,6 @@ public class DoogiesUtil {
 		}
 	}
 
-
-
 	public static final String eMailRegEx = "\\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,64}\\b";
   public static final Pattern p = Pattern.compile(eMailRegEx);
 
@@ -108,14 +106,16 @@ public class DoogiesUtil {
 	 * <h4>Example:</h4>
 	 * <pre>Optional&lt;UserModel&gt; firstMatchingUser = doesContain(userList, u -> u.name = "Hans")</pre>
 	 *
-	 * @param it an Iterable, e.g. a Colletion, List or Set
+	 * It's unbelievable to me that {@link Collections} still does not contain this.
+	 *
+	 * @param it an Iterable, e.g. a Collection, List or Set
 	 * @param predicate A function that takes an element as input and returns true
-	 *                  if this element fullfills the predicate.
+	 *                  if this element matches the predicate, eg. has a specific ID.
 	 * @param <T> type of elements in Iterable
 	 * @return An optional that contains the first element in <pre>it</pre> that matches <pre>predicate</pre>
-	 *         or Optional.empty() if no element <pre>it</pre> has that predicate
+	 *         or Optional.empty() if no element in the collections matches that predicate.
 	 */
-	public static <T> Optional<T> doesContain(Iterable<T> it, Predicate<T> predicate) {
+	public static <T> Optional<T> find(Iterable<T> it, Predicate<T> predicate) {
 		for(T elem : it) {
 			if (predicate.test(elem))
 				return Optional.of(elem);

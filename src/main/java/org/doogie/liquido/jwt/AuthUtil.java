@@ -82,7 +82,8 @@ public class AuthUtil {
 	}
 
 	/**
-	 * Check if a given user is the admin of this team. <b>This will fire a DB request!</b>
+	 * Check if a given user is the admin of this team. <b>This will fire a DB request!</b>.
+	 * Alternatively you can call {@link TeamModel#isAdmin(UserModel)}
 	 * @param teamId Id of an existing team
 	 * @param userId an existing userId in that team
 	 * @return true, if user and team exist, and user is an admin in that team.
