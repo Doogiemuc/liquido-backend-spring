@@ -57,7 +57,7 @@ public class LawRestController {
 	@RequestMapping(value = "/laws/{ideaId}/like", method = RequestMethod.POST)
 	@PreAuthorize(AuthUtil.HAS_ROLE_USER)
 	public @ResponseBody ResponseEntity<?> addSupporter(@PathVariable(name="ideaId") LawModel idea) throws LiquidoException {
-		UserModel currentUser = authUtil.getCurrentUser()
+		UserModel currentUser = authUtil.getCurrentUserFromDB()
 			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "MUST be logged in to add a supporter"));
 		lawService.addSupporter(currentUser, idea);
 		return ResponseEntity.ok("Thank you for supporting this idea.");

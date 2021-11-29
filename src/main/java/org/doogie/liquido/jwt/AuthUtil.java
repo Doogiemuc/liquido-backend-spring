@@ -5,6 +5,7 @@ import org.doogie.liquido.datarepos.TeamRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
+import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -47,7 +48,8 @@ public class AuthUtil {
 	 * Login a user into a team. This will check if user is an admin with the DB
 	 * and add the corresponding SimpleGrantedAuthority.
 	 *
-	 * This is called for each and every request from {@link JwtAuthenticationFilter} So keep this method fast !!!
+	 * <b>This is called for each and every request from {@link JwtAuthenticationFilter} So keep this method fast !!!</b>
+	 *
 	 * @param userId user id
 	 * @param teamId team id
 	 * @param jwt already validated JWT (is validated in {@link JwtAuthenticationFilter})
@@ -102,6 +104,12 @@ public class AuthUtil {
 		return teamOpt.isPresent();
 	}
 
+	public boolean isCurrentUserAdminInTeam() {
+		Optional<LiquidoAuthentication> liquidoAuthentication = getLiquidoAuthentication();
+		if (!liquidoAuthentication.isPresent()) return false;
+		return userIsAdminInTeam(liquidoAuthentication.get().userId, liquidoAuthentication.get().getTeamId());
+	}
+
 	/**
 	 * Get the currently logged in user from the DB.
 	 * <b>This calls the DB!</b>
@@ -110,7 +118,7 @@ public class AuthUtil {
 	 *   ie. no authentication info was sent with a JWT
 	 *   or if the user.id couldn't be found in the DB
 	 */
-	public Optional<UserModel> getCurrentUser()  {
+	public Optional<UserModel> getCurrentUserFromDB()  {
 		Optional<LiquidoAuthentication> liquidoAuth = this.getLiquidoAuthentication();
 		if (!liquidoAuth.isPresent()) return Optional.empty();
 		liquidoAuth.get().getDetails();
@@ -123,7 +131,7 @@ public class AuthUtil {
 	 * <b>This calls the DB!</b>
 	 * @return TeamModel or <b>null</b> if no one is logged in
 	 */
-	public Optional<TeamModel> getCurrentTeam() {
+	public Optional<TeamModel> getCurrentTeamFromDB() {
 		Optional<LiquidoAuthentication> liquidoAuth = this.getLiquidoAuthentication();
 		if (!liquidoAuth.isPresent()) return Optional.empty();
 		return teamRepo.findById(liquidoAuth.get().getTeamId());

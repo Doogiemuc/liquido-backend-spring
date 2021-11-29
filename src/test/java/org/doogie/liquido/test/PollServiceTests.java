@@ -1,20 +1,20 @@
 package org.doogie.liquido.test;
 
 import lombok.extern.slf4j.Slf4j;
-import org.doogie.liquido.testdata.LiquidoProperties;
-import org.doogie.liquido.datarepos.*;
+import org.doogie.liquido.datarepos.BallotRepo;
+import org.doogie.liquido.datarepos.PollRepo;
+import org.doogie.liquido.datarepos.RightToVoteRepo;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteRequest;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
-import org.doogie.liquido.services.ProxyService;
 import org.doogie.liquido.services.voting.SchulzeMethod;
 import org.doogie.liquido.testdata.TestDataCreator;
 import org.doogie.liquido.testdata.TestDataUtils;
 import org.doogie.liquido.testdata.TestFixtures;
-import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Matrix;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +27,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * Tests for {@link PollService}
@@ -38,25 +39,16 @@ import static org.junit.Assert.*;
 @Slf4j
 @RunWith(SpringRunner.class)
 @SpringBootTest
-public class PollServiceTests  extends BaseTest {
+public class PollServiceTests extends BaseTest {
 
 	@Autowired
 	PollService pollService;
-
-	@Autowired
-	ProxyService proxyService;
 
 	@Autowired
 	CastVoteService castVoteService;
 
 	@Autowired
 	TestDataCreator testDataCreator;
-
-	@Autowired
-	AreaRepo areaRepo;
-
-	@Autowired
-	LawRepo lawRepo;
 
 	@Autowired
 	PollRepo pollRepo;
@@ -68,13 +60,7 @@ public class PollServiceTests  extends BaseTest {
 	RightToVoteRepo rightToVoteRepo;
 
 	@Autowired
-	LiquidoRestUtils restUtils;
-
-	@Autowired
 	TestDataUtils util;
-
-	@Autowired
-	LiquidoProperties prop;
 
 	@Autowired
 	Environment springEnv;
@@ -83,14 +69,24 @@ public class PollServiceTests  extends BaseTest {
 	public String basePath;
 
 	/**
+	 * Login a dummy user in the backend. This does not do anything related to HTTP!
+	 */
+	private UserModel dummyLoginInSecurityContext() {
+		UserModel member = team.getMembers().iterator().next();
+		authUtil.authenticateInSecurityContext(member.getId(), team.getId(), null);  //TODO: test with JWT
+		auditor.setMockAuditor(member);
+		return member;
+	}
+
+
+	/**
 	 * This test creates a new poll. This makes it a bit slow, but we need a given combination of ballots.
 	 * @throws LiquidoException
 	 */
 	@Test
-	public void testSchulzeMethode() throws LiquidoException {
-		log.info("=========== testSchulzeMethode");
-
+	public void testSchulzeMethode() {
 		// We need 45 voters
+		this.dummyLoginInSecurityContext();
 		PollModel poll = testDataCreator.seedPollInVotingPhase(5);
 
 		// These numbers are from the example on wikipedia https://de.wikipedia.org/wiki/Schulze-Methode
@@ -224,6 +220,7 @@ public class PollServiceTests  extends BaseTest {
 	 */
 	@Test
 	public void testRankedPairs() throws LiquidoException {
+		this.dummyLoginInSecurityContext();
 		String[] cities = new String[] {"Memphis", "Nashville", "Knoxville", "Chattanooga"};
 		PollModel poll = testDataCreator.seedPollInVotingPhase(cities.length);
 
@@ -288,6 +285,7 @@ public class PollServiceTests  extends BaseTest {
 	 */
 	@Test
 	public void testRankedPairsNoVotes() throws LiquidoException {
+		this.dummyLoginInSecurityContext();
 		PollModel poll = testDataCreator.seedPollInVotingPhase(2);
 		// no seeded votes in this test!
 		pollService.finishVotingPhase(poll);
@@ -308,6 +306,7 @@ public class PollServiceTests  extends BaseTest {
 	 */
 	@Test
 	public void testFindEffectiveProxy() throws LiquidoException {
+		this.dummyLoginInSecurityContext();
 		String voterToken;
 		CastVoteRequest castVoteRequest;
 		UserModel voter;
@@ -363,6 +362,7 @@ public class PollServiceTests  extends BaseTest {
 	/** When there is no vote, then there must not be a winner! (came from a BUGFIX) */
 	@Test
 	public void testFinishVotingPhaseWithoutVotes() throws LiquidoException {
+		this.dummyLoginInSecurityContext();
 		// GIVEN a poll in voting phase
 		PollModel poll = testDataCreator.seedPollInVotingPhase(2);
 

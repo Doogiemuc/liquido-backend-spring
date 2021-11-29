@@ -1,7 +1,6 @@
 package org.doogie.liquido.test.graphql;
 
 import com.jayway.jsonpath.JsonPath;
-import graphql.ExecutionResultImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.OffsetLimitPageable;
 import org.doogie.liquido.datarepos.PollRepo;
@@ -27,7 +26,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.HttpClientErrorException;
 
-import javax.annotation.PostConstruct;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -47,25 +45,8 @@ public class GraphQLTests extends HttpBaseTest {
 	@Autowired
 	PollRepo pollRepo;
 
-	/** all test cases will run against this team */
-	TeamModel team;
 
 	private final String GraphQLPath = "/graphql";
-
-
-	@PostConstruct
-	public void loadTeamTestee() {
-		this.team = teamRepo.findAll(new OffsetLimitPageable(0, 1)).iterator().next();
-	}
-
-	public void loginTeamAdmin() {
-		this.loginUserJWT(team.getAdmins().iterator().next().getId(), team.getId());
-	}
-
-	public void loginTeamMember() {
-		this.loginUserJWT(team.getMembers().iterator().next().getId(), team.getId());
-	}
-
 
 	/**
 	 * Test register and login flow via GraphQL.
@@ -84,8 +65,6 @@ public class GraphQLTests extends HttpBaseTest {
 
 		/* login with received token
 
-
-
 		res = anonymousClient.getForEntity("/auth/loginWithToken?mobile={mobile}&token={smsToken}", String.class, mobile, smsToken);
 		String jwt = res.getBody();
 		log.debug("received JWT: "+jwt);
@@ -102,17 +81,11 @@ public class GraphQLTests extends HttpBaseTest {
 
 	}
 
-
-
-
-
-
-
 	/** Load information about team of currently logged in user */
 	@Test
 	public void testGetOwnTeam() {
 		//GIVEN a query for team of currently logged in user
-		this.loginTeamMember();
+		this.loginTeamMemberWithJWT();
 		String expectedTeamName   = team.getTeamName();
 		String graphQL    = "{ team { id teamName } }";
 
@@ -228,7 +201,7 @@ public class GraphQLTests extends HttpBaseTest {
 	@Test
 	public void testAdminCreatesNewPoll() {
 		//GIVEN a team with a logged in admin
-		this.loginTeamAdmin();
+		this.loginTeamAdminWithJWT();
 
 		// AND a graphQL mutation to createPoll
 		String pollTitle = "Poll from test " + System.currentTimeMillis() * 10000;
@@ -244,7 +217,7 @@ public class GraphQLTests extends HttpBaseTest {
 	@Test
 	public void testAddProposalToPoll() {
 		//GIVEN a logged in Admin
-		this.loginTeamAdmin();
+		this.loginTeamAdminWithJWT();
 
 		//  AND a poll in ELABORATION
 		List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.ELABORATION);
@@ -254,12 +227,13 @@ public class GraphQLTests extends HttpBaseTest {
 		// AND data for a new proposal
 		long now = System.currentTimeMillis() % 10000;
 		String proposalTitle = "Proposal added from Test "+now;
-		String description = getLoremIpsum(0, 200);
+		String description = getLoremIpsum(100, 200);
+		String icon = "atom";
 
 		// AND a graphQL mutation to add a proposal to this poll
 		String addProposalGraphQL = String.format(
-			"mutation { addProposal(pollId: \"%s\", title: \"%s\", description: \"%s\") { id, title, proposals { id, title, description } } }",
-			poll.getId(), proposalTitle, description
+			"mutation { addProposal(pollId: \"%s\", title: \"%s\", description: \"%s\", icon: \"%s\") { id, title, proposals { id, title, description, icon } } }",
+			poll.getId(), proposalTitle, description, icon
 		);
 
 		//WHEN this proposal is added to the poll

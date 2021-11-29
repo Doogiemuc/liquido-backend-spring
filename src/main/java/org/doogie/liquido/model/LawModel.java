@@ -2,6 +2,7 @@ package org.doogie.liquido.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.leangen.graphql.annotations.GraphQLIgnore;
 import lombok.*;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -57,17 +58,21 @@ public class LawModel extends BaseModel implements Comparable<LawModel> {
   @NotNull
   @NonNull
   @Column(length = 1000)
-	@Size(min=24, message = "Proposal description must be at least some characters long.")
+	@Size(min=20, message = "Proposal description must be at least some characters long.")
   public String description;
 
 	/** A nice looking icon. Mobile clients stores fontawesome icon names here. */
 	@Nullable
 	public String icon = null;
 
-  /** Area of this idea/proposal/proposal */
-  @NotNull
-  @NonNull
+  /**
+	 * Idea/proposal/proposal/laws can be grouped into areas. But this is optional
+	 * A user's {@link RightToVoteModel} is also issued per area.
+	 */
+	@NotNull
+	@NonNull
   @ManyToOne(optional = false)
+	//TODO: Make areas optional for mobile clients. Maybe via @GraphQLIgnore? Maybe in the same way as I prevent the backreference from Team to Polls?
   public AreaModel area;
 
 	/** enumeration for proposal status */

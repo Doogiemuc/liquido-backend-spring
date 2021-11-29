@@ -74,18 +74,51 @@ public class HttpBaseTest extends BaseTest {
 			.build();
 	}
 
-	/** old way of logging in a user without a team. Used in web only. */
-	public void loginUserJWT(String userEmail) {
-		UserModel user = userRepo.findByEmail(userEmail).orElseThrow(() -> new RuntimeException("Cannot loginUserJWT. Cannot find user with email="+userEmail));
-		this.loginUserJWT(user.getId(), null);   //TODO: JWT must contain a team. Refactor this
+	/**
+	 * Login the admin of the team under test by creating a dummy JWT
+	 * that all following HTTP requests will send in their Bearer header.
+	 * @return the logged in admin user
+	 */
+	public UserModel loginTeamAdminWithJWT() {
+		UserModel admin = team.getAdmins().iterator().next();
+		String jwt = jwtTokenUtils.generateToken(admin.getId(), team.getId());
+		jwtAuthInterceptor.setJwtToken(jwt);
+		//authUtil.authenticateInSecurityContext(admin.getId(), team.getId(), jwt);
+		//auditor.setMockAuditor(admin);
+		return admin;
 	}
 
 	/**
-	 * little helper to quickly login a specific user
+	 * Login a member of the team under test by creating a dummy JWT
+	 * that all following HTTP requests will send in their Bearer header.
+	 * @return the logged in Member
 	 */
-	public void loginUserJWT(Long userId, Long teamId) {
-		// Here we see that advantage of a completely stateless server. We simply generate a JWT and that's it. No login state is stored on the server.
-		String jwt = jwtTokenUtils.generateToken(userId, teamId);
+	public UserModel loginTeamMemberWithJWT() {
+		UserModel member = team.getMembers().iterator().next();
+		String jwt = jwtTokenUtils.generateToken(member.getId(), team.getId());
+		//authUtil.authenticateInSecurityContext(member.getId(), team.getId(), jwt);
+		jwtAuthInterceptor.setJwtToken(jwt);
+		//auditor.setMockAuditor(member);
+		return member;
+	}
+
+	/**
+	 * little helper to quickly login a specific user via JWT
+
+	 public void loginUserJWT(Long userId, Long teamId) {
+	 // Here we see that advantage of a completely stateless server. We simply generate a JWT and that's it. No login state is stored on the server.
+	 String jwt = jwtTokenUtils.generateToken(userId, teamId);
+	 jwtAuthInterceptor.setJwtToken(jwt);
+	 }
+	 */
+
+
+	/** old way of logging in a user without a team. Used in web client only. */
+	public void loginUserJWT(String userEmail) {
+		UserModel user = userRepo.findByEmail(userEmail).orElseThrow(() -> new RuntimeException("Cannot loginUserJWT. Cannot find user with email="+userEmail));
+		String jwt = jwtTokenUtils.generateToken(user.getId(), null);  //TODO: JWT must contain a team !!! Refactor this.  But this is called in MANY places :-(
 		jwtAuthInterceptor.setJwtToken(jwt);
 	}
+
+
 }

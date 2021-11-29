@@ -69,7 +69,7 @@ public class VoteRestController {
 			@RequestParam(name = "becomePublicProxy", defaultValue = "false", required = false) Boolean becomePublicProxy
 			//  Authentication auth
 	) throws LiquidoException {
-		UserModel voter = authUtil.getCurrentUser()
+		UserModel voter = authUtil.getCurrentUserFromDB()
 			.orElseThrow(()-> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Need login to get voterToken!"));			// [SECURITY]  This check is extremely important! Only valid users are allowed to get a voterToken
 		//UserModel voter = ((LiquidoAuthUser) auth.getPrincipal()).getLiquidoUserModel();   // This also works. But I kinda like getCurrentAuditor(), because it support mock auditor so nicely
 		log.trace("Request voterToken for " + voter.toStringShort() + " in " + area);
@@ -126,7 +126,7 @@ public class VoteRestController {
   @ResponseStatus(HttpStatus.CREATED)
   public @ResponseBody CastVoteResponse castVote(@RequestBody CastVoteRequest castVoteRequest) throws LiquidoException {
 		log.trace("=> POST /castVote");
-		Optional<UserModel> currentUser = authUtil.getCurrentUser();
+		Optional<UserModel> currentUser = authUtil.getCurrentUserFromDB();
 		if (currentUser.isPresent())
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_CAST_VOTE, "Cannot cast Vote. You should cast your vote anonymously. Do not send a JWT or SESSIONID in cookie.");
 		return castVoteService.castVote(castVoteRequest.getVoterToken(), castVoteRequest.getPoll(), castVoteRequest.getVoteOrderIds());            // all validity checks are done inside castVoteService.

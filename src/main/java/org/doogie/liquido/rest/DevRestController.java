@@ -244,7 +244,7 @@ public class DevRestController {
 		@PathVariable(name="pollId") PollModel poll,
 		@RequestParam(name="deleteProposals") boolean deleteProposals
 	) throws LiquidoException {
-		UserModel currentUser = authUtil.getCurrentUser()
+		UserModel currentUser = authUtil.getCurrentUserFromDB()
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.UNAUTHORIZED, "Cannot delete poll. Admin must be logged in to delete a poll!"));
 		log.info("DELETE " + poll.toString() + (deleteProposals ? " and all its proposals" : "") + " by "+currentUser.toStringShort());
 		pollService.deletePoll(poll, deleteProposals);

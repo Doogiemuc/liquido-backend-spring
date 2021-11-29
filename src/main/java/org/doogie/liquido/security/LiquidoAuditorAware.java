@@ -30,7 +30,7 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
 
   /**
    * Get the auditor that will be set as createdBy for newly created JPA entities.
-	 * @see AuthUtil#getCurrentUser()
+	 * @see AuthUtil#getCurrentUserFromDB()
    * @return (An Java optional that resolves to) the currently logged in user as a liquido UserModel
    */
   @Override
@@ -41,7 +41,7 @@ public class LiquidoAuditorAware implements AuditorAware<UserModel> {
 				log.warn("Returning mock auditor " + mockAuditor.getEmail());
 			return Optional.of(mockAuditor);
 		}
-		return authUtil.getCurrentUser();
+		return authUtil.getCurrentUserFromDB();
 	}
 
   public void setMockAuditor(UserModel mockAuditor) {

@@ -2,10 +2,14 @@ package org.doogie.liquido.test;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
+import org.doogie.liquido.datarepos.OffsetLimitPageable;
+import org.doogie.liquido.datarepos.TeamRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.jwt.AuthUtil;
+import org.doogie.liquido.jwt.JwtTokenUtils;
 import org.doogie.liquido.jwt.LiquidoAuthentication;
 import org.doogie.liquido.model.AreaModel;
+import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LiquidoException;
@@ -20,6 +24,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.context.ActiveProfiles;
 
+import javax.annotation.PostConstruct;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
@@ -28,12 +33,11 @@ import static org.doogie.liquido.jwt.AuthUtil.ROLE_USER;
 
 /**
  * Base for all test classes.
- * Provides many utility functions,
- * an anonymous HTTP client,
- * and a logged in HTTP client
+ * Provides basic utility functions that all tests need.
+ * See {@link HttpBaseTest} for HTTP related stuff.
  */
 @Slf4j
-@ActiveProfiles("test")			// Activate spring profile "test". Needed when run via maven. I am wondergin why this is not the default
+@ActiveProfiles("test")			// Activate spring profile "test". Needed when run via maven. I am wondering why this is not the default
 public class BaseTest {
 	@Autowired
 	LiquidoAuditorAware auditor;
@@ -50,10 +54,37 @@ public class BaseTest {
 	AreaRepo areaRepo;
 
 	@Autowired
+	TeamRepo teamRepo;
+
+	@Autowired
 	AuthUtil authUtil;
 
 	/* default area is lazily initiated in getDefaultArea() */
 	private AreaModel defaultArea = null;
+
+	/** all test cases will run against this team */
+	public TeamModel team;
+
+	@PostConstruct
+	public void loadTeamTestee() {
+		// TODO: refactor this as lazy loading
+		this.team = teamRepo.findAll(new OffsetLimitPageable(0, 1)).iterator().next();
+	}
+
+	/**
+	 * Lazily load the default area from the default. See liquido.defaultAreaTitle in application.properties
+	 * @return the default area
+	 * @throws RuntimeException when there is no area with that title
+	 */
+	public AreaModel getDefaultArea() throws RuntimeException {
+		if (this.defaultArea == null) {
+			this.defaultArea = areaRepo.findByTitle(props.getDefaultAreaTitle()).orElseThrow(
+				() -> new RuntimeException("Cannot find default area")
+			);
+		}
+		return this.defaultArea;
+	}
+
 
 	/**
 	 * Entry and exit logging for <b>all</b> test cases. Jiipppiiee. Did I already mention that I am a logging fanatic *G*
@@ -76,19 +107,6 @@ public class BaseTest {
 		}
 	};
 
-	/**
-	 * Lazily load the default area from the default. See liquido.defaultAreaTitle in application.properties
-	 * @return the default area
-	 * @throws RuntimeException when there is no area with that title
-	 */
-	public AreaModel getDefaultArea() throws RuntimeException {
-		if (this.defaultArea == null) {
-			this.defaultArea = areaRepo.findByTitle(props.getDefaultAreaTitle()).orElseThrow(
-				() -> new RuntimeException("Cannot find default area")
-			);
-		}
-		return this.defaultArea;
-	}
 
 	/**
 	 * Login a user into spring's SecurityContext for testing
