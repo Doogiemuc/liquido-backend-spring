@@ -39,7 +39,7 @@ public class LawEventHandler {
    */
   @HandleBeforeLinkSave
   public void handleLawLinkSave(LawModel idea, Set<UserModel> supporters) throws LiquidoException {
-    UserModel currentUser = authUtil.getCurrentUser()
+    UserModel currentUser = authUtil.getCurrentUserFromDB()
       .orElseThrow(() -> new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "MUST be logged in to add a supporter"));
     if (supporters.contains(idea.getCreatedBy())) {
       log.debug(idea.getCreatedBy().toStringShort()+" must not support his own proposal! "+idea);

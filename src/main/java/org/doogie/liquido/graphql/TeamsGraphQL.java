@@ -64,7 +64,7 @@ public class TeamsGraphQL {
 	@GraphQLQuery(name = "team")
 	@Transactional
 	public TeamModel getOwnTeam() throws LiquidoException {
-		TeamModel team = authUtil.getCurrentTeam()
+		TeamModel team = authUtil.getCurrentTeamFromDB()
 			.orElseThrow(LiquidoException.supply(Errors.UNAUTHORIZED, "Cannot get team. User must be logged into a team!"));
 		return team;
 	}
@@ -100,7 +100,7 @@ public class TeamsGraphQL {
 		    IF user with same email exists, THEN throw
 		    IF user with same mobilephone exits, THEN throw
 		 */
-		Optional<UserModel> currentUserOpt = authUtil.getCurrentUser();
+		Optional<UserModel> currentUserOpt = authUtil.getCurrentUserFromDB();
 		if (currentUserOpt.isPresent()) {
 			// IF user is logged and then he CAN create a new team, but he MUST provide his already registered email and mobilephone.
 			if (!DoogiesUtil.isEqual(currentUserOpt.get().email, admin.email) ||
@@ -150,7 +150,7 @@ public class TeamsGraphQL {
 
 		//TODO: make it configurable so that join team requests must be confirmed by an admin first.
 
-		Optional<UserModel> currentUserOpt = authUtil.getCurrentUser();
+		Optional<UserModel> currentUserOpt = authUtil.getCurrentUserFromDB();
 		if (currentUserOpt.isPresent()) {
 			// IF user is already logged in, then he CAN join another team, but he MUST provide his already registered email and mobilephone.
 			if (!DoogiesUtil.isEqual(currentUserOpt.get().email, member.email) ||

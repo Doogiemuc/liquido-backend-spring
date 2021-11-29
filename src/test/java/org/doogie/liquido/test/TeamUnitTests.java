@@ -33,7 +33,7 @@ public class TeamUnitTests extends BaseTest {
 	UserRepo userRepo;
 
 	@Test
-	public void testGetTeamsOfUser() throws LiquidoException {
+	public void testUserInTwoTeams() throws LiquidoException {
 		UserModel user = userRepo.findByEmail(TestFixtures.TWO_TEAM_USER_EMAIL)
 			.orElseThrow(LiquidoException.notFound("Cannot find test user which is in two teams (email="+TestFixtures.TWO_TEAM_USER_EMAIL+")"));
 		List<TeamModel> twoTeams = teamRepo.teamsOfUser(user);

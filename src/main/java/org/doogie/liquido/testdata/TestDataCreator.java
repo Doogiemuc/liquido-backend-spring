@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.graphql.TeamsGraphQL;
 import org.doogie.liquido.jwt.AuthUtil;
+import org.doogie.liquido.jwt.LiquidoAuthentication;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.rest.dto.CastVoteResponse;
 import org.doogie.liquido.rest.dto.CreateOrJoinTeamResponse;
@@ -468,8 +469,10 @@ public class TestDataCreator implements CommandLineRunner {
 			.orElseThrow(LiquidoException.notFound("need a team member to seedPollInTeam"));
 		authUtil.authenticateInSecurityContext(member.getId(), team.getId(), null);  // fake login member
 		LawModel proposal2 = this.createProposal("Another prop " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(100,200), getDefaultArea(), member, 2, 1);
-		poll = pollService.addProposalToPoll(proposal2, poll);
-		return poll;
+		PollModel newPoll = pollService.addProposalToPoll(proposal2, poll);
+		util.fakeCreateAt(newPoll, props.daysUntilVotingStarts/2);
+		util.fakeUpdatedAt(newPoll, props.daysUntilVotingStarts/2);
+		return newPoll;
 	}
 
 	/**
@@ -720,6 +723,9 @@ public class TestDataCreator implements CommandLineRunner {
   /**
    * Seed a poll that has some alternative proposals and is still in its elaboration phase,
    * ie. voting has not yet started. Also add some comments to each proposal in that poll.
+	 *
+	 * Must be logged in to call this!
+	 *
    * @return the poll in elaboration as it has been stored into the DB.
    */
   @Transactional
@@ -728,7 +734,7 @@ public class TestDataCreator implements CommandLineRunner {
     if (numProposals > util.usersMap.size())
     	throw new RuntimeException("Cannot seedPollInElaborationPhase. Need at least "+TestFixtures.NUM_ALTERNATIVE_PROPOSALS+" distinct usersMap");
 
-    try {
+		try {
       String title, desc;
       UserModel createdBy;
 

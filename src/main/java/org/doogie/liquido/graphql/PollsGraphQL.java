@@ -96,7 +96,7 @@ public class PollsGraphQL {
 	@GraphQLQuery(name = "polls")
 	@PreAuthorize(HAS_ROLE_USER)
 	public Set<PollModel> getPollsOfTeam() throws LiquidoException {
-		TeamModel team = authUtil.getCurrentTeam()
+		TeamModel team = authUtil.getCurrentTeamFromDB()
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.UNAUTHORIZED, "Cannot get polls of team: Must be logged into a team!"));
 		return team.getPolls();
 	}
@@ -113,8 +113,8 @@ public class PollsGraphQL {
 		@GraphQLNonNull @GraphQLArgument(name="title") String title
 	) throws LiquidoException {
 		AreaModel defaultArea = this.getDefaultArea();
-		UserModel user = authUtil.getCurrentUser().orElseThrow(LiquidoException.unauthorized("Must be logged in to like a proposal!"));
-		TeamModel team = authUtil.getCurrentTeam()
+		UserModel user = authUtil.getCurrentUserFromDB().orElseThrow(LiquidoException.unauthorized("Must be logged in to like a proposal!"));
+		TeamModel team = authUtil.getCurrentTeamFromDB()
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.UNAUTHORIZED, "Cannot create poll: Must be logged into a team!"));
 		PollModel newPoll = pollService.createPoll(title, defaultArea, team);
 		log.info("createPoll: Admin " + user.toStringShort() + " creates new poll '" + newPoll.getTitle() + "' in team "+team.getTeamName());
@@ -132,7 +132,8 @@ public class PollsGraphQL {
 	 * Creating ideas is currently not supported via the GraphQL endpoints. The workflow for the mobile app is simplified.
 	 *
 	 * @param pollId the poll, MUST exist
-	 * @param proposal with title, description and icon. Optionally area can be set or default area will be used.
+	 * @param title Title of the new proposal. MUST be unique within the poll.
+	 * @param description Longer description of the proposal
 	 * @return The updated poll with the added proposal
 	 * @throws LiquidoException when proposal title already exists in this poll.
 	 */
@@ -140,13 +141,14 @@ public class PollsGraphQL {
 	@PreAuthorize(HAS_ROLE_USER)
 	public PollModel addProposalToPoll(
 		@GraphQLNonNull @GraphQLArgument(name = "pollId") long pollId,
-		@GraphQLNonNull @GraphQLArgument(name = "proposal") LawModel proposal
+		@GraphQLNonNull @GraphQLArgument(name = "title") String title,
+		@GraphQLNonNull @GraphQLArgument(name = "description") String description,
+		@GraphQLNonNull @GraphQLArgument(name = "icon") String icon
 	) throws LiquidoException {
-		UserModel user = authUtil.getCurrentUser().orElseThrow(LiquidoException.unauthorized("Must be logged in to add a proposal!"));
+		UserModel user = authUtil.getCurrentUserFromDB().orElseThrow(LiquidoException.unauthorized("Must be logged in to add a proposal!"));
 
 		// Find the poll
-		PollModel poll = pollRepo.findById(pollId)
-			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposal: There is no poll with id="+pollId));
+		PollModel poll = pollRepo.findById(pollId).orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposal: There is no poll with id="+pollId));
 
 		// The PWA mobile client has no ideas that need to reach a quorum of supporters before they become a proposal. Mobile client directly creates proposals.
 		// Warn if this is configured incorrectly.
@@ -154,8 +156,9 @@ public class PollsGraphQL {
 			log.warn("Directly adding a proposal via GraphQL to poll(id="+poll.id+"). But needed supportersForProposal is actually configured to be "+liquidoProps.supportersForProposal);
 
 		// Create a new proposal and add it to the poll (via PollService)
-		if (proposal.getArea() == null) proposal.setArea(poll.getArea());
-		proposal.setStatus(LawModel.LawStatus.PROPOSAL);
+		LawModel proposal = new LawModel(title, description, poll.getArea());
+		proposal.setIcon(icon);
+		proposal.setStatus(LawModel.LawStatus.PROPOSAL);   // proposals created by the mobile client are automatically in status PROPOSAL. Skipping IDEA.
 		poll = pollService.addProposalToPoll(proposal, poll);
 		//BUGFIX: proposal.getCreatedBy() is not yet filled here
 		log.info("addProposalToPoll: " + user.toStringShort() + " adds proposal '" + proposal.getTitle() + "' to poll.id="+poll.id);
@@ -177,7 +180,7 @@ public class PollsGraphQL {
 		@GraphQLNonNull @GraphQLArgument(name = "pollId") long pollId,
 		@GraphQLNonNull @GraphQLArgument(name = "proposalId") long proposalId
 	) throws LiquidoException {
-		UserModel user = authUtil.getCurrentUser().orElseThrow(LiquidoException.unauthorized("Must be logged in to like a proposal!"));
+		UserModel user = authUtil.getCurrentUserFromDB().orElseThrow(LiquidoException.unauthorized("Must be logged in to like a proposal!"));
 
 		// Find the poll and check that poll is in status ELABORATION
 		PollModel poll = pollRepo.findById(pollId)
@@ -210,7 +213,7 @@ public class PollsGraphQL {
 		@GraphQLArgument(name = "becomePublicProxy", defaultValue = "false") Boolean becomePublicProxy
 	) throws LiquidoException {
 		AreaModel area = getAreaOrDefault(areaId);
-		UserModel voter = authUtil.getCurrentUser()
+		UserModel voter = authUtil.getCurrentUserFromDB()
 			.orElseThrow(LiquidoException.unauthorized("Must be logged in to getVoterToken!"));
 		return castVoteService.createVoterTokenAndStoreRightToVote(voter, area, tokenSecret, becomePublicProxy);
 	}
@@ -238,7 +241,7 @@ public class PollsGraphQL {
 	@GraphQLQuery(name = "isCreatedByCurrentUser", description = "Is a proposal created by the currently logged in user?")
 	@PreAuthorize(HAS_ROLE_USER)
 	public boolean isCreatedByCurrentUser(@GraphQLContext LawModel proposal) {
-		Optional<UserModel> user = authUtil.getCurrentUser();
+		Optional<UserModel> user = authUtil.getCurrentUserFromDB();
 		return proposal != null && user.isPresent() && user.get().equals(proposal.getCreatedBy());
 	}
 

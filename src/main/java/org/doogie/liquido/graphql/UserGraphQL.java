@@ -83,9 +83,9 @@ public class UserGraphQL {
 	@GraphQLQuery(name = "loginWithJwt")  // camelCaseJwt ! not "...JWT"
 	@Transactional
 	public CreateOrJoinTeamResponse loginWithJwt(/*@RequestHeader(name="Authorization") String token*/) throws LiquidoException {
-		UserModel user = authUtil.getCurrentUser()
+		UserModel user = authUtil.getCurrentUserFromDB()
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.UNAUTHORIZED, "JWT invalid. Cannot find user to loginWithJWT"));
-		TeamModel team = authUtil.getCurrentTeam()			// This loads the team with admins and members, but NOT YET the polls.
+		TeamModel team = authUtil.getCurrentTeamFromDB()			// This loads the team with admins and members, but NOT YET the polls.
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.UNAUTHORIZED, "JWT invalid. Cannot get team to loginWithJWT."));
 		String jwt = jwtTokenUtils.generateToken(user.getId(), team.getId());  // refresh JWT
 		return new CreateOrJoinTeamResponse(team, user, jwt);
@@ -229,7 +229,7 @@ public class UserGraphQL {
 		String jwt = authUtil.getCurrentJwt()
 			.orElseThrow(LiquidoException.unauthorized("Need JWT to switch into new team"));     // this should never throw, because of @PreAuthorize() annotation
 		jwtTokenUtils.validateToken(jwt);  // throws detailed LiquidoException, eg. "token expired"
-		UserModel user = authUtil.getCurrentUser()
+		UserModel user = authUtil.getCurrentUserFromDB()
 			.orElseThrow(LiquidoException.unauthorized("Need to be logged in to change team"));
 		TeamModel team = teamRepo.findByTeamName(teamName)
 			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TEAM_NOT_FOUND, "Cannot change team. Target team not found."));
