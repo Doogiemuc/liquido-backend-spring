@@ -635,13 +635,14 @@ public class RestEndpointTests extends HttpBaseTest {
 		LawModel proposal = postNewIdea("Idea create by test to join poll", this.getDefaultArea());
 		int numSupporters = Math.max(prop.supportersForProposal, 2);  // add at least two supporters
 		for (int j = 0; j < numSupporters; j++) {
-			//Keep in mind that user 16 must not support his own idea
-			String supporterURI = basePath + "/users/" + this.users.get(j).getId();
+			//Keep in mind that user must not support his own idea
+			String supporterURI = basePath + "/users/" + this.users.get(j+5).getId();
 			loginUserJWT(this.users.get(j).getEmail());
 			addSupporterToIdeaViaRest(supporterURI, proposal);
 		}
 
 		// WHEN this proposal joins the poll
+		loginUserJWT(TestFixtures.USER16_EMAIL);
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 		HttpEntity<String> requestEntity = new HttpEntity<>("{\"proposal\":\"/proposals/"+proposal.getId()+"\"}", headers);

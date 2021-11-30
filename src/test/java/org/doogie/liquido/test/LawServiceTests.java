@@ -3,11 +3,13 @@ package org.doogie.liquido.test;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.datarepos.LawRepo;
+import org.doogie.liquido.datarepos.OffsetLimitPageable;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.LawModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.LawQuery;
 import org.doogie.liquido.services.LawService;
+import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.testUtils.WithMockTeamUser;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.junit.Assert;
@@ -140,25 +142,29 @@ public class LawServiceTests extends BaseTest {
 
 	@Test
 	//MAYBE:  https://www.baeldung.com/spring-boot-data-sql-and-schema-sql    <=  @Sql annotation can be used on test classes or methods to execute SQL scripts.
-	public void testFindBySupporter() {
-		// GIVEN
+	public void testFindBySupporter() throws LiquidoException {
+		// GIVEN an idea that is supported by user1
+		UserModel supporter = userRepo.findByEmail(TestFixtures.USER1_EMAIL)
+			.orElseThrow(() -> new LiquidoException(LiquidoException.Errors.CANNOT_ADD_SUPPORTER, "TEST: Cannot find "+TestFixtures.USER1_EMAIL));
+		LawModel idea = getFirstResult(lawRepo.findByStatus(LawModel.LawStatus.PROPOSAL, new OffsetLimitPageable(0,1)));
+		lawService.addSupporter(supporter, idea);
+
+		// AND a query for this idea
 		LawQuery lawQuery = new LawQuery();
 		lawQuery.setStatusList(Arrays.asList(LawModel.LawStatus.PROPOSAL));
 		lawQuery.setSupportedByEMail(TestFixtures.USER1_EMAIL);
 
 		// WHEN
 		Page<LawModel> page = lawService.findBySearchQuery(lawQuery);
-		Optional<UserModel> supporter = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
 
 		// THEN
-		log.debug("========== Ideas supported by "+TestFixtures.USER1_EMAIL);
+		log.debug("========== Proposals supported by "+TestFixtures.USER1_EMAIL);
 		page.get().forEach((law) -> {
 			log.debug(law.toString());
 		});
 		LawModel firstLaw = getFirstResult(page);
 
-		Assert.assertTrue(supporter.isPresent());
-		Assert.assertTrue(firstLaw.getSupporters().contains(supporter.get()));
+		Assert.assertTrue(firstLaw.getSupporters().contains(supporter));
 	}
 
 	private LawModel getFirstResult(Page<LawModel> page) {

@@ -614,16 +614,18 @@ public class TestDataCreator implements CommandLineRunner {
   }
 
   /** seed proposals, ie. ideas that have already reached their quorum */
-  private void seedProposals() {
+  private void seedProposals() throws LiquidoException {
     log.info("Seeding Proposals ...");
+		UserModel createdBy = util.user(TestFixtures.USER1_EMAIL);
     for (int i = 0; i < TestFixtures.NUM_PROPOSALS; i++) {
       String title = "Proposal " + i + " that reached its quorum";
       LawModel proposal = createRandomProposal(title);
+			if (!createdBy.equals(proposal.getCreatedBy()))
+				lawService.addSupporter(createdBy, proposal);		// make sure that USER1 supports at least some proposals
       log.debug("Created proposal "+proposal);
     }
     // make sure, that testuser0 has at least 5 proposals
     for (int i = 0; i < 5; i++) {
-			UserModel createdBy = util.user(TestFixtures.USER1_EMAIL);
     	String title = "Proposal " + i + " for user "+createdBy.getEmail();
       String description = util.getLoremIpsum(100,400);
       AreaModel area = this.getDefaultArea();

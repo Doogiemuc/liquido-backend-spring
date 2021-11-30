@@ -14,7 +14,7 @@ fi
 # Liquido Java Spring Backend
 [ -z "$BACKEND_SOURCE" ] && BACKEND_SOURCE=/c/CodingSSD/liquido/liquido-backend-spring
 BACKEND_USER=ec2-user
-BACKEND_HOST=ec2-52-208-204-181.eu-west-1.compute.amazonaws.com
+BACKEND_HOST=ec2-34-253-48-76.eu-west-1.compute.amazonaws.com
 BACKEND_API=http://${BACKEND_HOST}:80/liquido-api/v3
 BACKEND_DEST_DIR=/home/ec2-user/liquido/liquido-int
 BACKEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:${BACKEND_DEST_DIR}
