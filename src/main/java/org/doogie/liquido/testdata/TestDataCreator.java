@@ -463,12 +463,12 @@ public class TestDataCreator implements CommandLineRunner {
 		authUtil.authenticateInSecurityContext(admin.getId(), team.getId(), null);  // fake login admin
 		String title = pollTitle != null ? pollTitle : "Poll " + now +  " in Team "+team.getTeamName();
 		PollModel poll = pollService.createPoll(title, getDefaultArea(), team);
-		LawModel proposal = this.createProposal("Proposal " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(100,200), getDefaultArea(), admin, 2, 1);
+		LawModel proposal = util.createProposal("Proposal " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(100,200), getDefaultArea(), admin, 2, 1);
 		pollService.addProposalToPoll(proposal, poll);
 		UserModel member = team.getMembers().stream().findFirst()
 			.orElseThrow(LiquidoException.notFound("need a team member to seedPollInTeam"));
 		authUtil.authenticateInSecurityContext(member.getId(), team.getId(), null);  // fake login member
-		LawModel proposal2 = this.createProposal("Another prop " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(100,200), getDefaultArea(), member, 2, 1);
+		LawModel proposal2 = util.createProposal("Another prop " + now + " in Team "+team.getTeamName(), util.getLoremIpsum(100,200), getDefaultArea(), member, 2, 1);
 		PollModel newPoll = pollService.addProposalToPoll(proposal2, poll);
 		util.fakeCreateAt(newPoll, props.daysUntilVotingStarts/2);
 		util.fakeUpdatedAt(newPoll, props.daysUntilVotingStarts/2);
@@ -600,27 +600,6 @@ public class TestDataCreator implements CommandLineRunner {
   }
 
 
-
-  private LawModel createProposal(String title, String description, AreaModel area, UserModel createdBy, int ageInDays, int reachedQuorumDaysAgo) {
-  	if (ageInDays < reachedQuorumDaysAgo) throw new RuntimeException("Proposal cannot reach its quorum before it was created.");
-    auditorAware.setMockAuditor(createdBy);
-    LawModel proposal = new LawModel(title, description, area);
-		lawRepo.save(proposal);
-
-		// add enough supporters so that the idea becomes a proposal. (Or add some random supporters.)
-		int numSupporters = props.supportersForProposal > 0 ? props.supportersForProposal : rand.nextInt(5)+1;
-		proposal = addSupportersToIdea(proposal, numSupporters);
-
-		LocalDateTime reachQuorumAt = LocalDateTime.now().minusDays(reachedQuorumDaysAgo);
-    proposal.setReachedQuorumAt(reachQuorumAt);			// fake reachQuorumAt date to be in the past
-
-		lawRepo.save(proposal);
-
-    util.fakeCreateAt(proposal,  ageInDays);
-    util.fakeUpdatedAt(proposal, ageInDays > 1 ? ageInDays - 1 : 0);
-    return proposal;
-  }
-
   private LawModel createRandomProposal(String title) {
     StringBuffer description = new StringBuffer();
     description.append(DoogiesUtil.randToken(8));    // prepend with some random chars to test sorting
@@ -629,7 +608,7 @@ public class TestDataCreator implements CommandLineRunner {
     UserModel createdBy = this.util.randUser();
     int ageInDays = rand.nextInt(10);
     int reachQuorumDaysAgo = (int)(ageInDays*rand.nextFloat());
-    LawModel proposal = createProposal(title, description.toString(), getDefaultArea(), createdBy, ageInDays, reachQuorumDaysAgo);
+    LawModel proposal = util.createProposal(title, description.toString(), getDefaultArea(), createdBy, ageInDays, reachQuorumDaysAgo);
     return proposal;
 
   }
@@ -650,7 +629,7 @@ public class TestDataCreator implements CommandLineRunner {
       AreaModel area = this.getDefaultArea();
       int ageInDays = rand.nextInt(10);
       int reachedQuorumDaysAgo = (int)(ageInDays*rand.nextFloat());
-      LawModel proposal = createProposal(title, description, area, createdBy, ageInDays, reachedQuorumDaysAgo);
+      LawModel proposal = util.createProposal(title, description, area, createdBy, ageInDays, reachedQuorumDaysAgo);
 			addCommentsToProposal(proposal);
       log.debug("Created proposal for user "+createdBy.getEmail());
     }
@@ -742,7 +721,7 @@ public class TestDataCreator implements CommandLineRunner {
       title = "Initial Proposal in a poll that is in elaboration "+System.currentTimeMillis();
       desc = util.getLoremIpsum(100, 400);
       createdBy = util.user(0);
-      LawModel initialProposal = createProposal(title, desc, getDefaultArea(), createdBy, 10, 7);
+      LawModel initialProposal = util.createProposal(title, desc, getDefaultArea(), createdBy, 10, 7);
 			initialProposal = addCommentsToProposal(initialProposal);
 			String pollTitle = "Poll in ELABORATION from TestDataCreator "+System.currentTimeMillis() % 10000;
       PollModel newPoll = pollService.createPollWithProposal(pollTitle, initialProposal);
@@ -753,7 +732,7 @@ public class TestDataCreator implements CommandLineRunner {
         title = "Alternative Proposal" + i + " in a poll that is in elaboration"+System.currentTimeMillis();
         desc = util.getLoremIpsum(100, 400);
         createdBy = util.user(i);
-        LawModel altProp = createProposal(title, desc, getDefaultArea(), createdBy, 20, 18);
+        LawModel altProp = util.createProposal(title, desc, getDefaultArea(), createdBy, 20, 18);
 				altProp = addCommentsToProposal(altProp);
         newPoll = pollService.addProposalToPoll(altProp, newPoll);
       }
@@ -853,7 +832,7 @@ public class TestDataCreator implements CommandLineRunner {
 
     for (int i = 0; i < TestFixtures.NUM_LAWS; i++) {
       String lawTitle = "Law " + i;
-      LawModel realLaw = createProposal(lawTitle, util.getLoremIpsum(100,400), getDefaultArea(), createdBy, 12, 10);
+      LawModel realLaw = util.createProposal(lawTitle, util.getLoremIpsum(100,400), getDefaultArea(), createdBy, 12, 10);
 			realLaw = addSupportersToIdea(realLaw, props.supportersForProposal+2);
 			//realLaw.setPoll(poll);
 			LocalDateTime reachQuorumAt = LocalDateTime.now().minusDays(10);
