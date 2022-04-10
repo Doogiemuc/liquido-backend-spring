@@ -93,27 +93,31 @@ public class TeamsGraphQL {
 		if (teamRepo.findByTeamName(teamName).isPresent())
 			throw new LiquidoException(Errors.TEAM_WITH_SAME_NAME_EXISTS, "Cannot create new team: A team with that name ('"+teamName+"') already exists");
 
-		/*
-		  IF request is authorized
-		    IF "admin" does NOT exactly have the same attributes as the logged in user THEN throw: not allowed
-		  ELSE // anonymous request
-		    IF user with same email exists, THEN throw
-		    IF user with same mobilephone exits, THEN throw
-		 */
+
 		Optional<UserModel> currentUserOpt = authUtil.getCurrentUserFromDB();
-		if (currentUserOpt.isPresent()) {
-			// IF user is logged and then he CAN create a new team, but he MUST provide his already registered email and mobilephone.
-			if (!DoogiesUtil.isEqual(currentUserOpt.get().email, admin.email) ||
-					!DoogiesUtil.isEqual(currentUserOpt.get().mobilephone, admin.mobilephone)) {
-				throw new LiquidoException(Errors.USER_EMAIL_EXISTS, "Your are already registered. You must provide your user data for the admin of the new team!");
-			}
-			admin = currentUserOpt.get();  // with db ID!
+		boolean emailExists = userRepo.findByEmail(admin.email).isPresent();
+		boolean mobilePhoneExists = userRepo.findByMobilephone(admin.mobilephone).isPresent();
+
+		if (!currentUserOpt.isPresent()) {
+			/* GIVEN an anonymous request
+				 WHEN anonymous user wants to create a new team
+					AND another user with that email or mobile-phone already exists,
+				 THEN throw an error   */
+			if (emailExists) throw new LiquidoException(Errors.USER_EMAIL_EXISTS, "Sorry, another user with that email already exists.");
+			if (mobilePhoneExists) throw new LiquidoException(Errors.USER_MOBILEPHONE_EXISTS, "Sorry, another user with that mobile phone number already exists.");
 		} else {
-			// Anonymous request. Must provide new email and mobilephone
-			Optional<UserModel> userByMail = userRepo.findByEmail(admin.email);
-			if (userByMail.isPresent()) throw new LiquidoException(Errors.USER_EMAIL_EXISTS, "Sorry, another user with that email already exists.");
-			Optional<UserModel> userByMobilephone = userRepo.findByEmail(admin.getMobilephone());
-			if (userByMobilephone.isPresent()) throw new LiquidoException(Errors.USER_MOBILEPHONE_EXISTS, "Sorry, another user with that mobile phone number already exists.");
+			/* GIVEN an authenticated request
+				  WHEN an already registered user wants to create a new team
+				   AND he does NOT provide his already registered email and mobile-phone
+			  	 AND he does also NOT provide completely new email and mobilephone
+	        THEN throw an error */
+			boolean providedOwnData = DoogiesUtil.isEqual(currentUserOpt.get().email, admin.email) && DoogiesUtil.isEqual(currentUserOpt.get().mobilephone, admin.mobilephone);
+			if (!providedOwnData &&	(emailExists || mobilePhoneExists)) {
+				throw new LiquidoException(Errors.CANNOT_CREATE_TEAM_ALREADY_REGISTERED,
+					"Your are already registered. You must provide your existing user data or a new email and new mobile phone for the admin of the new team!");
+			} else {
+				admin = currentUserOpt.get();  // with db ID!
+			}
 		}
 
 		TeamModel newTeam = new TeamModel(teamName, admin);

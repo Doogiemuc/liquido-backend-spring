@@ -29,26 +29,27 @@ public class LiquidoException extends Exception {
 	 * usefull and localized messages to a human depending on these codes.
 	 */
 	public enum Errors {
-		//Create New Team
-		TEAM_WITH_SAME_NAME_EXISTS(1, HttpStatus.CONFLICT),
+		CANNOT_REGISTER_NEED_EMAIL(1, HttpStatus.BAD_REQUEST),
+		CANNOT_REGISTER_NEED_MOBILEPHONE(2, HttpStatus.BAD_REQUEST),
 
-		//Join Team errors
-		CANNOT_JOIN_TEAM_INVITE_CODE_INVALID(10, HttpStatus.BAD_REQUEST),
-		CANNOT_JOIN_TEAM_ALREADY_MEMBER(11, HttpStatus.CONFLICT),						// there already is a member (or admin) with the same email or mobilephone
-		CANNOT_JOIN_TEAM_ALREADY_ADMIN(12, HttpStatus.CONFLICT),
-		CANNOT_REGISTER_NEED_EMAIL(13, HttpStatus.BAD_REQUEST),
-		CANNOT_REGISTER_NEED_MOBILEPHONE(14, HttpStatus.BAD_REQUEST),
+		// Create New Team
+		TEAM_WITH_SAME_NAME_EXISTS(10, HttpStatus.CONFLICT),
+		CANNOT_CREATE_TEAM_ALREADY_REGISTERED(11, HttpStatus.CONFLICT),			// Edge case: When a user is already registered and want's to create a team, ...
+		// Join a team
+		CANNOT_JOIN_TEAM_INVITE_CODE_INVALID(12, HttpStatus.BAD_REQUEST),
+		CANNOT_JOIN_TEAM_ALREADY_MEMBER(13, HttpStatus.CONFLICT),						// there already is a member (or admin) with the same email or mobilephone
+		CANNOT_JOIN_TEAM_ALREADY_ADMIN(14, HttpStatus.CONFLICT),
 		CANNOT_CREATE_TWILIO_USER(15, HttpStatus.INTERNAL_SERVER_ERROR),
-		USER_EMAIL_EXISTS(16, HttpStatus.CONFLICT),                          // user with that email  already exists
-		USER_MOBILEPHONE_EXISTS(17, HttpStatus.CONFLICT),                    // user with that mobilephone already exists
+		USER_EMAIL_EXISTS(16, HttpStatus.CONFLICT),                         // user with that email already exists
+		USER_MOBILEPHONE_EXISTS(17, HttpStatus.CONFLICT),                   // user with that mobilephone already exists
 
 		//Login Errors
 		CANNOT_LOGIN_MOBILE_NOT_FOUND(20, HttpStatus.UNAUTHORIZED),					// when requesting an SMS login token and mobile number is not known
 		CANNOT_LOGIN_EMAIL_NOT_FOUND(21, HttpStatus.UNAUTHORIZED),   				// when requesting a login email and email is not known
 		CANNOT_LOGIN_TOKEN_INVALID(22, HttpStatus.UNAUTHORIZED),     				// when a email or sms login token is invalid or expired
-		CANNOT_LOGIN_TEAM_NOT_FOUND(23, HttpStatus.UNAUTHORIZED),            // when changing team
-		CANNOT_LOGIN_USER_NOT_MEMBER_OF_TEAM(24, HttpStatus.UNAUTHORIZED),   // when changing team and user is not member or admin of target team
-		CANNOT_LOGIN_INTERNAL_ERROR(25, HttpStatus.INTERNAL_SERVER_ERROR),		// when sending of email is not possible
+		CANNOT_LOGIN_TEAM_NOT_FOUND(23, HttpStatus.UNAUTHORIZED),           // when changing team
+		CANNOT_LOGIN_USER_NOT_MEMBER_OF_TEAM(24, HttpStatus.UNAUTHORIZED),  // when changing team and user is not member or admin of target team
+		CANNOT_LOGIN_INTERNAL_ERROR(25, HttpStatus.INTERNAL_SERVER_ERROR),	// when sending of email is not possible
 
 		//JWT Erros
 		JWT_TOKEN_INVALID(30, HttpStatus.UNAUTHORIZED),

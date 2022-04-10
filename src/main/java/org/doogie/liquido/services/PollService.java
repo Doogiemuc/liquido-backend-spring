@@ -149,7 +149,7 @@ public class PollService {
 		boolean isAdmin = authUtil.isCurrentUserAdminInTeam();
 		if (!isAdmin && poll.getProposals().stream().anyMatch(prop -> currentUser.equals(prop.getCreatedBy())))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, proposal.getCreatedBy().toStringShort() + " already has a proposal in poll(id="+poll.getId()+")");
-		// Admin could also be fetched this way. But who knows how old the passed poll is.  poll.getTeam().isAdmin(currentUser);
+		// Admin could also be fetched this way: poll.getTeam().isAdmin(currentUser);   But who knows how old the passed poll is.
 		// Keep in mind that proposal.getCreatedBy() might not be filled yet!
 
     log.debug("addProposalToPoll(proposal.id="+proposal.getId()+", poll.id="+poll.getId()+")");

@@ -97,7 +97,7 @@ public class LiquidoBackendSpringApplication {
 		}
 		*/
 
-		//BUGFIX: Make sure H2 driver can be loaded. Otherwise things may break later at runtime.
+		//BUGFIX: Make sure H2 driver can be loaded. Otherwise, things may break later at runtime.
 		if (env.acceptsProfiles(Profiles.of("dev"))) {
 			try {
 				Class.forName("org.h2.Driver");
@@ -114,7 +114,7 @@ public class LiquidoBackendSpringApplication {
 				log.error(errMsg);
 				throw new Exception(errMsg);
 			} else {
-				log.info(" Default area exists.");
+				log.info(" Ok, default area exists.");
 			}
 		} catch (Exception e) {
 			log.error(e.toString());

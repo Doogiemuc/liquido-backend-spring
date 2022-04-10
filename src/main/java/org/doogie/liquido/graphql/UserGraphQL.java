@@ -69,7 +69,7 @@ public class UserGraphQL {
 	UserService userService;
 
 	@Autowired
-	TwilioVerifyApiClient verifyApiClient;
+	TwilioVerifyApiClient twilioApiClient;
 
 	@Autowired
 	Environment env;
@@ -125,28 +125,28 @@ public class UserGraphQL {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_INTERNAL_ERROR, "Internal server error: Cannot send Email " + e.toString(), e);
 		}
 		// SECURITY: This method MUST NOT return anything! This is the whole idea of 2FA login via email.
-		// The (correct) user must have access to this email. This _IS_ the second factor.
+		// The (correct) user must have access to his email. This _IS_ the second factor.
 	}
 
 	/**
 	 * User clicked on the link in his email. Verify token and if valid log him in.
 	 * @param email user's email that must match the email that requested the token.
-	 * @param token one time token that must not be expired.
+	 * @param authToken one time token that must not be expired.
 	 * @return Full login info
 	 * @throws LiquidoException when email was not found, does not match or token is expired.
 	 */
 	@GraphQLQuery(name = "loginWithEmailToken")
 	public CreateOrJoinTeamResponse loginWithEmailToken(
 		@GraphQLNonNull @GraphQLArgument(name="email") String email,
-		@GraphQLNonNull @GraphQLArgument(name="token") String token
+		@GraphQLNonNull @GraphQLArgument(name="token") String authToken
 	) throws LiquidoException {
-		OneTimeToken ott = ottRepo.findByNonce(token)
+		OneTimeToken ott = ottRepo.findByNonce(authToken)
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "This email token is invalid!"));
 		if (LocalDateTime.now().isAfter(ott.getValidUntil())) {
 			ottRepo.delete(ott);
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Token is expired!");
 		}
-		if (!ObjectUtils.nullSafeEquals(email, ott.getUser().getEmail()))
+		if (!DoogiesUtil.isEqual(email, ott.getUser().getEmail()))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "This token is not valid for that email!");
 
 		return loginUserIntoTeam(ott.getUser(), null);
@@ -172,11 +172,14 @@ public class UserGraphQL {
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "Cannot request auth token. There is no user with that mobilephone!"));
 
 		// When user passes correct devLoginToken, then do NOT send and SMS and return dummySID. This is used in testing.
-		if (devLoginToken.isPresent() && DoogiesUtil.isEqual(props.test.devLoginToken, devLoginToken.get()))
+		//BUGFIX: graphql-spqr passes null here: https://github.com/leangen/graphql-spqr/issues/197
+		if (devLoginToken != null && devLoginToken.isPresent() && DoogiesUtil.isEqual(props.test.devLoginToken, devLoginToken.get())) {
+			log.debug("requestAuthToken: DevLogin: returning Dummy token");
 			return "DummySID";
+		}
 
 		try {
-			return verifyApiClient.requestVerificationToken(TwilioVerifyApiClient.CHANNEL_SMS, mobilephone);
+			return twilioApiClient.requestVerificationToken(TwilioVerifyApiClient.CHANNEL_SMS, mobilephone);
 		} catch (Throwable t) {
 			log.debug("Cannot request authToken: ", t.toString());
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_INTERNAL_ERROR, t.getMessage());
@@ -184,25 +187,30 @@ public class UserGraphQL {
 	}
 
 	/**
-	 * Login with a token that has been sent via SMS or entered from an authentication application.
+	 * Login with a one time token that the user has received via SMS or from an authentication application.
+	 * If user is a member of several teams, then he will be logged into his last team.
+	 * When authToken is the devLoginToken then the login is granted automatically. This is used in tests.
+	 *
 	 * @param mobilephone must be a mobilephone of an already registered user
 	 * @param authToken the authentication token, eg. from the SMS
 	 * @return login data when successful
-	 * @throws LiquidoException when this mobilephone is not registered
+	 * @throws LiquidoException when this mobilephone is not registered or last team cannot be found
 	 */
 	@GraphQLQuery(name="loginWithAuthToken")
 	public CreateOrJoinTeamResponse loginWithAuthToken(
 		@GraphQLNonNull @GraphQLArgument(name="mobilephone") String mobilephone,
 		@GraphQLNonNull @GraphQLArgument(name="authToken") String authToken
+		//TODO: @GraphQLArgument(name="authToken") Long teamId   // when user is member of several teams   see#changeTeam()
 	) throws LiquidoException {
 		mobilephone = LiquidoRestUtils.cleanMobilephone(mobilephone);
 		UserModel user = userRepo.findByMobilephone(mobilephone)
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_LOGIN_MOBILE_NOT_FOUND, "Cannot login with auth token. There is no liquido user with that mobilephone!"));
+
 		if (DoogiesUtil.isEqual(props.test.devLoginToken, authToken)) {
 			// Allow login with devLoginToken. We do allow this in any environment, so that we can also run automated tests against prod.
 			// (This will skip the Authy verifyAPI call!)
 			return this.loginUserIntoTeam(user, null);
-		} else if (verifyApiClient.tokenIsValid(mobilephone, authToken)) {
+		} else if (twilioApiClient.tokenIsValid(mobilephone, authToken)) {
 			return this.loginUserIntoTeam(user, null);
 		} else {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "Cannot login. Auth Token is invalid");
@@ -265,6 +273,7 @@ public class UserGraphQL {
 
 		log.debug("Login " + user.toStringShort() + " into team '" + team.getTeamName()+"'");
 		String jwt = jwtTokenUtils.generateToken(user.getId(), team.getId());
+		authUtil.authenticateInSecurityContext(user.getId(), team.getId(), jwt);
 		return new CreateOrJoinTeamResponse(team, user, jwt);
 	}
 

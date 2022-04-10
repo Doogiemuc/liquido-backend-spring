@@ -33,19 +33,19 @@ public class UserModel extends BaseModel {
 
 	  Equality is a big thing in Java! :-) And it is an especially nasty issue for UserModels.
 	  When are two user models "equal" to each other?
-	   - then their ID matches?
+	   - when their ID matches?
 	   - when they have the same email address? (this is what most people would assume at first.)
 	   - when they have the same mobile phone? (security relevant for login via SMS token!)
 	   - do the other attributes also need to match (deep equals)
 	  Always distinguish between a "user" and a "human being"! A human might register multiple times with independent email addresses!
-	  There is no way an app could ever prevent this (other then requiring DNA tests).
+	  There is no way an app could ever prevent this (other than requiring DNA tests).
 
 	  LIQUIDO UserModels equal when their ID matches. This should normally always imply that all the other attributes also match.
 	  If not, we've been hacked!
 	*/
 
 	/**
-	 * User's email adress. This email must be unique within the team.
+	 * User's email address. This email must be unique within the team.
 	 * A user may be registered with the same email in <em>different</em> teams.
 	 */
 	@NotNull
