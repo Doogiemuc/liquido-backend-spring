@@ -7,7 +7,7 @@ import org.doogie.liquido.model.UserModel;
 
 /**
  * GraphQL response for the createNewTeam mutation
- * {@link org.doogie.liquido.graphql.TeamsGraphQL#createNewTeam(String, String, String, String, String, String)}
+ * {@link org.doogie.liquido.graphql.TeamsGraphQL#createNewTeam(String, UserModel)}
  */
 @Data
 @AllArgsConstructor

@@ -177,7 +177,6 @@ GET /users/{userId}/publicChecksum         get checksum of public proxy
 
  * `docker ps -a -q | ForEach { docker stop $_ }`  - stop all running containers
 
-
 ## Build a release with maven
 
  * `mvn release:prepare` -> Enter name for tag (can accept default) and next development version
@@ -185,7 +184,6 @@ GET /users/{userId}/publicChecksum         get checksum of public proxy
  *  This will automatically increment the build number (`mvn buildnumber:create`)
 
 # Database
-
 
     SELECT CONCAT('SHOW GRANTS FOR ''',user,'''@''',host,''';') FROM mysql.user;
 

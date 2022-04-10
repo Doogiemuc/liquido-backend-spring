@@ -166,14 +166,14 @@ echo
 echo "===== Build Web Frontend ====="
 echo
 echo "in $FRONTEND_SOURCE"
-read -p "Build Frontend? [yes|NO] " yn
+read -p "Build Web Frontend? [yes|NO] " yn
 FRONTEND_BUILT_SUCCESSFULLY=false
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
   cd $FRONTEND_SOURCE
   $NPM run build
   [ $? -ne 0 ] && exit 1
-  FRONTEND_BUILT_SUCCESSFULLY=false
-  echo -e "Frontend built successfully. ${GREEN_OK}"
+  FRONTEND_BUILT_SUCCESSFULLY=true
+  echo -e "Web Frontend built successfully. ${GREEN_OK}"
 fi
 
 echo
