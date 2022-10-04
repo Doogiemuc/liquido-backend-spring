@@ -11,7 +11,7 @@
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="liquido-backend-spring" target="8" />
+      <module name="liquido-backend-spring" target="1.8" />
     </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">

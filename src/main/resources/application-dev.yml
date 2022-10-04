@@ -74,7 +74,7 @@ logging:
       # This significantly slows down the app and creates A LOT of debugging output. Watch your disk space!
       # (It took me days to find BasicBinder class :-)
       hibernate:
-        #SQL: DEBUG
+        SQL: INFO
         type:
           descriptor:
             sql:

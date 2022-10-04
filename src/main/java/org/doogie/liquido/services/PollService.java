@@ -128,6 +128,7 @@ public class PollService {
    * @return the newly created poll
    * @throws LiquidoException if area or status of proposal or poll is wrong. And also when user already has a proposal in this poll.
    */
+	//TODO: @PreAuthorize(AuthUtil.HAS_ROLE_USER)
   public PollModel addProposalToPoll(@NonNull LawModel proposal, @NonNull PollModel poll) throws LiquidoException {
 		// sanity checks
 		if (proposal.getStatus() != LawModel.LawStatus.PROPOSAL)
@@ -139,7 +140,7 @@ public class PollService {
     if (proposal.getPoll() != null)
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Cannot addProposalToPoll: proposal(id="+proposal.getId()+") is already part of another poll.");
 		if(poll.getProposals().contains(proposal))
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Poll.id="+poll.getId()+" already contains proposal.id="+proposal.getId());
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Poll.id="+poll.getId()+" already contains proposal ="+proposal.toStringShort());
 		if (poll.getProposals().stream().anyMatch(prop -> prop.title.equals(proposal.title)))
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_ADD_PROPOSAL, "Poll.id="+poll.getId()+" already contains a proposal with the same title="+proposal.getTitle());
 

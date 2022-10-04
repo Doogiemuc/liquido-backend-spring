@@ -18,7 +18,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 @SpringBootTest
 @RunWith(SpringRunner.class)
 @Slf4j
-@Ignore
+@Ignore    // This test is ignored to NOT spam my Twillio API account.  But test is working fine.
 public class TwilioVerifyApiClientTest extends BaseTest {
 
 	@Autowired
@@ -57,7 +57,7 @@ public class TwilioVerifyApiClientTest extends BaseTest {
 		//----- send authentication request (via push or SMS)
 		log.debug("Send SMS or push notification to mobilephone="+mobilephone);
 		String res = verifyApiClient.requestVerificationToken("sms", mobilephone);
-		log.debug(" => "+res);
+		log.debug(" => SMS sent successfully. "+res);
 
 		/*
 		//----- validate user's token (this cannot be automated.)

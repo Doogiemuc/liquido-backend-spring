@@ -6,11 +6,8 @@ import org.doogie.liquido.datarepos.OffsetLimitPageable;
 import org.doogie.liquido.datarepos.TeamRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.jwt.AuthUtil;
-import org.doogie.liquido.jwt.JwtTokenUtils;
-import org.doogie.liquido.jwt.LiquidoAuthentication;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.TeamModel;
-import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.testdata.LiquidoProperties;
@@ -18,18 +15,11 @@ import org.junit.Rule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.context.ActiveProfiles;
 
 import javax.annotation.PostConstruct;
-import java.util.HashSet;
 import java.util.Random;
-import java.util.Set;
-
-import static org.doogie.liquido.jwt.AuthUtil.ROLE_USER;
 
 /**
  * Base for all test classes.
@@ -37,7 +27,7 @@ import static org.doogie.liquido.jwt.AuthUtil.ROLE_USER;
  * See {@link HttpBaseTest} for HTTP related stuff.
  */
 @Slf4j
-@ActiveProfiles("test")			// Activate spring profile "test". Needed when run via maven. I am wondering why this is not the default
+@ActiveProfiles(value={"test","local"})			// Activate spring profile "test" and "local". Needed when run via maven. I am wondering why "test" is not the default?
 public class BaseTest {
 	@Autowired
 	LiquidoAuditorAware auditor;
