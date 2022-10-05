@@ -2,6 +2,8 @@
 #
 # Linux Shell - Deployment Script for LIQUIDO
 #
+# deployLiquido.sh <path-to-ssh-key.pem>
+
 
 [ -z "$JAVA_HOME" ] && echo "Need JAVA_HOME !" && exit 1
 
@@ -11,21 +13,23 @@ fi
 
 [ -z "$SSH_KEY" ] && echo "Need SSH_KEY !" && exit 1
 
+CODE_DIR=/Users/doogie/Coding/liquido
+
 # Liquido Java Spring Backend
-[ -z "$BACKEND_SOURCE" ] && BACKEND_SOURCE=/c/CodingSSD/liquido/liquido-backend-spring
+[ -z "$BACKEND_SOURCE" ] && BACKEND_SOURCE=${CODE_DIR}/liquido-backend-spring
 BACKEND_USER=ec2-user
-BACKEND_HOST=ec2-34-253-48-76.eu-west-1.compute.amazonaws.com
+BACKEND_HOST=52.59.209.46        # liquido-prod-lightsail
 BACKEND_API=http://${BACKEND_HOST}:80/liquido-api/v3
-BACKEND_DEST_DIR=/home/ec2-user/liquido/liquido-int
+BACKEND_DEST_DIR=/home/ec2-user/liquido-prod
 BACKEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:${BACKEND_DEST_DIR}
 
 # Liquido Vue Web frontend
-[ -z "$FRONTEND_SOURCE" ] && FRONTEND_SOURCE=/c/CodingSSD/liquido/liquido-vue-frontend
+[ -z "$FRONTEND_SOURCE" ] && FRONTEND_SOURCE=${CODE_DIR}/liquido-vue-frontend
 FRONTEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:/var/www/html/liquido-web
 FRONTEND_URL=http://$BACKEND_HOST
 
 # Liquido Progressive Web App (PWA)
-[ -z "$PWA_SOURCE" ] && PWA_SOURCE=/c/CodingSSD/liquido/liquido-mobile-pwa
+[ -z "$PWA_SOURCE" ] && PWA_SOURCE=${CODE_DIR}/liquido-mobile-pwa
 PWA_DEST=${BACKEND_USER}@${BACKEND_HOST}:/var/www/html/liquido-mobile
 PWA_URL=http://$BACKEND_HOST/liquido-mobile
 
@@ -33,7 +37,7 @@ PWA_URL=http://$BACKEND_HOST/liquido-mobile
 CYPRESS_CONFIG_FILE=./cypress/cypress.int.json
 
 # Liquido Documentation
-DOC_SOURCE=/d/Coding/liquido/liquido-doc-gulp-pug/_site/
+DOC_SOURCE=${CODE_DIR}/liquido-doc-gulp-pug/_site/
 DOC_DEST=${BACKEND_USER}@${BACKEND_HOST}:/home/ec2-user/liquido/liquido-doc
 
 # Tools

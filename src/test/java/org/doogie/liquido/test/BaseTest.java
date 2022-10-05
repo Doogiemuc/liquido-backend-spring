@@ -11,9 +11,6 @@ import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.testdata.LiquidoProperties;
-import org.junit.Rule;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.context.ActiveProfiles;
@@ -79,7 +76,8 @@ public class BaseTest {
 	/**
 	 * Entry and exit logging for <b>all</b> test cases. Jiipppiiee. Did I already mention that I am a logging fanatic *G*
 	 */
-	@Rule
+	/*
+	//TODO: @ExtendWith(
 	public TestWatcher slf4jTestWatcher = new TestWatcher() {
 		@Override
 		protected void starting(Description descr) {
@@ -96,6 +94,8 @@ public class BaseTest {
 			log.debug("===== TEST SUCCESS "+descr.getDisplayName());
 		}
 	};
+
+	 */
 
 
 	/**

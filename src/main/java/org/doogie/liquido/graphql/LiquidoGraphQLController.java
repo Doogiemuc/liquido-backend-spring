@@ -1,6 +1,5 @@
 package org.doogie.liquido.graphql;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import graphql.*;
 import graphql.execution.AsyncExecutionStrategy;
 import graphql.schema.GraphQLSchema;
@@ -9,7 +8,6 @@ import io.leangen.graphql.GraphQLSchemaGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.rest.LiquidoUrlPaths;
 import org.doogie.liquido.services.LiquidoException;
-import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -19,15 +17,19 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.web.util.matcher.*;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.thymeleaf.util.MapUtils;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * GraphQL controller that handles POST requests to GraphQL endpoint.

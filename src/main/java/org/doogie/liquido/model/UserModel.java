@@ -1,8 +1,6 @@
 package org.doogie.liquido.model;
 
 import io.leangen.graphql.annotations.GraphQLIgnore;
-import io.leangen.graphql.annotations.GraphQLInputField;
-import io.leangen.graphql.annotations.types.GraphQLType;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;

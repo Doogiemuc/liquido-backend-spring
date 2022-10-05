@@ -2,34 +2,32 @@ package org.doogie.liquido.test;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
-import org.doogie.liquido.datarepos.RightToVoteRepo;
 import org.doogie.liquido.datarepos.DelegationRepo;
+import org.doogie.liquido.datarepos.RightToVoteRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
-import org.doogie.liquido.model.RightToVoteModel;
 import org.doogie.liquido.model.DelegationModel;
+import org.doogie.liquido.model.RightToVoteModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.ProxyService;
 import org.doogie.liquido.test.testUtils.WithMockTeamUser;
 import org.doogie.liquido.testdata.LiquidoProperties;
-import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.testdata.TestDataUtils;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.doogie.liquido.testdata.TestFixtures;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.test.context.support.WithUserDetails;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.Optional;
 
 import static org.doogie.liquido.testdata.TestFixtures.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+
 
 @Slf4j
-@RunWith(SpringRunner.class)
 @SpringBootTest
 public class ProxyServiceTests extends BaseTest {
 	@Autowired
@@ -82,17 +80,17 @@ public class ProxyServiceTests extends BaseTest {
 
 		//THEN
 		RightToVoteModel usersRightToVote = castVoteService.isVoterTokenValid(userVoterToken);
-		assertEquals("Voter's rightToVote must be delegated to proxy", proxiesRightToVote, usersRightToVote.getDelegatedTo());
-		assertEquals(toProxy.toStringShort()+" should now be the proxy of "+fromUser, toProxy, delegation.getToProxy());
+		assertEquals(proxiesRightToVote, usersRightToVote.getDelegatedTo(), "Voter's rightToVote must be delegated to proxy");
+		assertEquals(toProxy, delegation.getToProxy(), toProxy.toStringShort()+" should now be the proxy of "+fromUser);
 
 		Optional<DelegationModel> delegationOpt = delegationRepo.findByAreaAndFromUser(area, fromUser);
-		assertTrue("DelegationModel from user in that area must exist", delegationOpt.isPresent());
-		assertEquals("Delegation must point from voter ", fromUser, delegationOpt.get().getFromUser());
-		assertEquals("Delegation must point to proxy", toProxy, delegationOpt.get().getToProxy());
+		assertTrue(delegationOpt.isPresent(), "DelegationModel from user in that area must exist");
+		assertEquals(fromUser, delegationOpt.get().getFromUser(), "Delegation must point from voter ");
+		assertEquals(toProxy, delegationOpt.get().getToProxy(), "Delegation must point to proxy");
 
 		Optional<DelegationModel> directProxy = proxyService.getDelegationToDirectProxy(area, fromUser);
-		assertTrue(fromUser.toStringShort()+" should have a delegation", directProxy.isPresent());
-		assertEquals(toProxy+"is direct proxy of "+fromUser+" in area "+area, toProxy, directProxy.get().getToProxy());
+		assertTrue(directProxy.isPresent(), fromUser.toStringShort()+" should have a delegation");
+		assertEquals(toProxy, directProxy.get().getToProxy(), toProxy+"is direct proxy of "+fromUser+" in area "+area);
 	}
 
 	@Test
@@ -109,7 +107,7 @@ public class ProxyServiceTests extends BaseTest {
 		log.info("Delegation tree up to proxy "+proxy.toStringShort());
 		utils.printDelegationTree(getDefaultArea(), proxy);
 		long delegationCount = proxyService.getRecursiveDelegationCount(voterToken);
-		assertEquals(USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegations", TestFixtures.USER1_DELEGATIONS, delegationCount);
+		assertEquals(TestFixtures.USER1_DELEGATIONS, delegationCount, USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegations");
 
 		proxy = userRepo.findByEmail(USER4_EMAIL).get();
 		voterToken = castVoteService.createVoterTokenAndStoreRightToVote(proxy, area, USER_TOKEN_SECRET, false);
@@ -119,7 +117,7 @@ public class ProxyServiceTests extends BaseTest {
 		log.info("Delegation tree up to proxy "+proxy.toStringShort());
 		utils.printDelegationTree(getDefaultArea(), proxy);
 		delegationCount = proxyService.getRecursiveDelegationCount(voterToken);
-		assertEquals(USER4_EMAIL+" should have "+TestFixtures.USER4_DELEGATIONS +" delegations", TestFixtures.USER4_DELEGATIONS, delegationCount);
+		assertEquals(TestFixtures.USER4_DELEGATIONS, delegationCount, USER4_EMAIL+" should have "+TestFixtures.USER4_DELEGATIONS +" delegations");
 
 		log.trace("SUCCESS: testGetNumVotes");
 	}
@@ -184,8 +182,8 @@ public class ProxyServiceTests extends BaseTest {
 		proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);
 
 		//THEN
-		assertFalse("Normal delegation should be allowed", proxyService.thisWouldBeCircularDelegation(area, fromUser, toProxy));
-		assertTrue("Circular delegation should be forbidden", proxyService.thisWouldBeCircularDelegation(area, toProxy, fromUser));
+		assertFalse(proxyService.thisWouldBeCircularDelegation(area, fromUser, toProxy), "Normal delegation should be allowed");
+		assertTrue(proxyService.thisWouldBeCircularDelegation(area, toProxy, fromUser), "Circular delegation should be forbidden");
 		try {
 			proxyService.assignProxy(area, toProxy, fromUser, userVoterToken);
 			fail("Trying to assign a proxy which leads to a circular delegation should have thrown a LiquidoException!");
@@ -209,7 +207,7 @@ public class ProxyServiceTests extends BaseTest {
 
 		//THEN
 		Optional<DelegationModel> delegation  = delegationRepo.findByAreaAndFromUser(area, fromUser);
-		assertFalse("Delegation to proxy should not exist anymore", delegation.isPresent());
+		assertFalse(delegation.isPresent(), "Delegation to proxy should not exist anymore");
 
 		//Cleanup
 		proxyService.assignProxy(area, fromUser, toProxy, userVoterToken);

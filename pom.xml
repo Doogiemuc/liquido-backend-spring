@@ -23,7 +23,7 @@
 		<java.version>8</java.version>
 		<maven.compiler.source>8</maven.compiler.source>
 		<maven.compiler.target>8</maven.compiler.target>
-		<spring-boot.version>2.2.4.RELEASE</spring-boot.version>
+		<spring-boot.version>2.7.4</spring-boot.version>
 		<quartz.version>2.3.2</quartz.version>
 		<jjwt.version>0.9.1</jjwt.version>
 
@@ -67,18 +67,25 @@
 			<version>${spring-boot.version}</version>
 		</dependency>
 
-		<!-- (de)serialize LocalDate into ISO datetime format https://stackoverflow.com/questions/30871255/spring-boot-localdate-field-serialization-and-deserialization -->
-		<dependency>
-			<groupId>com.fasterxml.jackson.datatype</groupId>
-			<artifactId>jackson-datatype-jsr310</artifactId>
-		</dependency>
+        <!-- Spring Security -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+            <version>${spring-boot.version}</version>
+        </dependency>
 
-		<!-- Jackson (de)serialization support for new JDK8 data types, e.g. Optional https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jdk8 -->
-		<dependency>
-			<groupId>com.fasterxml.jackson.datatype</groupId>
-			<artifactId>jackson-datatype-jdk8</artifactId>
-			<version>2.9.8</version>
-		</dependency>
+        <!-- Spring boot validation -->
+        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-validation -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+            <version>${spring-boot.version}</version>
+        </dependency>
+
+
+
+
+
 
 		<!-- Spring Graphql Starter => Just GraphQL is enough
 		<dependency>
@@ -93,13 +100,13 @@
 		</dependency>
 		-->
 
-		<!-- GraphQL Playground - much more sophisticated than GraphiQL https://mvnrepository.com/artifact/com.graphql-java-kickstart/playground-spring-boot-starter -->
+		<!-- GraphQL Playground - much more sophisticated than GraphiQL https://mvnrepository.com/artifact/com.graphql-java-kickstart/playground-spring-boot-starter
 		<dependency>
 			<groupId>com.graphql-java-kickstart</groupId>
 			<artifactId>playground-spring-boot-starter</artifactId>
-			<version>5.10.0</version>
+			<version>11.1.0</version>
 		</dependency>
-
+		-->
 
 		<!-- Graphiql - GraphQL Web debug tool
 		<dependency>
@@ -109,7 +116,6 @@
 		</dependency>
 		-->
 
-
 		<!-- GraphQL Spqr - automatically generate GraphQL schema from entities -->
 		<dependency>
 			<groupId>io.leangen.graphql</groupId>
@@ -117,12 +123,7 @@
 			<version>0.11.2</version>
 		</dependency>
 
-		<!-- Spring Security -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-security</artifactId>
-			<version>${spring-boot.version}</version>
-		</dependency>
+
 
 		<!-- Database connector for MySQL
 		<dependency>
@@ -135,7 +136,7 @@
 		<dependency>
 			<groupId>org.mariadb.jdbc</groupId>
 			<artifactId>mariadb-java-client</artifactId>
-			<version>2.7.2</version>
+			<version>3.0.6</version>
 		</dependency>
 
 
@@ -226,62 +227,76 @@
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpclient</artifactId>
-			<version>4.5.2</version>
+			<version>4.5.13</version>
 		</dependency>
 
 
 		<!-- Project Lombok - https://projectlombok.org/ If you used it once you will never want to work without it. -->
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<version>1.18.12</version>
-			<scope>provided</scope>
-		</dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.24</version>
+            <scope>provided</scope>
+        </dependency>
 
 		<!-- For sending mails via SMTP -->
 		<dependency>
 			<groupId>com.sun.mail</groupId>
 			<artifactId>jakarta.mail</artifactId>
-			<version>1.6.4</version>
+			<version>2.0.1</version>
 		</dependency>
 
-		<!-- Jackson can also serialize objects to YAML. (Used in LiquidoProperties.java) -->
-		<dependency>
-			<groupId>com.fasterxml.jackson.dataformat</groupId>
-			<artifactId>jackson-dataformat-yaml</artifactId>
-			<version>2.12.2</version>
-		</dependency>
+
 
 
 		<!-- =================== TEST ==================== -->
 
-        <!-- spring-boot-starter-test: JUnit test case support -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
+        <!-- spring-boot-starter-test: JUnit5 Jupiter test case support -->
+        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <version>2.7.4</version>
+            <scope>test</scope>
+        </dependency>
 
-		<!-- spring-security-test for testing with logged-in users -->
+        <!-- spring-security-test for testing with logged-in users -->
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 
-		<!-- JUnit4.12 for testing -->
-	    <dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.12</version>
-      		<scope>test</scope>
-    	</dependency>
-		<dependency>
+        <dependency>
 			<groupId>com.jayway.jsonpath</groupId>
 			<artifactId>json-path</artifactId>
 		</dependency>
 
-	</dependencies>
+
+        <!-- (de)serialize LocalDate into ISO datetime format https://stackoverflow.com/questions/30871255/spring-boot-localdate-field-serialization-and-deserialization -->
+        <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jsr310   Need version 2.10.2  to be compatible with old graphql-spqr !!!-->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>2.10.2</version>
+        </dependency>
+
+        <!-- Jackson (de)serialization support for new JDK8 data types, e.g. Optional https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jdk8 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jdk8</artifactId>
+            <version>2.10.2</version>
+        </dependency>
+
+        <!-- Jackson can also serialize objects to YAML. (Used in LiquidoProperties.java) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <version>2.10.2</version>
+        </dependency>
+
+
+    </dependencies>
 
 	<build>
 		<!--finalName>${project.artifactId}-${project.version}-build${buildNumber}</finalName -->
@@ -294,6 +309,7 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>2.22.2</version>
+
 				<!-- configuration>
 					<systemPropertyVariables>
 						<loadSampleDB>true</loadSampleDB>
@@ -301,7 +317,7 @@
 				</configuration -->
 			</plugin>
 
-			<!-- Sets the main class and creates an runnable fast JAR -->
+			<!-- Sets the main class and creates a runnable fast JAR -->
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

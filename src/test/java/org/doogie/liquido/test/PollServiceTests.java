@@ -14,21 +14,16 @@ import org.doogie.liquido.testdata.TestDataCreator;
 import org.doogie.liquido.testdata.TestDataUtils;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.Matrix;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.springframework.test.util.AssertionErrors.*;
 
 /**
  * Tests for {@link PollService}
@@ -37,7 +32,6 @@ import static org.junit.Assert.assertNull;
  * So you must load that data before running these tests.
  */
 @Slf4j
-@RunWith(SpringRunner.class)
 @SpringBootTest
 public class PollServiceTests extends BaseTest {
 

@@ -10,24 +10,21 @@ import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.doogie.liquido.test.testUtils.WithMockTeamUser;
 import org.doogie.liquido.testdata.TestFixtures;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit Test for Spring DB Repositories
  */
 @Slf4j
-@RunWith(SpringRunner.class)
 @SpringBootTest
+//@DataJpaTest
 //@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)  //BUGFIX: must make sure that spring application context is reloaded after all tests in this class have run http://www.javarticles.com/2016/03/spring-dirtiescontext-annotation-example.html
 public class RepoTests extends BaseTest {
   @Autowired
@@ -45,7 +42,7 @@ public class RepoTests extends BaseTest {
   @Test
   public void findUserByEmail() {
     Optional<UserModel> foundUser = userRepo.findByEmail(TestFixtures.USER1_EMAIL);
-    assertTrue(TestFixtures.USER1_EMAIL +" could not be found", foundUser.isPresent());
+    assertTrue(foundUser.isPresent(), TestFixtures.USER1_EMAIL +" could not be found");
     assertEquals(TestFixtures.USER1_EMAIL, foundUser.get().getEmail());
     log.info("TEST SUCCESS: "+ TestFixtures.USER1_EMAIL +" found by email.");
   }
@@ -67,7 +64,7 @@ public class RepoTests extends BaseTest {
     //auditorAware.setMockAuditor(null);
     log.trace("saved Idea "+insertedIdea);
 
-    Assert.assertEquals("Expected idea to be created by "+user, user, insertedIdea.getCreatedBy());
+    assertEquals(user, insertedIdea.getCreatedBy(), "Expected idea to be created by "+user);
     log.trace("TEST CreateIdeaWithMockAuditor SUCCESSFULL");
   }
 
@@ -76,20 +73,20 @@ public class RepoTests extends BaseTest {
   public void testUpdate() {
     long count1 = areaRepo.count();
     Optional<AreaModel> areaOpt = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-    assertTrue("Did not find area 1 by title", areaOpt.isPresent());
+    assertTrue(areaOpt.isPresent(), "Did not find area 1 by title");
     AreaModel area = areaOpt.get();
     area.setDescription("Description from Test");
     areaRepo.save(area);
 
     long count2 = areaRepo.count();
-    assertEquals("Should not have inserted duplicate", count1, count2);
+    assertEquals(count1, count2, "Should not have inserted duplicate");
     log.trace("TEST update SUCCESS");
   }
 
   @Test
   public void testSaveDuplicateArea() {
     Optional<AreaModel> areaOpt = areaRepo.findByTitle(TestFixtures.AREA1_TITLE);
-    assertTrue("Did not find area 1 by title", areaOpt.isPresent());
+    assertTrue(areaOpt.isPresent(), "Did not find area 1 by title");
 
     AreaModel areaDuplicate = new AreaModel(areaOpt.get().getTitle(), "This is a duplicate", areaOpt.get().getCreatedBy());
     try {
@@ -104,7 +101,7 @@ public class RepoTests extends BaseTest {
   public void testFindSupportedProposals() {
     UserModel supporter = userRepo.findByEmail(TestFixtures.USER1_EMAIL).get();
     List<LawModel> supportedLaws = lawRepo.findDistinctByStatusAndSupportersContains(LawModel.LawStatus.PROPOSAL, supporter);
-    assertTrue("Expected at least 2 proposals that user "+TestFixtures.USER1_EMAIL+" supports", supportedLaws.size() >= 2);
+    assertTrue(supportedLaws.size() >= 2, "Expected at least 2 proposals that user "+TestFixtures.USER1_EMAIL+" supports");
     log.debug("User "+supporter.getEmail()+" supports "+supportedLaws.size()+" proposals.");
   }
 
