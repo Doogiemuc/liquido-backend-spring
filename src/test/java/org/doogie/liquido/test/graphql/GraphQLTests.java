@@ -14,28 +14,25 @@ import org.doogie.liquido.test.HttpBaseTest;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.Lson;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.util.AssertionErrors.assertNotNull;
 
 /**
  * Tests for {@link LawService}
  * Here we mostly test the advanced search capabilities.
  */
 @Slf4j
-@RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)   // automatically fire up the integrated webserver on a random port
 public class GraphQLTests extends HttpBaseTest {
 
@@ -54,7 +51,7 @@ public class GraphQLTests extends HttpBaseTest {
 	public void testAuthyLogin() {
 		// GIVEN a user with mobile phone
 		UserModel user = this.team.getMembers().iterator().next();
-		assertTrue("User needs mobile phone", DoogiesUtil.isEmpty(user.getMobilephone()));
+		assertTrue(DoogiesUtil.isEmpty(user.getMobilephone()), "User needs mobile phone");
 
 		//WHEN requesting an authy token
 		String graphQL    = String.format("{ authyToken(mobilephone: \"%s\") }", user.getMobilephone());
@@ -93,7 +90,7 @@ public class GraphQLTests extends HttpBaseTest {
 		String actualTeamName = executeGraphQl(graphQL, "$.data.team.teamName");
 
 		//THEN the correct teamName is returned
-		Assert.assertEquals("Expected teamName="+expectedTeamName, expectedTeamName, actualTeamName);
+		assertEquals(expectedTeamName, actualTeamName);
 	}
 
 
@@ -124,7 +121,7 @@ public class GraphQLTests extends HttpBaseTest {
 		String actualTeamName = executeGraphQl(graphQLMutation, "$.data.createNewTeam.team.teamName");
 
 		// THEN we receive info about the new team
-		Assert.assertEquals("Expected teamName="+teamName, teamName, actualTeamName);
+		assertEquals(teamName, actualTeamName);
 	}
 
 	@Test
@@ -153,9 +150,10 @@ public class GraphQLTests extends HttpBaseTest {
 			fail("GraphQL createNewTeam should have thrown an exception!");
 		} catch (HttpClientErrorException httpEx) {
 			// THEN correct Exception type is thrown with correct Liquido Error enum value
-			Assert.assertTrue(
-				"GraphQL createNewTeam should have thrown " + LiquidoException.Errors.TEAM_WITH_SAME_NAME_EXISTS.toString(),
-				httpEx.getResponseBodyAsString().contains(LiquidoException.Errors.TEAM_WITH_SAME_NAME_EXISTS.toString())
+
+			assertTrue(
+				httpEx.getResponseBodyAsString().contains(LiquidoException.Errors.TEAM_WITH_SAME_NAME_EXISTS.toString()),
+				"GraphQL createNewTeam should have thrown " + LiquidoException.Errors.TEAM_WITH_SAME_NAME_EXISTS
 			);
 		} catch (Exception e) {
 			fail("GraphQL createNewTeam should have thrown a LiquidoException, but it threw " + e);
@@ -168,7 +166,7 @@ public class GraphQLTests extends HttpBaseTest {
 		// GIVEN an inviteCode
 		Page<TeamModel> teams = teamRepo.findAll(new OffsetLimitPageable(0, 1));
 		TeamModel team = teams.iterator().next();
-		Assert.assertNotNull("Need at least one team to testJoinTeam!", team);
+		assertNotNull("Need at least one team to testJoinTeam!", team);
 		String inviteCode = team.getInviteCode();
 
 		// AND a graphQL mutation to join an existing team
@@ -194,7 +192,7 @@ public class GraphQLTests extends HttpBaseTest {
 
 		// THEN user's email is part of team.members
 		List<String> members = JsonPath.read(res.getBody(), "$.data.joinTeam.team.members..email");
-		assertTrue("Cannot find userEmail in joinedTeam.members", members.contains(userEmail));
+		assertTrue(members.contains(userEmail), "Cannot find userEmail in joinedTeam.members");
 	}
 
 	/** Admin creates a new poll in his team. */
@@ -211,7 +209,7 @@ public class GraphQLTests extends HttpBaseTest {
 		String actualTitle = executeGraphQl(graphQLMutation, "$.data.createPoll.title");
 
 		//THEN poll is created
-		Assert.assertEquals("Poll title should be returned", pollTitle, actualTitle);
+		assertEquals(pollTitle, actualTitle);
 	}
 
 	@Test
@@ -221,7 +219,7 @@ public class GraphQLTests extends HttpBaseTest {
 
 		//  AND a poll in ELABORATION
 		List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.ELABORATION);
-		assertTrue("Need at least one poll in elaboration to testAddProposalToPoll", polls.size() > 0);
+		assertTrue(polls.size() > 0, "Need at least one poll in elaboration to testAddProposalToPoll");
 		PollModel poll = polls.get(0);
 
 		// AND data for a new proposal
@@ -241,7 +239,7 @@ public class GraphQLTests extends HttpBaseTest {
 		ResponseEntity<String> res = this.client.exchange(this.GraphQLPath, HttpMethod.POST, entity.toJsonHttpEntity(), String.class);
 
 		//THEN poll is created
-		assertTrue("Proposal with that title should have been added", res.getBody() != null && res.getBody().contains(proposalTitle));
+		assertTrue(res.getBody() != null && res.getBody().contains(proposalTitle), "Proposal with that title should have been added");
 	}
 
 

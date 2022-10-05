@@ -11,31 +11,27 @@ import org.doogie.liquido.datarepos.*;
 import org.doogie.liquido.model.*;
 import org.doogie.liquido.services.CastVoteService;
 import org.doogie.liquido.services.LiquidoException;
-import org.doogie.liquido.test.testUtils.LogClientRequestInterceptor;
 import org.doogie.liquido.testdata.LiquidoProperties;
 import org.doogie.liquido.testdata.TestDataUtils;
 import org.doogie.liquido.testdata.TestFixtures;
 import org.doogie.liquido.util.DoogiesUtil;
 import org.doogie.liquido.util.Lson;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.*;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.http.HttpMethod.*;
 
 /**
@@ -47,7 +43,6 @@ import static org.springframework.http.HttpMethod.*;
  * We CAN use Autowired spring components here. But the tests should assert just the HTTP responses.
  */
 @Slf4j
-@RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)  // This automatically sets up everything and starts the server.
 //@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)       // Theoretically we could run tests against an already running server, e.g. PROD   But that's a lot of work. Instead our Cypress E2E tests can do this much better.
 //@Sql(scripts="/sampleDB-H2.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)   //TODO: test if I can inject my SQL data this way
@@ -92,7 +87,7 @@ public class RestEndpointTests extends HttpBaseTest {
 	 * Here we (fake) generation of a JWT token by directly calling jwtTokenProvider
 	 * By Default USER1_EMAIL is logged in
 	 */
-	@Before
+	@BeforeEach
 	public void beforeEachTest() {
 		this.loginUserJWT(TestFixtures.USER1_EMAIL);
 	}
@@ -121,7 +116,7 @@ public class RestEndpointTests extends HttpBaseTest {
 	@Test
 	public void testPublicPingEndpoint() {
 		ResponseEntity<String> res = anonymousClient.exchange("/_ping", HttpMethod.GET, null, String.class);
-		assertEquals("/_ping endpoint should be reachable anonymously", HttpStatus.OK, res.getStatusCode());
+		assertEquals(res.getStatusCode(), HttpStatus.OK, "/_ping endpoint should be reachable anonymously");
 	}
 
 	@Test
@@ -131,7 +126,7 @@ public class RestEndpointTests extends HttpBaseTest {
 			fail("Should have thrown an exception with forbidden(403)");
 		} catch (HttpClientErrorException err) {
 			log.debug("Ok, /laws endpoint is secured.");
-			assertEquals("Response should have status forbidden(403)", HttpStatus.FORBIDDEN, err.getStatusCode());
+			assertEquals(HttpStatus.FORBIDDEN,  err.getStatusCode(), "Response should have status forbidden(403)");
 		}
 	}
 
@@ -141,7 +136,7 @@ public class RestEndpointTests extends HttpBaseTest {
 			ResponseEntity<String> res = client.exchange("/invalidUrl", HttpMethod.GET, null, String.class);
 			fail("Should have thrown an exception with 404");
 		} catch (HttpClientErrorException err) {
-			assertEquals("Response should have status 404", HttpStatus.NOT_FOUND, err.getStatusCode());
+			assertEquals(HttpStatus.NOT_FOUND,  err.getStatusCode(), "Response should have status 404");
 		}
   }
 
@@ -165,7 +160,7 @@ public class RestEndpointTests extends HttpBaseTest {
 
 		// request one time login token
 		res = anonymousClient.getForEntity("/auth/requestToken?mobile={mobile}", String.class, mobile);
-		assertEquals("Could not requestToken", HttpStatus.OK, res.getStatusCode());
+		assertEquals(HttpStatus.OK,  res.getStatusCode(), "Could not requestToken");
 
 		log.info("Successfully requested a one time token");
 		//with reals 2FA tokens, this cannot be automatically tested
@@ -181,7 +176,7 @@ public class RestEndpointTests extends HttpBaseTest {
 		String userJson = client.getForObject("/my/user", String.class);
 		log.debug("Logged in as : "+userJson);
 		String receivedMobile = JsonPath.read(userJson, "$.profile.mobilephone");
-		assertEquals("Logged in user should have the phone number that we registered with", mobile, receivedMobile);
+		assertEquals(mobile,  receivedMobile, "Logged in user should have the phone number that we registered with");
 		*/
 
 	}
@@ -207,7 +202,7 @@ public class RestEndpointTests extends HttpBaseTest {
 
     ResponseEntity<AreaModel> response = client.exchange("/areas", POST, entity, AreaModel.class);
 
-    assertEquals("expected HttpStatus.CREATED(201)", HttpStatus.CREATED, response.getStatusCode());
+    assertEquals(HttpStatus.CREATED,  response.getStatusCode(), "expected HttpStatus.CREATED(201)");
     AreaModel createdArea = response.getBody();
     assertEquals(areaTitle, createdArea.getTitle());
   }
@@ -241,7 +236,7 @@ public class RestEndpointTests extends HttpBaseTest {
 
     log.debug("got response: "+response);
 
-    assertNotNull("Could not get recent ideas", response);
+    assertNotNull(response, "Could not get recent ideas");
 
     ObjectMapper mapper = new ObjectMapper();
     JsonNode node = mapper.readTree(response);
@@ -261,7 +256,7 @@ public class RestEndpointTests extends HttpBaseTest {
 
     // ===== Find a poll that is in VOTING phase
     List<PollModel> polls = pollRepo.findByStatus(PollModel.PollStatus.ELABORATION);
-    assertTrue("Need a poll that currently is in PROPOSAL phase for this test", polls != null && polls.size() > 0);
+    assertTrue(polls != null && polls.size() > 0, "Need a poll that currently is in PROPOSAL phase for this test");
 
     // I am deliberately not creating a new BallotModel(...) here that I could then   postForEntity like this:
     //   ResponseEntity<BallotModel> createdBallot = client.postForEntity("/ballot", newBallot, BallotModel.class);
@@ -286,7 +281,7 @@ public class RestEndpointTests extends HttpBaseTest {
     HttpEntity<String> entity = new HttpEntity<>(newLawJson.toString(), headers);
 
 		ResponseEntity<LawModel> res = client.postForEntity("/laws", entity, LawModel.class);
-		assertEquals("ERROR: builder proposal title does not match", HttpStatus.CREATED, res.getStatusCode());
+		assertEquals(HttpStatus.CREATED,  res.getStatusCode(), "ERROR: builder proposal title does not match");
     log.trace("TEST postAlternativeProposal successfully created.");
   }
 
@@ -340,9 +335,9 @@ public class RestEndpointTests extends HttpBaseTest {
 			fail("addSupporterToIdea should have thrown an Exception");
 		} catch (HttpClientErrorException e) {
 			//THEN
-			Assert.assertEquals("Response should have status" + HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST, e.getStatusCode());
+			assertEquals(HttpStatus.BAD_REQUEST,  e.getStatusCode(), "Response should have status" + HttpStatus.BAD_REQUEST);
 			String liquidoErrorName = JsonPath.read(e.getResponseBodyAsString(), "$.liquidoErrorName");
-			Assert.assertEquals("LiquidoException.Error should have been CANNOT_ADD_SUPPORTER", LiquidoException.Errors.CANNOT_ADD_SUPPORTER.name(), liquidoErrorName );
+			assertEquals(LiquidoException.Errors.CANNOT_ADD_SUPPORTER.name(),  liquidoErrorName , "LiquidoException.Error should have been CANNOT_ADD_SUPPORTER");
 			log.trace("TEST supportOwnIdea SUCCESSFUL");
 		} catch (Throwable t) {
 			fail("Should have thrown a HttpClientErrorException but threw "+t);
@@ -365,7 +360,7 @@ public class RestEndpointTests extends HttpBaseTest {
     assertEquals(0, idea.getNumSupporters());
 
     //===== add Supporters via JSON, so that idea reaches its quorum
-    Assert.assertTrue("Need at least "+prop.supportersForProposal+" users to run this test", this.users.size() >= prop.supportersForProposal);
+    assertTrue(this.users.size() >= prop.supportersForProposal, "Need at least "+prop.supportersForProposal+" users to run this test");
     for (int j = 0; j < this.users.size(); j++) {
       if (!this.users.get(j).getEmail().equals(TestFixtures.USER1_EMAIL)) {   // creator is implicitly already a supporter
 				String supporterURI = basePath + "/users/" + this.users.get(j).getId();
@@ -376,7 +371,7 @@ public class RestEndpointTests extends HttpBaseTest {
 
     //===== idea should now have reached its quorum
     LawModel updatedIdea = client.getForObject("/laws/"+idea.getId(), LawModel.class);
-    Assert.assertEquals("Idea should have reached its quorum and be in status PROPOSAL", LawModel.LawStatus.PROPOSAL, updatedIdea.getStatus());
+    assertEquals(updatedIdea.getStatus(), LawModel.LawStatus.PROPOSAL, "Idea should have reached its quorum and be in status PROPOSAL");
 
     log.trace("TEST ideaReachesQuorum SUCCESSFUL");
   }
@@ -391,7 +386,7 @@ public class RestEndpointTests extends HttpBaseTest {
 		log.debug("Newsfeed: "+res.getBody());
 
 		// THEN the newsfeed should not be empty
-		assertTrue("Newsfeed should not be empty", res != null);
+		assertTrue(res != null, "Newsfeed should not be empty");
 		DocumentContext ctx = JsonPath.parse(res.getBody());
 		Long recentlyDiscussedId = ctx.read("$.supportedByYou[0].id", Long.class);
 		assertNotNull(recentlyDiscussedId);
@@ -408,7 +403,7 @@ public class RestEndpointTests extends HttpBaseTest {
 		// GIVEN a PROPOSAL of currently logged in user
 		loginUserJWT(TestFixtures.USER1_EMAIL);
 		List<LawModel> proposals = lawRepo.findDistinctByStatusAndCreatedBy(LawModel.LawStatus.PROPOSAL, getCurrentUser());
-		assertTrue("Need at least one proposal of "+TestFixtures.USER1_EMAIL, proposals.size() > 0);
+		assertTrue(proposals.size() > 0, "Need at least one proposal of "+TestFixtures.USER1_EMAIL);
 		List<String> propURIs = Collections.singletonList("/laws/"+proposals.get(0).getId());
 
 		// WHEN user starts a new poll
@@ -425,9 +420,9 @@ public class RestEndpointTests extends HttpBaseTest {
 		ResponseEntity<PollModel> createdPoll = client.postForEntity("/polls", entity, PollModel.class);
 
 		// THEN the poll is created successfully and in correct status
-		assertEquals("expected HTTP 200", HttpStatus.CREATED, createdPoll.getStatusCode());
-		assertNotNull("Poll should have an ID", createdPoll.getBody().getId());
-		assertEquals("Poll should be in status ELABORATION", PollModel.PollStatus.ELABORATION, createdPoll.getBody().getStatus());
+		assertEquals(createdPoll.getStatusCode(), HttpStatus.CREATED, "expected HTTP 200");
+		assertNotNull(createdPoll.getBody().getId(), "Poll should have an ID");
+		assertEquals(createdPoll.getBody().getStatus(), PollModel.PollStatus.ELABORATION, "Poll should be in status ELABORATION");
 
 		log.debug("SUCCESSFULLY Create new poll");
 	}
@@ -506,7 +501,7 @@ public class RestEndpointTests extends HttpBaseTest {
   public void testGetVoterToken() {
     AreaModel area = this.getDefaultArea();
     String voterToken = getVoterToken(area.getId());
-    assertTrue("Voter token is invalid", voterToken != null && voterToken.startsWith("$2") && voterToken.length() > 10);
+    assertTrue(voterToken != null && voterToken.startsWith("$2") && voterToken.length() > 10, "Voter token is invalid\"");
     log.trace("TEST SUCCESS: found expected "+TestFixtures.USER1_DELEGATIONS +" delegations for "+TestFixtures.USER1_EMAIL + " in " + this.getDefaultArea().toString());
   }
 
@@ -516,7 +511,7 @@ public class RestEndpointTests extends HttpBaseTest {
 		loginUserJWT(TestFixtures.USER1_EMAIL);
 		String assignableResources = client.getForObject("/my/proxy/{areaId}/assignable", String.class, area.getId());
 		JSONArray assignableProxies = JsonPath.read(assignableResources, "$");
-		assertTrue("There should be at least one assignable proxy", assignableProxies.size() > 1);
+		assertTrue(assignableProxies.size() > 1, "There should be at least one assignable proxy");
 	}
 
 	@Test
@@ -530,8 +525,8 @@ public class RestEndpointTests extends HttpBaseTest {
 
 		String delegationsJSON = client.getForObject("/my/delegations/{areaId}?voterToken={voterToken}", String.class, area.getId(), voterToken);
 		int delegationCount = JsonPath.read(delegationsJSON, "$.delegationCount");
-		assertEquals(TestFixtures.USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegated votes in "+this.getDefaultArea(), TestFixtures.USER1_DELEGATIONS, delegationCount);
-		assertEquals("DelegationCount from GET /my/voterToken must equal the returned delegation count from GET /my/delegations/{areaId}", delegationCountFromVoterToken, delegationCount);
+		assertEquals(TestFixtures.USER1_DELEGATIONS,  delegationCount, TestFixtures.USER1_EMAIL+" should have "+TestFixtures.USER1_DELEGATIONS +" delegated votes in "+this.getDefaultArea());
+		assertEquals(delegationCountFromVoterToken,  delegationCount, "DelegationCount from GET /my/voterToken must equal the returned delegation count from GET /my/delegations/{areaId}");
 	}
 
 	@Test
@@ -543,8 +538,8 @@ public class RestEndpointTests extends HttpBaseTest {
 		String delegationsJSON = client.getForObject("/my/delegations/{areaId}?voterToken={voterToken}", String.class, area.getId(), voterToken);
 		Boolean isPublicProxy = JsonPath.read(delegationsJSON, "$.isPublicProxy");
 		int delegationCount = JsonPath.read(delegationsJSON, "$.delegationCount");
-		assertFalse(email + " should NOT be a public proxy in " + this.getDefaultArea().toString(), isPublicProxy);
-		assertEquals(email + " should have one delegation request", TestFixtures.USER2_DELEGATIONS, delegationCount);
+		assertFalse(isPublicProxy, email + " should NOT be a public proxy in " + this.getDefaultArea().toString());
+		assertEquals(TestFixtures.USER2_DELEGATIONS,  delegationCount, email + " should have one delegation request");
 	}
 
 
@@ -570,7 +565,7 @@ public class RestEndpointTests extends HttpBaseTest {
 			String updatedDelegationJson = response.getBody();
 			log.debug("received updated delegation: \n"+updatedDelegationJson);
 			String actualProxyEmail = JsonPath.read(updatedDelegationJson, "$.toProxy.email");
-			assertEquals("expected toProxy to be updated", toProxy.getEmail(), actualProxyEmail);
+			assertEquals(toProxy.getEmail(),  actualProxyEmail, "expected toProxy to be updated");
 		} finally {
     	// delete delegation. This is important. Otherwise other tests that depend on unchanged delegations from TestFixtures will fail.
 			client.delete("/my/proxy/{areaId}?voterToken={voterToken}", area.getId(), voterToken);
@@ -593,7 +588,7 @@ public class RestEndpointTests extends HttpBaseTest {
     	ResponseEntity<String> responseEntity = client.postForEntity("/areas", entity, String.class);  // This will return HTTP status 409(Conflict) because of the duplicate composite key.
 			fail("Should have thrown an exception with 409 (Conflict)");
 		} catch (HttpClientErrorException err) {
-			assertEquals("Response should have status 400", HttpStatus.CONFLICT, err.getStatusCode());
+			assertEquals(HttpStatus.CONFLICT,  err.getStatusCode(), "Response should have status 400");
 			log.trace("TEST postDuplicateArea SUCCESS: Did receive expected HttpStatus=409 (Conflict)");
 		}
 
@@ -614,7 +609,7 @@ public class RestEndpointTests extends HttpBaseTest {
   	String res = client.getForObject("/polls/search/findByStatus?status=ELABORATION", String.class);
   	try {
 			Map<String, Object> poll = JsonPath.read(res, "$._embedded.polls[0]");
-			assertEquals("Found poll should have had status ELABORATION!", PollModel.PollStatus.ELABORATION.name(), poll.get("status"));
+			assertEquals(PollModel.PollStatus.ELABORATION.name(),  poll.get("status"), "Found poll should have had status ELABORATION!");
 		}	catch (PathNotFoundException e) {
   		fail("Expected to find at least one poll in status ELABORATION: "+e.getMessage());
 		}
@@ -627,7 +622,7 @@ public class RestEndpointTests extends HttpBaseTest {
 
 		// GIVEN a poll in elaboration
 		List<PollModel> pollsInElaboration = pollRepo.findByStatusAndArea(PollModel.PollStatus.ELABORATION, this.getDefaultArea());
-		assertTrue("Need at least one poll in elaboration!", pollsInElaboration.size() > 0);
+		assertTrue(pollsInElaboration.size() > 0, "Need at least one poll in elaboration!");
 		PollModel poll = pollsInElaboration.get(0);
 		log.trace("Join poll: "+poll);
 
@@ -649,7 +644,7 @@ public class RestEndpointTests extends HttpBaseTest {
 		ResponseEntity<PollModel> res = client.postForEntity("/polls/" + poll.getId() + "/join", requestEntity, PollModel.class);
 
 		// THEN HTTP OK(200) is returned
-		assertEquals("ERROR: Cannot join Poll", HttpStatus.OK, res.getStatusCode());
+		assertEquals(HttpStatus.OK,  res.getStatusCode(), "ERROR: Cannot join Poll");
 		log.trace("Joined Poll successfully\n"+res.getBody().toString());
 	}
 
@@ -675,7 +670,7 @@ public class RestEndpointTests extends HttpBaseTest {
 
 		// GIVEN a poll that is in voting (user has not voted in this poll yet)
 		List<PollModel> pollsInVoting = pollRepo.findByStatus(PollModel.PollStatus.VOTING);
-		assertNotNull("Need at least one poll in voting!", pollsInVoting.size() > 0);
+		assertNotNull(pollsInVoting.size() > 0, "Need at least one poll in voting!");
 		PollModel poll = pollsInVoting.get(0);
 		log.trace("Cast vote in "+poll);
 
@@ -687,35 +682,35 @@ public class RestEndpointTests extends HttpBaseTest {
 		// WHEN getting own ballot of user4
 		ResponseEntity<String> noBallotYet = client.getForEntity("/polls/" + poll.getId() + "/myballot?voterToken="+user4VoterToken, String.class);
 		// THEN user4 does not yet have a ballot (404 is returned)
-		assertEquals("User should not yet have a ballot in this poll", HttpStatus.NO_CONTENT, noBallotYet.getStatusCode());
+		assertEquals(HttpStatus.NO_CONTENT,  noBallotYet.getStatusCode(), "User should not yet have a ballot in this poll");
 
 		// WHEN user4 casts his vote
 		List<Long> user4VoteOrderIds = TestDataUtils.randVoteOrderIds(poll);
 		ResponseEntity<String> user4CastVoteRes = castVoteRest(poll, user4VoterToken, user4VoteOrderIds);
 
 		// THEN his ballot is created successfully
-		assertEquals("User4's vote is casted successfully via REST", HttpStatus.CREATED, user4CastVoteRes.getStatusCode());
+		assertEquals(HttpStatus.CREATED,  user4CastVoteRes.getStatusCode(), "User4's vote is casted successfully via REST");
 
 		// AND voteCount is correct
 		long user4VoteCount = JsonPath.parse(user4CastVoteRes.getBody()).read("$.voteCount", Long.class);
-		assertEquals("Vote by user4 should have been counted for "+TestFixtures.USER4_DELEGATIONS+" delegations.", TestFixtures.USER4_DELEGATIONS, user4VoteCount);
+		assertEquals(TestFixtures.USER4_DELEGATIONS,  user4VoteCount, "Vote by user4 should have been counted for "+TestFixtures.USER4_DELEGATIONS+" delegations.");
 
 		//  AND ballot can be verified with checksum of user4
 		String user4Checksum = JsonPath.read(user4CastVoteRes.getBody(), "$.ballot.checksum");
 		ResponseEntity<BallotModel> user4VerifyRes = client.getForEntity("/polls/" + poll.getId() + "/verify?checksum=" + user4Checksum, BallotModel.class);
-		assertEquals("Ballot's checksum could be verified ", HttpStatus.OK, user4VerifyRes.getStatusCode());
-		assertEquals("Verified ballots's level is 0", 0, (long)user4VerifyRes.getBody().getLevel());
-		assertNull("Ballot.rightToVote should not be revealed", user4VerifyRes.getBody().getRightToVote());
+		assertEquals(HttpStatus.OK,  user4VerifyRes.getStatusCode(), "Ballot's checksum could be verified ");
+		assertEquals(0,  (long)user4VerifyRes.getBody().getLevel(), "Verified ballots's level is 0");
+		assertNull(user4VerifyRes.getBody().getRightToVote(), "Ballot.rightToVote should not be revealed");
 		for (int i = 0; i < user4VoteOrderIds.size(); i++) {
-			assertEquals("Verified ballot received with user1Checksum should have correct voteOrder", user4VoteOrderIds.get(i), user4VerifyRes.getBody().getVoteOrder().get(i).getId());
+			assertEquals(user4VoteOrderIds.get(i),  user4VerifyRes.getBody().getVoteOrder().get(i).getId(), "Verified ballot received with user1Checksum should have correct voteOrder");
 		}
 
 		//  AND we can retrieve user's ballot with correct level and voteOrder
 		ResponseEntity<BallotModel> myBallotRes = client.getForEntity("/polls/" + poll.getId() + "/myballot?voterToken="+user4VoterToken, BallotModel.class);
-		assertEquals("User should now have a ballot in this poll", HttpStatus.OK, myBallotRes.getStatusCode());
-		assertEquals("Ballot should have level 0", 0L, (long)myBallotRes.getBody().getLevel());
+		assertEquals(HttpStatus.OK,  myBallotRes.getStatusCode(), "User should now have a ballot in this poll");
+		assertEquals(0L,  (long)myBallotRes.getBody().getLevel(), "Ballot should have level 0");
 		for (int i = 0; i < user4VoteOrderIds.size(); i++) {
-			assertEquals("Ballot should have correct voteOrder", user4VoteOrderIds.get(i), myBallotRes.getBody().getVoteOrder().get(i).getId());
+			assertEquals(user4VoteOrderIds.get(i),  myBallotRes.getBody().getVoteOrder().get(i).getId(), "Ballot should have correct voteOrder");
 		}
 
 		// --------------------------------------------------------
@@ -726,20 +721,20 @@ public class RestEndpointTests extends HttpBaseTest {
 		ResponseEntity<String> user1CastVoteRes = castVoteRest(poll, user1VoterToken, user1VoteOrderIds);
 
 		// THEN ballot of user1 is created successfully
-		assertEquals("Vote by user1 is casted successfully via REST", HttpStatus.CREATED, user1CastVoteRes.getStatusCode());
+		assertEquals(HttpStatus.CREATED,  user1CastVoteRes.getStatusCode(), "Vote by user1 is casted successfully via REST");
 
 		// AND voteCount is correct (smaller than delegationCount because voter4 below has already voted from himself)
 		Long user1VoteCount = JsonPath.parse(user1CastVoteRes.getBody()).read("$.voteCount", Long.class);
-		assertEquals("Vote by user1 should have been counted for "+TestFixtures.USER1_VOTE_COUNT_WHEN_USER4_VOTED+ " delegations.", TestFixtures.USER1_VOTE_COUNT_WHEN_USER4_VOTED, (long)user1VoteCount);
+		assertEquals(TestFixtures.USER1_VOTE_COUNT_WHEN_USER4_VOTED,  (long)user1VoteCount, "Vote by user1 should have been counted for "+TestFixtures.USER1_VOTE_COUNT_WHEN_USER4_VOTED+ " delegations.");
 
 		//  AND ballot can be verified with checksum of user1
 		String user1Checksum = JsonPath.read(user1CastVoteRes.getBody(), "$.ballot.checksum");
 		ResponseEntity<BallotModel> user1VerifyRes = client.getForEntity("/polls/" + poll.getId() + "/verify?checksum=" + user1Checksum, BallotModel.class);
-		assertEquals("Ballot's checksum could be verified ", HttpStatus.OK, user1VerifyRes.getStatusCode());
-		assertEquals("Verified ballots's level is 0", 0, (long)user1VerifyRes.getBody().getLevel());
-		assertNull("Ballot.rightToVote should not be revealed", user1VerifyRes.getBody().getRightToVote());
+		assertEquals(HttpStatus.OK,  user1VerifyRes.getStatusCode(), "Ballot's checksum could be verified ");
+		assertEquals(0,  (long)user1VerifyRes.getBody().getLevel(), "Verified ballots's level is 0");
+		assertNull(user1VerifyRes.getBody().getRightToVote(), "Ballot.rightToVote should not be revealed");
 		for (int i = 0; i < user1VoteOrderIds.size(); i++) {
-			assertEquals("Verified ballot received with user1Checksum should have correct voteOrder", user1VoteOrderIds.get(i), user1VerifyRes.getBody().getVoteOrder().get(i).getId());
+			assertEquals(user1VoteOrderIds.get(i),  user1VerifyRes.getBody().getVoteOrder().get(i).getId(), "Verified ballot received with user1Checksum should have correct voteOrder");
 		}
 
 		// --------------------------------------------------------
@@ -747,10 +742,10 @@ public class RestEndpointTests extends HttpBaseTest {
 		//  WHEN a proxy above him casts a vote
 		// THEN the ballot of this user, who casted his own vote, did not change
 		ResponseEntity<BallotModel> verifiedBallotOfUser4 = client.getForEntity("/polls/" + poll.getId() + "/verify?checksum=" + user4Checksum, BallotModel.class);
-		assertEquals("ballot of user4 can still be verified via his checksum", HttpStatus.OK, verifiedBallotOfUser4.getStatusCode());
-		assertEquals("level of the ballot of user4 is still 0", 0, (long)verifiedBallotOfUser4.getBody().getLevel());
+		assertEquals(HttpStatus.OK,  verifiedBallotOfUser4.getStatusCode(), "ballot of user4 can still be verified via his checksum");
+		assertEquals(0,  (long)verifiedBallotOfUser4.getBody().getLevel(), "level of the ballot of user4 is still 0");
 		for (int i = 0; i < user4VoteOrderIds.size(); i++) {
-			assertEquals("Ballot of user4 should still have its original voteOrder, even after a proxy above him voted", user4VoteOrderIds.get(i), verifiedBallotOfUser4.getBody().getVoteOrder().get(i).getId());
+			assertEquals(user4VoteOrderIds.get(i),  verifiedBallotOfUser4.getBody().getVoteOrder().get(i).getId(), "Ballot of user4 should still have its original voteOrder, even after a proxy above him voted");
 		}
 
 		// CLEANUP: remove casted Ballots

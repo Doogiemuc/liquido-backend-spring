@@ -10,29 +10,25 @@ import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.LawQuery;
 import org.doogie.liquido.services.LawService;
 import org.doogie.liquido.services.LiquidoException;
-import org.doogie.liquido.test.testUtils.WithMockTeamUser;
 import org.doogie.liquido.testdata.TestFixtures;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
-import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for {@link LawService}
  * Here we mostly test the advanced search capabilities.
  */
 @Slf4j
-@RunWith(SpringRunner.class)
 @SpringBootTest
 public class LawServiceTests extends BaseTest {
 
@@ -62,8 +58,8 @@ public class LawServiceTests extends BaseTest {
 		page.get().forEach((law) -> {
 			log.debug(law.toString());
 		});
-		Assert.assertTrue(page != null);
-		Assert.assertTrue(page.getTotalElements() > 0);
+		assertTrue(page != null);
+		assertTrue(page.getTotalElements() > 0);
 	}
 
 	@Test
@@ -76,8 +72,8 @@ public class LawServiceTests extends BaseTest {
 		Page<LawModel> page = lawService.findBySearchQuery(lawQuery);
 
 		// THEN
-		Assert.assertTrue(page != null);
-		Assert.assertTrue(page.getTotalElements() == 0);
+		assertTrue(page != null);
+		assertTrue(page.getTotalElements() == 0);
 	}
 
 	@Test
@@ -95,7 +91,7 @@ public class LawServiceTests extends BaseTest {
 			log.debug(law.toString());
 		});
 		LawModel firstLaw = getFirstResult(page);
-		Assert.assertEquals(firstLaw.getCreatedBy().getName(), TestFixtures.USER1_NAME);
+		assertEquals(firstLaw.getCreatedBy().getName(), TestFixtures.USER1_NAME);
 	}
 
 
@@ -116,7 +112,7 @@ public class LawServiceTests extends BaseTest {
 			log.debug(law.toString());
 		});
 		LawModel firstLaw = getFirstResult(page);
-		Assert.assertEquals(TestFixtures.IDEA_0_TITLE, firstLaw.getTitle());
+		assertEquals(TestFixtures.IDEA_0_TITLE, firstLaw.getTitle());
 	}
 
 	@Test
@@ -136,8 +132,8 @@ public class LawServiceTests extends BaseTest {
 			log.debug(law.toString());
 		});
 		LawModel firstLaw = getFirstResult(page);
-		Assert.assertTrue(creator.isPresent());
-		Assert.assertEquals(creator.get(), firstLaw.getCreatedBy());
+		assertTrue(creator.isPresent());
+		assertEquals(creator.get(), firstLaw.getCreatedBy());
 	}
 
 	@Test
@@ -164,14 +160,14 @@ public class LawServiceTests extends BaseTest {
 		});
 		LawModel firstLaw = getFirstResult(page);
 
-		Assert.assertTrue(firstLaw.getSupporters().contains(supporter));
+		assertTrue(firstLaw.getSupporters().contains(supporter));
 	}
 
 	private LawModel getFirstResult(Page<LawModel> page) {
-		Assert.assertTrue("Expected to get a page", page != null);
-		Assert.assertTrue("Expected to get at least one result", page.getTotalElements() > 0);
+		assertTrue(page != null, "Expected to get a page");
+		assertTrue(page.getTotalElements() > 0, "Expected to get at least one result");
 		Optional<LawModel> firstLaw = page.get().findFirst();
-		Assert.assertTrue("Expected to have a first element in page", firstLaw.isPresent());
+		assertTrue(firstLaw.isPresent(), "Expected to have a first element in page");
 		return firstLaw.get();
 	}
 

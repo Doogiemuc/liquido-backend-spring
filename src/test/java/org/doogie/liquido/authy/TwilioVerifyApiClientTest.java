@@ -5,9 +5,8 @@ import org.doogie.liquido.security.TwilioVerifyApiClient;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.BaseTest;
 import org.doogie.liquido.testdata.LiquidoProperties;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -16,9 +15,8 @@ import org.springframework.test.context.junit4.SpringRunner;
  * Happy Flow test for new Twilio Verify 2.0 API client
  */
 @SpringBootTest
-@RunWith(SpringRunner.class)
 @Slf4j
-@Ignore    // This test is ignored to NOT spam my Twillio API account.  But test is working fine.
+@Disabled    // This test is ignored to NOT spam my Twillio API account.  But test is working fine.
 public class TwilioVerifyApiClientTest extends BaseTest {
 
 	@Autowired

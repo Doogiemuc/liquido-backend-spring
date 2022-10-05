@@ -7,22 +7,19 @@ import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.testdata.TestFixtures;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Unit Test for LIQUIDO Teams
  * see {@link org.doogie.liquido.model.TeamModel}
  */
 @Slf4j
-@RunWith(SpringRunner.class)
 @SpringBootTest
 public class TeamUnitTests extends BaseTest {
 
@@ -37,12 +34,12 @@ public class TeamUnitTests extends BaseTest {
 		UserModel user = userRepo.findByEmail(TestFixtures.TWO_TEAM_USER_EMAIL)
 			.orElseThrow(LiquidoException.notFound("Cannot find test user which is in two teams (email="+TestFixtures.TWO_TEAM_USER_EMAIL+")"));
 		List<TeamModel> twoTeams = teamRepo.teamsOfUser(user);
-		assertEquals("expected user to be in exactly two teams", 2, twoTeams.size());
+		assertEquals(2, twoTeams.size(), "expected user to be in exactly two teams");
 
 		UserModel admin = twoTeams.get(0).getAdmins().stream().findFirst()
 			.orElseThrow(LiquidoException.notFound("Team has no admin???"));
 		List<TeamModel> oneTeam = teamRepo.teamsOfUser(admin);
-		assertEquals("expected this admin to be in exactly one team", 1, oneTeam.size());
+		assertEquals(1, oneTeam.size(), "expected this admin to be in exactly one team");
 	}
 
 }

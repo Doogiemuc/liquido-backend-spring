@@ -5,9 +5,8 @@ import org.doogie.liquido.security.TwilioAuthyClient;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.test.BaseTest;
 import org.doogie.liquido.testdata.LiquidoProperties;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -17,9 +16,8 @@ import org.springframework.web.client.RestClientException;
  * Happy Flow test for authy API client
  */
 @SpringBootTest
-@RunWith(SpringRunner.class)
 @Slf4j
-@Ignore
+@Disabled
 public class TwilioAuthyClientTest extends BaseTest {
 
 	@Autowired
