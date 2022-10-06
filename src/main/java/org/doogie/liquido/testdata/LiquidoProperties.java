@@ -86,6 +86,7 @@ public class LiquidoProperties {
 		public String email;
 		public String name;
 		public String mobilephone;
+		public String website;
 		public String picture;
 	}
 
