@@ -2,8 +2,11 @@ package org.doogie.liquido;
 
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
+import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
+import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.testdata.LiquidoProperties;
+import org.doogie.liquido.testdata.TestDataUtils;
 import org.quartz.SchedulerException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,7 +18,9 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.security.core.userdetails.User;
 
+import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -41,6 +46,9 @@ public class LiquidoBackendSpringApplication {
 
 	@Autowired
 	AreaRepo areaRepo;
+
+	@Autowired
+	UserRepo userRepo;
 
   /**
    * Main entry point for Liquido Spring backend.
@@ -69,15 +77,6 @@ public class LiquidoBackendSpringApplication {
 		System.out.println("=====================================================");
 		System.out.println();
 
-		log.info("=======================================================");
-		log.info(" ServerPort: " + this.serverPort);
-		log.info(" spring.data.rest.base-path: " + env.getProperty("spring.data.rest.base-path"));
-		log.info(" graphiql.endpoint: "+ env.getProperty("graphiql.endpoint"));
-		log.info(" spring.jpa.generate-ddl: " + env.getProperty("spring.jpa.generate-ddl"));
-		log.info(" spring.jpa.hibernate.ddl-auto: " + env.getProperty("spring.jpa.hibernate.ddl-auto"));
-		log.info(" javax.javax.persistence.schema-generation: " + env.getProperty("javax.javax.persistence.schema-generation"));
-		log.info(" Database URL: " + jdbcTemplate.getDataSource().getConnection().getMetaData().getURL());  // may throw SQL Exception
-		log.info("=======================================================");
 		if (log.isDebugEnabled()) {
 			System.out.println();
 			System.out.println("LiquidoProperties:");
@@ -85,7 +84,20 @@ public class LiquidoBackendSpringApplication {
 			System.out.println();
 		}
 
-		log.info(" Running some sanity checks ...");
+		log.info("=======================================================");
+		log.info(" HostName:    " + InetAddress.getLocalHost().getHostName());
+		log.info(" HostAddress: " + InetAddress.getLocalHost().getHostAddress());
+		log.info(" ServerPort:  " + this.serverPort);
+		log.info(" spring.active.profiles: " +  Arrays.toString(env.getActiveProfiles()));
+		log.info(" spring.data.rest.base-path: " + env.getProperty("spring.data.rest.base-path"));
+		log.info(" graphiql.endpoint: "+ env.getProperty("graphiql.endpoint"));
+		log.info(" spring.jpa.generate-ddl: " + env.getProperty("spring.jpa.generate-ddl"));
+		log.info(" spring.jpa.hibernate.ddl-auto: " + env.getProperty("spring.jpa.hibernate.ddl-auto"));
+		log.info(" javax.javax.persistence.schema-generation: " + env.getProperty("javax.javax.persistence.schema-generation"));
+		log.info(" Database URL: " + jdbcTemplate.getDataSource().getConnection().getMetaData().getURL());  // may throw SQL Exception
+		log.info("=======================================================");
+
+		log.info("Running some sanity checks ...");
 
 		/*
 		try {
@@ -104,20 +116,34 @@ public class LiquidoBackendSpringApplication {
 			} catch (ClassNotFoundException e) {
 				log.error("ERROR: Cannot load org.h2.Driver!");
 			}
-			log.info(" Can load H2 Driver in dev");
+			log.info("Can load H2 Driver in dev");
 		}
 
+		log.debug("Checking connection to LIQUIDO DB ...");
+
+		// Create a default adminUser in DB (if not present yet)
+		UserModel adminUser = null;
 		try {
-			Optional<AreaModel> defaultArea = areaRepo.findByTitle(liquidoProps.defaultAreaTitle);
-			if (!defaultArea.isPresent()) {
-				String errMsg = "Cannot find default area with title '"+ liquidoProps.defaultAreaTitle+"'";
-				log.error(errMsg);
-				throw new Exception(errMsg);
-			} else {
-				log.info(" Ok, default area exists.");
+			Optional<UserModel> adminUserOpt = userRepo.findByEmail(liquidoProps.admin.email);
+			if (!adminUserOpt.isPresent()) {
+				adminUser = new UserModel(liquidoProps.admin.email, liquidoProps.admin.name, liquidoProps.admin.mobilephone, liquidoProps.admin.website, liquidoProps.admin.picture);
+				userRepo.save(adminUser);
+			}
+		} catch(Exception e) {
+			log.error("Cannot find or create admin user ", e.toString());
+			throw e;
+		}
+
+		// Create a default area. Used for mobile app.
+		try {
+			Optional<AreaModel> defaultAreaOpt = areaRepo.findByTitle(liquidoProps.defaultAreaTitle);
+			if (!defaultAreaOpt.isPresent()) {
+				AreaModel defaultArea = new AreaModel(liquidoProps.defaultAreaTitle, "This is an automatically created default area", adminUser);
+				areaRepo.save(defaultArea);
+				log.info("Created new default area: "+defaultArea);
 			}
 		} catch (Exception e) {
-			log.error(e.toString());
+			log.error("Cannot find or create default area!", e.toString());
 			throw e;
 		}
 

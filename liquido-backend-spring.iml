@@ -85,6 +85,8 @@
     <orderEntry type="library" name="Maven: io.github.classgraph:classgraph:4.8.102" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.30" level="project" />
     <orderEntry type="library" name="Maven: org.mariadb.jdbc:mariadb-java-client:3.0.6" level="project" />
+    <orderEntry type="library" name="Maven: org.postgresql:postgresql:42.5.0" level="project" />
+    <orderEntry type="library" scope="RUNTIME" name="Maven: org.checkerframework:checker-qual:3.5.0" level="project" />
     <orderEntry type="library" name="Maven: io.jsonwebtoken:jjwt:0.9.1" level="project" />
     <orderEntry type="library" name="Maven: com.h2database:h2:1.4.200" level="project" />
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter-quartz:2.7.4" level="project" />

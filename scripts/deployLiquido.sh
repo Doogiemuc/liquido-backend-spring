@@ -19,7 +19,7 @@ CODE_DIR=/Users/doogie/Coding/liquido
 [ -z "$BACKEND_SOURCE" ] && BACKEND_SOURCE=${CODE_DIR}/liquido-backend-spring
 BACKEND_USER=ec2-user
 BACKEND_HOST=52.59.209.46        # liquido-prod-lightsail
-BACKEND_API=http://${BACKEND_HOST}:80/liquido-api/v3
+BACKEND_API=http://${BACKEND_HOST}:7180/liquido-api/v3
 BACKEND_DEST_DIR=/home/ec2-user/liquido-prod
 BACKEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:${BACKEND_DEST_DIR}
 
@@ -98,7 +98,7 @@ echo
 echo "===== Build Backend ====="
 echo
 echo "in $BACKEND_SOURCE"
-read -p "Build backend? [yes|skipTests|NO] " yn
+read -p "Build backend? [YES|skipTests|no] " yn
 if [[ $yn =~ ^[Ss](kip)?$ ]] ; then
   echo "  Skipping tests."
   cd $BACKEND_SOURCE
@@ -107,15 +107,15 @@ if [[ $yn =~ ^[Ss](kip)?$ ]] ; then
   echo
   echo -e "Backend built successfully. ${GREEN_OK}"
   echo
-elif [[ $yn =~ ^[Yy](es)?$ ]] ; then
+elif [[ $yn =~ ^[Nn] ]] ; then
+  echo "Backend will NOT be built."
+else
   cd $BACKEND_SOURCE
   $MAVEN clean install package
   [ $? -ne 0 ] && exit 1
   echo
   echo -e "Backend built successfully. ${GREEN_OK}"
   echo
-else
-	echo "Backend will NOT be built."
 fi
 
 JAR_NAME=`(cd ${BACKEND_SOURCE}/target; ls -1 -t *.jar | head -1)`
@@ -135,14 +135,14 @@ echo "===== Upload backend JAR file to AWS EC2 ====="
 echo
 echo "from: $JAR"
 echo "to:   $BACKEND_DEST"
-read -p "Upload backend JAR file? [yes|NO] " yn
-if [[ $yn =~ ^[Yy](es)?$ ]] ; then
+read -p "Upload backend JAR file? [YES|no] " yn
+if [[ $yn =~ ^[Nn] ]] ; then
+  echo "Backend will NOT be deployed."
+else
   echo "scp -i $SSH_KEY $JAR $BACKEND_DEST"
   scp -i $SSH_KEY $JAR $BACKEND_DEST
   [ $? -ne 0 ] && exit 1
   echo -e "Backend deployed successfully. ${GREEN_OK}"
-else
-  echo "Backend will NOT be deployed."
 fi
 
 echo
@@ -151,8 +151,10 @@ echo
 
 RESTART_CMD="(cd ${BACKEND_DEST_DIR};./restartLiquido.sh ${JAR_NAME})"
 
-read -p "Restart remote backend? [yes|NO] " yn
-if [[ $yn =~ ^[Yy](es)?$ ]] ; then
+read -p "Restart remote backend? [YES|no] " yn
+if [[ $yn =~ ^[Nn] ]] ; then
+  echo "Backend will NOT be restarted."
+else
   echo "Restarting liquido backend:"
   echo "${RESTART_CMD}"
   echo "--------------------- output of remote command --------------"
@@ -160,8 +162,6 @@ if [[ $yn =~ ^[Yy](es)?$ ]] ; then
   [ $? -ne 0 ] && exit 1
   echo "---------------------- end of remote command ----------------"
   echo -e "Ok, ${JAR_NAME} is booting up on $BACKEND_HOST ... $GREEN_OK"
-else
-  echo "Backend will NOT be restarted."
 fi
 
 
@@ -170,9 +170,11 @@ echo
 echo "===== Build Web Frontend ====="
 echo
 echo "in $FRONTEND_SOURCE"
-read -p "Build Web Frontend? [yes|NO] " yn
+read -p "Build Web Frontend? [YES|no] " yn
 FRONTEND_BUILT_SUCCESSFULLY=false
-if [[ $yn =~ ^[Yy](es)?$ ]] ; then
+if [[ $yn =~ ^[Nn] ]] ; then
+  echo "Web Frontend will NOT be built."
+else
   cd $FRONTEND_SOURCE
   $NPM run build
   [ $? -ne 0 ] && exit 1
@@ -188,16 +190,15 @@ echo "to:   $FRONTEND_DEST"
 if [ "$FRONTEND_BUILT_SUCCESSFULLY" = false ] ; then
   echo "WARN: You did not build the frontend. This would deploy the last built version!"
 fi
-read -p "Deploy Web Frontend? [yes|NO] " yn
-if [[ $yn =~ ^[Yy](es)?$ ]] ; then
+read -p "Deploy Web Frontend? [YES|no] " yn
+if [[ $yn =~ ^[Nn]$ ]] ; then
+  echo "Web Frontend will NOT be deployed."
+else
   echo "scp -i $SSH_KEY -r $FRONTEND_SOURCE/dist/* $FRONTEND_DEST"
   scp -i $SSH_KEY -r $FRONTEND_SOURCE/dist/* $FRONTEND_DEST
   [ $? -ne 0 ] && exit 1
   echo -e "Web Frontend deployed to $FRONTEND_DEST ${GREEN_OK}"
-else
-  echo "Web Frontend will NOT be deployed."
 fi
-
 
 
 
@@ -205,13 +206,15 @@ echo
 echo "===== Build Mobile PWA ====="
 echo
 echo "in $PWA_SOURCE"
-read -p "Build Mobile PWA? [yes|NO] " yn
+read -p "Build Mobile PWA? [YES|no] " yn
 PWA_BUILT_SUCCESSFULLY=false
-if [[ $yn =~ ^[Yy](es)?$ ]] ; then
+if [[ $yn =~ ^[Nn]$ ]] ; then
+  echo "Mobile PWA will NOT be built."
+else
   cd $PWA_SOURCE
   $NPM run build
   [ $? -ne 0 ] && exit 1
-  echo "setting PWA_BUILT_SUCCESSFULLY to true"
+  # echo "setting PWA_BUILT_SUCCESSFULLY to true"
   PWA_BUILT_SUCCESSFULLY=true
   echo -e "Mobile PWA built successfully. ${GREEN_OK}"
 fi
@@ -225,16 +228,16 @@ echo "to:   $PWA_DEST"
 if [ "$PWA_BUILT_SUCCESSFULLY" = false ] ; then
   echo "WARN: You did not build the mobile PWA. This would redeploy the last built version!"
 fi
-read -p "Redeploy PWA? [yes|NO] " yn
-if [[ $yn =~ ^[Yy](es)?$ ]] ; then
+read -p "Redeploy PWA? [YES|no] " yn
+if [[ $yn =~ ^[Nn]$ ]] ; then
+  echo "Mobile PWA will NOT be deployed"
+else
   echo "Clean $PWA_DEST/*"
   ssh -i $SSH_KEY ${BACKEND_USER}@${BACKEND_HOST} rm -rf $PWA_DEST/*
   echo "Upload PWA: scp -i $SSH_KEY -r $PWA_SOURCE/dist/* $PWA_DEST"
   scp -i $SSH_KEY -r $PWA_SOURCE/dist/* $PWA_DEST
   [ $? -ne 0 ] && exit 1
   echo -e "Mobile PWA deployed to $PWA_DEST ${GREEN_OK}"
-else
-  echo "Mobile PWA will NOT be deployed."
 fi
 
 
@@ -242,11 +245,11 @@ fi
 echo
 echo "===== Sanity checks ====="
 echo
-echo -n "Querying backend to be alive at $BACKEND_API ..."
+echo -n "Querying backend to be alive at $BACKEND_API (for max 20 seconds) ..."
 
 PING_SUCCESS=0
 for i in {1..20}; do
-	HELLO_WORD=`curl -s -X GET ${BACKEND_API}/_ping`
+	HELLO_WORD=`curl ${BACKEND_API}/_ping`
 	if [[ $HELLO_WORD = '{"Hello":"World"}' ]] ; then
 	    echo -e " $GREEN_OK"
 		PING_SUCCESS=1

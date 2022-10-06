@@ -140,12 +140,20 @@
 		</dependency>
 
 
-		<!-- https://mvnrepository.com/artifact/org.postgresql/postgresql
+		<!-- PostgreSQL driver   https://mvnrepository.com/artifact/org.postgresql/postgresql -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
-			<version>42.2.9</version>
-		</dependency -->
+			<version>42.5.0</version>
+		</dependency>
+
+        <!-- MySQL Connector for PROD DB https://mvnrepository.com/artifact/mysql/mysql-connector-java
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.30</version>
+        </dependency>
+        -->
 
 		<!-- Json Web Tokens (JWT) -->
 		<dependency>
@@ -176,12 +184,12 @@
 			<artifactId>h2</artifactId>
 		</dependency>
 
-		<!-- Spring boot starter Quartz - task scheduler -
-		<dependency>
-			<groupId>org.quartz-scheduler</groupId>
-			<artifactId>quartz</artifactId>
-			<version>${quartz.version}</version>
-		</dependency -->
+        <!-- Spring boot starter Quartz - task scheduler -
+        <dependency>
+            <groupId>org.quartz-scheduler</groupId>
+            <artifactId>quartz</artifactId>
+            <version>${quartz.version}</version>
+        </dependency -->
 
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-quartz -->
 		<dependency>
