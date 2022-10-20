@@ -2,17 +2,28 @@
 #
 # Linux Shell - Deployment Script for LIQUIDO
 #
-# deployLiquido.sh <path-to-ssh-key.pem>
+# Usage: ./deployLiquido.sh [-j JAVA_HOME] [-s BACKEND_SSH_KEY]
 
+while getopts j:s:p:h? flag
+do
+    case "${flag}" in
+        j) JAVA_HOME=${OPTARG};;
+        s) BACKEND_SSH_KEY=${OPTARG};;   # SSH key for backend host
+        p) PWA_SSH_KEY=${OPTARG};;       # SSH key for mobile app SCP
+        h) echo "LIQUIDO CI/CD deployment script"
+           echo "Usage: $0 [-j JAVA_HOME] [-s BACKEND_SSH_KEY] [-p PWA_SSH_KEY]"
+           exit 1;;
+    esac
+done
 
-[ -z "$JAVA_HOME" ] && echo "Need JAVA_HOME !" && exit 1
+[ -z "$JAVA_HOME" ] && echo "Need -j JAVA_HOME !" && exit 1
+[ -z "$BACKEND_SSH_KEY" ] && echo "Need -s BACKEND_SSH_KEY for backend host!" && exit 1
+[ -z "$PWA_SSH_KEY" ] && echo "Need -p PWA_BACKEND_SSH_KEY to deploy mobile app!" && exit 1
 
-if [ -n "$1" ] ; then
-  SSH_KEY=$1
-fi
+# Backup current directory
+CURRENT_DIR=`pwd`
 
-[ -z "$SSH_KEY" ] && echo "Need SSH_KEY !" && exit 1
-
+# Source code dir
 CODE_DIR=/Users/doogie/Coding/liquido
 
 # Liquido Java Spring Backend
@@ -27,21 +38,26 @@ BACKEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:${BACKEND_DEST_DIR}
 [ -z "$FRONTEND_SOURCE" ] && FRONTEND_SOURCE=${CODE_DIR}/liquido-vue-frontend
 FRONTEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:/var/www/html/liquido-web
 FRONTEND_URL=http://$BACKEND_HOST
-
+xx^
 # Liquido Progressive Web App (PWA)
-[ -z "$PWA_SOURCE" ] && PWA_SOURCE=${CODE_DIR}/liquido-mobile-pwa
-PWA_DEST=${BACKEND_USER}@${BACKEND_HOST}:/var/www/html/liquido-mobile
-PWA_URL=http://$BACKEND_HOST/liquido-mobile
+[ -z "$PWA_SOURCE" ] && PWA_SOURCE=${CODE_DIR}/liquido-mobile-pwa-vue3
+#PWA_DEST=${BACKEND_USER}@${BACKEND_HOST}:/var/www/html/liquido-mobile    # liquido INT env on AWS lightsail
+#PWA_URL=http://$BACKEND_HOST/liquido-mobile
+
+PWA_HOST=access799372408.webspace-data.io   # ionos webspace
+PWA_USER=u98668608
+PWA_DEST=${PWA_USER}@${PWA_HOST}:./liquido-mobile-pwa
+PWA_URL=http://app.liquido.vote    # for cypress test
 
 # Cypress configuration for environment
-CYPRESS_CONFIG_FILE=./cypress/cypress.int.json
+#CYPRESS_CONFIG_FILE=./test/e2e/cypress.prod.json
 
-# Liquido Documentation
+# Liquido Website
 DOC_SOURCE=${CODE_DIR}/liquido-doc-gulp-pug/_site/
 DOC_DEST=${BACKEND_USER}@${BACKEND_HOST}:/home/ec2-user/liquido/liquido-doc
 
 # Tools
-CURRENT_DIR=$PWD
+
 NPM=npm
 MAVEN=./mvnw
 CYPRESS=./node_modules/cypress/bin/cypress
@@ -86,9 +102,8 @@ if [ ! -d $BACKEND_SOURCE ] ; then
 fi
 echo -e "$GREEN_OK"
 
-
 echo -n "Checking connection to target host $BACKEND_HOST ..."
-if ! ssh -i $SSH_KEY ${BACKEND_USER}@${BACKEND_HOST} "ls" > /dev/null; then
+if ! ssh -i $BACKEND_SSH_KEY ${BACKEND_USER}@${BACKEND_HOST} "ls" > /dev/null; then
 	echo -e "$RED_FAIL"
 	exit 1
 fi
@@ -131,7 +146,7 @@ echo -e "$GREEN_OK"
 
 
 echo
-echo "===== Upload backend JAR file to AWS EC2 ====="
+echo "===== Deploy LIQUIDO backend (JAR file) ====="
 echo
 echo "from: $JAR"
 echo "to:   $BACKEND_DEST"
@@ -139,14 +154,16 @@ read -p "Upload backend JAR file? [YES|no] " yn
 if [[ $yn =~ ^[Nn] ]] ; then
   echo "Backend will NOT be deployed."
 else
-  echo "scp -i $SSH_KEY $JAR $BACKEND_DEST"
-  scp -i $SSH_KEY $JAR $BACKEND_DEST
+  echo "scp -i $BACKEND_SSH_KEY $JAR $BACKEND_DEST"
+  scp -i $BACKEND_SSH_KEY $JAR $BACKEND_DEST
   [ $? -ne 0 ] && exit 1
   echo -e "Backend deployed successfully. ${GREEN_OK}"
 fi
 
 echo
 echo "===== Restart Backend ====="
+echo
+echo "on $BACKEND_DEST"
 echo
 
 RESTART_CMD="(cd ${BACKEND_DEST_DIR};./restartLiquido.sh ${JAR_NAME})"
@@ -158,7 +175,7 @@ else
   echo "Restarting liquido backend:"
   echo "${RESTART_CMD}"
   echo "--------------------- output of remote command --------------"
-  ssh -i $SSH_KEY ${BACKEND_USER}@${BACKEND_HOST} ${RESTART_CMD}
+  ssh -i $BACKEND_SSH_KEY ${BACKEND_USER}@${BACKEND_HOST} ${RESTART_CMD}
   [ $? -ne 0 ] && exit 1
   echo "---------------------- end of remote command ----------------"
   echo -e "Ok, ${JAR_NAME} is booting up on $BACKEND_HOST ... $GREEN_OK"
@@ -194,8 +211,8 @@ read -p "Deploy Web Frontend? [YES|no] " yn
 if [[ $yn =~ ^[Nn]$ ]] ; then
   echo "Web Frontend will NOT be deployed."
 else
-  echo "scp -i $SSH_KEY -r $FRONTEND_SOURCE/dist/* $FRONTEND_DEST"
-  scp -i $SSH_KEY -r $FRONTEND_SOURCE/dist/* $FRONTEND_DEST
+  echo "scp -i $BACKEND_SSH_KEY -r $FRONTEND_SOURCE/dist/* $FRONTEND_DEST"
+  scp -i $BACKEND_SSH_KEY -r $FRONTEND_SOURCE/dist/* $FRONTEND_DEST
   [ $? -ne 0 ] && exit 1
   echo -e "Web Frontend deployed to $FRONTEND_DEST ${GREEN_OK}"
 fi
@@ -233,9 +250,14 @@ if [[ $yn =~ ^[Nn]$ ]] ; then
   echo "Mobile PWA will NOT be deployed"
 else
   echo "Clean $PWA_DEST/*"
-  ssh -i $SSH_KEY ${BACKEND_USER}@${BACKEND_HOST} rm -rf $PWA_DEST/*
-  echo "Upload PWA: scp -i $SSH_KEY -r $PWA_SOURCE/dist/* $PWA_DEST"
-  scp -i $SSH_KEY -r $PWA_SOURCE/dist/* $PWA_DEST
+  ssh -i $PWA_SSH_KEY ${PWA_USER}@${PWA_HOST} rm -rf $PWA_DEST/*
+
+  #echo "Upload PWA: scp -i $PWA_SSH_KEY -r $PWA_SOURCE/dist/* $PWA_DEST"
+  #scp -i $PWA_SSH_KEY -r $PWA_SOURCE/dist/* $PWA_DEST
+
+  echo "Upload PWA: rsync -avr -e \"ssh -i $PWA_SSH_KEY\" $PWA_SOURCE/dist/ $PWA_DEST"
+  rsync -avr -e "ssh -i $PWA_SSH_KEY" $PWA_SOURCE/dist/ $PWA_DEST    # Trailing slash in source is important!
+
   [ $? -ne 0 ] && exit 1
   echo -e "Mobile PWA deployed to $PWA_DEST ${GREEN_OK}"
 fi
@@ -278,10 +300,12 @@ echo "Backend API: $BACKEND_API"
 echo
 
 # Cypress command line --config and --env overwrite --config-file
-CYPRESS_CMD="$PWA_SOURCE/$CYPRESS run --config baseUrl=$PWA_URL --env LIQUIDO_API=$BACKEND_API --config-file=$CYPRESS_CONFIG_FILE --spec ./cypress/integration/happy-case.js"
+CYPRESS_CMD="$PWA_SOURCE/$CYPRESS run --config baseUrl=$PWA_URL --env LIQUIDO_API=$BACKEND_API" # use defaults instead of    --spec ./tests/e2e/specs/happy-case.js" --config-file=$CYPRESS_CONFIG_FILE
 
-read -p "Run Cypress tests against PWA? [yes|NO] " yn
-if [[ $yn =~ ^[Yy](es)?$ ]] ; then
+read -p "Run Cypress tests against PWA? [YES|no] " yn
+if [[ $yn =~ ^[Nn]$ ]] ; then
+  echo "Cypress test will NOT be run."
+else
 	cd $PWA_SOURCE
 	echo $CYPRESS_CMD
 	eval $CYPRESS_CMD
@@ -318,10 +342,10 @@ echo "===== Update LIQUIDO Documentation on EC2 ====="
 echo
 read -p "Update LIQUIDO documentation? [yes|NO] " yn
 if [[ $yn =~ ^[Yy](es)?$ ]] ; then
-  echo "rsync -avz -e ssh -i $SSH_KEY $DOC_SOURCE $DOC_DEST"
+  echo "rsync -avz -e ssh -i $BACKEND_SSH_KEY $DOC_SOURCE $DOC_DEST"
   BACKUP_CURRENT_DIR=$PWD
   cd $DOC_SOURCE
-  rsync -avz -e "ssh -i $SSH_KEY" . $DOC_DEST
+  rsync -avz -e "ssh -i $BACKEND_SSH_KEY" . $DOC_DEST
   [ $? -ne 0 ] && exit 1
   cd $BACKUP_CURRENT_DIR
   echo -e "Documentation updated in $DOC_DEST ${GREEN_OK}"

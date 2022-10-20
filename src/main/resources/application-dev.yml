@@ -67,8 +67,8 @@ logging:
 #        security: DEBUG
         web:
           filter:
-            # Show HTTP requests
-            CommonsRequestLoggingFilter: DEBUG
+            # Show HTTP requests  wiht spring's LogFormatUtils.  But DoogiesRequestLogger is better :-)
+            # CommonsRequestLoggingFilter: DEBUG
 
       # Show all Hibernate JPA SQL commands during runtime including binding of sql query parameters to values. (needs debug=true)
       # This significantly slows down the app and creates A LOT of debugging output. Watch your disk space!
