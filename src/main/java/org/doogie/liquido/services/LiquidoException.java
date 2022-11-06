@@ -50,8 +50,9 @@ public class LiquidoException extends Exception {
 		CANNOT_LOGIN_TEAM_NOT_FOUND(23, HttpStatus.UNAUTHORIZED),           // when changing team
 		CANNOT_LOGIN_USER_NOT_MEMBER_OF_TEAM(24, HttpStatus.UNAUTHORIZED),  // when changing team and user is not member or admin of target team
 		CANNOT_LOGIN_INTERNAL_ERROR(25, HttpStatus.INTERNAL_SERVER_ERROR),	// when sending of email is not possible
+		CANNOT_REQUEST_SMS_TOKEN(26, HttpStatus.UNAUTHORIZED),              // eg. when entered mobile number is not valid
 
-		//JWT Erros
+		//JWT Errors
 		JWT_TOKEN_INVALID(30, HttpStatus.UNAUTHORIZED),
 		JWT_TOKEN_EXPIRED(31, HttpStatus.UNAUTHORIZED),
 

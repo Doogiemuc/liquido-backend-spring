@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 
 /**
  * Happy Flow test for new Twilio Verify 2.0 API client
@@ -33,7 +32,7 @@ public class TwilioVerifyApiClientTest extends BaseTest {
 	@Test
 	public void testTwilioAuthentication() throws LiquidoException {
 		String email = null;
-		String mobilephone = props.admin.mobilephone;
+		String mobilephone = props.testUser.mobilephone;
 		long userAuthyId;
 
 		//----- create new user

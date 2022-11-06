@@ -4,7 +4,7 @@
 
 	<groupId>org.doogie.liquido</groupId>
 	<artifactId>liquido-backend-spring</artifactId>
-	<version>4.1.0</version>
+	<version>5.0.0</version>
 	<packaging>jar</packaging>
 
 	<name>liquido-backend-spring</name>
@@ -248,14 +248,11 @@
         </dependency>
 
 		<!-- For sending mails via SMTP -->
-		<dependency>
-			<groupId>com.sun.mail</groupId>
-			<artifactId>jakarta.mail</artifactId>
-			<version>2.0.1</version>
-		</dependency>
-
-
-
+        <dependency>
+            <groupId>javax.mail</groupId>
+            <artifactId>mail</artifactId>
+            <version>1.5.0-b01</version>
+        </dependency>
 
 		<!-- =================== TEST ==================== -->
 

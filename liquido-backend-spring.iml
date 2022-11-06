@@ -98,8 +98,8 @@
     <orderEntry type="library" name="Maven: org.apache.httpcomponents:httpcore:4.4.13" level="project" />
     <orderEntry type="library" name="Maven: commons-codec:commons-codec:1.13" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.projectlombok:lombok:1.18.24" level="project" />
-    <orderEntry type="library" name="Maven: com.sun.mail:jakarta.mail:2.0.1" level="project" />
-    <orderEntry type="library" name="Maven: com.sun.activation:jakarta.activation:1.2.1" level="project" />
+    <orderEntry type="library" name="Maven: javax.mail:mail:1.5.0-b01" level="project" />
+    <orderEntry type="library" name="Maven: javax.activation:activation:1.1" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.springframework.boot:spring-boot-starter-test:2.7.4" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.springframework.boot:spring-boot-test:2.2.4.RELEASE" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.springframework.boot:spring-boot-test-autoconfigure:2.2.4.RELEASE" level="project" />

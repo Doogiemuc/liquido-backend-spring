@@ -6,7 +6,6 @@ import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.testdata.LiquidoProperties;
-import org.doogie.liquido.testdata.TestDataUtils;
 import org.quartz.SchedulerException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,7 +17,6 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.security.core.userdetails.User;
 
 import java.net.InetAddress;
 import java.util.Arrays;
@@ -94,6 +92,7 @@ public class LiquidoBackendSpringApplication {
 		log.info(" spring.jpa.generate-ddl: " + env.getProperty("spring.jpa.generate-ddl"));
 		log.info(" spring.jpa.hibernate.ddl-auto: " + env.getProperty("spring.jpa.hibernate.ddl-auto"));
 		log.info(" javax.javax.persistence.schema-generation: " + env.getProperty("javax.javax.persistence.schema-generation"));
+		log.info(" Mail/SMTP   : " + liquidoProps.smtp.host + ":" + liquidoProps.smtp.port);
 		log.info(" Database URL: " + jdbcTemplate.getDataSource().getConnection().getMetaData().getURL());  // may throw SQL Exception
 		log.info("=======================================================");
 
@@ -124,9 +123,9 @@ public class LiquidoBackendSpringApplication {
 		// Create a default adminUser in DB (if not present yet)
 		UserModel adminUser = null;
 		try {
-			Optional<UserModel> adminUserOpt = userRepo.findByEmail(liquidoProps.admin.email);
+			Optional<UserModel> adminUserOpt = userRepo.findByEmail(liquidoProps.testUser.email);
 			if (!adminUserOpt.isPresent()) {
-				adminUser = new UserModel(liquidoProps.admin.email, liquidoProps.admin.name, liquidoProps.admin.mobilephone, liquidoProps.admin.website, liquidoProps.admin.picture);
+				adminUser = new UserModel(liquidoProps.testUser.email, liquidoProps.testUser.name, liquidoProps.testUser.mobilephone, liquidoProps.testUser.website, liquidoProps.testUser.picture);
 				userRepo.save(adminUser);
 			}
 		} catch(Exception e) {
@@ -134,18 +133,7 @@ public class LiquidoBackendSpringApplication {
 			throw e;
 		}
 
-		// Create a default area. Used for mobile app.
-		try {
-			Optional<AreaModel> defaultAreaOpt = areaRepo.findByTitle(liquidoProps.defaultAreaTitle);
-			if (!defaultAreaOpt.isPresent()) {
-				AreaModel defaultArea = new AreaModel(liquidoProps.defaultAreaTitle, "This is an automatically created default area", adminUser);
-				areaRepo.save(defaultArea);
-				log.info("Created new default area: "+defaultArea);
-			}
-		} catch (Exception e) {
-			log.error("Cannot find or create default area!", e.toString());
-			throw e;
-		}
+
 
 
 		/* This way you could log ALL effective environment properties. But this reveals all passwords!!!

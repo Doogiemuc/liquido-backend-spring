@@ -143,17 +143,19 @@ liquido:
   smtp:
     host: smtp.server.com
     port: 587
+    startttls: true
     from: donotreply@domain.tld
     fromname: LIQUIDO
     username: user@server.com
     pass: XXXXXXX
 
-  # SuperAdmin user (will automatically be upserted)
-  admin:
-    email: admin@liquido.de
+  # Default test user, will automatically be created, used in tests
+  testUser:
+    email: adminTeamOne@liquido.vote
     name: Liquido Admin
-    mobilephone: "+491511234567"
+    mobilephone: "+49151XXXXXXXX"
     picture: Avatar16.png
+    teamName: AdminTeamOne
 
   # AUTHY API secrets
   authy:
@@ -166,7 +168,7 @@ liquido:
     serviceSID: VA.....XXXXXXX.....
     authToken: 627a69XXXXXXXXXXXXXXXXXXXXX
 
-  # LIQUIDO can create a SQL file with schmea and data
+  # LIQUIDO can create a SQL file with schema and data
   # And then quickly load that testdata in future runs. This is fast!
   test:
     recreateTestData: false

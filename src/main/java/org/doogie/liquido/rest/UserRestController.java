@@ -160,7 +160,7 @@ public class UserRestController {
 		log.info("User "+user.getEmail()+" may login. Sending code via EMail.");
 
 		try {
-			mailService.sendEMail(email, oneTimeToken.getNonce());
+			mailService.sendEMail(user.getName(), email, oneTimeToken.getNonce());
 		} catch (Exception e) {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_INTERNAL_ERROR, "Internal server error: Cannot send Email "+e.toString(), e);
 		}

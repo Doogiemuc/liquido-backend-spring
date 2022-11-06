@@ -77,7 +77,7 @@ public class TestDataUtils {
 	 * Create the admin user with the values from application.properties
 	 */
 	public void seedAdminUser() {
-		UserModel admin = new UserModel(prop.admin.email, prop.admin.name, prop.admin.mobilephone, "", prop.admin.picture);
+		UserModel admin = new UserModel(prop.testUser.email, prop.testUser.name, prop.testUser.mobilephone, "", prop.testUser.picture);
 		//TODO: admin.setAuthyId();
 		upsert(admin);
 		reloadUsersCache();

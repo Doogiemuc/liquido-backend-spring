@@ -26,11 +26,14 @@ CURRENT_DIR=`pwd`
 # Source code dir
 CODE_DIR=/Users/doogie/Coding/liquido
 
+
+#TODO: load these from a config.yaml file!
+
 # Liquido Java Spring Backend
 [ -z "$BACKEND_SOURCE" ] && BACKEND_SOURCE=${CODE_DIR}/liquido-backend-spring
 BACKEND_USER=ec2-user
-BACKEND_HOST=52.59.209.46        # liquido-prod-lightsail
-BACKEND_API=http://${BACKEND_HOST}:7180/liquido-api/v3
+BACKEND_HOST=api.liquido.vote                                        # liquido-prod-lightsail static IP  3.72.227.123
+BACKEND_API=https://${BACKEND_HOST}:7180/liquido-api/v3              # HTTPS !!!
 BACKEND_DEST_DIR=/home/ec2-user/liquido-prod
 BACKEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:${BACKEND_DEST_DIR}
 
@@ -38,7 +41,7 @@ BACKEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:${BACKEND_DEST_DIR}
 [ -z "$FRONTEND_SOURCE" ] && FRONTEND_SOURCE=${CODE_DIR}/liquido-vue-frontend
 FRONTEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:/var/www/html/liquido-web
 FRONTEND_URL=http://$BACKEND_HOST
-xx^
+
 # Liquido Progressive Web App (PWA)
 [ -z "$PWA_SOURCE" ] && PWA_SOURCE=${CODE_DIR}/liquido-mobile-pwa-vue3
 #PWA_DEST=${BACKEND_USER}@${BACKEND_HOST}:/var/www/html/liquido-mobile    # liquido INT env on AWS lightsail
@@ -47,7 +50,7 @@ xx^
 PWA_HOST=access799372408.webspace-data.io   # ionos webspace
 PWA_USER=u98668608
 PWA_DEST=${PWA_USER}@${PWA_HOST}:./liquido-mobile-pwa
-PWA_URL=http://app.liquido.vote    # for cypress test
+PWA_URL=https://app.liquido.vote    				# for cypress test
 
 # Cypress configuration for environment
 #CYPRESS_CONFIG_FILE=./test/e2e/cypress.prod.json
@@ -251,12 +254,14 @@ if [[ $yn =~ ^[Nn]$ ]] ; then
 else
   echo "Clean $PWA_DEST/*"
   ssh -i $PWA_SSH_KEY ${PWA_USER}@${PWA_HOST} rm -rf $PWA_DEST/*
+  echo
 
   #echo "Upload PWA: scp -i $PWA_SSH_KEY -r $PWA_SOURCE/dist/* $PWA_DEST"
   #scp -i $PWA_SSH_KEY -r $PWA_SOURCE/dist/* $PWA_DEST
 
   echo "Upload PWA: rsync -avr -e \"ssh -i $PWA_SSH_KEY\" $PWA_SOURCE/dist/ $PWA_DEST"
   rsync -avr -e "ssh -i $PWA_SSH_KEY" $PWA_SOURCE/dist/ $PWA_DEST    # Trailing slash in source is important!
+  echo
 
   [ $? -ne 0 ] && exit 1
   echo -e "Mobile PWA deployed to $PWA_DEST ${GREEN_OK}"
@@ -267,11 +272,12 @@ fi
 echo
 echo "===== Sanity checks ====="
 echo
-echo -n "Querying backend to be alive at $BACKEND_API (for max 20 seconds) ..."
+echo -n "Querying backend to be alive at $BACKEND_API/_ping (for max 20 seconds) ..."
 
 PING_SUCCESS=0
 for i in {1..20}; do
-	HELLO_WORD=`curl ${BACKEND_API}/_ping`
+  # graphQL ping would be: "curl -X POST -d '{"query": "query {ping}"}' -H "Content-Type: application/json" ${BACKEND_API}/graphql
+	HELLO_WORD=`curl --silent ${BACKEND_API}/_ping`
 	if [[ $HELLO_WORD = '{"Hello":"World"}' ]] ; then
 	    echo -e " $GREEN_OK"
 		PING_SUCCESS=1
