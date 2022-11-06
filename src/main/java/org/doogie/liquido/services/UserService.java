@@ -85,9 +85,9 @@ public class UserService {
 
 		// The admin, and only the admin is allowed to login with a secret static devLoginToken
 		if (DoogiesUtil.equals(prop.test.devLoginToken, authyToken) &&
-				DoogiesUtil.equals(prop.admin.mobilephone, mobile) &&
-				DoogiesUtil.equals(prop.admin.email, user.getEmail()) &&
-				DoogiesUtil.equals(prop.admin.name, user.getName())
+				DoogiesUtil.equals(prop.testUser.mobilephone, mobile) &&
+				DoogiesUtil.equals(prop.testUser.email, user.getEmail()) &&
+				DoogiesUtil.equals(prop.testUser.name, user.getName())
 		) {
 			log.info("[DEV] Admin login as "+user);
 		} else {

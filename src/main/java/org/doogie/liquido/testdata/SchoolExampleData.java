@@ -148,7 +148,7 @@ public class SchoolExampleData implements CommandLineRunner {
 
 	void seedAreas() {
 		log.debug("seedAreas");
-		UserModel admin = util.user(prop.admin.email);
+		UserModel admin = util.user(prop.testUser.email);
 		if (admin == null) throw new RuntimeException("ERROR: Need admin user to seed areas!");
 		this.areaTimetable = util.upsert(new AreaModel("Timetable", "Planning the timetable for all classes", admin));
 		this.areaExcursions = util.upsert(new AreaModel("Excursions", "Planning our adventurous excursions", admin));

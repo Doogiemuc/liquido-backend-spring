@@ -9,20 +9,22 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
 @Slf4j
-@Disabled // currently disabled
-//@ActiveProfiles("test")   // Needed to manually set test profile for tests, so that application-test.yml is loaded ???
 public class MailServiceTest extends BaseTest {
 
 	@Autowired
 	MailService mailService;
 
+	/**
+	 * This can for example send a mail to https://mailtrap.io/ when configured in your application-local.yml
+	 * @throws Exception when sending of mail fails eg. due to a SMTP misconfiguration or error
+	 */
 	@Test
 	public void testSendEMail() throws Exception {
 		//GIVEN an emailToken
 		String emailToken = "testDummyEmailToken";
 
 		//WHEN sending an Email
-		mailService.sendEMail("liquido_test@doogie.de", emailToken);
+		mailService.sendEMail("DummyUserName", "liquido_test@nowhere.sdf", emailToken);
 
 		//THEN no exception is thrown
 		log.info("Email sent successfully");

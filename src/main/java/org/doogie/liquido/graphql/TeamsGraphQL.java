@@ -47,11 +47,12 @@ public class TeamsGraphQL {
 	AuthUtil authUtil;
 
 	/**
-	 * Check if backend is available at all
-	 * @return some hello world json if everything is ok
+	 * Check if GraphQL part of backend is available.
+	 * @see org.doogie.liquido.rest.PingController  for an is-alive ping via HTTP REST
+	 * @return some dummy hello world json if everything is ok
 	 */
 	@GraphQLQuery(name = "ping")
-	public Lson pingApi() {
+	public Lson graphQLPing() {
 		return Lson.builder("api", "LIQUIDO API is available");
 	}
 
@@ -127,6 +128,20 @@ public class TeamsGraphQL {
 		String jwt = jwtTokenUtils.generateToken(admin.getId(), newTeam.getId());
 		return new CreateOrJoinTeamResponse(newTeam, admin, jwt);
 	}
+
+	/**
+	 * Get information about team by inviteCode
+	 * @param inviteCode a valid InviteCode
+	 * @return TeamModel or nothing if InviteCode is invalid
+	 */
+	@GraphQLQuery(name = "getTeamForInviteCode")
+	public Optional<TeamModel> getTeamForInviteCode(
+		@GraphQLArgument(name = "inviteCode") String inviteCode
+	) {
+		Optional<TeamModel> team = teamRepo.findByInviteCode(inviteCode);
+		return team;
+	}
+
 
 	/**
 	 * Join an existing team as a member.

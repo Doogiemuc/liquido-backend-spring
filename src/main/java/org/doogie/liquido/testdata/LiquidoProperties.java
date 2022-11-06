@@ -66,6 +66,7 @@ public class LiquidoProperties {
 		@ToString.Exclude
 		@JsonIgnore
 		public String pass;
+		public Boolean startttls;
 	}
 
 	public Test test = new Test();
@@ -80,14 +81,15 @@ public class LiquidoProperties {
 	}
 
 	@ToString.Exclude
-	public Admin admin = new Admin();
+	public TestUser testUser = new TestUser();
 	@Data
-	public static class Admin {
+	public static class TestUser {
 		public String email;
 		public String name;
 		public String mobilephone;
 		public String website;
 		public String picture;
+		public String teamName;
 	}
 
 	public Authy authy = new Authy();

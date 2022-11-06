@@ -85,11 +85,11 @@ public class DevRestController {
 		if (!token.equals(prop.test.devLoginToken))
 			throw new LiquidoException(LiquidoException.Errors.UNAUTHORIZED, "Invalid token for GET /dev/users");
 		List<UserModel> users = new ArrayList<UserModel>();
-		Optional<UserModel> adminOpt = userRepo.findByEmail(prop.admin.email);
+		Optional<UserModel> adminOpt = userRepo.findByEmail(prop.testUser.email);
 		if (adminOpt.isPresent()) users.add(adminOpt.get());
 		int count = 0;
 		for (UserModel user : userRepo.findAll()) {
-			if (!user.getEmail().equalsIgnoreCase(prop.admin.email)) users.add(user);   // don't add the admin twice
+			if (!user.getEmail().equalsIgnoreCase(prop.testUser.email)) users.add(user);   // don't add the admin twice
 			count++;
 			if (count > 10) break;
 		}

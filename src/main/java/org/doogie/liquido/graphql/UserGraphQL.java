@@ -120,7 +120,7 @@ public class UserGraphQL {
 		log.info("User " + user.getEmail() + " may login. SendingL code via EMail.");
 
 		try {
-			mailService.sendEMail(email, oneTimeToken.getNonce());
+			mailService.sendEMail(user.getName(), email, oneTimeToken.getNonce());
 		} catch (Exception e) {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_INTERNAL_ERROR, "Internal server error: Cannot send Email " + e.toString(), e);
 		}
@@ -173,16 +173,17 @@ public class UserGraphQL {
 
 		// When user passes correct devLoginToken, then do NOT send and SMS and return dummySID. This is used in testing.
 		//BUGFIX: graphql-spqr passes null here: https://github.com/leangen/graphql-spqr/issues/197
-		if (devLoginToken != null && devLoginToken.isPresent() && DoogiesUtil.isEqual(props.test.devLoginToken, devLoginToken.get())) {
-			log.debug("requestAuthToken: DevLogin: returning Dummy token");
-			return "DummySID";
+		if (devLoginToken != null && devLoginToken.isPresent() && DoogiesUtil.isEqual(props.test.devLoginToken, devLoginToken.get()) &&
+		    mobilephone.equals(props.testUser.mobilephone)) {
+			log.debug("requestAuthToken: DevLogin: returning valid dummy token for testUser");
+			return "DummyAuthToken";
 		}
 
 		try {
 			return twilioApiClient.requestVerificationToken(TwilioVerifyApiClient.CHANNEL_SMS, mobilephone);
 		} catch (Throwable t) {
 			log.debug("Cannot request authToken: ", t.toString());
-			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_INTERNAL_ERROR, t.getMessage());
+			throw new LiquidoException(LiquidoException.Errors.CANNOT_REQUEST_SMS_TOKEN, t.getMessage());
 		}
 	}
 
