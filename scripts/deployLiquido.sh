@@ -185,6 +185,8 @@ else
 fi
 
 
+if false; then
+
 
 echo
 echo "===== Build Web Frontend ====="
@@ -219,6 +221,10 @@ else
   [ $? -ne 0 ] && exit 1
   echo -e "Web Frontend deployed to $FRONTEND_DEST ${GREEN_OK}"
 fi
+
+
+fi  ## SKIP
+
 
 
 
@@ -272,7 +278,7 @@ fi
 echo
 echo "===== Sanity checks ====="
 echo
-echo -n "Querying backend to be alive at $BACKEND_API/_ping (for max 20 seconds) ..."
+echo -n "Querying backend to be alive at ${BACKEND_API}/_ping (for max 20 seconds) ..."
 
 PING_SUCCESS=0
 for i in {1..20}; do

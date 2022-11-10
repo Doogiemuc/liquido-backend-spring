@@ -113,7 +113,6 @@ public class SchoolExampleData implements CommandLineRunner {
 	public void seedSchoolExampleData() throws LiquidoException {
 		log.info("===== Create school example data: START");
 		seedUsers();
-		util.seedAdminUser();
 		seedAreas();
 		seedIdeas();
 		seedProposals();

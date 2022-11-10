@@ -75,13 +75,14 @@ public class TestDataUtils {
 
 	/**
 	 * Create the admin user with the values from application.properties
-	 */
+	   DEPRECATED: Default test user is now created in LiquidoInitializer.
 	public void seedAdminUser() {
 		UserModel admin = new UserModel(prop.testUser.email, prop.testUser.name, prop.testUser.mobilephone, "", prop.testUser.picture);
 		//TODO: admin.setAuthyId();
 		upsert(admin);
 		reloadUsersCache();
 	}
+	*/
 
 	public UserModel user(int index) {
 		return this.users.get(index);

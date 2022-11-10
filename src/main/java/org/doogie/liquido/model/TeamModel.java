@@ -111,7 +111,7 @@ public class TeamModel extends BaseModel {
 		buf.append("id=" + id);
 		buf.append(", teamName='" + this.teamName + '\'');
 		buf.append(", firstAdmin='" + firstAdmin + "'");
-		buf.append(", numMembers="+this.members.size());
+		buf.append(", numAdminAndMembers=" + (this.admins.size() + this.members.size()));
 		buf.append(']');
 		return buf.toString();
   }
