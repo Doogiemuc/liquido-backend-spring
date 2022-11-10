@@ -215,8 +215,7 @@ public class TestDataCreator implements CommandLineRunner {
 
 			// ======== The order of these seed*() methods is very important! =====
 			seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX);
-			util.seedAdminUser();
-			auditorAware.setMockAuditor(util.user(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will be set as @createdAt
+			auditorAware.setMockAuditor(util.user(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will now be set as @createdAt
 			seedAreas();
 
 			// See some teams for mobile app. With an admin, users, proposals and polls.

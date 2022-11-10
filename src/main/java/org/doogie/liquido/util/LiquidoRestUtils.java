@@ -63,6 +63,6 @@ public class LiquidoRestUtils {
 	 */
 	public static String cleanMobilephone(String mobile) {
 		if (mobile == null) return null;
-		return mobile.replaceAll("/[\\+0-9]/", "");
+		return mobile.replaceAll("[^\\+0-9]", "");
 	}
 }

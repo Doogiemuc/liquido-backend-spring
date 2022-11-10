@@ -38,6 +38,7 @@ import java.util.List;
  */
 @Slf4j
 @Service
+@Deprecated  // replaced by TwillioVerifyApiClient.java
 public class TwilioAuthyClient {
 
 	@Autowired

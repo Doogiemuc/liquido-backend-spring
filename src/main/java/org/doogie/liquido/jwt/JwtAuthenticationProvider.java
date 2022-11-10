@@ -26,7 +26,7 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
 		LiquidoAuthentication auth = (LiquidoAuthentication)authentication;
 		Long userId = auth.getUserId();
 		UserModel user = userRepo.findById(userId)
-			.orElseThrow(() -> new AuthenticationCredentialsNotFoundException("Cannot find and authenticate from JWT user.id="+userId));
+			.orElseThrow(() -> new AuthenticationCredentialsNotFoundException("Cannot find user from passed JWT: user.id="+userId));
 		//TODO: sanity check user. isExpired, is locked, is in team etc.
 		auth.setAuthenticated(true);
 		auth.setDetails(user);
