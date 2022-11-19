@@ -13,3 +13,4 @@ release.properties
 
 /sampleDB-H2.sql
 sampleDB-H2.sql
+/scripts/deploy-config.sh

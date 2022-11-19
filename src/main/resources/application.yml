@@ -7,6 +7,10 @@
 
 server:
   port: 8080
+  servlet:
+    session:
+      cookie:
+        same-site: strict   # SameSite attribute for cookies
 
 graphql.playground:
   mapping: /playground

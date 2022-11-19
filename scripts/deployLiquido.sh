@@ -4,12 +4,17 @@
 #
 # Usage: ./deployLiquido.sh [-j JAVA_HOME] [-s BACKEND_SSH_KEY]
 
+# Load options from configuration file
+source deploy-config.sh
+
+# Load command line options
 while getopts j:s:p:h? flag
 do
     case "${flag}" in
         j) JAVA_HOME=${OPTARG};;
         s) BACKEND_SSH_KEY=${OPTARG};;   # SSH key for backend host
         p) PWA_SSH_KEY=${OPTARG};;       # SSH key for mobile app SCP
+        w) WEB_SSH_KEY=${OPTARG};;       # SSH key for mobile app SCP
         h) echo "LIQUIDO CI/CD deployment script"
            echo "Usage: $0 [-j JAVA_HOME] [-s BACKEND_SSH_KEY] [-p PWA_SSH_KEY]"
            exit 1;;
@@ -19,15 +24,32 @@ done
 [ -z "$JAVA_HOME" ] && echo "Need -j JAVA_HOME !" && exit 1
 [ -z "$BACKEND_SSH_KEY" ] && echo "Need -s BACKEND_SSH_KEY for backend host!" && exit 1
 [ -z "$PWA_SSH_KEY" ] && echo "Need -p PWA_BACKEND_SSH_KEY to deploy mobile app!" && exit 1
+[ -z "$WEB_SSH_KEY" ] && echo "Need -w WEB_BACKEND_SSH_KEY to update website!" && exit 1
+
+
+# check that file exists and EXIT with error if not.
+# param1 path to file
+# param2 description of file for error message
+function checkFileExists() {
+  if [ ! -f $1 ]; then
+      echo "ERROR: $2 $1"
+      exit 1
+  fi
+}
+
+function checkDirExists() {
+  if [ ! -d $1 ]; then
+      echo "ERROR: $2 $1"
+      exit 1
+  fi
+}
+
 
 # Backup current directory
 CURRENT_DIR=`pwd`
 
 # Source code dir
 CODE_DIR=/Users/doogie/Coding/liquido
-
-
-#TODO: load these from a config.yaml file!
 
 # Liquido Java Spring Backend
 [ -z "$BACKEND_SOURCE" ] && BACKEND_SOURCE=${CODE_DIR}/liquido-backend-spring
@@ -36,11 +58,7 @@ BACKEND_HOST=api.liquido.vote                                        # liquido-p
 BACKEND_API=https://${BACKEND_HOST}:7180/liquido-api/v3              # HTTPS !!!
 BACKEND_DEST_DIR=/home/ec2-user/liquido-prod
 BACKEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:${BACKEND_DEST_DIR}
-
-# Liquido Vue Web frontend
-[ -z "$FRONTEND_SOURCE" ] && FRONTEND_SOURCE=${CODE_DIR}/liquido-vue-frontend
-FRONTEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:/var/www/html/liquido-web
-FRONTEND_URL=http://$BACKEND_HOST
+checkDirExists $BACKEND_SOURCE "Backend Source"
 
 # Liquido Progressive Web App (PWA)
 [ -z "$PWA_SOURCE" ] && PWA_SOURCE=${CODE_DIR}/liquido-mobile-pwa-vue3
@@ -55,12 +73,23 @@ PWA_URL=https://app.liquido.vote    				# for cypress test
 # Cypress configuration for environment
 #CYPRESS_CONFIG_FILE=./test/e2e/cypress.prod.json
 
-# Liquido Website
-DOC_SOURCE=${CODE_DIR}/liquido-doc-gulp-pug/_site/
-DOC_DEST=${BACKEND_USER}@${BACKEND_HOST}:/home/ec2-user/liquido/liquido-doc
+# Liquido Vue Web frontend
+[ -z "$FRONTEND_SOURCE" ] && FRONTEND_SOURCE=${CODE_DIR}/liquido-vue-frontend
+FRONTEND_DEST=${BACKEND_USER}@${BACKEND_HOST}:/var/www/html/liquido-web
+FRONTEND_URL=http://$BACKEND_HOST
+checkDirExists $FRONTEND_SOURCE "Frontend Source"
+
+# Liquido.vote Website
+WEB_SOURCE=${CODE_DIR}/FlexStart-landing-page/_site/         # Trailing slash in source is important for rsync command!
+WEB_DEST=${PWA_USER}@${PWA_HOST}:./liquido-vote-website
+checkDirExists $WEB_SOURCE "Website Source"
+
+# Cypress End-2-End tests against mobile PWA
+CYPRESS_CONFIG_FILE=$PWA_SOURCE/cypress.config.PROD.js
+checkFileExists $CYPRESS_CONFIG_FILE "Cannot find Cypress Config file"
+
 
 # Tools
-
 NPM=npm
 MAVEN=./mvnw
 CYPRESS=./node_modules/cypress/bin/cypress
@@ -273,6 +302,26 @@ else
   echo -e "Mobile PWA deployed to $PWA_DEST ${GREEN_OK}"
 fi
 
+echo
+echo "===== Update Website www.liquido.vote ====="
+echo
+echo "from: $WEB_SOURCE"
+echo "to:   $WEB_DEST"
+read -p "Update Website www.liquido.vote? [YES|no] " yn
+if [[ $yn =~ ^[Nn]$ ]] ; then
+  echo "www.liquido.vote will not be updated"
+else
+
+  echo "Updating Website: rsync -avr -e \"ssh -i $WEB_SSH_KEY\" $WEB_SOURCE $WEB_DEST"
+  rsync -avr -e "ssh -i $WEB_SSH_KEY" $WEB_SOURCE $WEB_DEST
+  echo
+
+  [ $? -ne 0 ] && exit 1
+  echo -e "Website updated to $WEB_DEST ${GREEN_OK}"
+fi
+
+
+
 
 
 echo
@@ -297,10 +346,6 @@ if [ $PING_SUCCESS == 0 ] ; then
 	exit 1
 fi
 
-#
-# TODO: make some security checks against PROD
-#
-
 
 
 echo
@@ -311,8 +356,8 @@ echo "PWA_URL:     $PWA_URL"
 echo "Backend API: $BACKEND_API"
 echo
 
-# Cypress command line --config and --env overwrite --config-file
-CYPRESS_CMD="$PWA_SOURCE/$CYPRESS run --config baseUrl=$PWA_URL --env LIQUIDO_API=$BACKEND_API" # use defaults instead of    --spec ./tests/e2e/specs/happy-case.js" --config-file=$CYPRESS_CONFIG_FILE
+# Cypress command line --config foo=bar and --env envFoo=envVal  could overwrite values from --config-file
+CYPRESS_CMD="$PWA_SOURCE/$CYPRESS run --config-file=$CYPRESS_CONFIG_FILE --config baseUrl=$PWA_URL --env backendBaseURL=$BACKEND_API"
 
 read -p "Run Cypress tests against PWA? [YES|no] " yn
 if [[ $yn =~ ^[Nn]$ ]] ; then
@@ -328,8 +373,11 @@ fi
 
 
 
+
+if false; then
+
 echo
-echo "===== Web Frontend: End-2-End Tests ====="
+echo "===== Cypress End-2-End Tests against web frontend ====="
 echo
 echo "Frontend Source: $FRONTEND_SOURCE"
 echo "Web frontend:    $FRONTEND_URL"
@@ -347,23 +395,9 @@ if [[ $yn =~ ^[Yy](es)?$ ]] ; then
 	echo -e "Cypress tests against web frontend were successful ${GREEN_OK}"
 fi
 
+fi # skip testing old web frontend
 
 
-echo
-echo "===== Update LIQUIDO Documentation on EC2 ====="
-echo
-read -p "Update LIQUIDO documentation? [yes|NO] " yn
-if [[ $yn =~ ^[Yy](es)?$ ]] ; then
-  echo "rsync -avz -e ssh -i $BACKEND_SSH_KEY $DOC_SOURCE $DOC_DEST"
-  BACKUP_CURRENT_DIR=$PWD
-  cd $DOC_SOURCE
-  rsync -avz -e "ssh -i $BACKEND_SSH_KEY" . $DOC_DEST
-  [ $? -ne 0 ] && exit 1
-  cd $BACKUP_CURRENT_DIR
-  echo -e "Documentation updated in $DOC_DEST ${GREEN_OK}"
-else
-  echo "Documentation will NOT be updated."
-fi
 
 
 
