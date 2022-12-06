@@ -106,10 +106,11 @@ public class UserGraphQL {
 	public void requestEmailToken(
 		@GraphQLNonNull @GraphQLArgument(name="email") String email
 	) throws LiquidoException {
-		UserModel user = userRepo.findByEmail(email)
+		String emailLowerCase = LiquidoRestUtils.cleanEmail(email);
+		UserModel user = userRepo.findByEmail(emailLowerCase)
 			.orElseThrow(() -> {
-				log.info("Email "+email+" tried to request email token, but is not registered");  // This needs to be logged on level INFO. (Not warn, but info.)
-				return new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_EMAIL_NOT_FOUND, "User with that email is not found.");
+				log.info("Email "+ emailLowerCase +" tried to request email token, but is not registered");
+				return new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_EMAIL_NOT_FOUND, "User with that email <" + emailLowerCase + "> is not found.");
 			});
 
 		// Create new email login link with a token time token in it.
@@ -117,10 +118,25 @@ public class UserGraphQL {
 		LocalDateTime validUntil = LocalDateTime.now().plusHours(props.loginLinkExpirationHours);
 		OneTimeToken oneTimeToken = new OneTimeToken(tokenUUID.toString(), user, validUntil);
 		ottRepo.save(oneTimeToken);
-		log.info("User " + user.getEmail() + " may login. SendingL code via EMail.");
+		log.info("User " + user.getEmail() + " may login via email link.");
+
+		// This link is parsed in a cypress test case. Must update test if you change this.
+		String loginLink = "<a id='loginLink' style='font-size: 20pt;' href='"+props.frontendUrl+"/login?email="+user.getEmail()+"&emailToken="+oneTimeToken.getNonce()+"'>Login " + user.getName() +  "</a>";
+		String body = String.join(
+			System.getProperty("line.separator"),
+			"<html><h1>Liquido Login Token</h1>",
+			"<h3>Hello " + user.getName() + "</h3>",
+			"<p>With this link you can login to Liquido.</p>",
+			"<p>&nbsp;</p>",
+			"<b>" + loginLink + "</b>",
+			"<p>&nbsp;</p>",
+			"<p>This login link can only be used once!</p>",
+			"<p style='color:grey; font-size:10pt;'>You received this email, because  a login token for the <a href='https://www.liquido.net'>LIQUIDO</a> eVoting webapp was requested. If you did not request a login yourself, than you may simply ignore this message.</p>",
+			"</html>"
+		);
 
 		try {
-			mailService.sendEMail(user.getName(), email, oneTimeToken.getNonce());
+			mailService.sendEMail(user.getName(), emailLowerCase, body);
 		} catch (Exception e) {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_INTERNAL_ERROR, "Internal server error: Cannot send Email " + e.toString(), e);
 		}
@@ -138,8 +154,9 @@ public class UserGraphQL {
 	@GraphQLQuery(name = "loginWithEmailToken")
 	public CreateOrJoinTeamResponse loginWithEmailToken(
 		@GraphQLNonNull @GraphQLArgument(name="email") String email,
-		@GraphQLNonNull @GraphQLArgument(name="token") String authToken
+		@GraphQLNonNull @GraphQLArgument(name="authToken") String authToken
 	) throws LiquidoException {
+		email = LiquidoRestUtils.cleanEmail(email);
 		OneTimeToken ott = ottRepo.findByNonce(authToken)
 			.orElseThrow(LiquidoException.supply(LiquidoException.Errors.CANNOT_LOGIN_TOKEN_INVALID, "This email token is invalid!"));
 		if (LocalDateTime.now().isAfter(ott.getValidUntil())) {

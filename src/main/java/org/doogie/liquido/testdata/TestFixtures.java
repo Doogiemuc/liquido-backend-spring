@@ -15,7 +15,7 @@ public class TestFixtures {
 
 	public static final int NUM_TEAMS = 3;
 	public static final int NUM_TEAM_MEMBERS = 5;
-	public static final int NUM_USERS = 20;
+	public static final int NUM_USERS = 100;    // need 100 users for PollServiceTest.testRankedPairs()
 	public static final int NUM_VOTES = 15;			// number of casted votes. Must be smaller than NUM_USERS!
 	public static final int NUM_AREAS = 10;
 	public static final int NUM_IDEAS = 111;
@@ -24,42 +24,46 @@ public class TestFixtures {
 
 	public static final String AREA1_TITLE = "Area 1";
 
-	public static final String USER_NAME_PREFIX = "TestUser";
-	public static final String MAIL_PREFIX = "testuser";
+	// all email adresses MUST be lowercase here! Because they will be stored lowercase!!!
+	public static final String USER_NAME_PREFIX = "test_";
+	public static final String MAIL_PREFIX = "test_";
 	public static final String MOBILEPHONE_PREFIX = "+49151555";
-	public static final String DEFAULT_WEBSITE = "www.liquido.me";
+	public static final String DEFAULT_WEBSITE = "www.liquido.vote";
+	public static final String EMAIL_DOMAIN = "liquido.vote";
 	public static final String AVATAR_IMG_PREFIX = "Avatar";   // path to avatar images is configured in the client
 
-	public static final String USER1_NAME = "Donald Duck";										// Special name for user1
+	public static final String USER1_NAME = USER_NAME_PREFIX+"Donald Duck";				 // Special name for user1
 
-  public static final String USER1_EMAIL = MAIL_PREFIX+"1@liquido.de";      // testuser1 has  ID 1 in the DB !
-  public static final String USER2_EMAIL = MAIL_PREFIX+"2@liquido.de";
-  public static final String USER3_EMAIL = MAIL_PREFIX+"3@liquido.de";
-  public static final String USER4_EMAIL = MAIL_PREFIX+"4@liquido.de";
-  public static final String USER5_EMAIL = MAIL_PREFIX+"5@liquido.de";
-	public static final String USER6_EMAIL = MAIL_PREFIX+"6@liquido.de";
-	public static final String USER7_EMAIL = MAIL_PREFIX+"7@liquido.de";
-	public static final String USER8_EMAIL = MAIL_PREFIX+"7@liquido.de";
-	public static final String USER9_EMAIL = MAIL_PREFIX+"9@liquido.de";
-	public static final String USER10_EMAIL = MAIL_PREFIX+"10@liquido.de";
-	public static final String USER11_EMAIL = MAIL_PREFIX+"11@liquido.de";
-	public static final String USER12_EMAIL = MAIL_PREFIX+"12@liquido.de";
-	public static final String USER13_EMAIL = MAIL_PREFIX+"13@liquido.de";
-	public static final String USER14_EMAIL = MAIL_PREFIX+"14@liquido.de";
-	public static final String USER15_EMAIL = MAIL_PREFIX+"15@liquido.de";
-	public static final String USER16_EMAIL = MAIL_PREFIX+"16@liquido.de";
+  public static final String USER1_EMAIL = MAIL_PREFIX+"1@" + EMAIL_DOMAIN;      // testuser1 has ID 1 in the DB !
+  public static final String USER2_EMAIL = MAIL_PREFIX+"2@" + EMAIL_DOMAIN;
+  public static final String USER3_EMAIL = MAIL_PREFIX+"3@" + EMAIL_DOMAIN;
+  public static final String USER4_EMAIL = MAIL_PREFIX+"4@" + EMAIL_DOMAIN;
+  public static final String USER5_EMAIL = MAIL_PREFIX+"5@" + EMAIL_DOMAIN;
+	public static final String USER6_EMAIL = MAIL_PREFIX+"6@" + EMAIL_DOMAIN;
+	public static final String USER7_EMAIL = MAIL_PREFIX+"7@" + EMAIL_DOMAIN;
+	public static final String USER8_EMAIL = MAIL_PREFIX+"7@" + EMAIL_DOMAIN;
+	public static final String USER9_EMAIL = MAIL_PREFIX+"9@" + EMAIL_DOMAIN;
+	public static final String USER10_EMAIL = MAIL_PREFIX+"10@" + EMAIL_DOMAIN;
+	public static final String USER11_EMAIL = MAIL_PREFIX+"11@" + EMAIL_DOMAIN;
+	public static final String USER12_EMAIL = MAIL_PREFIX+"12@" + EMAIL_DOMAIN;
+	public static final String USER13_EMAIL = MAIL_PREFIX+"13@" + EMAIL_DOMAIN;
+	public static final String USER14_EMAIL = MAIL_PREFIX+"14@" + EMAIL_DOMAIN;
+	public static final String USER15_EMAIL = MAIL_PREFIX+"15@" + EMAIL_DOMAIN;
+	public static final String USER16_EMAIL = MAIL_PREFIX+"16@" + EMAIL_DOMAIN;
+
+	//TODO: create these email adresses dynamically and replace testUtils
 
 	// Teams and members and admins
-	public static final String TEAM1_NAME = "TeamOne";         // First Team has a fixed name that is used in tests
-	public static final String TEAM1_ADMIN_EMAIL = "adminTeamOne@liquido.me";            // This user is admin in ONE team
+	public static final String TEAM1_NAME = "test_TeamXCCv33D";         													// Fixed TeamName that is used in tests
+	public static final String TEAM1_ADMIN_EMAIL = MAIL_PREFIX + "adminofoneteam@"+EMAIL_DOMAIN;            // This user is admin in ONE team
 	public static final String TEAM1_ADMIN_MOBILEPHONE = MOBILEPHONE_PREFIX+"111";
-	public static final String TWO_TEAM_USER_EMAIL = "twoTeamMember@liquido.me";         // This user is member in TWO teams
+	public static final String TWO_TEAM_USER_EMAIL = MAIL_PREFIX + "memberintwoteams@"+EMAIL_DOMAIN;        // This user is member in TWO teams
 	public static final String TWO_TEAM_USER_MOBILEPHONE = MOBILEPHONE_PREFIX+"222";
-	public static final String TEAM_NAME_PREFIX = "TestTeam";
-	public static final String TEAM_ADMIN_NAME_PREFIX = "Admin";
-	public static final String TEAM_ADMIN_EMAIL_PREFIX = "admin";  // e.g. admin4711@TestTeam0.org
-	public static final String TEAM_MEMBER_NAME_PREFIX = "Member";
-	public static final String TEAM_MEMBER_EMAIL_PREFIX = "member";
+	public static final String TEAM_NAME_PREFIX = "test_Team";
+	public static final String TEAM_ADMIN_NAME_PREFIX = USER_NAME_PREFIX + "Admin";
+	public static final String TEAM_ADMIN_EMAIL_PREFIX = MAIL_PREFIX + "admin";  					// e.g. test_User_admin4711@TestTeam0.org
+	public static final String TEAM_MEMBER_NAME_PREFIX = USER_NAME_PREFIX + "Member";
+	public static final String TEAM_MEMBER_EMAIL_PREFIX = MAIL_PREFIX + "member";
 
 	// Ideas
 	public static final String IDEA_0_TITLE = "Idea 0 title from TestFixtures";
@@ -72,7 +76,7 @@ public class TestFixtures {
    * This secret is used when a test needs to create a voter token
    * This must only be used in tests!
    */
-	public static final String 	USER_TOKEN_SECRET = "userTokenSecret";
+	public static final String 	USER_TOKEN_SECRET = "test_userTokenSecret";
 
 
 	/** dynamic method as TestFixture.  Mmhh nice! */

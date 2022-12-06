@@ -3,11 +3,13 @@ package org.doogie.liquido.util;
 import lombok.extern.slf4j.Slf4j;
 import org.doogie.liquido.datarepos.AreaRepo;
 import org.doogie.liquido.graphql.TeamsGraphQL;
+import org.doogie.liquido.jwt.AuthUtil;
 import org.doogie.liquido.model.AreaModel;
 import org.doogie.liquido.model.UserModel;
 import org.doogie.liquido.rest.dto.CreateOrJoinTeamResponse;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.testdata.LiquidoProperties;
+import org.doogie.liquido.testdata.TestFixtures;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
@@ -29,6 +31,9 @@ public class LiquidoInitializer implements CommandLineRunner {
 	@Autowired
 	AreaRepo areaRepo;
 
+	@Autowired
+	AuthUtil authUtil;
+
 	/**
 	 * This runs when application has started successfully
    * and after TestDataCreator
@@ -36,6 +41,7 @@ public class LiquidoInitializer implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws LiquidoException {
 		// Create a default test user
+		authUtil.logoutOfSecurityContext();  //BUGFIX: Make sure no one is logged in before creating a new team for test.
 		UserModel testUser = new UserModel(props.testUser.email, props.testUser.name, props.testUser.mobilephone, props.testUser.website, props.testUser.picture);
 		try {
 			CreateOrJoinTeamResponse res = teamsGraphQL.createNewTeam(props.testUser.teamName, testUser);

@@ -171,7 +171,7 @@ public class PollServiceTests extends BaseTest {
 		long numMissingUsers = countBallots - util.users.size();
 		if (numMissingUsers > 0) {
 			log.debug("Seeding "+numMissingUsers + " more users to seed ballots quickly");
-			testDataCreator.seedUsers(numMissingUsers, "poll"+poll.getId()+"TestUser");   // we need seperate users for each poll
+			testDataCreator.seedUsers(numMissingUsers);   // we need seperate users for each poll
 		}
 
 		if (util.users.size() < countBallots)

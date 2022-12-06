@@ -214,7 +214,7 @@ public class TestDataCreator implements CommandLineRunner {
 			}
 
 			// ======== The order of these seed*() methods is very important! =====
-			seedUsers(TestFixtures.NUM_USERS, TestFixtures.MAIL_PREFIX);
+			seedUsers(TestFixtures.NUM_USERS);
 			auditorAware.setMockAuditor(util.user(TestFixtures.USER1_EMAIL));   // Simulate that user is logged in.  This user will now be set as @createdAt
 			seedAreas();
 
@@ -506,18 +506,16 @@ public class TestDataCreator implements CommandLineRunner {
 
 	/**
 	 * Seed some users. This can be called multiple times! Uses will be stored in this.userMap
-	 *
-	 * @param numUsers
-	 * @param mailPrefix
+	 * @param numUsers how many user to create
 	 */
-	public void seedUsers(long numUsers, String mailPrefix) {
+	public void seedUsers(long numUsers) {
 		log.info("Seeding Users ... this may bring up a 'Cannot getCurrentAuditor' warning, that you can ignore.");
 		long countUsers = userRepo.count();
 		for (int i = 0; i < numUsers; i++) {
-			String email = mailPrefix + (i + 1) + "@liquido.de";
-			String name = (i == 0) ? "Test User" + (i + 1) : TestFixtures.USER1_NAME;           // user1 has a special fixed name.
+			String email = (i > 0) ? TestFixtures.MAIL_PREFIX + (i + 1) + "@" + TestFixtures.EMAIL_DOMAIN : TestFixtures.USER1_EMAIL;
+			String name  = (i > 0) ? TestFixtures.USER_NAME_PREFIX + "John" + (i + 1) + " DOE": TestFixtures.USER1_NAME;           // user1 has a special fixed name.
 			String mobilephone = TestFixtures.MOBILEPHONE_PREFIX + (countUsers + i + 1);
-			String website = "http://www.liquido.de";
+			String website = TestFixtures.DEFAULT_WEBSITE;
 			String picture = TestFixtures.AVATAR_IMG_PREFIX + ((i % 16) + 1) + ".png";
 			UserModel newUser = new UserModel(email, name, mobilephone, website, picture);
 			//TODO: newUser.setAuthyId();

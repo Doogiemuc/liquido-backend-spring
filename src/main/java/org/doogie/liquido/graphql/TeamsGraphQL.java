@@ -89,6 +89,7 @@ public class TeamsGraphQL {
 		@GraphQLArgument(name = "admin") @GraphQLNonNull UserModel admin
 	) throws LiquidoException {
 		admin.setMobilephone(LiquidoRestUtils.cleanMobilephone(admin.mobilephone));
+		admin.setEmail(LiquidoRestUtils.cleanEmail(admin.email));
 
 		// IF team with same name exist, then throw error
 		if (teamRepo.findByTeamName(teamName).isPresent())
@@ -100,7 +101,7 @@ public class TeamsGraphQL {
 		boolean mobilePhoneExists = userRepo.findByMobilephone(admin.mobilephone).isPresent();
 
 		if (!currentUserOpt.isPresent()) {
-			/* GIVEN an anonymous request
+			/* GIVEN an anonymous request (this is what normally happens when a new team is created)
 				 WHEN anonymous user wants to create a new team
 					AND another user with that email or mobile-phone already exists,
 				 THEN throw an error   */
@@ -108,14 +109,14 @@ public class TeamsGraphQL {
 			if (mobilePhoneExists) throw new LiquidoException(Errors.USER_MOBILEPHONE_EXISTS, "Sorry, another user with that mobile phone number already exists.");
 		} else {
 			/* GIVEN an authenticated request
-				  WHEN an already registered user wants to create a new team
+				  WHEN an already registered user wants to create a another new team
 				   AND he does NOT provide his already registered email and mobile-phone
-			  	 AND he does also NOT provide completely new email and mobilephone
+			  	 AND he does also NOT provide a completely new email and mobilephone
 	        THEN throw an error */
 			boolean providedOwnData = DoogiesUtil.isEqual(currentUserOpt.get().email, admin.email) && DoogiesUtil.isEqual(currentUserOpt.get().mobilephone, admin.mobilephone);
 			if (!providedOwnData &&	(emailExists || mobilePhoneExists)) {
 				throw new LiquidoException(Errors.CANNOT_CREATE_TEAM_ALREADY_REGISTERED,
-					"Your are already registered. You must provide your existing user data or a new email and new mobile phone for the admin of the new team!");
+					"Your are already registered as " + currentUserOpt.get().email + ". You must provide your existing user data or a new email and new mobile phone for the admin of the new team!");
 			} else {
 				admin = currentUserOpt.get();  // with db ID!
 			}
@@ -164,6 +165,7 @@ public class TeamsGraphQL {
 		@GraphQLArgument(name = "member") @GraphQLNonNull UserModel member  //grouped as one argument of type UserModel: https://graphql-rules.com/rules/input-grouping
 	) throws LiquidoException {
 		member.setMobilephone(LiquidoRestUtils.cleanMobilephone(member.mobilephone));
+		member.setEmail(LiquidoRestUtils.cleanEmail(member.email));
 		TeamModel team = teamRepo.findByInviteCode(inviteCode)
 			.orElseThrow(LiquidoException.supply(Errors.CANNOT_JOIN_TEAM_INVITE_CODE_INVALID, "Invalid inviteCode '"+inviteCode+"'"));
 

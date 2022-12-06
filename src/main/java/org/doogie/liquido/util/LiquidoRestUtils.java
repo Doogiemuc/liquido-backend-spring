@@ -65,4 +65,14 @@ public class LiquidoRestUtils {
 		if (mobile == null) return null;
 		return mobile.replaceAll("[^\\+0-9]", "");
 	}
+
+	/**
+	 * emails a case IN-sensitive. So store and compare them in lowercase
+	 * @param email an email address
+	 * @return the email in lowercase
+	 */
+	public static String cleanEmail(String email) {
+		if (email == null) return null;
+		return email.toLowerCase();
+	}
 }

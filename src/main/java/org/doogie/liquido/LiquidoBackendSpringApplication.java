@@ -120,6 +120,8 @@ public class LiquidoBackendSpringApplication {
 
 		log.debug("Checking connection to LIQUIDO DB ...");
 
+		/*
+		This has been moved to LiquidoInitializer.java
 		// Create a default adminUser in DB (if not present yet)
 		UserModel adminUser = null;
 		try {
@@ -132,6 +134,8 @@ public class LiquidoBackendSpringApplication {
 			log.error("Cannot find or create admin user ", e.toString());
 			throw e;
 		}
+		*/
+
 
 
 

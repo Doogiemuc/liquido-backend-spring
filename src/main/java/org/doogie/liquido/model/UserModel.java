@@ -32,8 +32,8 @@ public class UserModel extends BaseModel {
 	  Equality is a big thing in Java! :-) And it is an especially nasty issue for UserModels.
 	  When are two user models "equal" to each other?
 	   - when their ID matches?
-	   - when they have the same email address? (this is what most people would assume at first.)
-	   - when they have the same mobile phone? (security relevant for login via SMS token!)
+	   - when they have the same email address? (this is what most people would assume at first.) In the same case?
+	   - when they have the same mobile phone? (security relevant for login via SMS token!) With or without some spaces and pluses and nulls in between?
 	   - do the other attributes also need to match (deep equals)
 	  Always distinguish between a "user" and a "human being"! A human might register multiple times with independent email addresses!
 	  There is no way an app could ever prevent this (other than requiring DNA tests).
@@ -44,6 +44,7 @@ public class UserModel extends BaseModel {
 
 	/**
 	 * User's email address. This email must be unique within the team.
+	 * Emails are always stored in lowercase in the DB!
 	 * A user may be registered with the same email in <em>different</em> teams.
 	 */
 	@NotNull

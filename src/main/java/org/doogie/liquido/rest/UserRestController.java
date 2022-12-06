@@ -159,8 +159,22 @@ public class UserRestController {
 		ottRepo.save(oneTimeToken);
 		log.info("User "+user.getEmail()+" may login. Sending code via EMail.");
 
+		// This link is parsed in a cypress test case. Must update test if you change this.
+		String loginLink = "<a id='loginLink' style='font-size: 20pt;' href='"+prop.frontendUrl+"/login?email="+user.getEmail()+"&emailToken="+oneTimeToken.getNonce()+"'>Login " + user.getName() +  "</a>";
+		String body = String.join(
+			System.getProperty("line.separator"),
+			"<html><h1>Liquido Login Token</h1>",
+			"<h3>Hello " + user.getName() + "</h3>",
+			"<p>With this link you can login to Liquido.</p>",
+			"<p>&nbsp;</p>",
+			"<b>" + loginLink + "</b>",
+			"<p>&nbsp;</p>",
+			"<p>This login link can only be used once!</p>",
+			"<p style='color:grey; font-size:10pt;'>You received this email, because  a login token for the <a href='https://www.liquido.net'>LIQUIDO</a> eVoting webapp was requested. If you did not request a login yourself, than you may simply ignore this message.</p>",
+			"</html>"
+		);
 		try {
-			mailService.sendEMail(user.getName(), email, oneTimeToken.getNonce());
+			mailService.sendEMail(user.getName(), email, body);
 		} catch (Exception e) {
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_LOGIN_INTERNAL_ERROR, "Internal server error: Cannot send Email "+e.toString(), e);
 		}

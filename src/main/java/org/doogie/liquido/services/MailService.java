@@ -24,20 +24,7 @@ public class MailService {
 
 	String SUBJECT = "[LIQUIDO] One time login token";
 
-	public void sendEMail(String name, String recipientEMail, String emailToken) throws Exception {
-
-		String BODY = String.join(
-			System.getProperty("line.separator"),
-			"<html><h1>Liquido Login Token</h1>",
-			"<h3>Hello "+name+"</h3>",
-			"<p>With this link you can login to Liquido.</p>",
-			"<p>&nbsp;</p>",
-			"<b><a style='font-size: 20pt;' href='"+prop.frontendUrl+"/login?email="+recipientEMail+"&token="+emailToken+"'>Login " + name +  "</a></b>",
-			"<p>&nbsp;</p>",
-			"<p>This login link can only be used once!</p>",
-			"<p style='color:grey; font-size:10pt;'>You received this email, because you (or someone) requested a login token for the <a href='https://www.liquido.net'>LIQUIDO</a> eVoting webapp. If you did not request a login yourself, than you may simply ignore this message.</p>",
-			"</html>"
-		);
+	public void sendEMail(String name, String recipientEMail, String body) throws Exception {
 
 		// Create a Properties object to contain connection configuration information.
 		Properties props = new Properties();
@@ -62,7 +49,7 @@ public class MailService {
 		msg.setFrom(new InternetAddress(prop.smtp.from, prop.smtp.fromName));
 		msg.setRecipient(Message.RecipientType.TO, new InternetAddress(recipientEMail));
 		msg.setSubject(SUBJECT);
-		msg.setContent(BODY,"text/html");
+		msg.setContent(body,"text/html");
 
 		// Add a configuration set header. Comment or delete the
 		// next line if you are not using a configuration set

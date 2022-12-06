@@ -154,12 +154,12 @@ liquido:
     pass: XXXXXXX
 
   # Default test user, will automatically be created, used in tests
-  testUser:
-    email: adminTeamOne@liquido.vote
-    name: Liquido Admin
-    mobilephone: "+49151XXXXXXXX"
-    picture: Avatar16.png
-    teamName: AdminTeamOne
+  #testUser:
+  #  email: testuserr@domain.tld
+  #  name: Liquido Admin
+  #  mobilephone: "+1555XXXXXXXX"
+  #  picture: Avatar16.png
+  #  teamName: DummyTestUserTeam
 
   # AUTHY API secrets
   authy:
