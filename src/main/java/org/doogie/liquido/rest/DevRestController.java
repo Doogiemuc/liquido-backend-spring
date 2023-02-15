@@ -12,6 +12,7 @@ import org.doogie.liquido.rest.dto.CreateOrJoinTeamResponse;
 import org.doogie.liquido.services.LiquidoException;
 import org.doogie.liquido.services.PollService;
 import org.doogie.liquido.testdata.LiquidoProperties;
+import org.doogie.liquido.util.LiquidoRestUtils;
 import org.doogie.liquido.util.Lson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -114,8 +115,7 @@ public class DevRestController {
 	 * Then authentication for further requests can then be handled normally in {@link org.doogie.liquido.jwt.JwtAuthenticationProvider}
 	 *
 	 * If a team is given, then login user into that team. (Team must exist. And user must be member or admin of that team.)
-	 * Either mobile or email must be given and user must exist.
-	 *
+	 * Either mobile or email must be given and user must exist (in that team).
 	 *
 	 * The client must still provide the valid devLoginToken from application.properties.
 	 *
@@ -149,15 +149,15 @@ public class DevRestController {
 		}
 		if (emailOpt.isPresent()) {
 			if (team != null) {
-				user = team.getAdminOrMemberByEmail(emailOpt.get())
+				user = team.getAdminOrMemberByEmail(emailOpt.get().toLowerCase())
 					.orElseThrow(LiquidoException.notFound("DevLogin: Cannot find an admin or member with email="+emailOpt.get()+" in team "+team.getTeamName()));
 			} else {
-				user = userRepo.findByEmail(emailOpt.get())
+				user = userRepo.findByEmail(emailOpt.get().toLowerCase())
 					.orElseThrow(LiquidoException.notFound("DevLogin: Cannot find a user with email="+emailOpt.get()));
 			}
 		}
 		if (mobile.isPresent()) {
-			user = userRepo.findByMobilephone(mobile.get())
+			user = userRepo.findByMobilephone(LiquidoRestUtils.cleanMobilephone(mobile.get()))
 				.orElseThrow(LiquidoException.notFound("DevLogin: Cannot find a user with mobile="+mobile.get()));
 		}
 
@@ -175,8 +175,8 @@ public class DevRestController {
 
 
 	/**
-	 * Spring Web Security: Make /dev/users endpoint publicly available.  But just this one resource! The other /dev/**
-	 * endpoints need authentication in ROLE_ADMIN
+	 * Spring Web Security: Make /dev/users, /dev/getJWT endpoints publicly available.
+	 * All other endpoints need authentication in ROLE_ADMIN.
 	 */
 	@Configuration
 	@Order(20)   // MUST be smaller than 100  to be first!

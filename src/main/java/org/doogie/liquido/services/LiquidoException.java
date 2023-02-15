@@ -85,10 +85,17 @@ public class LiquidoException extends Exception {
 		int liquidoErrorCode;
 		HttpStatus httpResponseStatus;
 
-	Errors(int code, HttpStatus httpResponseStatus) {
-		this.liquidoErrorCode = code;
-		this.httpResponseStatus = httpResponseStatus;
-	}
+		Errors(int code, HttpStatus httpResponseStatus) {
+			this.liquidoErrorCode = code;
+			this.httpResponseStatus = httpResponseStatus;
+		}
+
+		int getLiquidoErrorCode() {
+			return this.liquidoErrorCode;
+		}
+		HttpStatus getHttpResponseStatus() {
+			return this.httpResponseStatus;
+		}
 
 	}
 

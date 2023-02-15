@@ -44,7 +44,7 @@ public class UserModel extends BaseModel {
 
 	/**
 	 * User's email address. This email must be unique within the team.
-	 * Emails are always stored in lowercase in the DB!
+	 * <b>Emails are case insensitive and therefore always stored in lowercase in the DB!</b>
 	 * A user may be registered with the same email in <em>different</em> teams.
 	 */
 	@NotNull
@@ -100,7 +100,13 @@ public class UserModel extends BaseModel {
 		this.picture = picture;
 	}
 
-  @Override
+	/** Set an email which will be stored in lower case */
+	public void setEmail(String email) {
+		if (email != null) email = email.toLowerCase();
+		this.email = email;
+	}
+
+	@Override
   public String toString() {
   	StringBuffer buf = new StringBuffer();
     buf.append("UserModel[");

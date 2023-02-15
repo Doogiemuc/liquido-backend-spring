@@ -78,7 +78,7 @@ public class TeamModel extends BaseModel {
 		return this.admins.contains(admin);
 	}
 	public boolean emailIsAdmin(String email) {
-		return this.admins.stream().anyMatch(admin -> admin.email != null && admin.email.equals(email));
+		return this.admins.stream().anyMatch(admin -> admin.email != null && admin.email.equalsIgnoreCase(email));
 	}
 	public boolean mobilephoneIsAdmin(String mobilephone) {
 		return this.admins.stream().anyMatch(admin -> admin.mobilephone != null && admin.mobilephone.equals(mobilephone));
@@ -88,7 +88,7 @@ public class TeamModel extends BaseModel {
 		return this.members.contains(member);
 	}
 	public boolean emailIsMember(String email) {
-		return this.members.stream().anyMatch(member -> member.email != null && member.email.equals(email));
+		return this.members.stream().anyMatch(member -> member.email != null && member.email.equalsIgnoreCase(email));
 	}
 	public boolean mobilephoneIsMember(String mobilephone) {
 		return this.members.stream().anyMatch(member -> member.mobilephone != null && member.mobilephone.equals(mobilephone));
@@ -100,7 +100,7 @@ public class TeamModel extends BaseModel {
 	 * @return the user or admin if it is part of this team
 	 */
 	public Optional<UserModel> getAdminOrMemberByEmail(String email) {
-		return Stream.concat(this.getAdmins().stream(), this.getMembers().stream()).filter(u -> u.email.equals(email)).findFirst();
+		return Stream.concat(this.getAdmins().stream(), this.getMembers().stream()).filter(u -> u.email.equalsIgnoreCase(email)).findFirst();
 	}
 
   @Override

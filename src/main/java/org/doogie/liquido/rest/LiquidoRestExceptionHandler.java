@@ -22,6 +22,7 @@ import org.springframework.web.util.WebUtils;
  * Global Liquido REST exception handler
  * This exception handler returns a nice JSON for each error.
  * And it also returns the corresponding HttpStatus code depending on the errorCode
+ *
  * @See {@link LiquidoException}  and {@link LiquidoGeneralExceptionHandler}
  * @See https://www.baeldung.com/exception-handling-for-rest-with-spring
  */
@@ -45,13 +46,36 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 	}
 	*/
 
+	/**
+	 * This will be called when a {@link LiquidoException} is thrown.
+	 * @param lex the LiquidoException with a specific Error code
+	 * @param request the HTTP request
+	 * @return an Http ResponseEntity with error info in body, that will be returned to the client.
+	 */
 	@ExceptionHandler(value = {LiquidoException.class})
 	ResponseEntity<Object> handleLiquidoException(LiquidoException lex, WebRequest request) {
 		//log.info(lex.toString());
 		Lson bodyOfResponse = getMessageAsJson(lex, request);
+		if (lex.getHttpResponseStatus().is4xxClientError() ||
+			lex.getHttpResponseStatus().is4xxClientError()) {
+			log.warn(lex.toString());  // If something more bad happens, then log it. This is a sophisticated toString() that logs usefull info.
+		} else
+		if (lex.getHttpResponseStatus().is5xxServerError() ||
+		    lex.getHttpResponseStatus().is5xxServerError()) {
+			log.error(lex.toString());  // If something more bad happens, then log it. This is a sophisticated toString() that logs usefull info.
+		}
 		return handleExceptionInternal(lex, bodyOfResponse.toString(), new HttpHeaders(), lex.getHttpResponseStatus(), request);
 	}
 
+	/**
+	 * This will be called for any generel HTTP exception. (LiquidoException or others)
+	 * @param ex
+	 * @param body
+	 * @param headers
+	 * @param status
+	 * @param request
+	 * @return
+	 */
 	@Override
 	protected ResponseEntity<Object> handleExceptionInternal(Exception ex, Object body, HttpHeaders headers, HttpStatus status, WebRequest request) {
 
@@ -69,6 +93,7 @@ public class LiquidoRestExceptionHandler extends ResponseEntityExceptionHandler 
 				log.debug(body.toString());
 				//StackTraceElement[] firstElems = Arrays.copyOfRange(ex.getStackTrace(), 0, Math.min(5, ex.getStackTrace().length));
 				//bodyOfResponse.put("stacktrace", firstElems);    // this will be nicely serialized as JSON by my Lson utility   => but I decided to NOT return exceptions to the client!
+				// Log first 5 elements of stacktrace
 				for (int i = 0; i < 5; i++) {
 					if (ex.getStackTrace().length > i) {
 						log.debug("    at "+ex.getStackTrace()[i].toString());

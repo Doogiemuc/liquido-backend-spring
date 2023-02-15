@@ -23,7 +23,7 @@ import org.springframework.web.context.request.WebRequest;
 @Order(Ordered.LOWEST_PRECEDENCE)
 public class LiquidoGeneralExceptionHandler {
 
-	//TODO: Now also Resource not found is a 500 instead of 404 :-(  TODO: only call my really generalException Method  AFTER RepositoryRestExceptionHandler has done its job.
+	//TODO: Now also Resource not found is a 500 instead of 404 :-(  TODO: only call my really generalException Method  AFTER LiquidoRestExceptionHandler and RepositoryRestExceptionHandler has done its job.
 
 
 	//TODO: This is normally handeled by RepositoryRestExceptionHandler. But I want to catch EVERY exception below => MAYBE check Order
