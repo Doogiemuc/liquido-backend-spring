@@ -332,7 +332,8 @@ echo -n "Querying backend to be alive at ${BACKEND_API}/_ping (for max 20 second
 PING_SUCCESS=0
 for i in {1..20}; do
   # graphQL ping would be: "curl -X POST -d '{"query": "query {ping}"}' -H "Content-Type: application/json" ${BACKEND_API}/graphql
-	HELLO_WORD=`curl --silent ${BACKEND_API}/_ping`
+	HELLO_WORD=`curl ${BACKEND_API}/_ping`
+	echo "received $HELLO_WORD"
 	if [[ $HELLO_WORD = '{"Hello":"World"}' ]] ; then
 	    echo -e " $GREEN_OK"
 		PING_SUCCESS=1

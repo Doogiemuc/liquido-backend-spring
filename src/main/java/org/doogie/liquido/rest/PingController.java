@@ -1,5 +1,6 @@
 package org.doogie.liquido.rest;
 
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -12,6 +13,7 @@ public class PingController {
    * @return <pre>{"Hello":"World"}</pre>
    */
   @RequestMapping("${spring.data.rest.base-path}/_ping")      // Must add the base path here!
+	@CrossOrigin(origins = "*")  																// allow ping from every origin
   public String isAlive() {
     return "{\"Hello\":\"World\"}";
   }

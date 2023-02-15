@@ -120,6 +120,25 @@ public class RestEndpointTests extends HttpBaseTest {
 	}
 
 	@Test
+	public void testCORS() {
+		// GIVEN a CORS request
+		HttpHeaders headers = new HttpHeaders();
+		headers.setAccessControlRequestMethod(GET);
+		headers.setOrigin("http://app.liquido.vote");
+		HttpEntity<String> entity = new HttpEntity<>(headers);
+
+		// WHEN sending this as an OPTION request
+		ResponseEntity<String> response = client.exchange("/_ping", OPTIONS, entity, String.class);
+
+		// THEN status is 200 OK
+		assertEquals(HttpStatus.OK, response.getStatusCode(), "/_ping endpoint should be reachable from cross-origin");
+
+		//  AND "*" is in the list of returned "accessControlAllowOrigins" response header
+		List<String> allowedOrigins = response.getHeaders().get(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN);
+		assertTrue(response.getHeaders().get(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN).stream().anyMatch(elem -> "*".equals(elem)), "CORS Should allow all ('*') origins!");
+	}
+
+	@Test
 	public void testProposalsUrlShouldNeedAuth() {
 		try {
 			ResponseEntity<String> res = anonymousClient.exchange("/laws", HttpMethod.GET, null, String.class);

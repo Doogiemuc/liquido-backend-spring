@@ -20,10 +20,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RegexRequestMatcher;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Arrays;
@@ -38,6 +35,7 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("${spring.data.rest.base-path}")
+@CrossOrigin(origins = "*")
 public class LiquidoGraphQLController {
 
 	private final GraphQL graphQL;
@@ -76,6 +74,7 @@ public class LiquidoGraphQLController {
 	/**
 	 * HTTP endpoint for graphQL queries. The /graphql endpoint itself is public.
 	 * But most GraphQL query resolver will need an authenticated user (via JWT)
+	 *
 	 * @param body request body with GraphQL {query: "..."}
 	 * @param request the raw HttpServletRequest (POST)
 	 * @return The Execution of the GraphQL query: { data:{}, errors: [] }

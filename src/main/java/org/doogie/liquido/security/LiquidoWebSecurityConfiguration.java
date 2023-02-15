@@ -69,10 +69,11 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
   protected void configure(HttpSecurity http) throws Exception {
     log.info("Configuring HttpWebSecurity for "+ basePath);
 	  http
+			.cors().and()  																												// make spring-security allow CORS requests
 			//.antMatcher(basePath).authenticationProvider(new LiquidoTokenAuthProvider()) // can I add my token auth that way?
 			.authorizeRequests()
 			  .antMatchers(basePath+"/_ping").permitAll()        			// allow is alive
-				.antMatchers(basePath+"/globalProperties").permitAll()		// allow fetching properties
+				.antMatchers(basePath+"/globalProperties").permitAll()	// allow fetching properties
 			  .antMatchers(basePath+"/auth/**").permitAll()      			// allow login via one time token
 				.antMatchers(basePath+"/castVote").permitAll()   				// allow anonymous voting
 			  .anyRequest().authenticated()																				// everything else must be authenticated
@@ -115,13 +116,16 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
 		return PasswordEncoderFactories.createDelegatingPasswordEncoder();
 	}
 
-  /**
+  /*
+
+    OUTDATED, replaced with CORS annotations
+
    * Configure CORS so that access from localhost:3001 is allowed.
    * http://stackoverflow.com/a/31748398/122441 until https://jira.spring.io/browse/DATAREST-573
    * https://spring.io/blog/2015/06/08/cors-support-in-spring-framework#filter-based-cors-support
    * https://spring.io/guides/gs/rest-service-cors/
    * @return the FilterRegistrationBean
-   */
+   *
   @Bean
   public FilterRegistrationBean corsFilter() {
     log.trace("Configuring CORS from spring blog");
@@ -139,6 +143,6 @@ public class LiquidoWebSecurityConfiguration extends WebSecurityConfigurerAdapte
     return bean;
   }
 
-
+   */
 
 }
