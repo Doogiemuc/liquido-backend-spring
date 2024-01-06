@@ -18,6 +18,7 @@ bin/
 *.iml
 *.iws
 
+
 # NetBeans
 nb-configuration.xml
 
@@ -54,3 +55,5 @@ application-local.yaml
 /config/application-*.properties
 /import-testData.sql
 /createLiquidoDbSchema.sql
+application-local.yml
+

@@ -4,11 +4,11 @@
 
 	<groupId>org.doogie.liquido</groupId>
 	<artifactId>liquido-backend-spring</artifactId>
-	<version>5.0.0</version>
+	<version>6.0.0</version>
 	<packaging>jar</packaging>
 
 	<name>liquido-backend-spring</name>
-	<description>Backend for my Liquid Democracy eVoting app "Liquido"</description>
+	<description>Backend for Liquid Democracy eVoting app "Liquido"</description>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -20,9 +20,10 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<java.version>8</java.version>
-		<maven.compiler.source>8</maven.compiler.source>
-		<maven.compiler.target>8</maven.compiler.target>
+		<java.version>11</java.version>
+        <maven.compiler.release>11</maven.compiler.release>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
 		<spring-boot.version>2.7.4</spring-boot.version>
 		<quartz.version>2.3.2</quartz.version>
 		<jjwt.version>0.9.1</jjwt.version>
@@ -140,7 +141,7 @@
 		</dependency>
 
 
-		<!-- PostgreSQL driver   https://mvnrepository.com/artifact/org.postgresql/postgresql -->
+		<!-- Postgres driver   https://mvnrepository.com/artifact/org.postgresql/postgresql -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
@@ -333,8 +334,8 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.8.1</version>
 				<configuration>
-                    <source>8</source>
-                    <target>8</target>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
                 </configuration>
             </plugin>
 
