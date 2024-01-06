@@ -1,16 +1,55 @@
-
-.idea/
+#Maven
 target/
-build/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
 release.properties
-/application*.properties
-/application-local.yml
-/application-int.yml
-/application-prod.yml
-/application-test.yml
-/src/main/resources/sampleDB-H2.sql
-/src/test/resources/application-dev.yml
+.flattened-pom.xml
 
-/sampleDB-H2.sql
-sampleDB-H2.sql
-/scripts/deploy-config.sh
+# Eclipse
+.project
+.classpath
+.settings/
+bin/
+
+# IntelliJ
+.idea
+*.ipr
+*.iml
+*.iws
+
+# NetBeans
+nb-configuration.xml
+
+# Visual Studio Code
+.vscode
+.factorypath
+
+# OSX
+.DS_Store
+
+# Vim
+*.swp
+*.swo
+
+# patch
+*.orig
+*.rej
+
+# Local environment
+application.local
+.env
+
+# Exclude secrets !!!
+*.pem
+*.p12
+
+# Exclude configurations with secrets
+application-prod.yml
+/config/application-test.properties
+/config/application-local.properties
+/config/application-prod.properties
+/config/application-dev.properties
+/config/application-*.properties
+/import-testData.sql
+/createLiquidoDbSchema.sql
