@@ -199,7 +199,7 @@ public class UserGraphQL {
 		try {
 			return twilioApiClient.requestVerificationToken(TwilioVerifyApiClient.CHANNEL_SMS, mobilephone);
 		} catch (Throwable t) {
-			log.debug("Cannot request authToken: ", t.toString());
+			log.debug("Cannot request authToken: " + t);
 			throw new LiquidoException(LiquidoException.Errors.CANNOT_REQUEST_SMS_TOKEN, t.getMessage());
 		}
 	}

@@ -209,7 +209,9 @@ public class TestDataCreator implements CommandLineRunner {
 			try {
 				List<UserModel> users = jdbcTemplate.queryForList("SELECT * FROM users LIMIT 10", UserModel.class);
 			} catch (Exception e) {
-				log.error("Cannot recreateTestData. There is no 'users' table! Did you create a DB schema at all?");
+				log.error("=======================================================================================================================");
+				log.error("FATAL: !!!!!!!!!!! Cannot recreateTestData. There is no 'users' table! Did you create a DB schema at all? !!!!!!!!!!!!!");
+				log.error("=======================================================================================================================");
 				throw e;
 			}
 

@@ -20,7 +20,7 @@ public interface BallotRepo extends CrudRepository<BallotModel, Long> {
 	/**
 	 * Find all ballots in a poll.
 	 * @param poll a poll
-	 * @return list of ballots that have been casted in this ppoll (so far)
+	 * @return list of ballots that have been cast in this poll (so far)
 	 */
   List<BallotModel> findByPoll(PollModel poll);
 
@@ -30,7 +30,7 @@ public interface BallotRepo extends CrudRepository<BallotModel, Long> {
 	 * @param poll the poll with that ballot
 	 * @return the ballot or Optional.emtpy() if not found
 	 */
-  Optional<BallotModel> findByPollAndChecksum(PollModel poll, String checksum);
+  Optional<BallotModel>  findByPollAndChecksum(PollModel poll, String checksum);
 
 	/**
 	 * Count number of ballots casted in this poll

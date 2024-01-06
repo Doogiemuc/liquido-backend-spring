@@ -46,6 +46,7 @@ application.local
 
 # Exclude configurations with secrets
 application-prod.yml
+application-local.yaml
 /config/application-test.properties
 /config/application-local.properties
 /config/application-prod.properties

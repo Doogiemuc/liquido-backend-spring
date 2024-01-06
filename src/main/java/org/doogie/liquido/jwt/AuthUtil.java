@@ -5,7 +5,6 @@ import org.doogie.liquido.datarepos.TeamRepo;
 import org.doogie.liquido.datarepos.UserRepo;
 import org.doogie.liquido.model.TeamModel;
 import org.doogie.liquido.model.UserModel;
-import org.doogie.liquido.security.LiquidoAuditorAware;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;

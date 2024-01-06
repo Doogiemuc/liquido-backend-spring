@@ -66,6 +66,7 @@ public class LiquidoGraphQLController {
 		// Print the graphQL schema that was created by graphql-spqr
 		if (log.isDebugEnabled()) {
 			String graphQLschema = new SchemaPrinter().print(schema);
+			log.debug("=============== LIQUIDO GraphQL schema ================");
 			log.debug(graphQLschema);
 		}
 

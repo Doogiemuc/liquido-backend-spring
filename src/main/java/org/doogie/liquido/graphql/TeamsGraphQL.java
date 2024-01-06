@@ -183,7 +183,7 @@ public class TeamsGraphQL {
 			// Anonymous request. Must provide new email and mobilephone
 			Optional<UserModel> userByMail = userRepo.findByEmail(member.email);
 			if (userByMail.isPresent()) throw new LiquidoException(Errors.USER_EMAIL_EXISTS, "Sorry, another user with that email already exists.");
-			Optional<UserModel> userByMobilephone = userRepo.findByEmail(member.mobilephone);
+			Optional<UserModel> userByMobilephone = userRepo.findByMobilephone(member.mobilephone);
 			if (userByMobilephone.isPresent()) throw new LiquidoException(Errors.USER_MOBILEPHONE_EXISTS, "Sorry, another user with that mobile phone number already exists.");
 		}
 

@@ -54,17 +54,6 @@ public class LiquidoBackendSpringApplication {
    */
   public static void main(String[] args) throws SchedulerException {
   	//This code may be executed twice: https://stackoverflow.com/questions/49527862/spring-boot-application-start-twice
-		System.out.println("====================== Starting LIQUIDO ==========================");
-		SpringApplication.run(LiquidoBackendSpringApplication.class, args);
-	}
-
-	/**
-	 * When application started successfully, then perform some sanity checks
-	 * and log the most important security configuration.
-	 * @throws Exception
-	 */
-	@EventListener(ApplicationReadyEvent.class)
-	public void applicationReady() throws Exception {
 		System.out.println();
 		System.out.println("=====================================================");
 		System.out.println(" _       ___    ___    _   _   ___   ____     ___  ");
@@ -75,6 +64,16 @@ public class LiquidoBackendSpringApplication {
 		System.out.println("=====================================================");
 		System.out.println();
 
+		SpringApplication.run(LiquidoBackendSpringApplication.class, args);
+	}
+
+	/**
+	 * When application started successfully, then perform some sanity checks
+	 * and log the most important security configuration.
+	 * @throws Exception
+	 */
+	@EventListener(ApplicationReadyEvent.class)
+	public void applicationReady() throws Exception {
 		if (log.isDebugEnabled()) {
 			System.out.println();
 			System.out.println("LiquidoProperties:");
@@ -93,7 +92,7 @@ public class LiquidoBackendSpringApplication {
 		log.info(" spring.jpa.hibernate.ddl-auto: " + env.getProperty("spring.jpa.hibernate.ddl-auto"));
 		log.info(" javax.javax.persistence.schema-generation: " + env.getProperty("javax.javax.persistence.schema-generation"));
 		log.info(" Mail/SMTP   : " + liquidoProps.smtp.host + ":" + liquidoProps.smtp.port);
-		log.info(" Database URL: " + jdbcTemplate.getDataSource().getConnection().getMetaData().getURL());  // may throw SQL Exception
+		log.debug(" Database URL: " + jdbcTemplate.getDataSource().getConnection().getMetaData().getURL());     // BE CAREFULL. Do not expose passwords.  (This may throw SQL Exception!)
 		log.info("=======================================================");
 
 		log.info("Running some sanity checks ...");
@@ -118,7 +117,7 @@ public class LiquidoBackendSpringApplication {
 			log.info("Can load H2 Driver in dev");
 		}
 
-		log.debug("Checking connection to LIQUIDO DB ...");
+		log.info("Checking connection to LIQUIDO DB ...");
 
 		/*
 		This has been moved to LiquidoInitializer.java
